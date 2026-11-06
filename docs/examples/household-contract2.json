@@ -1,0 +1,329 @@
+{
+  "contract": 2,
+  "people": [
+    {
+      "id": "person.alex",
+      "name": "Alex",
+      "kind": "kid",
+      "kind_set": true,
+      "tv_profiles": [],
+      "all": {
+        "id": "all",
+        "name": "All screen time",
+        "used_minutes": 25,
+        "minutes_left": 95,
+        "budget": 120,
+        "bonus": 0
+      },
+      "groups": [
+        {
+          "id": "all",
+          "name": "All screen time",
+          "used_minutes": 25,
+          "minutes_left": 95,
+          "budget": 120,
+          "bonus": 0
+        },
+        {
+          "id": "video",
+          "name": "Video",
+          "used_minutes": 25,
+          "minutes_left": 5,
+          "budget": 30,
+          "bonus": 0
+        }
+      ],
+      "locked": true,
+      "locked_by": [
+        "pause"
+      ],
+      "held": false,
+      "held_by": [],
+      "pause": {
+        "until": "2026-11-06T18:30:11-08:00",
+        "reason": "Dinner"
+      },
+      "lock": {
+        "by": [
+          "pause"
+        ],
+        "kind": "pause",
+        "kinds": [
+          "pause"
+        ],
+        "until": "2026-11-06T18:30:11-08:00"
+      },
+      "playing": [],
+      "headline": {
+        "text": "asks for 30 more · video",
+        "level": "urgent",
+        "key": "ask:h3RnR2dlNmQV"
+      },
+      "lines": [
+        {
+          "text": "paused · dinner till 6:30",
+          "level": "urgent",
+          "key": "pause:2026-11-06T18:30:11-08:00"
+        },
+        {
+          "text": "video · 5 left",
+          "level": "notice",
+          "key": "low:video"
+        },
+        {
+          "text": "screen time · 95 left",
+          "level": "calm",
+          "key": "left:all"
+        }
+      ],
+      "actions": [
+        {
+          "id": "ask_yes:h3RnR2dlNmQV",
+          "label": "yes 30",
+          "service": "hearth.answer_request",
+          "data": {
+            "request_id": "h3RnR2dlNmQV",
+            "minutes": 30
+          },
+          "primary": true
+        },
+        {
+          "id": "ask_no:h3RnR2dlNmQV",
+          "label": "no",
+          "service": "hearth.answer_request",
+          "data": {
+            "request_id": "h3RnR2dlNmQV",
+            "deny": true
+          }
+        },
+        {
+          "id": "bonus:video",
+          "label": "+15 video",
+          "service": "hearth.add_bonus",
+          "data": {
+            "person": "person.alex",
+            "minutes": 15,
+            "group": "video"
+          }
+        },
+        {
+          "id": "bonus:all",
+          "label": "+15 screen time",
+          "service": "hearth.add_bonus",
+          "data": {
+            "person": "person.alex",
+            "minutes": 15,
+            "group": "all"
+          }
+        },
+        {
+          "id": "pause_end",
+          "label": "end the pause",
+          "service": "hearth.pause_end",
+          "data": {
+            "people": [
+              "person.alex"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "person.sam",
+      "name": "Sam",
+      "kind": "kid",
+      "kind_set": true,
+      "tv_profiles": [
+        "user:10"
+      ],
+      "all": {
+        "id": "all",
+        "name": "All screen time",
+        "used_minutes": 15,
+        "minutes_left": 105,
+        "budget": 120,
+        "bonus": 0
+      },
+      "groups": [
+        {
+          "id": "all",
+          "name": "All screen time",
+          "used_minutes": 15,
+          "minutes_left": 105,
+          "budget": 120,
+          "bonus": 0
+        },
+        {
+          "id": "video",
+          "name": "Video",
+          "used_minutes": 10,
+          "minutes_left": 50,
+          "budget": 60,
+          "bonus": 0
+        },
+        {
+          "id": "games",
+          "name": "Games",
+          "used_minutes": 5,
+          "minutes_left": null,
+          "budget": null,
+          "bonus": 0
+        }
+      ],
+      "locked": false,
+      "locked_by": [],
+      "held": false,
+      "held_by": [],
+      "next_lock": {
+        "at": "2026-11-06T21:00:00-08:00",
+        "by": "binary_sensor.sam_tablet_bedtime_active",
+        "kind": "bedtime"
+      },
+      "playing": [],
+      "headline": {
+        "text": "video · 50 left",
+        "level": "calm",
+        "key": "left:video"
+      },
+      "lines": [
+        {
+          "text": "screen time · 105 left",
+          "level": "calm",
+          "key": "left:all"
+        },
+        {
+          "text": "bedtime at 9:00",
+          "level": "calm",
+          "key": "next:bedtime:2026-11-06T21:00:00-08:00"
+        }
+      ],
+      "actions": [
+        {
+          "id": "bonus:video",
+          "label": "+15 video",
+          "service": "hearth.add_bonus",
+          "data": {
+            "person": "person.sam",
+            "minutes": 15,
+            "group": "video"
+          }
+        },
+        {
+          "id": "bonus:all",
+          "label": "+15 screen time",
+          "service": "hearth.add_bonus",
+          "data": {
+            "person": "person.sam",
+            "minutes": 15,
+            "group": "all"
+          }
+        },
+        {
+          "id": "pause",
+          "label": "pause 30 min",
+          "service": "hearth.pause",
+          "data": {
+            "people": [
+              "person.sam"
+            ],
+            "minutes": 30
+          },
+          "confirm": "pause sam for 30 min?"
+        }
+      ]
+    }
+  ],
+  "devices": [
+    {
+      "id": "phone-0123456789abcd",
+      "name": "Alex's phone",
+      "kind": "mobile",
+      "connected": true,
+      "screen": "on",
+      "app": null,
+      "media_title": null,
+      "media_app": null,
+      "profile": null,
+      "media_player": null,
+      "kids_profile": null,
+      "person": "person.alex"
+    },
+    {
+      "id": "tv-0123456789abcdef",
+      "name": "Kitchen",
+      "kind": "tv",
+      "connected": true,
+      "screen": "on",
+      "app": null,
+      "media_title": null,
+      "media_app": null,
+      "profile": "Sam",
+      "media_player": null,
+      "kids_profile": true,
+      "person": "person.sam"
+    }
+  ],
+  "approvals": [
+    {
+      "type": "more_time",
+      "id": "h3RnR2dlNmQV",
+      "person": "person.alex",
+      "person_name": "Alex",
+      "minutes": 30,
+      "group": "video",
+      "note": "",
+      "device_id": "phone-0123456789abcd",
+      "asked": "2026-11-07T01:40:11+00:00",
+      "expires": "2026-11-07T02:10:11+00:00",
+      "offered": false
+    }
+  ],
+  "not_screen_time": [
+    "messaging"
+  ],
+  "media_rooms": [],
+  "household": {
+    "headline": {
+      "text": "alex asks for 30 more",
+      "level": "urgent",
+      "key": "asks:h3RnR2dlNmQV"
+    },
+    "actions": [
+      {
+        "id": "ask_yes:h3RnR2dlNmQV",
+        "label": "alex yes 30",
+        "service": "hearth.answer_request",
+        "data": {
+          "request_id": "h3RnR2dlNmQV",
+          "minutes": 30
+        },
+        "primary": true
+      },
+      {
+        "id": "ask_no:h3RnR2dlNmQV",
+        "label": "alex no",
+        "service": "hearth.answer_request",
+        "data": {
+          "request_id": "h3RnR2dlNmQV",
+          "deny": true
+        }
+      },
+      {
+        "id": "pause_end",
+        "label": "end the pause",
+        "service": "hearth.pause_end",
+        "data": {}
+      },
+      {
+        "id": "pause_all",
+        "label": "pause everyone 30 min",
+        "service": "hearth.pause",
+        "data": {
+          "minutes": 30
+        },
+        "confirm": "pause everyone for 30 min?"
+      }
+    ]
+  },
+  "version": "1fb9f00f9b49f948"
+}

@@ -486,14 +486,16 @@ directly on the home network; the mailbox is for devices that are rarely on at t
 
 ### Contract
 
-`contract` (an integer, now 1) says which shape of the device API and the household summary this is: in the approved
+`contract` (an integer, now 2) says which shape of the device API and the household summary this is: in the approved
 pair answer, every status answer (`{"ok": true, "contract": 1, "state": {...}}`), every state document and the
 summary. A device may send its own in its status (`contract`). It goes up only when a field changes meaning or type,
 becomes required, or goes away; an added field doesn't change it, so a reader ignores fields it doesn't know. It's
 apart from `version`, which changes with the content. A phone's person document also says `kind` (`kid`, `adult` or
 `person`) and `kind_set` (whether an adult set it on Hearth's page). Only an adult (on Hearth's page) has a parent PIN.
 The summary is for administrators and for adults on Hearth's page whose person is their Home Assistant user (without
-pairing codes); `hearth.add_bonus` and `hearth.set_budget` take a group's name as well as its id.
+pairing codes); `hearth.add_bonus` and `hearth.set_budget` take a group's name as well as its id. Contract 2 added the
+summary's `headline`, `lines` and `actions` (per person) and `household` ([below](#contract-2-headline-lines-actions)):
+added fields, so nothing of contract 1 changed, but the number went up so an app knows they're there.
 
 ### Ask for more
 
@@ -507,7 +509,9 @@ The adults are told: `hearth_more_time_requested` (`id`, `person`, `person_name`
 `device_id`, `asked`, `expires`), a notification in Home Assistant, and on the phone chosen for new apps an actionable
 one (the asked amount, the next one up, Not now: `HEARTH_MORE|<id>|<minutes>`, 0 for not now). The first answer wins,
 once: from that phone, Hearth's page, or `{"type": "hearth/approvals/answer", "request_id", "minutes" (1-600) |
-"deny": true}` on the WebSocket (administrators, and adults on Hearth's page). More time is extra time today (as `add_bonus`); the answer fires
+"deny": true}` on the WebSocket, or the service `hearth.answer_request` (`request_id`; `minutes` 1-600 or `deny:
+true`; returns the request as the device sees it; a second answer, or one to an expired request, is refused with a
+validation error) (administrators, and adults on Hearth's page). More time is extra time today (as `add_bonus`); the answer fires
 `hearth_more_time_answered` (`id`, `person`, `status`, `minutes`, `by`: the user). The asking device sees it in the
 person's state document: `request` {id, status: pending | approved | denied | expired, minutes (granted when
 approved), asked_minutes, group, expires, answered (when it was answered or expired, null while pending)}, for two hours after.
@@ -544,6 +548,248 @@ then sends the same object as an event whenever it changes, at most every 2 seco
   also has `budget` (today's, null for none) and `bonus` (extra time given today).
 - `not_screen_time`, `contract`, and `version` (changes with any of it).
 - `media_rooms`: the house's media players by room, below.
+- Contract 2: each person's `headline`, `lines` and `actions`, and the household's `household` {`headline`,
+  `actions`}, below.
+
+A second parent who isn't an administrator (an adult on Hearth's page whose person is their Home Assistant user) reads
+the whole summary, contract 2 included, without pairing codes: the household's headline and actions never mention a
+device waiting to pair for them (Glint's H-3; covered by a test).
+
+#### Contract 2: headline, lines, actions
+
+Hearth decides what matters about each person now, and an app draws it, so a new kind of news or a new control shows
+without a release of the app. Each item is `{text, level, key}`: `text` is short and lower case (`"youtube · 25
+left"`), `level` is `calm`, `notice` or `urgent`, and `key` names the news, its kind and its subject (`low:youtube`,
+`ask:<request id>`, `pause:<until>`), never a count: it stays the same while the minutes tick down and changes when the
+news does, so an app can animate only real news.
+
+The **headline** is the first of these that holds (glance.py), in this order:
+
+| Level | News | Text | Key |
+|---|---|---|---|
+| urgent | a request for more time waits (or an offer) | `asks for 30 more · youtube` (`youtube ran out · give 30?`) | `ask:<id>` |
+| urgent | a family pause | `paused · dinner till 6:30` | `pause:<until>` |
+| urgent | out of All screen time (and no allow for all) | `out of time` | `out:all` |
+| notice | locked now by bedtime, School time or another lock | `bedtime till 7:00` | `lock:<kind>:<until>` |
+| notice | bedtime or School time starts within 15 minutes | `bedtime in 12 min` | `soon:<kind>:<at>` |
+| notice | a group out, or under 10 minutes (fewest first) | `youtube · out`, `youtube · 7 left` | `out:<group>`, `low:<group>` |
+| notice | an allow (`hearth.allow`) | `youtube allowed till 8:00` | `allow:<id>` |
+| notice | School time taken off today | `no school time today` | `school_off:<id>` |
+| calm | the most-used group with a limit (All screen time only when it's the only one) | `youtube · 25 left` | `left:<group>` |
+| calm | nothing else | `all clear` | `clear` |
+
+Times are local, 12-hour, without am/pm. **lines** are the rest of that list in the same order, then each group with a
+limit (All screen time first, `left`, `low` or `out` as above), what's playing (`hearthtube · kitchen`, key
+`playing:<package>`) and the next lock (`bedtime at 9:00`, key `next:<kind>:<at>`); never the headline again.
+
+**actions** are what an adult can do for the person now, each `{id, label, service, data, confirm?, primary?}`: an app
+calls `service` with exactly `data`, with the adult's own Home Assistant sign-in, after asking `confirm` when it's set;
+`primary` ones come first. The result shows in the next summary. Only what applies now is offered:
+
+| id | When | service and data |
+|---|---|---|
+| `ask_yes:<id>` (primary), `ask_no:<id>` | a request waits | `hearth.answer_request` `{request_id, minutes: <asked>}` / `{request_id, deny: true}` |
+| `bonus:<group>` | each group with a limit today, fewest minutes first; primary when it's out | `hearth.add_bonus` `{person, minutes: 15, group}` |
+| `pause` (confirm) | not paused | `hearth.pause` `{people: [person], minutes: 30}` |
+| `pause_end` | paused | `hearth.pause_end` `{people: [person]}` |
+| `allow_end:<id>` (confirm) | an allow | `hearth.allow_end` `{people: [person], group}` or `{people: [person], app}` |
+
+`household` is the same for the whole house: a `headline` (urgent: requests waiting, `alex asks for 30 more` or `2
+asks waiting`; notice: a pause, `everyone paused till 6:30` or `sam paused till 6:30`; notice, administrators only: a
+device waiting to pair; notice: kids out of time; calm: `all clear`) and `actions`: each waiting request's yes and no
+(labelled with the kid's name), `pause_end` (`hearth.pause_end {}`, ends every pause) while anyone is paused, and
+`pause_all` (`hearth.pause {minutes: 30}`, confirm) unless everyone is. Approving a device to pair isn't an action:
+it's an administrator's step on Hearth's page, with no service.
+
+A trimmed example: a kid Alex who asked for more, is paused and is low on video, and Sam with nothing to report. The
+whole summary, from a test, is [examples/household-contract2.json](examples/household-contract2.json).
+
+```json
+{
+  "contract": 2,
+  "people": [
+    {
+      "id": "person.alex",
+      "name": "Alex",
+      "kind": "kid",
+      "headline": {
+        "text": "asks for 30 more · video",
+        "level": "urgent",
+        "key": "ask:h3RnR2dlNmQV"
+      },
+      "lines": [
+        {
+          "text": "paused · dinner till 6:30",
+          "level": "urgent",
+          "key": "pause:2026-11-06T18:30:11-08:00"
+        },
+        {
+          "text": "video · 5 left",
+          "level": "notice",
+          "key": "low:video"
+        },
+        {
+          "text": "screen time · 95 left",
+          "level": "calm",
+          "key": "left:all"
+        }
+      ],
+      "actions": [
+        {
+          "id": "ask_yes:h3RnR2dlNmQV",
+          "label": "yes 30",
+          "service": "hearth.answer_request",
+          "data": {
+            "request_id": "h3RnR2dlNmQV",
+            "minutes": 30
+          },
+          "primary": true
+        },
+        {
+          "id": "ask_no:h3RnR2dlNmQV",
+          "label": "no",
+          "service": "hearth.answer_request",
+          "data": {
+            "request_id": "h3RnR2dlNmQV",
+            "deny": true
+          }
+        },
+        {
+          "id": "bonus:video",
+          "label": "+15 video",
+          "service": "hearth.add_bonus",
+          "data": {
+            "person": "person.alex",
+            "minutes": 15,
+            "group": "video"
+          }
+        },
+        {
+          "id": "bonus:all",
+          "label": "+15 screen time",
+          "service": "hearth.add_bonus",
+          "data": {
+            "person": "person.alex",
+            "minutes": 15,
+            "group": "all"
+          }
+        },
+        {
+          "id": "pause_end",
+          "label": "end the pause",
+          "service": "hearth.pause_end",
+          "data": {
+            "people": [
+              "person.alex"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "person.sam",
+      "name": "Sam",
+      "kind": "kid",
+      "headline": {
+        "text": "video · 50 left",
+        "level": "calm",
+        "key": "left:video"
+      },
+      "lines": [
+        {
+          "text": "screen time · 105 left",
+          "level": "calm",
+          "key": "left:all"
+        },
+        {
+          "text": "bedtime at 9:00",
+          "level": "calm",
+          "key": "next:bedtime:2026-11-06T21:00:00-08:00"
+        }
+      ],
+      "actions": [
+        {
+          "id": "bonus:video",
+          "label": "+15 video",
+          "service": "hearth.add_bonus",
+          "data": {
+            "person": "person.sam",
+            "minutes": 15,
+            "group": "video"
+          }
+        },
+        {
+          "id": "bonus:all",
+          "label": "+15 screen time",
+          "service": "hearth.add_bonus",
+          "data": {
+            "person": "person.sam",
+            "minutes": 15,
+            "group": "all"
+          }
+        },
+        {
+          "id": "pause",
+          "label": "pause 30 min",
+          "service": "hearth.pause",
+          "data": {
+            "people": [
+              "person.sam"
+            ],
+            "minutes": 30
+          },
+          "confirm": "pause sam for 30 min?"
+        }
+      ]
+    }
+  ],
+  "household": {
+    "headline": {
+      "text": "alex asks for 30 more",
+      "level": "urgent",
+      "key": "asks:h3RnR2dlNmQV"
+    },
+    "actions": [
+      {
+        "id": "ask_yes:h3RnR2dlNmQV",
+        "label": "alex yes 30",
+        "service": "hearth.answer_request",
+        "data": {
+          "request_id": "h3RnR2dlNmQV",
+          "minutes": 30
+        },
+        "primary": true
+      },
+      {
+        "id": "ask_no:h3RnR2dlNmQV",
+        "label": "alex no",
+        "service": "hearth.answer_request",
+        "data": {
+          "request_id": "h3RnR2dlNmQV",
+          "deny": true
+        }
+      },
+      {
+        "id": "pause_end",
+        "label": "end the pause",
+        "service": "hearth.pause_end",
+        "data": {}
+      },
+      {
+        "id": "pause_all",
+        "label": "pause everyone 30 min",
+        "service": "hearth.pause",
+        "data": {
+          "minutes": 30
+        },
+        "confirm": "pause everyone for 30 min?"
+      }
+    ]
+  }
+}
+```
+
+`HEARTH_EXAMPLE_OUT=<file>` with the tests (`ha_tests/test_glance.py`) writes the full example again.
 
 Hearth's page opens on a tab from its link: `/hearth#today`, `#kids`, `#devices`, `#apps`, `#family`, and
 `#approvals` (Today, where requests for more time and devices waiting to pair are shown first).
@@ -791,6 +1037,12 @@ device removes it from the household.
   bounded, never templated.
 - Kids' devices hold no Home Assistant token.
 - Pairing is the one step that needs an administrator.
+- **Who may call Hearth's services.** Every `hearth.*` service checks its caller: a call with no user (an automation,
+  or a script an automation started) may; so may an administrator, and a user whose person is an adult on Hearth's
+  page (the rule that lets them read the household summary, auth.py). Anyone else (a kid with a Home Assistant user of
+  their own) gets Home Assistant's Unauthorized error, for the read-only ones too (`explain`, `get_watch_log`,
+  `watch_digest`): a kid doesn't read the watch log. A script a kid starts from a dashboard runs as the kid, so it's
+  refused as well.
 
 ## Migration
 
