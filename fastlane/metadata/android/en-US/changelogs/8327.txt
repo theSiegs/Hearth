@@ -1,0 +1,1 @@
+Parent PINs from Home Assistant are checked there when it's reachable; the TV's offline copy is now encrypted.

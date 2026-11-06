@@ -1,0 +1,1 @@
+A parent PIN for each adult, set in Home Assistant: connected TVs take them and accept any adult's, offline too.

@@ -53,15 +53,25 @@ def merge(readings: Iterable[Reading]) -> DeviceUsage:
 
 
 def group_seconds(
-    devices: Mapping[str, DeviceUsage], groups_of: Callable[[str], set[str]]
+    devices: Mapping[str, DeviceUsage],
+    groups_of: Callable[[str], set[str]],
+    outside: Iterable[str] = (),
 ) -> dict[str, float]:
-    """Seconds per group across [devices]; [groups_of] says which groups an app or title is in (All is added)."""
+    """Seconds per group across [devices]; [groups_of] says which groups an app or title is in (All is added). Time in
+    an [outside] group (music, say) isn't screen time: it counts in its group but not in All."""
+    outside = set(outside) - {ALL}
     out: dict[str, float] = {ALL: 0.0}
     for usage in devices.values():
         out[ALL] += usage.total_s
         for item, seconds in usage.items.items():
-            for group in groups_of(item) - {ALL}:
+            groups = groups_of(item) - {ALL}
+            for group in groups:
                 out[group] = out.get(group, 0.0) + seconds
+            if groups & outside:
+                out[ALL] -= seconds
         if usage.rest_s > 0 and usage.rest_group and usage.rest_group != ALL:
             out[usage.rest_group] = out.get(usage.rest_group, 0.0) + usage.rest_s
+            if usage.rest_group in outside:
+                out[ALL] -= usage.rest_s
+    out[ALL] = max(0.0, out[ALL])
     return out

@@ -429,6 +429,22 @@ public class MainActivity extends FlutterActivity {
                     call.argument("profile"), call.argument("slot"), call.argument("jpeg")));
             // The Parent PIN: the household's, and this TV's for it (HouseholdParentPin decides which way)
             case "getHouseholdParentPin" -> answerFrom(sIoExecutor, result, () -> Household.parentPin(this));
+            case "getHaParentPins" -> answerFrom(sIoExecutor, result, () -> {
+                java.util.Map<String, Object> pins = new java.util.HashMap<>();
+                pins.put("kept", HaParentPins.kept(this));
+                pins.put("managed", HaParentPins.managed(this));
+                return pins;
+            });
+            case "verifyParentPin" -> answerFrom(sIoExecutor, result,
+                    () -> HaParentPins.verify(this, (String) call.arguments()));
+            case "forgetHaParentPins" -> {
+                HaParentPins.forget(this);
+                result.success(null);
+            }
+            case "noteParentPinLockout" -> {
+                HaParentPins.noteLockout(this);
+                result.success(null);
+            }
             case "publishHouseholdParentPin" -> answerFrom(sIoExecutor, result,
                     () -> Household.publishParentPin(this, (String) call.arguments()));
             case "lookForHouseholds" -> {
@@ -522,6 +538,37 @@ public class MainActivity extends FlutterActivity {
                 state.put("url", HaConfig.baseUrl(this));
                 return state;
             });
+            // The Hearth integration's say about the active kids profile, for the time's up card: a pause, the lock
+            // on now, the next bedtime, the latest request for more time, the groups out of time (HaLocks)
+            case "getHaLockState" -> {
+                String key = LauncherAccessibilityService.getActiveProfileKey(this);
+                long now = System.currentTimeMillis();
+                result.success(HaLocks.forFlutter(HaAllowance.entryFor(this, key, now), HaIntegration.isPaired(this),
+                        key != null && ProfileUsers.isKids(this), now));
+            }
+            // A kid asks the adults for more time (HaIntegration.ask): {ok, request} or {error, request?, retryIn?}
+            case "askForMoreTime" -> {
+                Integer minutes = call.argument("minutes");
+                String group = call.argument("group");
+                String key = LauncherAccessibilityService.getActiveProfileKey(this);
+                answerFrom(sIoExecutor, result, () -> {
+                    org.json.JSONObject asked = HaIntegration.ask(this, key, minutes != null ? minutes : 15, group);
+                    Map<String, Object> answer = new HashMap<>();
+                    answer.put("ok", asked.optBoolean("ok", false));
+                    answer.put("error", asked.optString("error", null));
+                    if (asked.has("retry_in")) answer.put("retryIn", asked.optInt("retry_in"));
+                    org.json.JSONObject request = asked.optJSONObject("request");
+                    if (request != null) answer.put("request", HaLocks.requestForFlutter(request));
+                    // The answer shows in the next status answer: post soon
+                    if (answer.get("ok") == Boolean.TRUE) runOnUiThread(HaBridgeService::refreshNow);
+                    return answer;
+                });
+            }
+            // A fresh status answer from the integration (a request waits for its answer)
+            case "refreshHaStatus" -> {
+                HaBridgeService.refreshNow();
+                result.success(null);
+            }
             case "startHaPairing" -> {
                 String url = HaConfig.normalizeUrl(call.argument("url"));
                 String nonce = HaIntegration.randomToken(32);
@@ -1101,7 +1148,7 @@ public class MainActivity extends FlutterActivity {
 
     private boolean launchApp(String packageName) {
         // Its group's time is up today for this kid (the Hearth integration)
-        if (Allowance.holdForTime(this, packageName)) return false;
+        if (Allowance.holdForTime(this, packageName, true)) return false;
         // Another profile on: its own copy, in its user
         Boolean inProfile = ProfileApps.launch(this, packageName);
         if (inProfile != null) return inProfile;
@@ -1665,6 +1712,24 @@ public class MainActivity extends FlutterActivity {
         new Handler(Looper.getMainLooper()).post(() -> channel.invokeMethod("homePressed", null));
     }
 
+    /**
+     * Tells Flutter an app was held because its group's time is up ([group]; null: a family pause holds every app),
+     * so the time's up card shows. False when Flutter isn't there to hear it (the caller shows a toast instead).
+     */
+    static boolean notifyTimeUp(String group) {
+        MethodChannel channel = sMethodChannel != null ? sMethodChannel.get() : null;
+        if (channel == null) return false;
+        new Handler(Looper.getMainLooper()).post(() -> channel.invokeMethod("timeUp", group));
+        return true;
+    }
+
+    /** Tells Flutter a new answer from the Hearth integration came (a pause, a lock, a request's answer). */
+    static void notifyHaStateChanged() {
+        MethodChannel channel = sMethodChannel != null ? sMethodChannel.get() : null;
+        if (channel == null) return;
+        new Handler(Looper.getMainLooper()).post(() -> channel.invokeMethod("haStateChanged", null));
+    }
+
     static void notifyProfileChanged() {
         MethodChannel channel = sMethodChannel != null ? sMethodChannel.get() : null;
         if (channel == null) return;
@@ -1846,7 +1911,7 @@ public class MainActivity extends FlutterActivity {
      * otherwise here, once something handles it, telling Profile Pairing first.
      */
     private boolean openInApp(Intent intent, String pkg) {
-        if (Allowance.holdForTime(this, pkg != null ? pkg : packageOf(intent))) return false;
+        if (Allowance.holdForTime(this, pkg != null ? pkg : packageOf(intent), true)) return false;
         Boolean inProfile = ProfileApps.open(this, intent);
         if (inProfile != null) return inProfile;
         if (intent.resolveActivity(getPackageManager()) == null) return false;

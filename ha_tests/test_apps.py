@@ -1,8 +1,8 @@
-"""New apps: noticed, suggested a group, asked about, and sorted into a group."""
+"""New apps: noticed and sorted on their own (a group that lists them, their category, else Other); an adult moves one
+later, and that beats everything."""
 
 from homeassistant.components import persistent_notification
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import async_capture_events, async_mock_service
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
@@ -38,70 +38,52 @@ async def test_what_was_there_already_isn_t_new(hass: HomeAssistant, hass_client
     assert hass.states.get("sensor.hearth_home_apps_to_sort").state == "0"
 
 
-async def test_a_newly_allowed_app_is_asked_about(
+async def test_a_new_app_is_sorted_without_asking(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
     calls = async_mock_service(hass, "notify", "mobile_app_parent")
     await _watching(hass, hass_client_no_auth, phone=True)
     events = async_capture_events(hass, "hearth_new_app")
 
-    _allowed(hass, ("com.example.old", "Old App"), ("com.example.newgame", "New Game"))
+    _allowed(hass, ("com.example.old", "Old App"), ("com.example.newgame", "New Game"), ("com.whatsapp", "WhatsApp"))
     await hass.async_block_till_done()
 
-    assert [e.data["package"] for e in events] == ["com.example.newgame"]
-    assert _waiting(hass)[0]["name"] == "New Game"
-    assert _waiting(hass)[0]["who"] == "Sam"
-    notes = persistent_notification._async_get_or_create_notifications(hass)
-    assert any("New Game" in n["message"] for n in notes.values())
-    assert len(calls) == 1
-    buttons = [a["title"] for a in calls[0].data["data"]["actions"]]
-    assert buttons == ["Streaming", "Games", "Other"]
-
-
-async def test_an_app_already_in_a_group_isn_t_asked_about(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
-) -> None:
-    await _watching(hass, hass_client_no_auth)
-    _allowed(hass, ("com.example.old", "Old App"), ("com.netflix.ninja", "Netflix"))
-    await hass.async_block_till_done()
+    assert {e.data["package"]: e.data["group"] for e in events} == {
+        "com.example.newgame": "other",
+        "com.whatsapp": "messaging",
+    }
     assert hass.states.get("sensor.hearth_home_apps_to_sort").state == "0"
+    assert calls == []
+    notes = persistent_notification._async_get_or_create_notifications(hass)
+    assert not any("New Game" in n["message"] for n in notes.values())
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    recent = {a["package"]: a["group"] for a in household.apps_overview()["recent"]}
+    assert recent == {"com.example.newgame": "other", "com.whatsapp": "messaging"}
 
 
-async def test_sorting_on_the_phone_puts_it_in_the_group(
+async def test_an_app_an_adult_moved_stays_where_they_put_it(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
     async_mock_service(hass, "notify", "mobile_app_parent")
     await _watching(hass, hass_client_no_auth, phone=True)
-    _allowed(hass, ("com.example.old", "Old App"), ("com.example.show", "Show Box"))
+    _allowed(hass, ("com.example.old", "Old App"), ("com.example.show", "Show Box"), ("com.netflix.ninja", "Netflix"))
     await hass.async_block_till_done()
 
+    # An older phone button still works: it moves the app
     hass.bus.async_fire("mobile_app_notification_action", {"action": "HEARTH_APP|streaming|com.example.show"})
     await hass.async_block_till_done()
-
     entry = hass.config_entries.async_entries(DOMAIN)[0]
-    streaming = next(g for g in entry.options["groups"] if g["id"] == "streaming")
-    assert "com.example.show" in streaming["apps"]
-    assert hass.states.get("sensor.hearth_home_apps_to_sort").state == "0"
-    notes = persistent_notification._async_get_or_create_notifications(hass)
-    assert not any("Show Box" in n["message"] for n in notes.values())
+    assert entry.options["app_groups"] == {"com.example.show": "streaming"}
 
-
-async def test_sorting_in_the_options(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
-    await _watching(hass, hass_client_no_auth)
-    _allowed(hass, ("com.example.old", "Old App"), ("com.example.a", "Alpha"), ("com.example.b", "Beta"))
-    await hass.async_block_till_done()
-    entry = hass.config_entries.async_entries(DOMAIN)[0]
-
-    result = await hass.config_entries.options.async_init(entry.entry_id)
-    result = await hass.config_entries.options.async_configure(result["flow_id"], {"next_step_id": "sort_apps"})
-    assert result["type"] is FlowResultType.FORM
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {"Alpha (com.example.a)": "games", "Beta (com.example.b)": "other"}
+    # Moving an app out of the group that lists it beats the list
+    hass.config_entries.async_update_entry(
+        entry, options={**entry.options, "app_groups": {**entry.options["app_groups"], "com.netflix.ninja": "other"}}
     )
-    assert result["type"] is FlowResultType.CREATE_ENTRY
     await hass.async_block_till_done()
-    assert "com.example.a" in entry.options["group_apps"]["games"]
-    assert hass.states.get("sensor.hearth_home_apps_to_sort").state == "0"
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    groups = {a["package"]: (a["group"], a["moved"]) for a in household.apps_overview()["apps"]}
+    assert groups["com.example.show"] == ("streaming", True)
+    assert groups["com.netflix.ninja"] == ("other", True)
 
 
 async def test_a_newly_watched_list_isn_t_a_flood(

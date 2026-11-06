@@ -113,7 +113,7 @@ public class ProfileProvider extends ContentProvider {
                 FlutterPrefs.getString(context, "accent_color", null),
                 formats[1],
                 FlutterPrefs.getString(context, "app_language", ""),
-                FlutterPrefs.getString(context, "device_parent_pin_hash", null) != null ? 1 : 0,
+                HaParentPins.any(context) ? 1 : 0,
                 FlutterPrefs.getString(context, "gradient_uuid", null),
                 wallpaper.file != null ? wallpaper.file.lastModified() : 0,
                 formats[0],
@@ -297,15 +297,15 @@ public class ProfileProvider extends ContentProvider {
             return result;
         }
 
-        String hash = FlutterPrefs.getString(context, "device_parent_pin_hash", null);
-        // Either form the app keeps (ParentPinHash): the salted one, or the old one
-        boolean ok = ParentPinHash.verify(pin, hash);
+        // The adults' from Home Assistant while there are any, else the TV's own (either form ParentPinHash keeps)
+        boolean ok = HaParentPins.verify(context, pin);
 
         int wrong = ok ? 0 : prefs.getInt(PREF_WRONG_PINS, 0) + 1;
         SharedPreferences.Editor editor = prefs.edit();
         if (wrong >= MAX_PIN_TRIES) {
             wrong = 0;
             editor.putLong(PREF_PIN_LOCKED_UNTIL, now + PIN_LOCKOUT_MS);
+            HaParentPins.noteLockout(context);
         }
         editor.putInt(PREF_WRONG_PINS, wrong).commit();
 

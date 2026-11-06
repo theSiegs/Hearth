@@ -44,12 +44,12 @@ It's free software (GPL-3.0).
 - Follows Google TV's own profiles, kids' and adults': a home layout, wallpaper and Continue Watching per person.
 - **Profile Pairing** (optional): opening Netflix, Disney+, Apple TV, HBO Max or Paramount+ from Hearth picks your
   profile in that app, by name or the one you pair it with.
-- **Lock Profile** with Google TV's own lock: hold the profile button (on remotes that have one), from Settings, or
+- **Lock now** with Google TV's own lock: hold the profile button (on remotes that have one), from Settings, or
   when the TV goes to sleep.
 
 **Kids & Family Link**
 - Works with Family Link: Hearth steps aside for Google TV's bedtime and time's-up screens, and comes back after.
-- Hearth (and HearthTube) goes on each kids profile and stays there. **Settings → Profiles → Kids profiles**
+- Hearth (and HearthTube) goes on each kids profile and stays there. **Settings → Family → Kids profiles**
   shows each kid as Ready or Needs a fix, and holds each kid's settings, like their YouTube time per day.
 - A parent PIN guards anything in a kids profile that could undo your setup.
 - With HearthTube, kids watch YouTube only there, where their daily time applies.
@@ -67,7 +67,7 @@ It's free software (GPL-3.0).
 - The Home button opens Hearth, every time.
 
 **Also:** a notifications panel, sleep when idle, TV inputs (on TVs that have them), daily backups on the TV,
-updates from GitHub releases, If you ever want
+updates from GitHub releases. If you ever want
 Google TV's home back for a while, **Settings → TV & power → Use Google TV's home**.
 
 ## With Home Assistant
@@ -104,7 +104,7 @@ exactly what they do.
   accessibility service pressing the app's on-screen keys (Netflix, Disney+, Apple TV and HBO Max profile PINs;
   Paramount+'s content PIN). PINs are encrypted with a key that never leaves the TV, belong to the Google TV profile
   that saved them, and in an adult's profile are typed only when that profile has its own Google TV PIN. After two
-  rejected PINs Hearth stops. You can save them from your phone (encrypted on the phone first). One switch turns it
+  rejected profile PINs (one for Paramount+'s content PIN) Hearth stops. You can save them from your phone (encrypted on the phone first). One switch turns it
   all off. Streaming services' terms may not allow an app to do this for you.
 - **Approve from your phone** (new, experimental; needs Home Assistant and its phone app). When someone opens your
   PIN-locked Google TV profile, your phone asks Allow or Deny; Allow has Hearth type your Google TV PIN, which you
@@ -113,7 +113,7 @@ exactly what they do.
   time the profile starts. Once you press **Fix**, Hearth puts itself (and HearthTube) on your kids profiles and
   keeps them there, using the TV's own debugging connection. That means **debugging stays on**, with "Disable adb
   authorization timeout" set, so the TV keeps trusting Hearth. It only installs, keeps and removes Hearth's own two
-  apps. Uninstall from **Settings → Profiles → Kids profiles → Uninstall Hearth**, or copies stay behind on the kids
+  apps. Uninstall from **Settings → System → Uninstall Hearth**, or copies stay behind on the kids
   profiles.
 
 ## What setup takes
@@ -167,12 +167,12 @@ No ads, analytics, crash reporting or account. Settings, layouts, watch history 
 connects only for the features you use:
 
 - Bing's photo of the day (`www.bing.com`)
-- Weather (`api.open-meteo.com`), unless you use the Breezy Weather app
+- Weather (`api.open-meteo.com`, and `geocoding-api.open-meteo.com` to look up a place), unless you use the Breezy Weather app
 - Search: what you type, to Wikidata and TMDB (`www.wikidata.org`, `api.themoviedb.org`, `image.tmdb.org`)
 - Continue Watching: the title of a card that has no poster Hearth can read, to the same two, once per title
 - Continue Watching artwork, from the image hosts the apps name
 - The Home Assistant map: OpenStreetMap tiles around home, fetched once (`tile.openstreetmap.org`)
-- Updates of Hearth and HearthTube, and a list of streaming-app versions not to type PINs in (GitHub)
+- Updates of Hearth and HearthTube, a list of streaming-app versions not to type PINs in, and updated PIN-entry steps (GitHub)
 - Your own Home Assistant
 
 Details, and every Android permission Hearth asks for and why: [docs/privacy.md](docs/privacy.md).

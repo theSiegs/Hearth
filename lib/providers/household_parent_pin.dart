@@ -55,9 +55,19 @@ class HouseholdParentPin {
     return local == null ? ParentPinStep.none : ParentPinStep.give;
   }
 
-  /// One round: outside a household, forgets what it knew (a household joined later starts fresh).
+  /// One round: first Home Assistant's parent PINs; while the TV uses those, the household's isn't synced (each TV
+  /// takes them from Home Assistant). Outside a household, forgets what it knew (a household joined later starts
+  /// fresh).
   Future<void> tick() async {
     try {
+      final fromHa = await _channel.getHaParentPins();
+      if (fromHa != null) {
+        await _settings.setHaParentPins(kept: fromHa["kept"] == true, managed: fromHa["managed"] == true);
+      }
+      if (_settings.haParentPinsKept) {
+        await _settings.setHouseholdParentPinOffered(null);
+        return;
+      }
       final state = await _channel.getHouseholdParentPin();
       if (state == null) {
         await _prefs.remove(knownKey);

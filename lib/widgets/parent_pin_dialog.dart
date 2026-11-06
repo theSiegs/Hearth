@@ -55,7 +55,7 @@ Future<bool> requireParent(BuildContext context) async {
     builder: (_) => ParentPinDialog(
       title: l.parentPinTitle,
       subtitle: l.parentPinKidsSubtitle,
-      verify: settings.verifyParentPin,
+      verify: settings.checkParentPin,
       phone: context.read<FLauncherChannel?>(),
     ),
   );
@@ -82,7 +82,7 @@ Future<bool> requireParentPin(BuildContext context) async {
   }
   final String? pin = await showDialog<String>(
     context: context,
-    builder: (_) => ParentPinDialog(title: l.parentPinTitle, verify: settings.verifyParentPin, phone: channel),
+    builder: (_) => ParentPinDialog(title: l.parentPinTitle, verify: settings.checkParentPin, phone: channel),
   );
   if (pin != null && !kids && channel != null) {
     try {
@@ -117,8 +117,20 @@ Future<bool> chooseNewParentPin(BuildContext context) async {
     builder: (_) => ParentPinDialog(title: l.parentPinConfirm, verify: (pin) => pin == first),
   );
   if (second == null) return false;
+  final channel = context.mounted ? context.read<FLauncherChannel?>() : null;
   await settings.setParentPin(first);
+  // A PIN of this TV's own replaces any kept from Home Assistant (the Java side's copy too, not waited for)
+  unawaited(forgetHaParentPins(channel));
   return true;
+}
+
+/// Tells the Java side its Home Assistant parent PINs are replaced by a PIN of the TV's own (a failure is only noted).
+Future<void> forgetHaParentPins(FLauncherChannel? channel) async {
+  try {
+    await channel?.forgetHaParentPins();
+  } catch (err) {
+    noteFailure('forget_ha_parent_pins', err);
+  }
 }
 
 /// Full-screen PIN entry in Google TV's style: the shuffled row pad (see [_RowPad]), number keys type directly.
@@ -133,6 +145,9 @@ class PinLockout {
 
   static final PinLockout shared = PinLockout();
 
+  /// Told when a lockout starts (the Parent PIN pads count them for Home Assistant).
+  void Function()? onLocked;
+
   int _misses = 0;
   DateTime? _until;
 
@@ -145,6 +160,7 @@ class PinLockout {
     if (_misses < freeTries) return;
     final seconds = (baseSeconds * (1 << (_misses - freeTries))).clamp(baseSeconds, maxSeconds);
     _until = now.add(Duration(seconds: seconds));
+    onLocked?.call();
   }
 
   void clear() {
@@ -156,7 +172,8 @@ class PinLockout {
 class ParentPinDialog extends StatefulWidget {
   final String title;
   final String? subtitle;
-  final bool Function(String pin)? verify;
+  /// Checks an entered PIN; may wait (Home Assistant's are checked there).
+  final FutureOr<bool> Function(String pin)? verify;
   static const int digitCount = 4;
 
   /// How many digits the PIN has ([digitCount] for Hearth's own; a streaming app's may differ).
@@ -248,15 +265,29 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
     });
   }
 
-  void _onDigit(String digit) {
-    if (_locked || _entered.length >= widget.length) return;
+  bool _checking = false;
+
+  Future<void> _onDigit(String digit) async {
+    if (_locked || _checking || _entered.length >= widget.length) return;
     setState(() {
       _entered += digit;
       _error = false;
     });
     if (_entered.length < widget.length) return;
 
-    if (widget.verify == null || widget.verify!(_entered)) {
+    var ok = true;
+    if (widget.verify != null) {
+      _checking = true;
+      try {
+        ok = await widget.verify!(_entered);
+      } catch (_) {
+        ok = false;
+      } finally {
+        _checking = false;
+      }
+      if (!mounted) return;
+    }
+    if (ok) {
       if (widget.verify != null) _lockout.clear();
       Navigator.of(context).pop(_entered);
       return;

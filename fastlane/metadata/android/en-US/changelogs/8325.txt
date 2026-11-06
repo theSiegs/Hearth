@@ -1,0 +1,1 @@
+Home Assistant limits: apps of a group that isn't screen time (music, say) stay usable when All screen time runs out.

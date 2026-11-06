@@ -68,7 +68,7 @@ void main() {
   testWidgets("kids profile needs the right parent PIN", (tester) async {
     when(profile.isKidsProfile).thenReturn(true);
     when(settings.hasParentPin).thenReturn(true);
-    when(settings.verifyParentPin(any)).thenAnswer((i) => i.positionalArguments[0] == "2468");
+    when(settings.checkParentPin(any)).thenAnswer((i) => i.positionalArguments[0] == "2468");
     await pump(tester);
 
     for (final digit in ["1", "1", "1", "1"]) {
@@ -90,7 +90,7 @@ void main() {
   testWidgets("the remote's number keys type the PIN too", (tester) async {
     when(profile.isKidsProfile).thenReturn(true);
     when(settings.hasParentPin).thenReturn(true);
-    when(settings.verifyParentPin(any)).thenAnswer((i) => i.positionalArguments[0] == "2468");
+    when(settings.checkParentPin(any)).thenAnswer((i) => i.positionalArguments[0] == "2468");
     await pump(tester);
 
     for (final key in [
@@ -113,7 +113,7 @@ void main() {
       channel = MockFLauncherChannel();
       when(profile.isKidsProfile).thenReturn(true);
       when(settings.hasParentPin).thenReturn(true);
-      when(settings.verifyParentPin(any)).thenAnswer((i) => i.positionalArguments[0] == "2468");
+      when(settings.checkParentPin(any)).thenAnswer((i) => i.positionalArguments[0] == "2468");
       when(channel.cancelParentApproval()).thenAnswer((_) async {});
     });
 

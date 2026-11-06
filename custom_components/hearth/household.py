@@ -24,6 +24,9 @@ from .const import (
     CONF_LOCKS,
     CONF_PERSON,
     CONF_PROFILES,
+    CONF_ROLES,
+    CONF_TILE_EXCHANGE,
+    CONTRACT,
     DOMAIN,
     EVENT_BUDGET_REACHED,
     EVENT_PLAYING_TOGETHER,
@@ -41,9 +44,12 @@ from .apps import (
     update_notification,
 )
 from .counting import ALL, DeviceUsage, Reading, group_seconds, merge
-from .limits import OTHER_DAY, SCHOOL_DAY, Group, GroupState, Limits, groups_from_options, groups_of
+from .limits import CONF_APP_GROUPS, OTHER, OTHER_DAY, SCHOOL_DAY, Group, GroupState, Limits, groups_from_options, groups_of
 from .enforce import Enforcement, enforcers_from_options
 from .watch import WatchLog
+from .pause import PAUSE, lock_kinds, lock_until, next_lock, pause_of
+from . import parent_pin
+from .media import media_rooms
 from .schooldays import SchoolDays
 from .live import LiveTracker, Observation, Together
 from .sources import (
@@ -155,6 +161,8 @@ class Household:
         found |= {d.get(CONF_PERSON) for d in self.hub.devices.values() if d.get(CONF_PERSON)}
         found |= {s.person for s in sources_from_options(self.options)}
         found |= {lock["person"] for lock in self.options.get(CONF_LOCKS, []) if lock.get("person")}
+        # The kids named on Hearth's page, before anything of theirs is set up
+        found |= {p for p, role in self.options.get(CONF_ROLES, {}).items() if role == "kid"}
         return sorted(found)
 
     def person_name(self, person: str) -> str:
@@ -165,7 +173,15 @@ class Household:
         """Entities whose changes count: the screen time sources and the locks."""
         locks = [lock["entity_id"] for lock in self.options.get(CONF_LOCKS, [])]
         watched = list(self.options.get(CONF_APP_WATCH, []))
-        return [s.entity_id for s in sources_from_options(self.options)] + locks + watched + self.school.watched_entities()
+        # Who's playing a shared Switch: a change holds or lets it go
+        playing = [e for enforcer in enforcers_from_options(self.options) for e in enforcer.playing]
+        return (
+            [s.entity_id for s in sources_from_options(self.options)]
+            + locks
+            + watched
+            + playing
+            + self.school.watched_entities()
+        )
 
     def _locked_by(self, person: str) -> list[str]:
         return [
@@ -175,6 +191,33 @@ class Household:
             and (state := self.hass.states.get(lock["entity_id"])) is not None
             and state.state == "on"
         ]
+
+    def _lock_entities(self, person: str) -> list[str]:
+        return [lock["entity_id"] for lock in self.options.get(CONF_LOCKS, []) if lock.get("person") == person]
+
+    def _locks_document(self, person: str, day: PersonDay | None) -> dict[str, Any]:
+        """Why and until when the person is held ("lock" {by, until}), a family pause ("pause" {until, reason}), and
+        the next bedtime or school time ("next_lock" {at, by, kind}), for winding down before it."""
+        out: dict[str, Any] = {}
+        pause = pause_of(self.hass, person)
+        if pause:
+            out["pause"] = pause
+        if day and day.locked:
+            ends = [lock_until(self.hass, [e for e in day.locked_by if e != PAUSE])]
+            if pause:
+                ends.append(dt_util.parse_datetime(pause["until"]))
+            until = max((e for e in ends if e is not None), default=None)
+            kinds = lock_kinds(self.hass, day.locked_by)
+            out["lock"] = {
+                "by": list(day.locked_by),
+                # bedtime, school_time, pause or other: the first of them (bedtime before school time before a pause)
+                "kind": next((k for k in ("bedtime", "school_time", "pause", "other") if k in kinds), "other"),
+                "kinds": kinds,
+                "until": dt_util.as_local(until).isoformat() if until else None,
+            }
+        if upcoming := next_lock(self.hass, self._lock_entities(person)):
+            out["next_lock"] = upcoming
+        return out
 
     def seen_profiles(self) -> dict[str, str | None]:
         """TV profiles the TVs have reported: profile_id -> its name, for the options."""
@@ -208,6 +251,10 @@ class Household:
             for item in by_item:
                 if not item.startswith("title:"):
                     apps.setdefault(item, item)
+        # Every app the catalog has seen (a watched list, a device), with its name when one was given
+        for entry in self.apps.apps.values():
+            if apps.get(entry.package, entry.package) == entry.package:
+                apps[entry.package] = entry.name or entry.package
         for title in self.titles:
             apps[f"title:{title.id}"] = f"{title.name} (title)"
         return apps
@@ -223,7 +270,7 @@ class Household:
     def membership(self):
         """An item's groups: from the group lists, Android's category, where its time came from, and for a title
         its apps'."""
-        base = groups_of(self.groups, self.categories)
+        base = groups_of(self.groups, self.categories, self.options.get(CONF_APP_GROUPS, {}))
         hints = self._hints
         titles = {f"title:{t.id}": t for t in self.titles}
 
@@ -240,6 +287,8 @@ class Household:
     @callback
     def recompute(self) -> None:
         now = dt_util.now()
+        # A TV's commands that waited too long are told as expired
+        self.hub.commands.prune()
         today = now.date()
         new_day = self.limits.new_day(today)
         options = self.options
@@ -251,6 +300,7 @@ class Household:
         playing: dict[str, list[Playing]] = {}
         observations: list[Observation] = []
         categories: dict[str, str] = {}
+        catalog: dict[str, str] = {}
         hints: dict[str, set[str]] = {}
         profiles = self.profile_people()
 
@@ -270,6 +320,7 @@ class Household:
             if status is None:
                 continue
             categories.update(status.get("app_categories") or {})
+            catalog.update(status.get("catalog_categories") or {})
             name = device.get("name") or device_id
             # Yesterday's counts from a device that hasn't posted since midnight don't count today
             fresh = status.get("day") == today.isoformat()
@@ -323,6 +374,9 @@ class Household:
                         if source.group:
                             hints.setdefault(key, set()).add(source.group)
 
+        # An app's own category first, the shared catalog's for the rest
+        for package, category in catalog.items():
+            categories.setdefault(package, category)
         self.categories = categories
         self._hints = hints
         self._look_for_new_apps(categories)
@@ -333,8 +387,11 @@ class Household:
         days: dict[str, PersonDay] = {}
         for person in self.people():
             devices = {device: merge(r) for device, r in readings.get(person, {}).items()}
-            seconds = group_seconds(devices, membership)
+            seconds = group_seconds(devices, membership, self.outside_all())
             locked_by = self._locked_by(person)
+            # A family pause holds them as a lock does
+            if pause_of(self.hass, person, now):
+                locked_by.append(PAUSE)
             day = PersonDay(person, devices, seconds, playing=playing.get(person, []),
                             together_s=self.live.together_s.get(person, 0.0), locked=bool(locked_by),
                             locked_by=locked_by)
@@ -385,14 +442,15 @@ class Household:
                     status.get("app") or status["app_package"], where, f"hearth:{device_id}"
                 )
         fresh = self.apps.observe(observed, categories, self.groups, sources)
+        # Sorted on their own (a group that lists them, their category, the catalog's, else Other): nobody is asked;
+        # an adult moves one on Hearth's page if it landed wrong
         for entry in fresh:
             self.hass.bus.async_fire(
                 EVENT_NEW_APP,
-                {"package": entry.package, "name": entry.name, "who": entry.who, "suggested": entry.suggested},
+                {"package": entry.package, "name": entry.name, "who": entry.who, "group": entry.group or OTHER},
             )
-            self._ask_on_phone(entry)
         if fresh:
-            update_notification(self.hass, self.apps.new_apps(), self.groups)
+            update_notification(self.hass, [], self.groups)
 
     def _ask_on_phone(self, entry) -> None:
         service = self.options.get(CONF_ASK_NOTIFY)
@@ -417,18 +475,46 @@ class Household:
 
     @callback
     def sort_app(self, package: str, group: str) -> bool:
-        """An adult put an app in a group (or Other: All screen time only)."""
-        if group != "other" and self.group(group) is None:
+        """An adult moved an app to a group (or Other: All screen time only); it beats every automatic source."""
+        if group != OTHER and self.group(group) is None:
             return False
-        entry = self.apps.sort(package, group)
-        if entry is None:
-            return False
-        update_notification(self.hass, self.apps.new_apps(), self.groups)
-        if group != "other":
-            self.hass.config_entries.async_update_entry(
-                self.hub.entry, options=options_with_app_in_group(dict(self.hub.entry.options), package, group)
-            )
+        self.apps.sort(package, group)
+        moved = {**self.options.get(CONF_APP_GROUPS, {}), package: group}
+        self.hass.config_entries.async_update_entry(self.hub.entry, options={**self.hub.entry.options, CONF_APP_GROUPS: moved})
         return True
+
+    def app_group(self, package: str, membership=None) -> str:
+        """Where an app counts now: its first group besides All, or Other."""
+        groups = (membership or self.membership())(package) - {ALL}
+        order = [g.id for g in self.groups]
+        return min(groups, key=order.index) if groups else OTHER
+
+    def apps_overview(self) -> dict[str, Any]:
+        """Every known app with its group (and whether an adult moved it), and the ones sorted lately, newest first."""
+        membership = self.membership()
+        moved = self.options.get(CONF_APP_GROUPS, {})
+        known = self.known_apps()
+        apps = [
+            {"package": p, "name": name, "group": self.app_group(p, membership), "moved": p in moved}
+            for p, name in sorted(known.items(), key=lambda kv: kv[1].lower())
+        ]
+        recent = sorted(
+            (e for e in self.apps.apps.values() if e.state != "known"), key=lambda e: e.seen, reverse=True
+        )[:25]
+        return {
+            "apps": apps,
+            "recent": [
+                {
+                    "package": e.package,
+                    "name": known.get(e.package, e.name),
+                    "who": e.who,
+                    "seen": e.seen,
+                    "group": self.app_group(e.package, membership),
+                    "moved": e.package in moved,
+                }
+                for e in recent
+            ],
+        }
 
     def _label(self, key: str, fallback: str | None) -> str:
         if key.startswith("title:"):
@@ -456,21 +542,42 @@ class Household:
                     found.add(candidate)
         return sorted(found)
 
-    def _person_apps(self, day: PersonDay | None, membership) -> list[str]:
-        """Every app of a person's Hearth knows, for holding All screen time: the apps of every group, and those in
-        their usage today on any device and from any source (a title's packages)."""
+    def outside_all(self) -> set[str]:
+        """The groups whose time isn't screen time (Configure > Not screen time)."""
+        return {g.id for g in self.groups if not g.in_all and g.id != ALL}
+
+    def _spared(self, membership) -> set[str]:
+        """The packages All screen time never holds: those of the groups outside it."""
         found: set[str] = set()
         for group in self.groups:
-            if group.id != ALL:
+            if group.id in self.outside_all():
+                found |= set(self._group_apps(group, membership))
+        return found
+
+    def group_packages(self) -> dict[str, list[str]]:
+        """Each group's packages (not All's: every app), as devices are held to them."""
+        membership = self.membership()
+        return {g.id: self._group_apps(g, membership) for g in self.groups if g.id != ALL}
+
+    def _person_apps(self, day: PersonDay | None, membership) -> list[str]:
+        """Every app of a person's Hearth knows, for holding All screen time: the apps of every group, and those in
+        their usage today on any device and from any source (a title's packages); never those of a group outside All
+        screen time."""
+        outside = self.outside_all()
+        found: set[str] = set()
+        for group in self.groups:
+            if group.id != ALL and group.id not in outside:
                 found |= set(self._group_apps(group, membership))
         titles = {f"title:{t.id}": t for t in self.titles}
         for usage in (day.devices.values() if day else ()):
             for item in usage.items:
+                if membership(item) & outside:
+                    continue
                 title = titles.get(item)
                 for candidate in (title.raw if title else (item,)):
                     if "." in candidate and " " not in candidate:
                         found.add(candidate)
-        return sorted(found)
+        return sorted(found - self._spared(membership))
 
     def _person_document(self, person: str) -> dict[str, Any]:
         day = self.days.get(person)
@@ -480,18 +587,25 @@ class Household:
             state = day.limits.get(group.id) if day else None
             if state is None or state.budget_min is None:
                 continue
-            groups.append(
-                {
-                    "id": group.id,
-                    "name": group.name,
-                    "minutes_left": state.minutes_left,
-                    "apps": self._group_apps(group, membership),
-                }
-            )
+            entry = {
+                "id": group.id,
+                "name": group.name,
+                "minutes_left": state.minutes_left,
+                "apps": self._group_apps(group, membership),
+            }
+            # All screen time holds every app but these (a group outside it: music, say)
+            if group.id == ALL and (spared := self._spared(membership)):
+                entry["except"] = sorted(spared)
+            groups.append(entry)
         return {
             "person": person,
             "groups": groups,
             "locked": bool(day and day.locked),
+            **self._locks_document(person, day),
+            # A parent let this person's phone share with the launcher's tile exchange (off unless chosen)
+            "tile_exchange_share": person in self.options.get(CONF_TILE_EXCHANGE, []),
+            # Their latest request for more time and its answer (asks.py), while it's still news
+            **({"request": ask.device_view()} if (ask := self.hub.asks.latest_for(person)) else {}),
             # What a parent blocked here, for HearthTube in the person's kids profiles (a TV's Hearth passes it on)
             "youtube_blocks": self.watch.blocks_document(person),
         }
@@ -518,11 +632,39 @@ class Household:
                     for profile_id, person in sorted(profiles.items())
                     if person
                 },
+                # One-shot commands waiting for this TV (hearth.play_on_tv): it runs each id once and says so in its
+                # next status (commands_done)
+                "commands": self.hub.commands.document_for(device_id),
             }
+            # The adults' parent PINs (hashes, never a PIN): a paired TV asks verify_pin, and keeps these (sealed) to
+            # check PINs with Home Assistant down. Sent only when they changed since the TV's copy (its
+            # parent_pins_version); the version alone says its copy is current. Each says the TV profiles of its adult.
+            if pins := parent_pin.stored_pins(self.options):
+                listed = [
+                    {
+                        "person": person,
+                        "name": self.person_name(person),
+                        "hash": stored,
+                        "profiles": sorted(p for p, who in profiles.items() if who == person),
+                    }
+                    for person, stored in sorted(pins.items())
+                ]
+                pins_version = hashlib.sha256(json.dumps(listed, sort_keys=True).encode()).hexdigest()[:16]
+                body["parent_pins_version"] = pins_version
+                if status.get("parent_pins_version") != pins_version:
+                    body["parent_pins"] = listed
         else:
             person = device.get(CONF_PERSON)
             body = {"person": self._person_document(person) if person else None}
+            if body["person"] is not None:
+                role = self.options.get(CONF_ROLES, {}).get(person)
+                # kid / adult as set on Hearth's page (kind_set); else a kid when they have limits
+                body["person"]["kind"] = role or ("kid" if any(g["minutes_left"] is not None for g in body["person"]["groups"]) else "person")
+                body["person"]["kind_set"] = role is not None
+            # What's playing where in the house is anyone's to see: every room's players, for a phone's Music
+            body["media_rooms"] = media_rooms(self.hass)
         body["version"] = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()[:16]
+        body["contract"] = CONTRACT
         return body
 
     # Changes from services and entities

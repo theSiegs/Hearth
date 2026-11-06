@@ -76,6 +76,11 @@ const String _startOnBootKey = "start_on_boot";
 // device_ prefix: shared by all profiles, never part of a per-profile layout
 const String _parentPinHashKey = "device_parent_pin_hash";
 const String _householdParentPinOfferedKey = "device_household_parent_pin_offered";
+// Whether the adults' parent PINs from Home Assistant are kept (the Java side keeps them, sealed: HaParentPins.java), and
+// whether Home Assistant manages them now. The old key held their hashes here in the clear (2026.11.04): removed.
+const String _haParentPinsOldKey = "device_ha_parent_pins";
+const String _haParentPinsKeptKey = "device_ha_parent_pins_kept";
+const String _haParentPinsManagedKey = "device_ha_parent_pins_managed";
 const String _updatesIncludePrereleasesKey = "device_updates_include_prereleases";
 const String _updatesBuildKindKey = "device_updates_build_kind";
 
@@ -366,7 +371,35 @@ class SettingsService extends ChangeNotifier {
 
   Future<void> setPinConsentGiven() => _setBool(_pinConsentKey, true);
 
-  bool get hasParentPin => _sharedPreferences.getString(_parentPinHashKey) != null;
+  bool get hasParentPin => _sharedPreferences.getString(_parentPinHashKey) != null || haParentPinsKept;
+
+  /// The adults' parent PINs from Home Assistant are kept: while they are, any of them is the Parent PIN, in place of
+  /// this TV's own, and the Java side checks it ([checkParentPin]).
+  bool get haParentPinsKept => _sharedPreferences.getBool(_haParentPinsKeptKey) ?? false;
+
+  /// Home Assistant sets the Parent PIN: it can't be changed here.
+  bool get haParentPinsManaged => _sharedPreferences.getBool(_haParentPinsManagedKey) ?? false;
+
+  /// What the Java side says it keeps from Home Assistant.
+  Future<void> setHaParentPins({required bool kept, required bool managed}) async {
+    final hadOld = _sharedPreferences.containsKey(_haParentPinsOldKey);
+    if (!hadOld && kept == haParentPinsKept && (managed && kept) == haParentPinsManaged) return;
+    await _sharedPreferences.remove(_haParentPinsOldKey);
+    await _sharedPreferences.setBool(_haParentPinsKeptKey, kept);
+    await _sharedPreferences.setBool(_haParentPinsManagedKey, managed && kept);
+    notifyListeners();
+  }
+
+  /// Checks a PIN on the Java side while Home Assistant's are kept (it asks the integration, whose answer and lockout
+  /// are final, and falls back to its sealed copy); set at start-up.
+  Future<bool> Function(String pin)? haPinChecker;
+
+  /// Whether [pin] is the Parent PIN: Home Assistant's adults' while they're kept, else this TV's own.
+  FutureOr<bool> checkParentPin(String pin) {
+    final checker = haPinChecker;
+    if (haParentPinsKept && checker != null) return checker(pin);
+    return verifyParentPin(pin);
+  }
 
   /// The parent PIN as the TV keeps it (a hash), for the household; null when none is set.
   String? get parentPinHash => _sharedPreferences.getString(_parentPinHashKey);
@@ -377,8 +410,8 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Whether [pin] is the Parent PIN. A PIN kept in the old form (an unsalted hash) is kept in the new one after the
-  /// first good check.
+  /// Whether [pin] is this TV's own Parent PIN. A PIN kept in the old form (an unsalted hash) is kept in the new one
+  /// after the first good check. (Home Assistant's: [checkParentPin].)
   bool verifyParentPin(String pin) {
     final stored = _sharedPreferences.getString(_parentPinHashKey);
     if (!ParentPinHash.verify(pin, stored)) return false;
@@ -414,7 +447,12 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// A Parent PIN of this TV's own (null: none). It replaces any kept from Home Assistant (the caller tells the Java
+  /// side, FLauncherChannel.forgetHaParentPins).
   Future<void> setParentPin(String? pin) async {
+    await _sharedPreferences.remove(_haParentPinsOldKey);
+    await _sharedPreferences.remove(_haParentPinsKeptKey);
+    await _sharedPreferences.remove(_haParentPinsManagedKey);
     if (pin == null) {
       await _sharedPreferences.remove(_parentPinHashKey);
     } else {

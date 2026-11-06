@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flauncher/database.dart';
@@ -23,6 +24,7 @@ import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/home_forecast.dart';
 import 'package:flauncher/providers/household_parent_pin.dart';
+import 'package:flauncher/widgets/parent_pin_dialog.dart' show PinLockout;
 import 'package:flauncher/providers/home_agenda.dart';
 import 'package:flauncher/providers/calendars.dart';
 import 'package:flauncher/providers/home_data_usage.dart';
@@ -111,13 +113,16 @@ Future<void> main() async {
 
   final sharedPreferences = await SharedPreferences.getInstance();
   final fLauncherChannel = FLauncherChannel();
+  // Each lockout of a Parent PIN pad is counted for Home Assistant (its status says how many)
+  PinLockout.shared.onLocked = () => unawaited(fLauncherChannel.noteParentPinLockout().catchError((_) {}));
   final fLauncherDatabase = FLauncherDatabase(connect());
 
   runApp(MultiProvider(
       providers: [
         Provider<FLauncherChannel>.value(value: fLauncherChannel),
         ChangeNotifierProvider(
-            create: (_) => SettingsService(sharedPreferences),
+            // Home Assistant's parent PINs are checked on the Java side (it asks the integration first)
+            create: (_) => SettingsService(sharedPreferences)..haPinChecker = fLauncherChannel.verifyParentPin,
             lazy: false),
         // Made before the first profile check, which saves a layout: it tells a first start from an existing install
         ChangeNotifierProvider(create: (_) => SetupFlowService(sharedPreferences), lazy: false),

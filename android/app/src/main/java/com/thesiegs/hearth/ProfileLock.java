@@ -3,6 +3,8 @@ package com.thesiegs.hearth;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 /**
@@ -14,8 +16,10 @@ import android.util.Log;
  *
  * Asked for from a remote button (ButtonMapper "lock"), holding the profile button and Settings > Profiles.
  *
- * Waking after the TV slept a while (Settings > Profiles > the wake choice) opens Google TV's profile chooser
- * instead: whoever turned the TV on picks who is watching, and a profile with a PIN asks for it before it opens.
+ * The TV going to sleep (Settings > Profiles > the sleep choice) opens Google TV's profile chooser instead, kids
+ * profiles too: it waits behind the dark screen, so whoever turns the TV on next picks who is watching, and a profile
+ * with a PIN asks for it before it opens. With a time chosen, it opens once the TV has slept that long, or on waking
+ * if the TV slept too deeply for the timer to run.
  */
 final class ProfileLock {
     private static final String TAG = "HearthProfileLock";
@@ -24,8 +28,12 @@ final class ProfileLock {
     private static final String ON_SLEEP_KEY = "lock_on_sleep_minutes";
     /** When the screen last went off (wall clock), kept so a Hearth restart while the TV sleeps (an update) still knows. */
     private static final String OFF_AT_KEY = "screen_off_at";
-    /** "Lock when the TV sleeps" is off. */
+    /** "Log out when the TV sleeps" is off. */
     static final int OFF = -1;
+    /** Until someone chooses: log out on every sleep. */
+    static final int DEFAULT_MINUTES = 0;
+    private static final Handler HANDLER = new Handler(Looper.getMainLooper());
+    private static Runnable sPending;
 
     private ProfileLock() {
     }
@@ -52,9 +60,9 @@ final class ProfileLock {
         return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
-    /** Minutes the TV must sleep before it locks on waking (0: any sleep), or {@link #OFF}. */
+    /** Minutes the TV must sleep before it logs out (0: any sleep), or {@link #OFF}. */
     static int lockOnSleepMinutes(Context context) {
-        return prefs(context).getInt(ON_SLEEP_KEY, OFF);
+        return prefs(context).getInt(ON_SLEEP_KEY, DEFAULT_MINUTES);
     }
 
     static void setLockOnSleepMinutes(Context context, int minutes) {
@@ -62,7 +70,26 @@ final class ProfileLock {
     }
 
     static void onScreenOff(Context context) {
-        prefs(context).edit().putLong(OFF_AT_KEY, System.currentTimeMillis()).apply();
+        long offAt = System.currentTimeMillis();
+        prefs(context).edit().putLong(OFF_AT_KEY, offAt).apply();
+        int minutes = lockOnSleepMinutes(context);
+        if (minutes == OFF) return;
+        Context app = context.getApplicationContext();
+        cancelPending();
+        sPending = () -> {
+            sPending = null;
+            // Woken meanwhile: onScreenOn took the time saved and decided
+            if (prefs(app).getLong(OFF_AT_KEY, 0) != offAt) return;
+            prefs(app).edit().remove(OFF_AT_KEY).apply();
+            Log.i(TAG, "Asleep " + (System.currentTimeMillis() - offAt) / 1000 + " s: opening the profile chooser");
+            showChooser(app);
+        };
+        HANDLER.postDelayed(sPending, minutes * 60_000L);
+    }
+
+    private static void cancelPending() {
+        if (sPending != null) HANDLER.removeCallbacks(sPending);
+        sPending = null;
     }
 
     /**
@@ -79,8 +106,12 @@ final class ProfileLock {
         return now - offAt >= minutes * 60_000L;
     }
 
-    /** The TV woke: opens the profile chooser if it slept at least the chosen time. */
+    /**
+     * The TV woke: opens the profile chooser if it slept at least the chosen time and the chooser didn't open while it
+     * slept (the timer doesn't run while the TV sleeps deeply).
+     */
     static void onScreenOn(Context context) {
+        cancelPending();
         SharedPreferences prefs = prefs(context);
         long offAt = prefs.getLong(OFF_AT_KEY, 0);
         prefs.edit().remove(OFF_AT_KEY).apply();
@@ -90,9 +121,11 @@ final class ProfileLock {
         showChooser(context);
     }
 
-    /** Google TV's profile chooser. Not in a kids profile, which has its own lock and bedtime. */
+    /**
+     * Google TV's profile chooser, from any profile: in a kids profile Google TV's kids lock still decides who may
+     * leave it.
+     */
     static boolean showChooser(Context context) {
-        if (ProfileUsers.isKids(context)) return false;
         try {
             context.startActivity(LauncherAccessibilityService.profileChooserIntent()
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));

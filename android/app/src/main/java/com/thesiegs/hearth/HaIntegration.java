@@ -258,6 +258,71 @@ final class HaIntegration {
     }
 
     /**
+     * Asks the integration whether {@code pin} is an adult's parent PIN (it keeps the lockout). UNKNOWN when it can't
+     * say: unreachable, not paired any more, or it has none set. Quick to give up, as someone waits at the PIN pad.
+     */
+    static HaParentPins.Verdict verifyPin(Context context, String pin) {
+        String base = HaConfig.baseUrl(context);
+        String secret = secret(context);
+        if (base == null || secret == null || pin == null) return HaParentPins.Verdict.UNKNOWN;
+        Answer answer;
+        try {
+            answer = request(base + "/api/hearth/device/" + deviceId(context) + "/verify_pin", "POST",
+                    new JSONObject().put("pin", pin), null, secret, 2_000, 3_000);
+        } catch (JSONException e) {
+            return HaParentPins.Verdict.UNKNOWN;
+        }
+        if (answer.code == 200 && answer.body != null) {
+            return answer.body.optBoolean("ok", false) ? HaParentPins.Verdict.YES : HaParentPins.Verdict.NO;
+        }
+        // Locked out there: no, even for the right PIN, as on a phone
+        if (answer.code == 429) return HaParentPins.Verdict.NO;
+        return HaParentPins.Verdict.UNKNOWN;
+    }
+
+    /** The amounts of more time a kid can ask for, in minutes (the integration's asks.AMOUNTS). */
+    static final int[] ASK_MINUTES = {15, 30, 45, 60};
+
+    /**
+     * Asks the adults for more time for a TV profile (blocking): POST .../ask {minutes, group, profile_id}. Answers
+     * {ok: true, request} or {error, request?, retry_in?}: already_open (with the open request), cooldown (retry_in
+     * seconds after a "not now"), no_person (the profile is nobody's in Home Assistant), not_paired, too_often,
+     * unreachable, or failed.
+     */
+    static JSONObject ask(Context context, String profileKey, int minutes, String group) {
+        JSONObject result = new JSONObject();
+        try {
+            String base = HaConfig.baseUrl(context);
+            String secret = secret(context);
+            if (base == null || secret == null) return result.put("error", "not_paired");
+            JSONObject body = new JSONObject().put("minutes", minutes)
+                    .put("group", group == null || group.isEmpty() ? HaAllowance.ALL_GROUP : group);
+            if (profileKey != null) body.put("profile_id", profileKey);
+            Answer answer = request(base + "/api/hearth/device/" + deviceId(context) + "/ask", "POST", body, null,
+                    secret);
+            return askResult(answer.code, answer.body);
+        } catch (JSONException e) {
+            return result;
+        }
+    }
+
+    /** The integration's answer to an ask, as {@link #ask} gives it. */
+    static JSONObject askResult(int code, JSONObject body) throws JSONException {
+        JSONObject result = new JSONObject();
+        JSONObject request = body != null ? body.optJSONObject("request") : null;
+        if (request != null) result.put("request", request);
+        if (code == 200 && request != null) return result.put("ok", true);
+        String error = body != null ? body.optString("error", "") : "";
+        if (code == 429 && body != null && body.has("retry_in")) result.put("retry_in", body.optInt("retry_in"));
+        return result.put("error", code == 409 ? "already_open"
+                : code == 429 && "cooldown".equals(error) ? "cooldown"
+                : code == 429 ? "too_often"
+                : code == 404 && "no_person".equals(error) ? "no_person"
+                : code == 401 ? "not_paired"
+                : code == 0 ? "unreachable" : "failed");
+    }
+
+    /**
      * Since when the refusals have lasted, given a refusal now: {@code since} (0: none counted yet) and {@code last},
      * the previous refusal. Refusals more than {@link #REFUSAL_GAP_MS} apart aren't one stretch (the TV was off, or Home
      * Assistant was unreachable meanwhile, which answers nothing either way), so a refusal then starts a new one: a
@@ -309,6 +374,11 @@ final class HaIntegration {
     }
 
     private static Answer request(String url, String method, JSONObject body, String nonce, String secret) {
+        return request(url, method, body, nonce, secret, 5_000, 8_000);
+    }
+
+    private static Answer request(String url, String method, JSONObject body, String nonce, String secret,
+                                  int connectMs, int readMs) {
         HttpURLConnection connection = null;
         try {
             URL target = new URL(url);
@@ -318,8 +388,8 @@ final class HaIntegration {
                 return new Answer(0, null);
             }
             connection = (HttpURLConnection) target.openConnection();
-            connection.setConnectTimeout(5_000);
-            connection.setReadTimeout(8_000);
+            connection.setConnectTimeout(connectMs);
+            connection.setReadTimeout(readMs);
             connection.setRequestMethod(method);
             connection.setInstanceFollowRedirects(false);
             connection.setRequestProperty("Accept", "application/json");

@@ -129,7 +129,11 @@
           "new_apps": "Watch for new apps",
           "add_group": "Add a group",
           "group_apps": "Add apps to Video or Games",
-          "remove_group": "Remove a group"
+          "not_screen_time": "Not screen time",
+          "remove_group": "Remove a group",
+          "tile_exchange": "Tile exchange sharing",
+          "parent_pin": "Parent PINs",
+        "push": "Push to phones (ntfy)"
         }
       },
       "people": {
@@ -154,6 +158,37 @@
         "data": {
           "video": "Video",
           "games": "Games"
+        }
+      },
+      "not_screen_time": {
+        "title": "Not screen time",
+        "description": "Groups whose time doesn't count toward All screen time (music, say). Their apps aren't held when All screen time runs out; a budget of their own still applies.",
+        "data": {
+          "groups": "Groups"
+        }
+      },
+      "parent_pin": {
+        "title": "Parent PINs",
+        "description": "Each adult's own parent PIN (set now: {people}). Any of them unlocks a parent's settings. Paired TVs use these in place of their own Parent PIN, and phones check them here; a phone never gets a PIN. They're kept as hashes. After 5 wrong tries a device waits, longer each time.",
+        "data": {
+          "person": "Adult",
+          "pin": "New PIN (4 digits)",
+          "pin_again": "New PIN again",
+          "remove": "Remove their PIN"
+        }
+      },
+      "push": {
+        "title": "Push to phones",
+        "description": "An ntfy server (ntfy.sh, or your own) through which Home Assistant tells a paired phone that something changed, so it fetches its state at once instead of at its next check. Each phone listens on its own random topic; the ping only says \"changed\", never a name or a number. Leave it empty for no pings.",
+        "data": {
+          "server": "ntfy server"
+        }
+      },
+      "tile_exchange": {
+        "title": "Tile exchange sharing",
+        "description": "People whose phone may share with the launcher's tile exchange: the layout of notifications from apps that have no tile yet, with every word and number blanked out (never chat, health or payment apps). Off for everyone not chosen here.",
+        "data": {
+          "people": "People"
         }
       },
       "remove_group": {
@@ -242,7 +277,7 @@
       },
       "enforce": {
         "title": "Enforce",
-        "description": "When one of this person's groups is out of time, their Hearth TVs and phones stop its apps. Here, other parental controls can hold them too, until the group has time again (more time, a new day). Family Link pauses the group's Android apps, every app for All screen time (they stay installed; Google TV ignores this, Hearth holds the TV). Family Safety locks the platforms below while one of its groups below is out of time, until midnight. Nintendo suspends the Switch's game while one of its groups below is out of time (Max screentime today set to 0, with Suspend software on), and puts its limit and Suspend software back after. Choosing a person again replaces theirs; leaving them all empty stops it, and what was held is let go.",
+        "description": "When one of this person's groups is out of time, their Hearth TVs and phones stop its apps. Here, other parental controls can hold them too, until the group has time again (more time, a new day). Family Link pauses the group's Android apps (they stay installed; Google TV ignores this, Hearth holds the TV); for All screen time it locks the person's devices instead, and apps with unlimited time still work. Family Safety locks the platforms below while one of its groups below is out of time, until midnight. Nintendo suspends the Switch's game while one of its groups below is out of time (Max screentime today set to 0, with Suspend software on), and puts its limit and Suspend software back after. Choosing a person again replaces theirs; leaving them all empty stops it, and what was held is let go.",
         "data": {
           "person": "Person",
           "family_link": "Family Link: any of the person's Family Link entities",
@@ -250,14 +285,19 @@
           "platforms": "Family Safety: platforms to lock",
           "groups": "Family Safety: lock while one of these groups is out of time",
           "nintendo": "Nintendo: the person's Switch (its Max screentime today)",
-          "nintendo_groups": "Nintendo: suspend while one of these groups is out of time"
+          "nintendo_groups": "Nintendo: suspend while one of these groups is out of time",
+          "nintendo_playing": "A shared Switch: held only while this person is the one playing (their playing sensor)"
         }
       }
     },
     "error": {
       "name_taken": "That name is taken.",
       "already_added": "That sensor is a source already.",
-      "bad_profile_id": "Give an id like user:11, and its person."
+      "bad_profile_id": "Give an id like user:11, and its person.",
+      "bad_pin": "Give 4 digits.",
+      "pins_differ": "The two PINs differ.",
+      "not_adult": "Only an adult has a parent PIN: mark them as an adult on Hearth's page (Family) first.",
+      "bad_server": "Give the server's address, like https://ntfy.example.com (no user name, password or query)."
     },
     "abort": {
       "no_profiles": "No TV has reported its profiles yet. Pair a TV and let it post its status first.",
@@ -267,6 +307,23 @@
     }
   },
   "services": {
+    "pause": {
+      "name": "Pause",
+      "description": "Holds the people's Hearth devices (dinner time, say) for some minutes or until a time; they stop and show the reason. Everyone in the household when no one is chosen.",
+      "fields": {
+        "minutes": {"name": "Minutes", "description": "How long."},
+        "until": {"name": "Until", "description": "Or until this time (tomorrow's, if it has passed today)."},
+        "reason": {"name": "Reason", "description": "What the devices show, such as Dinner."},
+        "people": {"name": "People", "description": "Who; everyone when empty."}
+      }
+    },
+    "pause_end": {
+      "name": "End the pause",
+      "description": "Lets the people go again (everyone paused when no one is chosen).",
+      "fields": {
+        "people": {"name": "People", "description": "Who; everyone paused when empty."}
+      }
+    },
     "add_bonus": {
       "name": "Add a bonus",
       "description": "Adds minutes to a person's budget for today (a negative number takes them away).",
@@ -429,6 +486,15 @@
           "name": "Word",
           "description": "A word or words; videos whose title has it are hidden (titles only)."
         }
+      }
+    },
+    "play_on_tv": {
+      "name": "Play on a TV",
+      "description": "Starts a link, a YouTube video (in HearthTube) or an app on a Hearth TV. The TV takes it with its next status, within about 2 minutes while it's on, and plays it as if picked there: a kids profile's limits and blocks still apply. Answers the command's id; hearth_command_done says how it went.",
+      "fields": {
+        "device_id": {"name": "TV", "description": "The Hearth TV (its device, or its Hearth device id)."},
+        "what": {"name": "What", "description": "A link (http or https), a YouTube video id or link, or an app's package name (com.example.app)."},
+        "profile": {"name": "Profile", "description": "Optional: the TV profile to play it in (an id like user:10, or a person with one profile on the TV). The TV switches to it first, asking for its PIN as usual."}
       }
     }
   }

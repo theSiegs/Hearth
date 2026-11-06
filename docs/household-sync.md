@@ -14,7 +14,8 @@ Not a goal: keeping every setting equal. A TV's own settings (its name, Wi-Fi, p
 and token, Home Button Fix, the ad sandbox) stay on that TV.
 
 **One idea for the person using it: "Your TVs".** There is no separate copy, sync and household to understand. Every
-Hearth TV is in a household, even when it is the only one. A TV on its own that hears another household on the network
+Hearth TV is to be in a household, even when it is the only one (planned: today a TV on its own offers **Start a
+household on this TV**, in Settings or as a setup step). A TV on its own that hears another household on the network
 offers to join it; a TV in a household lists its TVs. Joining is the first sync. Settings > Family > **Household sync**
 replaces both Copy profiles between TVs and Household sync.
 
@@ -41,7 +42,8 @@ replaces both Copy profiles between TVs and Household sync.
 | Parent PIN | household | including every change to it; see Parent PIN |
 | Notifications | person, or every adult | Home Assistant's, and a TV asking to join; see [Notifications](#notifications) |
 
-Never synced: the Home Assistant token, the webhook ID, the TV's name (each TV announces its own), permissions,
+Never synced: the Home Assistant token, the webhook ID, the TV's name (each TV sets its own; it travels only in its
+own member entry, for the list of TVs), permissions,
 anything about a TV's hardware. The Home Assistant address and a token are handed over once when a TV joins, when the
 adult who allows it says so (see Joining); the TV then makes its own webhook.
 
@@ -191,10 +193,10 @@ Every TV on the list keeps the whole list, so each knows every other, even two t
 - Each TV still writes its name into its own `member` entry when renamed, and refreshes it once a day, so the list shows
   current names and when each TV was last on.
 
-**Removing, from the person's side.** Each TV on the Your TVs page has **Remove from household**. On this TV's own row
-it means leave; on another TV's row it removes that TV. Removing another TV asks a parent (Parent PIN, or phone
-approval where it's on). A TV that hasn't been seen for 60 days is marked "Not seen for 2 months" with Remove next to
-it; nothing is ever removed on its own.
+**Removing, from the person's side.** Choosing another TV on the Household sync page offers **Remove from
+household**; this TV leaves with **Leave the household**. Both ask for the Parent PIN where this TV has one. Each TV
+shows when it was last on ("Last on 12 days ago"); nothing is ever removed on its own. (Marking a TV not seen for 60
+days isn't built.)
 
 **Leaving** (removing this TV) writes this TV's own removal and tries to hand it to the TVs that are on now (for up to
 ten seconds). The first exchange that carries it ends the household here: the TV deletes its key, its entries and its
@@ -273,9 +275,10 @@ things on joining, so it shows them first and keeps a copy:
   taking it away would take it from every TV. The TV stays in the household, and what was put back is the newest
   change, so the other TVs take it too for the same people; to keep a TV different, leave the household instead.
 
-**The first TV** makes its TV key and a one-TV member list during setup, so there is no "start a household" step. A TV
-on its own that hears a different household on the network still offers Join; **Start a separate household** only
-exists as a small choice under it, for the rare home that wants two.
+**The first TV** makes its TV key and a one-TV member list when it starts a household (**Start a household on this
+TV**, or the setup step; planned: during setup, with no "start a household" step). A TV on its own that hears a
+different household on the network offers Join; **Start a separate household instead** is a small choice under it,
+for the rare home that wants two.
 
 ## Who a profile is
 
@@ -404,13 +407,13 @@ does.
 - Each TV announces itself on the home network (`_hearth-sync._tcp`: its TV id, its household id, its name and port)
   and listens on one port, answering only home-network addresses (LocalNet). The household id is a hash of the first
   TV's id; it names the household and proves nothing.
-- A TV that changes an entry tells the others it can see. They pull.
+- A TV that changes an entry opens an exchange with each TV it can see, two seconds later.
 - A TV that wakes, or sees another appear, exchanges **version vectors** (one counter per TV) with it and asks for what
   it lacks. While two TVs are on together they check again every few minutes as a backstop.
 - Changes travel only while at least two TVs are awake together. A TV that has been off for days catches up the next
   time it meets any other.
 
-**Optional: Home Assistant as a mailbox.** With the Home Assistant address and a token set, each TV also publishes its
+**Optional: Home Assistant as a mailbox** (planned, step 5; not built). With the Home Assistant address and a token set, each TV also publishes its
 changes to a Home Assistant entity (a `sensor` set through the REST API), sealed separately for each member's public key,
 so Home Assistant only ever holds ciphertext and a removed TV can't open anything written after its removal. A household
 is a handful of TVs, so sealing per member is cheap. Because the mailbox may vanish on a restart of Home Assistant,
@@ -424,13 +427,14 @@ deleted flag and a timestamp, kept for 90 days, so a TV that was off can't bring
 removals never lose and are never purged; Continue Watching is a set (union, newest play per title); a
 profile's look and layout merge item by item, each setting, row and app on its own (see What syncs).
 
-**Size.** Entries are small, except pictures and watch history. History keeps at most 100 entries per profile, 90 days.
+**Size.** Entries are small, except pictures and watch history. History keeps at most 300 played titles per profile, 90 days;
+each exchange sends a person's 40 newest.
 A TV never sends a picture a peer already has.
 
 ## One switch
 
 **Settings > Family > Household sync > Sync with my other TVs** is one switch, on by default, and it covers every profile,
-kids' included: a kid follows themselves from TV to TV like anyone else. Turning it off needs the Parent PIN, stops this
+kids' included: a kid follows themselves from TV to TV like anyone else. Turning it off needs the Parent PIN (where this TV has one), stops this
 TV sending and taking entries, and leaves what it has; the TV stays on the member list. There are no per-kind or
 per-profile switches. A kid's synced Continue Watching is still per streaming app profile, so a kid's card can't appear
 in an adult's row.
@@ -458,19 +462,22 @@ last took or gave:
 ## Your TVs (the page)
 
 ```
-Your TVs
-Profiles, looks and saved PINs follow you to every TV.
+Household sync
+TVs in a household keep every profile in step over your home network: ...
 
+  TVs in this household
   [TV] Office        This TV
   [TV] Kitchen       On now
-  [TV] Study         Last on yesterday
+  [TV] Study         Last on 2 days ago
 
-  [x] Keep my TVs in step
+  [x] Sync with my other TVs
   Sync now
+  Leave the household
 ```
 
-Choosing a TV opens its row's actions: rename (this TV only), Remove from household. On a TV on its own that hears a
-household, the list is that household's TVs, with **Join** above it and Start a separate household small below. Text
+Choosing another TV offers Remove from household; this TV's own row does nothing. A TV's name is its Android device
+name (there is no rename here). On a TV on its own that hears a household, the list is that household's TVs, then
+**Join the household**, and Start a separate household instead small below. Text
 stays short; no step lists and no internal terms ("Profile Pairing" appears only as the name of its own page).
 
 ## Setup flow
@@ -578,9 +585,9 @@ What a TV checks before it takes part or takes something, and what that guards a
 - Pairing with an app profile needs the same app profile name on both TVs' pickers; the entry keeps the name and the
   receiving TV checks it against the names its picker has shown.
 - A TV whose Keystore key is gone (a factory reset, a restore) has no TV key and no entries; it is a new TV and joins
-  again. The household marks its old id as not seen and offers Remove after 60 days.
-- No analytics and no outside server. The only outside traffic is the optional Home Assistant mailbox, on the home
-  network.
+  again. Its old id shows when it was last on, and any household TV can remove it.
+- No analytics and no outside server. Sync has no outside traffic (a planned Home Assistant mailbox would stay on the
+  home network).
 
 ## From version 1
 
@@ -595,9 +602,9 @@ Changed in version 2:
 |---|---|
 | One household key on every TV proves membership and seals entries and exchanges | A TV key per TV; the synced member list says who is in; exchanges are signed and sealed per pair |
 | Person ids keyed by the household key | Keyed by the person salt |
-| Join through Copy profiles, digits on both screens | Join from the new TV, approved on a parent's phone (or on the household TV) |
+| Join through Copy profiles, digits on both screens | Join from the new TV, allowed in the notification Bell of a household TV |
 | Leaving wipes the key; cutting a TV off means resetting the household | Remove from household: one removal, nothing else changes |
-| "Start a household on this TV" | Every TV is in one from setup |
+| "Start a household on this TV" | Planned: every TV in one from setup (today: still "Start a household on this TV", or the setup step) |
 | Copy profiles between TVs, separate from sync | Gone from Settings once look and layout sync; Backup & restore stays for a TV off the network |
 
 **Converting a version 1 household.** On updating, a TV that holds a version 1 household key makes its TV key, and the
@@ -621,7 +628,7 @@ version 1 converts as above when it updates.)
    the copy, conversion from version 1, leave and remove (a Remove action on the Household page's TV list). Unit tests
    for the channel (an outsider, a forged id, a spent invitation, a removed TV either way round), removal never losing,
    leaving, and conversion.
-2. **Joining from the new TV** (built): the join request, the join code, phone approval through the household TV, the
+2. **Joining from the new TV** (built): the join request, the join code, approval in a household TV's Bell, the
    on-screen fallback on its Household page, the first sync, and the preview and copy before the household's settings
    replace this TV's.
 3. **Look and layout, then wallpaper pictures** (built, every profile, kids' included).
@@ -641,8 +648,6 @@ version 1 converts as above when it updates.)
 - The on-screen fallback for joining needs a parent at both TVs. A Parent PIN typed on the new TV would avoid that, but
   it must not reach a device pretending to be a household TV, which needs a password-authenticated key exchange
   (CPace or SPAKE2) rather than the plain one. Worth it only if many households run without phone approval.
-- Home Assistant's buttons stay on the TV that received the notification. Carrying them to the other TVs' Bells
-  would let any household TV ask another to call a Home Assistant service; worth it?
 
 Decided by the owner:
 

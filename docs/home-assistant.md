@@ -7,7 +7,7 @@ Hearth talks to Home Assistant these ways, each optional:
 
 | | Direction | Needs |
 |---|---|---|
-| [Notifications](#notifications) | Home Assistant → TV | Home Button Fix on |
+| [Notifications](#notifications) | Home Assistant → TV | Its switch on, and Home Button Fix on |
 | [Dashboard panel](#dashboard-panel) | TV shows Home Assistant | Address and an access token |
 | [Hearth integration](#hearth-integration) | TV ↔ Home Assistant | The integration in Home Assistant, and pairing |
 | [TV status](#tv-status) | TV → Home Assistant | Address and a webhook ID (or the Hearth integration) |
@@ -37,12 +37,13 @@ Hearth's link to Home Assistant (this and the TV status below) keeps running eve
 for instance after an update. The pop-up itself is drawn by Home Button Fix, so while it is off Hearth answers
 Home Assistant that it can't show one.
 
-1. In Home Assistant, add the **Notifications for Android TV / Fire TV** integration with the TV's IP address
-   (Settings → Home Assistant → Notifications shows it).
+1. On the TV, turn on **Settings → Home Assistant → Notifications → Show Home Assistant notifications** (off until
+   you do). In Home Assistant, add the **Notifications for Android TV / Fire TV** integration with the TV's IP
+   address (the same page shows it).
 2. Send a notification from an automation:
 
    ```yaml
-   action: notify.living_room_tv
+   action: notify.tv
    data:
      title: Doorbell
      message: Someone is at the front door
@@ -51,8 +52,8 @@ Home Assistant that it can't show one.
        position: center
    ```
 
-The usual options work: `duration` (1–120 s), `position`, `fontsize`, `transparency`, `bkgcolor`, `interrupt`, an
-icon and an image.
+These options work: `duration` (1–120 s), `position`, `bkgcolor`, an icon and an image. `fontsize`, `transparency`
+and `interrupt` are accepted and ignored.
 
 ### Cameras and buttons
 
@@ -137,7 +138,7 @@ have its own dashboard (**Dashboard for this profile**).
 ## Approve switches from a phone
 
 With the dashboard panel's address and token set, an adult can have their phone approve a switch into their
-PIN-locked Google TV profile (**Settings → Profiles → Approve switches from my phone**, in their own profile; the row
+PIN-locked Google TV profile (**Settings → Profiles → Unlock from my phone**, in their own profile; the row
 is greyed out until Home Assistant is set up). They choose their phone, one of Home Assistant's `notify.mobile_app_…`
 services, and save their Google TV PIN.
 
@@ -184,7 +185,8 @@ only on Hearth's endpoints) instead of to a webhook, every 2 minutes at least. I
 (`app_categories`), for the integration's Video and Games. Each answer carries every profile's minutes left per group,
 and the fewest left in a group holding HearthTube becomes the profile's YouTube allowance (instead of reading
 `sensor.hearth_allowance`). **Unpair** forgets the pairing on the TV; deleting the TV's device in Home Assistant
-removes it there (the TV then finds itself unpaired at its next post).
+removes it there (the TV unpairs itself once Home Assistant has refused its posts for about 10 minutes; a
+restarting Home Assistant refuses them briefly).
 
 ## TV status
 
@@ -243,7 +245,7 @@ Never asked, HearthTube shares (its own **Tell Home Assistant what's playing** s
 from their media sessions, which Android only shows to a notification listener in the same Android user. In the TV's
 main user that's Hearth itself (its notification access). A kids profile's apps play in that profile's own Android
 user, so there it's Hearth's agent, which needs notification access granted in that user. A parent's **Fix**
-(Settings → Profiles → Kids profiles) grants it over Hearth's own adb; by hand it's
+(Settings → Family → Kids profiles) grants it over Hearth's own adb; by hand it's
 `adb shell cmd notification allow_listener com.thesiegs.hearth/com.thesiegs.hearth.LauncherNotificationListenerService
 <user id>`. Without it, that profile's `playing` lists HearthTube only (its `apps` time in front is counted either
 way). In a kids profile the agent's notification access does nothing else: no pop-ups, nothing read but what's
@@ -251,8 +253,8 @@ playing. What plays (title, episode, how far it got) is kept on the TV for that 
 Continue Watching, and with household sync on it goes to the household's other TVs for that kid's row only; it isn't
 sent to Home Assistant.
 
-**Allowance for HearthTube (optional).** Hearth enforces a daily YouTube limit on its own (Settings → Profiles →
-YouTube time per day). Home Assistant can add its say, e.g. a pool shared with the family's phones and tablets:
+**Allowance for HearthTube (optional).** Hearth enforces a daily YouTube limit on its own (Settings → Family →
+Kids profiles → the kid → YouTube time per day). Home Assistant can add its say, e.g. a pool shared with the family's phones and tablets:
 with the Home Assistant panel's address and token set, Hearth reads `sensor.hearth_allowance` about once a minute.
 Its attribute `profiles`, or else its state as JSON (a template helper made in the UI can't have attributes), maps a
 `profile_id` to `{"youtube_minutes_left": int or null, "schedule_locked": bool, "message": optional text}`; a

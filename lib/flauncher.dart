@@ -59,6 +59,7 @@ import 'package:flauncher/providers/profile_service.dart';
 
 import 'models/category.dart';
 import 'package:flauncher/widgets/title_pill.dart';
+import 'package:flauncher/widgets/time_up_card.dart';
 import 'package:flauncher/quiet_failure.dart';
 
 class FLauncher extends StatefulWidget {
@@ -139,6 +140,8 @@ class _FLauncherState extends State<FLauncher> {
     FLauncherChannel.listenForProfilePins(_openProfilePins);
     // Home means the home: whatever is open over it closes
     FLauncherChannel.listenForHomePressed(_onHomePressed);
+    // An app picked here was held (its group's time is up, a family pause): the time's up card says why
+    FLauncherChannel.listenForTimeUp(_showTimeUp);
     final channel = context.read<FLauncherChannel>();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
@@ -315,6 +318,19 @@ class _FLauncherState extends State<FLauncher> {
   /// The Home button, pressed while Hearth is up: Settings, a panel, a dialog or the search box over the home close,
   /// a search ends, and the home goes back to its start: the dock (Continue Watching put away), or the first app at
   /// the top of the page without one.
+  bool _timeUpShowing = false;
+
+  /// The time's up card over the home, once at a time (an app held again while it's up changes nothing).
+  Future<void> _showTimeUp(String? group) async {
+    if (!mounted || _timeUpShowing) return;
+    _timeUpShowing = true;
+    try {
+      await showTimeUpDialog(context, context.read<FLauncherChannel>(), group);
+    } finally {
+      _timeUpShowing = false;
+    }
+  }
+
   void _onHomePressed() {
     if (!mounted) return;
     Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
@@ -937,7 +953,8 @@ class _FLauncherState extends State<FLauncher> {
     );
   }
 
-  /// Shown when the profile can open nothing at all (a kids profile at bedtime, or before apps are approved).
+  /// Shown when the profile can open nothing at all (a kids profile at bedtime, or before apps are approved). With
+  /// Home Assistant it says why (a pause, a bedtime, time up) and until when, and lets a kid ask for more time.
   Widget _nothingToWatch(double viewportHeight) => Container(
         key: const Key("nothing_to_watch"),
         height: viewportHeight,
@@ -948,14 +965,11 @@ class _FLauncherState extends State<FLauncher> {
             color: Colors.black.withValues(alpha: 0.55),
             borderRadius: BorderRadius.circular(20),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.nightlight_round, color: Colors.white70, size: 40),
-              const SizedBox(height: 12),
-              Text(AppLocalizations.of(context)!.homeNothingToWatch,
-                  style: const TextStyle(color: Colors.white, fontSize: 24)),
-            ],
+          child: TimeUpCard(
+            channel: context.read<FLauncherChannel>(),
+            fallback: AppLocalizations.of(context)!.homeNothingToWatch,
+            // Nothing else on the home takes the selection
+            autofocus: true,
           ),
         ),
       );
