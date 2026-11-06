@@ -689,12 +689,12 @@ class TimeUpFace extends StatelessWidget {
   static bool shows(HaLockState s, {required bool nothingToOpen, required DateTime now}) =>
       nothingToOpen || held(s) || soon(s, now) != null;
 
-  @override
-  Widget build(BuildContext context) {
+  /// What the tile says for [s]: its icon, its line and, for a hold that ends, until when. Also the peek's words.
+  static ({IconData icon, String title, String? until}) words(BuildContext context, HaLockState s,
+      {bool nothingToOpen = false, DateTime? now}) {
     final l10n = AppLocalizations.of(context)!;
     String time(DateTime at) => MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(at),
         alwaysUse24HourFormat: MediaQuery.maybeAlwaysUse24HourFormatOf(context) ?? false);
-    final s = state;
     IconData icon = Icons.nightlight_round;
     String title;
     DateTime? until;
@@ -713,15 +713,22 @@ class TimeUpFace extends StatelessWidget {
     } else if (s.timeUp.isNotEmpty) {
       icon = Icons.hourglass_bottom;
       title = l10n.timeUpForGroup(s.timeUp.map((g) => g.name).join(", "));
-    } else if (nothingToOpen) {
+    } else if (nothingToOpen || soon(s, now ?? DateTime.now()) == null) {
       title = l10n.homeNothingToWatch;
     } else {
-      final at = soon(s, clock())!;
+      final at = soon(s, now ?? DateTime.now())!;
       final school = s.nextLockKind == HaLockKind.schoolTime;
       icon = school ? Icons.school_outlined : Icons.nightlight_round;
       title = school ? l10n.glintSchoolTimeAt(time(at)) : l10n.glintBedtimeAt(time(at));
     }
-    final sub = until == null ? null : l10n.timeUpUntil(time(until));
+    return (icon: icon, title: title, until: until == null ? null : l10n.timeUpUntil(time(until)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final s = state;
+    final (:icon, :title, until: sub) = words(context, s, nothingToOpen: nothingToOpen, now: clock());
     final opens = held(s) || nothingToOpen;
     return GlintTile(
       key: const Key("glint_time_up"),
