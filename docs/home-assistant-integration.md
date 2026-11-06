@@ -285,7 +285,13 @@ minutes, group: All screen time by default; by title isn't built), whoever asks:
   actionable notification: the amount asked, the next one up, **Not now** (see [Ask for more](#ask-for-more)). The
   first answer adds the bonus (or not) and is shown on the kid's device. One open request per person; it's open 30
   minutes.
-- **Chores, automations, a dashboard button**: call `hearth.add_bonus`.
+- **Offer more** (Configure > Offer more time): when one of a kid's chosen groups runs out, the adults get the same
+  actionable notification the other way round ("Sam's YouTube is used up. Give Sam 30 more minutes today?"). Nothing
+  is asked of the kid and their devices aren't told about it; "Not now" starts no cooldown.
+- **Chores** (Configure > Chores earn time): per person, a to-do list, a group and what a chore is worth (15 minutes
+  by default, or the chore's own "+N": "Dishes +30"). Each item checked off adds its minutes once and is removed from
+  the list; `hearth_chore_done` (person, chore, group, minutes) and the adults' phone are told.
+- **Automations, a dashboard button**: call `hearth.add_bonus`.
 
 **Who enforces.** When one of a person's groups is out of time, its apps are held everywhere the household chose,
 until the group has time again (a bonus, a higher budget, a new day):
@@ -307,7 +313,15 @@ until the group has time again (a bonus, a higher budget, a new day):
     unlimited time in Family Link still work, as when Family Link's own limit is reached. The limit they had (the
     child's weekday limit entity) is kept and put back when there's time again, and just before midnight, since it's
     the weekday's setting. An app with unlimited time is never paused for a group either. Calls, texts, the system and
-    the parental controls' own apps are never paused.
+    the parental controls' own apps are never paused for a group.
+
+    **During School time, pause these apps** (Google Messages by default in the form): those apps are paused while
+    the child's Family Link School time is on (any of their devices' School time sensors), and resumed when it ends,
+    through the same hold. That matters: Family Link keeps one saved setting per child and app, `pause_app` saves only
+    the first, and any `resume_app` puts it back, so two owners (a budget hold and a School-time pause) would undo each
+    other. Hearth is the one owner, holding by person, and resumes an app only when no reason to hold it is left. The
+    School-time apps are the adult's own choice, so they may include Messages and apps with unlimited time; never
+    Hearth's own or Family Link's.
   - **Microsoft Family Safety** locks the chosen platforms (Xbox by default) until midnight while one of the chosen
     groups (Games and All screen time by default) is out of time (`lock_platform`), and unlocks them when none is.
   - **Nintendo** (the built-in [Nintendo Switch parental controls](https://www.home-assistant.io/integrations/nintendo_parental_controls)
@@ -330,6 +344,81 @@ until the group has time again (a bonus, a higher budget, a new day):
   starts nothing is let go (the sources report in first). A failed call shows on the person's **Held by parental
   controls** sensor and is tried again 5 minutes later. Each change fires `hearth_enforced` (person, by, held, let go).
 - `hearth_budget_reached` stays for anything else an automation wants to do.
+
+### Exceptions
+
+An adult lets someone use an app or a group for a while, whatever would hold it:
+
+- `hearth.allow` (`people`; `app`, a package, or `group`, a Hearth group or `all`; `until`: a time, tomorrow's if it
+  has passed, `school_time_end` (the end of their School time today, from Family Link's sensors) or `end_of_day`, the
+  default; `reason`) returns `{id, until: {person: when}}`. It's kept across restarts. While it lasts, Hearth holds
+  that app or group nowhere for those people: their TVs' and phones' state documents leave the group out (an allowed
+  app is taken out of every group's `apps` and added to All screen time's `except`, so a device needs no change),
+  Family Link doesn't pause it (budget or School time), and Family Safety and Nintendo don't hold for an allowed group.
+  It ends on its own; what should hold then holds again with the next minute's recompute.
+- `hearth.allow_end` (`id`, or `people` with an optional `app` or `group`) ends one early; returns `{ended: [ids]}`.
+- Bedtime, School time itself and a family pause still lock the person. An allow lifts Hearth's holds, not those
+  locks: a TV can't open one app through a lock without a change on the TV, and Family Link's own bedtime still locks
+  the phone. To lift School time, take it off (`hearth.school_time_off`).
+- `hearth.explain` (`person`; `app` or `group`), response only: `{allowed, until, blocked_by: [{kind, by, until}],
+  lifted, exceptions, school_time_off}`. `kind` is `budget` (by the group, until midnight), `bedtime`, `school_time`
+  or `other` (by the lock entity, until it says), `pause` (until, reason) or `school_time_apps` (by the Family Link
+  entity, until School time ends). `until` is when it's allowed again (the latest of the blocks, null when one doesn't
+  say), or, when allowed thanks to an exception, when that ends. `lifted` lists the holds an allow lifts now.
+- The person's **Screen time today** sensor has an `exceptions` attribute: `allows` (id, app or group, until, reason)
+  and `school_time_off` (what's taken off and when it's put back).
+
+### School days and day types
+
+Configure > School days says which budget applies (the first that answers: dates typed in, an entity, a calendar,
+Monday to Friday within the school year). It also knows **half days**: dates typed in, an entity state (`half` or
+`half_day` by default), or a calendar event with one of the half-day words. A half day takes the other-day budget
+unless chosen otherwise (as before half days were known: a helper that says `half` wasn't a school day).
+
+The household's **Day type** sensor says today's: `school`, `half_day`, `day_off` (a weekday of the school year that
+isn't a school day), `weekend` or `no_school` (a weekday outside the school year). The **School day** binary sensor
+has it as `day_type` too. The calendar and the dates are the household's own: they're typed in (or come from its
+calendar), never part of Hearth.
+
+### Schedule
+
+Configure > Schedule says what each day type does to the kids' Family Link (everyone with Family Link in Enforce, or
+the people chosen):
+
+- **Day off: School time off.** At 00:05 each kid's School time switch is turned off (`switch.turn_off`, which turns
+  off the weekly School time with today's) and noted to be put back.
+- **Half day: School time ends N hours early**, today only (`familylink.set_school_time`, scope `today`, from the
+  weekly start to the weekly end less N), for a kid whose School time is on; one whose School time is off gets the
+  early end when it's put back.
+- **Extra minutes** on days off and on half days: as Family Link's daily limit for today (`familylink.set_daily_limit`
+  with the child's id and no day: the weekday's limit plus the extra, an override that ends by itself; only while the
+  child's daily limit is on), and/or as Hearth bonus minutes on a group. Family Link's way is the default, as that is
+  what a household's own "extra hour" automation did: it raises the phone's own limit. A Hearth bonus raises a Hearth
+  budget instead.
+- `hearth.school_time_off` (`people`; `date`, today by default; `from`, a time; `reason`) does the same for anyone,
+  any day; `hearth.school_time_off_cancel` (`people`, `date`) drops one not started, or puts one already off back from
+  today.
+
+**Putting School time back.** Switching School time on outside a kid's window opens a window from then until 23:59,
+so Hearth switches it on only on a school day (or half day), inside the kid's own weekly window for today (read from
+Family Link's time entities, and kept when it was turned off in case they read unknown meanwhile; N hours shorter on a
+half day), and at once pins today's window to those hours (`set_school_time`, scope `today`). Each minute it checks
+the devices' `schooltime_end` and pins again until they say the pinned end; then it's done. A kid whose window has
+ended is left for the next school day. Switched on or pinned, it waits two minutes before doing either again (Family
+Link is read once a minute).
+
+**Checks.** At 06:00 a School time that should be off and isn't is turned off again, and the adults are told what
+didn't apply (the extra time, too). At the watchdog time (10:00 by default) on a school day, they're told about anyone
+whose School time is still off, unless it was taken off for today. "Told" is a notification in Home Assistant and the
+schedule's phone (else the one that answers requests for more time). Each step fires `hearth_schedule` (action:
+`school_time_off`, `school_time_back`, `half_day`, `bonus`, `site_list`, `site_list_failed`; person; details). Each
+action runs once a day; what's pending is kept across restarts.
+
+**Website block list** (Configure > Website block list): an https address, a time (07:30 by default) and the people
+(everyone with Family Link by default). Every day at that time, Hearth calls `familylink.sync_site_list` (entity: the
+person's Family Link entity, url) for each, one after another; a failure for one is logged, fires `site_list_failed`
+and is tried again 5 minutes later, and the others go on. That service adds the list's new domains and removes only
+what the list itself added before. For example `https://example.com/blocklist.txt`.
 
 ## Data out
 
@@ -577,8 +666,8 @@ them.
 The Configure menu (Settings > Devices & services > Hearth > Configure) still has everything, as a menu:
 
 **Who's who on the TVs**, **Add / Remove a screen time source**, **Add / Remove a title**, **Locks** (bedtime,
-school time), **Enforce limits** (Family Link, Family Safety, Nintendo), **School days**, **Sort new apps**, **Watch
-for new apps**, **Add a group**, **Add apps to Video or Games**, **Not screen time**, **Remove a group**, **Tile
+school time), **Enforce limits** (Family Link, Family Safety, Nintendo), **School days**, **Schedule**, **Website
+block list**, **Chores earn time**, **Offer more time**, **Sort new apps**, **Watch for new apps**, **Add a group**, **Add apps to Video or Games**, **Not screen time**, **Remove a group**, **Tile
 exchange sharing** and **Parent PINs**. (Suggested title matches and rules aren't built.)
 
 Budgets aren't in the options: they're number entities, so a dashboard, a voice assistant or an automation can change
@@ -603,16 +692,19 @@ Per person (a device of its own in Home Assistant, "Hearth: <person>"):
 | Held by parental controls | sensor: what Family Link, Family Safety or Nintendo holds now |
 | Locked | binary sensor |
 
-Per household: **Playing together** and **School day** (binary sensors), **Apps to sort**. Open requests for more
+Per household: **Playing together** and **School day** (binary sensors), **Apps to sort**, **Day type**. Open requests for more
 time are in the household summary and on Hearth's page, not an entity.
 
 Events: `hearth_budget_reached` (person, group, group_name), `hearth_more_time_requested` and
 `hearth_more_time_answered` (as in [Ask for more](#ask-for-more)), `hearth_playing_together` (title, people, started
-or ended), `hearth_enforced`, `hearth_new_app`, `hearth_parent_pin_used`, `hearth_parent_pin_locked_out`.
+or ended), `hearth_enforced`, `hearth_new_app`, `hearth_parent_pin_used`, `hearth_parent_pin_locked_out`,
+`hearth_schedule`, `hearth_chore_done`.
 
 Per person with a TV profile: **Last video started** (see [A kids profile's YouTube](#a-kids-profiles-youtube)).
 
-Services: `hearth.add_bonus`, `hearth.set_budget`, `hearth.pause`, `hearth.pause_end`, `hearth.play_on_tv` (event
+Services: `hearth.add_bonus`, `hearth.set_budget`, `hearth.pause`, `hearth.pause_end`, `hearth.allow`,
+`hearth.allow_end`, `hearth.explain`, `hearth.school_time_off`, `hearth.school_time_off_cancel` (see
+[Exceptions](#exceptions) and [Schedule](#schedule)), `hearth.play_on_tv` (event
 `hearth_command_done`, see [Play on a TV](#play-on-a-tv));
 `hearth.get_watch_log`, `hearth.watch_digest`, `hearth.block_video`, `hearth.block_channel`, `hearth.block_word` and
 their `unblock_` twins. Event `hearth_video_started`.
@@ -718,6 +810,56 @@ device removes it from the household.
 
    Each moves when an adult chooses, checked side by side in history for a few days first.
 4. After a release or two of both, the webhook path is documented as legacy.
+
+### Replacing hand-written automations
+
+Hearth is meant to be the one place a kid's screen-time rules, exceptions and schedules live. Typical hand-written
+automations, and what replaces each (the names here are examples):
+
+| An automation that... | With Hearth |
+|---|---|
+| pauses Messages when `binary_sensor.<device>_school_time_active` turns on, resumes it when off | Configure > Enforce: Family Link, **During School time, pause these apps**. Disable the automation first: a resume from it would undo Hearth's pause, and the other way round. |
+| pauses YouTube with `familylink.pause_app` when a "minutes left" template reaches 0 | Configure > Enforce: Family Link, with a YouTube group and its budget. Same reason: only one may pause and resume. |
+| runs at 00:05 with a list of days off and half days, turns School time off, ends it early, adds an extra hour | Configure > School days (the dates as Days off and Half days) and Configure > Schedule |
+| switches School time back on after a day off, every minute, inside each kid's window, with a 10:00 watchdog | Schedule (it puts School time back by itself) |
+| a one-shot "no School time on Wednesday from noon" | `hearth.school_time_off` {people, date, from: "12:00"} |
+| syncs a website list into Family Link every morning | Configure > Website block list |
+| adds bonus minutes when a chore is checked off | Configure > Chores earn time |
+| offers an adult "give 30 more?" when a kid's time runs out | Configure > Offer more time |
+| resets bonus helpers at midnight | nothing: Bonus today starts at 0 each day |
+| ends a family pause at a set time | `hearth.pause` with `until` |
+| lets a kid use one app for homework | `hearth.allow` {people, app, until} |
+
+For example, a day off for one kid from noon, and Messages for the rest of the afternoon:
+
+```yaml
+- action: hearth.school_time_off
+  data:
+    people: person.sam
+    date: "2026-12-02"
+    from: "12:00"
+    reason: Early pickup
+- action: hearth.allow
+  data:
+    people: person.alex
+    app: com.google.android.apps.messaging
+    until: school_time_end
+    reason: Bus is late
+```
+
+And a dashboard button "why can't Sam open YouTube?":
+
+```yaml
+- action: hearth.explain
+  data:
+    person: person.sam
+    group: youtube
+  response_variable: why
+```
+
+The order matters for anything that pauses Family Link apps: turn the old automation off first (while nothing is
+paused, in the evening say), then set Hearth's option. Never let a template build a Family Link child id: Home
+Assistant reads the 21 digits as a number and loses some. Hearth passes it as text.
 
 ## Testing
 
