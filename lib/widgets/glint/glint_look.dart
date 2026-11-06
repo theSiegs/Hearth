@@ -27,10 +27,61 @@ class GlintLook {
   GlintLook._();
 
   /// The version of Glint's token file these numbers follow.
-  static const int tokensVersion = 3;
+  static const int tokensVersion = 4;
 
   /// Glint's accent (colors.accent.default).
   static const Color ember = Color(0xFFF0955A);
+
+  /// Glint's accent as words on glass (colors.ink.accentText): the accent itself when it reads at [accentMinContrast]
+  /// against Glint's reference frosted dark surface, else the accent mixed toward white just far enough (the hue
+  /// stays). Large text ([isLargeText]) needs only [accentMinContrastLarge]. Fills, edges and bars keep [ember].
+  static const Color frostedDark = Color(0xFF555658);
+  static const double accentMinContrast = 4.5, accentMinContrastLarge = 3.0;
+  static const double largeTextPx = 20, largeBoldTextPx = 16;
+  static const int largeBoldWeight = 600;
+
+  /// Glint's "large" text, at the size it's drawn (the TV's scale included): [largeTextPx] and up, or [largeBoldTextPx]
+  /// and up at [largeBoldWeight] or heavier.
+  static bool isLargeText(double px, {int weight = 400}) =>
+      px >= largeTextPx || (weight >= largeBoldWeight && px >= largeBoldTextPx);
+
+  /// [ember] as text: small text by default, [large] for big words and numbers.
+  static Color accentText({bool large = false}) =>
+      accentInk(ember, frostedDark, large ? accentMinContrastLarge : accentMinContrast);
+
+  /// Glint's AccentInk.text: [accent] when it has [min] contrast (WCAG) with [surface], else the least of 256 sRGB
+  /// steps toward white (on a dark surface) or black (on a light one) that reaches it.
+  static Color accentInk(Color accent, Color surface, double min) {
+    final a = accent.withValues(alpha: 1);
+    if (contrast(a, surface) >= min) return a;
+    final toWhite = contrast(Colors.white, surface) >= contrast(Colors.black, surface);
+    final toward = toWhite ? Colors.white : Colors.black;
+    final ls = surface.computeLuminance();
+    bool ok(Color c) => contrast(c, surface) >= min && (c.computeLuminance() > ls) == toWhite;
+    const steps = 256;
+    Color mix(int step) {
+      int ch(double x, double y) => ((x * 255) + ((y * 255) - (x * 255)) * step / steps).round().clamp(0, 255);
+      return Color.fromARGB(255, ch(a.r, toward.r), ch(a.g, toward.g), ch(a.b, toward.b));
+    }
+
+    if (!ok(mix(steps))) return toward;
+    var lo = 0, hi = steps;
+    while (lo < hi) {
+      final mid = (lo + hi) ~/ 2;
+      if (ok(mix(mid))) {
+        hi = mid;
+      } else {
+        lo = mid + 1;
+      }
+    }
+    return mix(lo);
+  }
+
+  /// WCAG contrast between two opaque colours (1 … 21).
+  static double contrast(Color a, Color b) {
+    final la = a.computeLuminance(), lb = b.computeLuminance();
+    return ((la > lb ? la : lb) + 0.05) / ((la > lb ? lb : la) + 0.05);
+  }
 
   /// The glass's dark tint over the blurred picture (glass.dark).
   static const Color tint = Color(0xFF0E1016);

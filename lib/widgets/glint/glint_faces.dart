@@ -550,7 +550,7 @@ class NotificationsFace extends StatelessWidget {
             Row(
               children: [
                 Expanded(child: _label(n.appLabel)),
-                if (items.length > 1) Text("${items.length}", style: GlintLook.label.copyWith(color: GlintLook.ember)),
+                if (items.length > 1) Text("${items.length}", style: GlintLook.label.copyWith(color: GlintLook.accentText())),
               ],
             ),
             const Spacer(),

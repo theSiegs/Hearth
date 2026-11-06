@@ -12,7 +12,11 @@ import 'package:flutter_test/flutter_test.dart';
 /// The TV differs from the phone on purpose in three places, checked here as such rather than skipped:
 /// - type: every size is Glint's times [GlintLook.tvScale] (a TV is read from across the room);
 /// - rest: the home rests after 45 s, not Glint's 20 s (a TV is left alone longer);
-/// - motion: Easy is the default, not Glint's Calm, and one tile turns at a time at every level.
+/// - motion: Easy is the default, not Glint's Lively (a TV home is mostly for opening an app), and one tile turns at a
+///   time at every level.
+///
+/// Not drawn on the TV, so not checked: the tile surfaces other than Smoke (Outline, Fog and the rest), Auto glass's
+/// light thresholds, and the flat buttons' kinds (Urgent, Lit, Stop).
 void main() {
   final tokens = jsonDecode(File("test/widgets/glint/glint-tokens.json").readAsStringSync()) as Map<String, dynamic>;
   dynamic at(String path) => path.split(".").fold<dynamic>(tokens, (node, key) => (node as Map<String, dynamic>)[key]);
@@ -30,6 +34,25 @@ void main() {
     expect(GlintLook.content, color("colors.ink.onDark.content"));
     expect(GlintLook.secondaryAlpha, number("colors.ink.onDark.secondaryAlpha"));
     expect(GlintLook.secondary.a, closeTo(number("colors.ink.onDark.secondaryAlpha"), 0.002));
+  });
+
+  test("the accent as words on glass", () {
+    const a = "colors.ink.accentText";
+    expect(GlintLook.frostedDark, color("$a.frostedDark"));
+    expect(GlintLook.accentMinContrast, number("$a.minContrast"));
+    expect(GlintLook.accentMinContrastLarge, number("$a.minContrastLarge"));
+    expect(GlintLook.largeTextPx, number("$a.largePx"));
+    expect(GlintLook.largeBoldTextPx, number("$a.largeBoldPx"));
+    expect(GlintLook.largeBoldWeight, at("$a.boldWeight"));
+    // Ember reads at about 3.2:1 on frosted dark: big words keep it, small ones are lifted toward white just enough
+    expect(GlintLook.accentText(large: true), GlintLook.ember);
+    final small = GlintLook.accentText();
+    expect(GlintLook.contrast(small, GlintLook.frostedDark), greaterThanOrEqualTo(4.5));
+    expect(small, isNot(GlintLook.ember));
+    expect(HSLColor.fromColor(small).hue, closeTo(HSLColor.fromColor(GlintLook.ember).hue, 1.5));
+    expect(GlintLook.isLargeText(20), isTrue);
+    expect(GlintLook.isLargeText(16, weight: 600), isTrue);
+    expect(GlintLook.isLargeText(16 * GlintLook.tvScale), isFalse);
   });
 
   test("glass, hairline and shine", () {
@@ -87,7 +110,7 @@ void main() {
     expect([for (final m in GlintMotion.values) m.name], [
       for (final l in at("motion.levels") as List) (l as String).toLowerCase(),
     ]);
-    expect(at("motion.default"), "Calm");
+    expect(at("motion.default"), "Lively");
     expect(GlintMotion.fallback, GlintMotion.easy, reason: "the TV's default on purpose");
     for (final m in GlintMotion.values) {
       final row = at("motion.pace.${m.name[0].toUpperCase()}${m.name.substring(1)}") as Map<String, dynamic>;
