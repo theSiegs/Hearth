@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "about": "Glint's design tokens, mirrored from the Kotlin look (glint-look, glint-tiles). Kotlin is the source of truth; GlintTokensTest in :glint-tiles fails when this file and the Kotlin drift apart. Colors are #AARRGGBB; Dp, sp, px and ms are in the key's suffix. Keys starting with _ are notes, not tokens. See README.md.",
 
   "colors": {
@@ -22,6 +22,13 @@
       "onAccent": {
         "_rule": "Ink on a solid accent fill (a lit button, a pressed one): light when its WCAG contrast with the accent is at least minContrast or higher than dark's, else dark. onLit is the dark ink.",
         "dark": "#FF1A1208", "light": "#FFFFFFFF", "minContrast": 4.5
+      },
+      "accentText": {
+        "_source": "AccentInk.text / onDark / onLight (MetroLogic.kt), Backdrop.accentInk and accentInk() (LookTokens.kt)",
+        "_rule": "The accent as TEXT on glass (labels, kickers, timers, group headers): the accent when its WCAG contrast with the surface is at least minContrast, else the accent mixed in sRGB toward white (dark surface) or black (light surface) by the least step that reaches it; the HSL hue stays. Surfaces: frostedDark = #808080 under glass.dark at the default clarity's Smoke strength; frostedLight = #808080 under Fog's white at the default clarity. Fills and edges keep the raw accent.",
+        "frostedDark": "#FF555658", "frostedLight": "#FFAEAEAE", "minContrast": 4.5,
+        "_large": "Large text (largePx and up, or largeBoldPx and up at boldWeight or heavier; px = dp, font scale included) lifts only to minContrastLarge, keeping more color. Looser than WCAG's large text (24 px, or 18.66 px bold) by owner choice.",
+        "minContrastLarge": 3.0, "largePx": 20, "largeBoldPx": 16, "boldWeight": 600
       }
     }
   },
@@ -29,13 +36,14 @@
   "glass": {
     "_source": "SurfaceGlass, PictureRest, FrostBlur (SurfaceTokens.kt); drawn by Glint's Modifier.glass",
     "_formula": "frosted = clarity / 100. Over the frosted picture: Smoke (and Auto on a dark picture) = dark at strengthBase + strengthFrost*frosted + smoke.extra; Auto on a light picture = white at autoLight.base + autoLight.frost*frosted; Fog = white at fog.base + fog.frost*frosted + fog.lift; Tinted = dark at the strength, then the accent at tinted.accentAlpha; Gradient = the picture's two colors (gradient.fallbackStart -> accent) at gradient.alpha; Solid = the app's color (else the accent), no picture; Picture = no tint. The sharp picture shows at (1 - frosted/sharp.until) * sharp.max. Then the app's color wash, the hairline and the shine.",
-    "surfaces": ["Auto", "Smoke", "Fog", "Tinted", "Gradient", "Solid", "Picture"],
+    "surfaces": ["Auto", "Smoke", "Fog", "Tinted", "Gradient", "Solid", "Picture", "Outline"],
+    "outline": { "_source": "OutlineSurface (SurfaceTokens.kt)", "veil": 0.16, "frameAlpha": 0.55, "frameWidthDp": 1, "edgeBoost": 1.6, "ringWidthDp": 4 },
     "clarity": { "default": 40, "clear": 15, "glass": 40, "frosted": 70, "fog": 95 },
     "dark": "#FF0E1016",
     "strengthBase": 0.06,
     "strengthFrost": 0.49,
     "smoke": { "extra": 0.12 },
-    "autoLight": { "base": 0.18, "frost": 0.35, "lightAboveLuminance": 0.64, "darkBelowLuminance": 0.56 },
+    "autoLight": { "base": 0.18, "frost": 0.35, "lightAboveLuminance": 0.68, "darkBelowLuminance": 0.52 },
     "fog": { "base": 0.10, "frost": 0.40, "lift": 0.1 },
     "tinted": { "accentAlpha": 0.35 },
     "gradient": { "alpha": 0.78, "fallbackStart": "#FF3B2A4A" },
@@ -79,12 +87,17 @@
     "_stop": "The one stop red in both apps (ignore, end call, end bar, timer stop); CallColors.EndRed is this color.",
     "urgent": {
       "_source": "Glass.Urgent, FlatGlass.UrgentBorder (LitGlass.kt), UrgentInk (MetroLogic.kt)",
-      "_rule": "Urgent = the one act-now positive action on a surface (answer). Never for on/off state. At rest: a solid fill (the accent, or nearStop.fill when the accent is near stop) with a borderDp border in border; ink = colors.ink.onAccent on the fill. Pressed: clear glass (flatButton.fill) with an outlineDp outline in the fill color and white ink, held until release (no animated fill). No ring lap on the square.",
+      "_rule": "Urgent = the one act-now positive action on a surface (answer). Never for on/off state. At rest: a solid fill (the accent, or nearStop.fill when the accent is near stop) with a borderDp border in border; ink = colors.ink.onAccent on the fill. Pressed: clear glass (flatButton.fill) with an outlineDp outline in the fill color (so white near stop, never a red ring) and white ink, held until release (no animated fill). No ring lap on the square.",
       "border": "#FFFFFFFF", "borderDp": 2,
       "nearStop": {
         "_rule": "Near stop when CIE76 deltaE (CIELAB, D65) to flatButton.stop is at most deltaE, or the CIELAB LCh chroma is at least minChroma and the LCh hue is within hueDeg of stop's.",
         "hueDeg": 20, "minChroma": 40, "deltaE": 30, "fill": "#FFFFFFFF"
       }
+    },
+    "lit": {
+      "_source": "UrgentInk.litFill (MetroLogic.kt), GlassColors.litFill (LitGlass.kt)",
+      "_rule": "A lit square's fill (and a pressed Rest or Primary square's): the accent, or when the accent is near stop (urgent.nearStop) its colors.ink.accentText on frostedDark, a lighter tint of the same hue at least minDeltaE (CIE76) from stop; ink = colors.ink.onAccent on the fill. A pressed Primary keeps its white border (primaryBorderDp), never an accent ring.",
+      "nearStopMinDeltaE": 30
     },
     "fillMs": 120, "releaseMs": 160,
     "litPressDarken": 0.12, "stopPressLighten": 0.15,
@@ -163,7 +176,7 @@
   "motion": {
     "_source": "Motion, MotionPace (glint-look); FlippingTile, TileTicker, ArrivalCue, TileTurn (glint-tiles)",
     "levels": ["Lively", "Easy", "Calm", "Still"],
-    "default": "Calm",
+    "default": "Lively",
     "crowd": 16,
     "_pace": "Ranges are [min, max] ms inclusive; null means the level never does it.",
     "pace": {

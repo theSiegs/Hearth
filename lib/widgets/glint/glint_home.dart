@@ -20,6 +20,7 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:flauncher/models/app.dart';
 import 'package:flauncher/models/category.dart';
+import 'package:flauncher/models/ha_lock_state.dart';
 import 'package:flauncher/models/watch_next_program.dart';
 import 'package:flauncher/providers/apps_service.dart';
 import 'package:flauncher/providers/calendars.dart';
@@ -27,6 +28,7 @@ import 'package:flauncher/providers/notifications_service.dart';
 import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/watch_next_service.dart';
+import 'package:flauncher/quiet_failure.dart';
 import 'package:flauncher/providers/weather_service.dart';
 import 'package:flauncher/widgets/glint/glint_faces.dart';
 import 'package:flauncher/flauncher_channel.dart';
@@ -62,6 +64,11 @@ class _GlintHomeState extends State<GlintHome> with SingleTickerProviderStateMix
   late final GlintHouseFeed _house;
   Timer? _idle;
 
+  /// What Home Assistant's Hearth integration says holds this kid (or soon will), read again when it says something
+  /// changed and every minute; [HaLockState.none] without the integration.
+  HaLockState _lock = HaLockState.none;
+  Timer? _lockTimer;
+
   @override
   void initState() {
     super.initState();
@@ -70,8 +77,20 @@ class _GlintHomeState extends State<GlintHome> with SingleTickerProviderStateMix
     WidgetsBinding.instance.addObserver(this);
     _rest.addListener(() => _ticker.paused = _rest.value > 0);
     _awake();
+    FLauncherChannel.haStateVersion.addListener(_loadLock);
+    _lockTimer = Timer.periodic(const Duration(minutes: 1), (_) => _loadLock());
+    _loadLock();
     // Arriving with nothing selected (the first start, the classic home switched off): the first tile
     WidgetsBinding.instance.addPostFrameCallback((_) => _selectFirstIfNothing());
+  }
+
+  Future<void> _loadLock() async {
+    try {
+      final lock = await context.read<FLauncherChannel>().getHaLockState();
+      if (mounted) setState(() => _lock = lock);
+    } catch (err) {
+      noteFailure('glint_home', err);
+    }
   }
 
   void _houseChanged() {
@@ -95,6 +114,8 @@ class _GlintHomeState extends State<GlintHome> with SingleTickerProviderStateMix
       ..removeListener(_houseChanged)
       ..dispose();
     _idle?.cancel();
+    FLauncherChannel.haStateVersion.removeListener(_loadLock);
+    _lockTimer?.cancel();
     _rest.dispose();
     _ticker.dispose();
     _scroll.dispose();
@@ -185,6 +206,13 @@ class _GlintHomeState extends State<GlintHome> with SingleTickerProviderStateMix
           (_) => AppFace(app: app, category: shown, wide: i < 2),
         ),
       );
+    }
+    // A kid's time, right after the clock: why apps are held, until when, or bedtime coming; and, with nothing to
+    // open at all, the classic home's "Nothing to watch right now" (select opens the time's up card to ask for more)
+    final nothingToOpen = startApps.isEmpty && programs.isEmpty;
+    if (TimeUpFace.shows(_lock, nothingToOpen: nothingToOpen, now: DateTime.now())) {
+      final lock = _lock;
+      tiles.insert(1, _Tile("time", GlintSize.wide, (_) => TimeUpFace(state: lock, nothingToOpen: nothingToOpen)));
     }
     tiles.add(_Tile("all-apps", GlintSize.small, (_) => const AllAppsFace()));
     tiles.add(_Tile("search", GlintSize.small, (_) => const SearchFace()));

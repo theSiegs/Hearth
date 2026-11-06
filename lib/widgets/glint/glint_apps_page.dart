@@ -81,11 +81,12 @@ class GlintAppsPage extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(0, 14, 0, 4),
             child: Text(
               l.toLowerCase(),
-              style: const TextStyle(
+              // Words in the accent: big letters keep it (Glint's accent ink lifts only small text)
+              style: TextStyle(
                 fontFamily: GlintLook.wpFont,
                 fontSize: 26,
                 fontWeight: FontWeight.w600,
-                color: GlintLook.ember,
+                color: GlintLook.accentText(large: true),
               ),
             ),
           ),

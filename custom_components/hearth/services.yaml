@@ -171,3 +171,52 @@ unblock_word:
       example: "prank"
       selector:
         text:
+
+pause:
+  fields:
+    minutes:
+      example: 45
+      selector:
+        number:
+          min: 1
+          max: 720
+          unit_of_measurement: min
+          mode: box
+    until:
+      example: "19:00"
+      selector:
+        time:
+    reason:
+      example: Dinner
+      selector:
+        text:
+    people:
+      selector:
+        entity:
+          domain: person
+          multiple: true
+
+pause_end:
+  fields:
+    people:
+      selector:
+        entity:
+          domain: person
+          multiple: true
+
+play_on_tv:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: hearth
+    what:
+      required: true
+      example: "https://youtu.be/aBcDeFgHiJk"
+      selector:
+        text:
+    profile:
+      example: user:10
+      selector:
+        text:

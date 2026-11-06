@@ -20,6 +20,7 @@ from homeassistant.components import persistent_notification
 from homeassistant.core import callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import (
+    BooleanSelector,
     DateSelector,
     EntitySelector,
     EntitySelectorConfig,
@@ -28,9 +29,23 @@ from homeassistant.helpers.selector import (
     SelectSelectorConfig,
     TextSelector,
     TextSelectorConfig,
+    TextSelectorType,
 )
 
-from .const import CONF_GROUP_APPS, CONF_GROUPS, CONF_LOCKS, CONF_PERSON, CONF_PROFILES, DOMAIN, KIND_MOBILE
+from .const import (
+    CONF_GROUP_APPS,
+    CONF_GROUPS,
+    CONF_LOCKS,
+    CONF_OUTSIDE_ALL,
+    CONF_ROLES,
+    CONF_TILE_EXCHANGE,
+    CONF_PERSON,
+    CONF_PROFILES,
+    CONF_PUSH_SERVER,
+    DOMAIN,
+    KIND_MOBILE,
+)
+from .counting import ALL
 from .limits import BUILTIN_GROUPS, GAMES, VIDEO, slug
 from .apps import CONF_APP_WATCH, CONF_ASK_NOTIFY, OTHER, options_with_app_in_group, update_notification
 from .enforce import (
@@ -46,6 +61,8 @@ from .enforce import (
 from .notifications import pairing_notification_id
 from .schooldays import CALENDAR_OFF, CALENDAR_SCHOOL, CONF_SCHOOL_DAYS
 from .sources import CONF_SOURCES, CONF_TITLES
+from . import parent_pin
+from .push import clean_server
 
 PERSON_SELECTOR = EntitySelector(EntitySelectorConfig(domain="person"))
 
@@ -129,7 +146,11 @@ class HearthOptionsFlow(OptionsFlow):
                 "new_apps",
                 "add_group",
                 "group_apps",
+                "not_screen_time",
                 "remove_group",
+                "tile_exchange",
+                "parent_pin",
+                "push",
             ],
         )
 
@@ -211,6 +232,98 @@ class HearthOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="group_apps", data_schema=schema)
+
+    async def async_step_not_screen_time(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Groups whose time isn't screen time (music, say): not counted in All screen time, not held when it runs
+        out. Their own budget still applies."""
+        options = self._options()
+        if user_input is not None:
+            return self.async_create_entry(data={**options, CONF_OUTSIDE_ALL: list(user_input.get("groups", []))})
+        groups = [g for g in self._household().groups if g.id != ALL]
+        schema = vol.Schema(
+            {
+                vol.Optional("groups", default=list(options.get(CONF_OUTSIDE_ALL, []))): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[SelectOptionDict(value=g.id, label=g.name) for g in groups], multiple=True
+                    )
+                )
+            }
+        )
+        return self.async_show_form(step_id="not_screen_time", data_schema=schema)
+
+    async def async_step_tile_exchange(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """The people whose phone may share with the launcher's tile exchange (scrubbed notification layouts, never
+        content). Off for everyone until chosen here."""
+        options = self._options()
+        if user_input is not None:
+            return self.async_create_entry(data={**options, CONF_TILE_EXCHANGE: list(user_input.get("people", []))})
+        schema = vol.Schema(
+            {
+                vol.Optional("people", default=list(options.get(CONF_TILE_EXCHANGE, []))): EntitySelector(
+                    EntitySelectorConfig(domain="person", multiple=True)
+                )
+            }
+        )
+        return self.async_show_form(step_id="tile_exchange", data_schema=schema)
+
+    async def async_step_push(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """The ntfy server the phones are pinged through when their state changes (push.py); empty: no pings."""
+        options = self._options()
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                server = clean_server(user_input.get("server"))
+            except vol.Invalid:
+                errors["server"] = "bad_server"
+            else:
+                return self.async_create_entry(data={**options, CONF_PUSH_SERVER: server})
+        schema = vol.Schema(
+            {
+                vol.Optional("server", description={"suggested_value": options.get(CONF_PUSH_SERVER)}): TextSelector(
+                    TextSelectorConfig(type=TextSelectorType.URL)
+                )
+            }
+        )
+        return self.async_show_form(step_id="push", data_schema=schema, errors=errors)
+
+    async def async_step_parent_pin(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """An adult's parent PIN, which paired TVs and phones check (kept as a hash; see parent_pin.py). Typed twice;
+        "Remove" clears that adult's."""
+        options = self._options()
+        pins = parent_pin.stored_pins(options)
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            person = user_input[CONF_PERSON]
+            if user_input.get("remove"):
+                pins.pop(person, None)
+                return self.async_create_entry(data={**options, parent_pin.CONF_PARENT_PINS: pins})
+            pin = (user_input.get("pin") or "").strip()
+            if options.get(CONF_ROLES, {}).get(person) != "adult":
+                errors[CONF_PERSON] = "not_adult"
+            elif not parent_pin.PIN.match(pin):
+                errors["pin"] = "bad_pin"
+            elif pin != (user_input.get("pin_again") or "").strip():
+                errors["pin_again"] = "pins_differ"
+            else:
+                pins[person] = await self.hass.async_add_executor_job(parent_pin.make, pin)
+                return self.async_create_entry(data={**options, parent_pin.CONF_PARENT_PINS: pins})
+        password = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_PERSON): PERSON_SELECTOR,
+                vol.Optional("pin"): password,
+                vol.Optional("pin_again"): password,
+                vol.Optional("remove", default=False): BooleanSelector(),
+            }
+        )
+        return self.async_show_form(
+            step_id="parent_pin",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={
+                "people": ", ".join(self._household().person_name(p) for p in sorted(pins)) or "nobody yet"
+            },
+        )
 
     async def async_step_remove_group(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         options = self._options()
@@ -374,6 +487,7 @@ class HearthOptionsFlow(OptionsFlow):
                         "person": person,
                         "entity_id": user_input["nintendo"],
                         "groups": list(user_input.get("nintendo_groups") or DEFAULT_NINTENDO_GROUPS),
+                        **({"playing": list(user_input["nintendo_playing"])} if user_input.get("nintendo_playing") else {}),
                     }
                 )
             return self.async_create_entry(data={**options, CONF_ENFORCE: kept})
@@ -396,6 +510,10 @@ class HearthOptionsFlow(OptionsFlow):
                 ),
                 vol.Optional("nintendo_groups", default=list(DEFAULT_NINTENDO_GROUPS)): SelectSelector(
                     SelectSelectorConfig(options=groups, multiple=True)
+                ),
+                # A shared Switch: held only while one of these is on (this person is the one playing)
+                vol.Optional("nintendo_playing"): EntitySelector(
+                    EntitySelectorConfig(domain="binary_sensor", multiple=True)
                 ),
             }
         )

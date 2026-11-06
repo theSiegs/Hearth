@@ -5,7 +5,7 @@ See docs/home-assistant-integration.md.
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import voluptuous as vol
 
@@ -23,8 +23,13 @@ from homeassistant.helpers.event import (
 from homeassistant.util import dt as dt_util
 
 from .api import async_register_views
+from .websocket import async_register_commands
+from .pause import end_pause, set_pause
+from . import panel
 from .apps import ACTION_PREFIX
-from .const import DOMAIN
+from .commands import is_profile_id, what_to_play
+from .const import CONF_DEVICES, CONF_KIND, CONF_PUSH_TOPIC, DOMAIN, KIND_MOBILE, KIND_TV
+from .push import new_topic
 from .hub import HearthHub
 from .limits import DAY_TYPES
 from .watch import CHANNELS, MAX_BLOCKS, MAX_LOG, VIDEOS, WORDS, channel_id_of, clean_word, video_id_of
@@ -56,6 +61,18 @@ SET_BUDGET_SCHEMA = vol.Schema(
         vol.Optional("days", default="both"): vol.In(["school_days", "other_days", "weekday", "weekend", "both"]),
     }
 )
+PAUSE_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            vol.Exclusive("minutes", "how_long"): vol.All(vol.Coerce(int), vol.Range(min=1, max=720)),
+            vol.Exclusive("until", "how_long"): vol.Any(cv.datetime, cv.time),
+            vol.Optional("reason"): cv.string,
+            vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id]),
+        }
+    ),
+    cv.has_at_least_one_key("minutes", "until"),
+)
+PAUSE_END_SCHEMA = vol.Schema({vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id])})
 GET_WATCH_LOG_SCHEMA = vol.Schema(
     {
         vol.Required("person"): cv.entity_id,
@@ -79,14 +96,22 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         household = entries[0].runtime_data.household
         if call.data["person"] not in household.people():
             raise ServiceValidationError(f"{call.data['person']} isn't one of the household's people")
-        if household.group(call.data["group"]) is None:
+        if household.group(group_id(household, call.data["group"])) is None:
             raise ServiceValidationError(f"No group {call.data['group']}")
         return household
+
+    def group_id(household, given: str) -> str:
+        """A group's id, also from its name (an older app gives the name)."""
+        if household.group(given) is not None:
+            return given
+        by_name = next((g.id for g in household.groups if g.name.casefold() == given.strip().casefold()), None)
+        return by_name or given
 
     @callback
     def add_bonus(call: ServiceCall) -> None:
         """Minutes added to (or, negative, taken from) a person's group today: the one way to extend."""
-        household(call).add_bonus(call.data["person"], call.data["group"], call.data["minutes"])
+        target = household(call)
+        target.add_bonus(call.data["person"], group_id(target, call.data["group"]), call.data["minutes"])
 
     @callback
     def set_budget(call: ServiceCall) -> None:
@@ -94,12 +119,131 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         names = {"school_days": "weekday", "other_days": "weekend", "weekday": "weekday", "weekend": "weekend"}
         days = DAY_TYPES if call.data["days"] == "both" else (names[call.data["days"]],)
         for kind in days:
-            target.set_budget(call.data["person"], call.data["group"], kind, call.data["minutes"])
+            target.set_budget(call.data["person"], group_id(target, call.data["group"]), kind, call.data["minutes"])
 
     hass.services.async_register(DOMAIN, SERVICE_ADD_BONUS, add_bonus, schema=ADD_BONUS_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_SET_BUDGET, set_budget, schema=SET_BUDGET_SCHEMA)
+
+    def loaded_household():
+        entries = hass.config_entries.async_loaded_entries(DOMAIN)
+        if not entries:
+            raise ServiceValidationError("Hearth isn't set up")
+        return entries[0].runtime_data.household
+
+    @callback
+    def pause(call: ServiceCall) -> None:
+        """Holds the people (everyone by default) for some minutes or until a time (today's, or tomorrow's if it's
+        passed): their Hearth devices stop and say why."""
+        household = loaded_household()
+        now = dt_util.now()
+        if "minutes" in call.data:
+            until = now + timedelta(minutes=call.data["minutes"])
+        elif isinstance(call.data["until"], datetime):
+            until = dt_util.as_local(call.data["until"]) if call.data["until"].tzinfo else call.data["until"].replace(
+                tzinfo=dt_util.get_default_time_zone()
+            )
+        else:
+            until = now.replace(
+                hour=call.data["until"].hour, minute=call.data["until"].minute, second=0, microsecond=0
+            )
+            if until <= now:
+                until += timedelta(days=1)
+        if until <= now:
+            raise ServiceValidationError("That time has passed")
+        people = call.data.get("people") or household.people()
+        unknown = [p for p in people if p not in household.people()]
+        if unknown:
+            raise ServiceValidationError(f"Not the household's: {', '.join(unknown)}")
+        set_pause(hass, people, until, call.data.get("reason"))
+        household.recompute()
+
+    @callback
+    def pause_end(call: ServiceCall) -> None:
+        household = loaded_household()
+        end_pause(hass, call.data.get("people"))
+        household.recompute()
+
+    hass.services.async_register(DOMAIN, "pause", pause, schema=PAUSE_SCHEMA)
+    hass.services.async_register(DOMAIN, "pause_end", pause_end, schema=PAUSE_END_SCHEMA)
     _register_watch_services(hass)
+    _register_play_on_tv(hass)
     return True
+
+
+PLAY_ON_TV_SCHEMA = vol.Schema(
+    {
+        vol.Required("device_id"): vol.Any(cv.string, vol.All(cv.ensure_list, vol.Length(min=1, max=1), [cv.string])),
+        vol.Required("what"): cv.string,
+        vol.Optional("profile"): vol.Any(None, cv.string),
+    }
+)
+
+
+def _register_play_on_tv(hass: HomeAssistant) -> None:
+    """hearth.play_on_tv: a URL, a video or an app on a paired Hearth TV, handed over with its next status answer."""
+
+    def tv_of(hub: HearthHub, given: str) -> str:
+        """The TV's Hearth device id, also from its Home Assistant device id (a device selector gives that)."""
+        if given in hub.devices:
+            device_id = given
+        else:
+            device = dr.async_get(hass).async_get(given)
+            device_id = next(
+                (
+                    ident
+                    for domain, ident in (device.identifiers if device else ())
+                    if domain == DOMAIN and ident in hub.devices
+                ),
+                None,
+            )
+        if device_id is None:
+            raise ServiceValidationError(f"{given} isn't one of the household's Hearth devices")
+        if hub.kind(device_id) != KIND_TV:
+            raise ServiceValidationError(f"{hub.devices[device_id].get('name') or device_id} isn't a TV")
+        return device_id
+
+    def profile_of(hub: HearthHub, device_id: str, given: str | None) -> str | None:
+        """A TV profile id as Hearth reports it (user:10), also from a person mapped to one."""
+        if not given:
+            return None
+        given = given.strip()
+        if is_profile_id(given):
+            return given
+        household = hub.household
+        if given not in household.people():
+            raise ServiceValidationError(f"{given} is neither a TV profile id (user:10) nor one of the household's people")
+        theirs = sorted(p for p, who in household.profile_people().items() if who == given)
+        status = hub.state(device_id).status or {}
+        on_this_tv = set(status.get("usage_today") or {}) | ({status["profile_id"]} if status.get("profile_id") else set())
+        if len(theirs) > 1:
+            theirs = [p for p in theirs if p in on_this_tv] or theirs
+        if len(theirs) != 1:
+            raise ServiceValidationError(
+                f"{given} has {'no' if not theirs else 'more than one'} TV profile here: give the profile id"
+            )
+        return theirs[0]
+
+    @callback
+    def play_on_tv(call: ServiceCall) -> ServiceResponse:
+        entries = hass.config_entries.async_loaded_entries(DOMAIN)
+        if not entries:
+            raise ServiceValidationError("Hearth isn't set up")
+        hub: HearthHub = entries[0].runtime_data
+        given = call.data["device_id"]
+        device_id = tv_of(hub, given[0] if isinstance(given, list) else given)
+        target = what_to_play(call.data["what"])
+        if target is None:
+            raise ServiceValidationError("Give a link, a YouTube video (an id or a link) or an app's package name")
+        profile_id = profile_of(hub, device_id, call.data.get("profile"))
+        if not hub.connected(device_id):
+            raise ServiceValidationError(f"{hub.devices[device_id].get('name') or device_id} isn't connected")
+        # In the TV's state document from now on: its next status answer carries it
+        command = hub.commands.play(device_id, target, profile_id)
+        return {"id": command.id, "device_id": device_id, "expires": command.expires.isoformat()}
+
+    hass.services.async_register(
+        DOMAIN, "play_on_tv", play_on_tv, schema=PLAY_ON_TV_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    )
 
 
 def _register_watch_services(hass: HomeAssistant) -> None:
@@ -179,6 +323,23 @@ def _register_watch_services(hass: HomeAssistant) -> None:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bool:
+    # Phones paired before push existed get their topic now (before the update listener, so it doesn't reload)
+    devices = entry.data.get(CONF_DEVICES, {})
+    if any(d.get(CONF_KIND) == KIND_MOBILE and not d.get(CONF_PUSH_TOPIC) for d in devices.values()):
+        hass.config_entries.async_update_entry(
+            entry,
+            data={
+                **entry.data,
+                CONF_DEVICES: {
+                    device_id: (
+                        {**d, CONF_PUSH_TOPIC: new_topic()}
+                        if d.get(CONF_KIND) == KIND_MOBILE and not d.get(CONF_PUSH_TOPIC)
+                        else d
+                    )
+                    for device_id, d in devices.items()
+                },
+            },
+        )
     hub = HearthHub(hass, entry)
     await hub.async_load()
     entry.runtime_data = hub
@@ -188,7 +349,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     # loaded they answer that Hearth isn't set up
     if not hass.data.get(_VIEWS_REGISTERED):
         async_register_views(hass)
+        async_register_commands(hass)
+        panel.async_register_commands(hass)
         hass.data[_VIEWS_REGISTERED] = True
+    # Hearth's page in the sidebar, while the household is set up
+    await panel.async_register_panel(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     @callback
@@ -213,6 +378,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     def phone_answer(event) -> None:
         """A Sort button on a new app's phone notification: HEARTH_APP|<group>|<package>."""
         action = str(event.data.get("action") or "")
+        # A request for more time: the first adult's answer decides
+        if hub.asks.phone_answer(action, event.context.user_id):
+            return
         if not action.startswith(ACTION_PREFIX):
             return
         parts = action.split("|", 2)
@@ -220,6 +388,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
             hub.household.sort_app(parts[2], parts[1])
 
     entry.async_on_unload(hass.bus.async_listen("mobile_app_notification_action", phone_answer))
+    # "Something changed" pings to the phones, when a push server is set
+    hub.push.start()
+    entry.async_on_unload(hub.push.stop)
     # People and groups come from the entry: when it changes (options, a phone paired), its entities are made again
     entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
     return True
@@ -232,6 +403,12 @@ async def _async_entry_updated(hass: HomeAssistant, entry: HearthConfigEntry) ->
 async def async_unload_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bool:
     await entry.runtime_data.async_flush()
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
+    """The household is deleted: Hearth's page goes from the sidebar. (A reload keeps it, so changing a setting there
+    doesn't send you away.)"""
+    panel.async_remove_panel(hass)
 
 
 async def async_remove_config_entry_device(

@@ -885,6 +885,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get peekHeadline => 'Headlines';
 
   @override
+  String glintBedtimeAt(String time) {
+    return 'Bedtime at $time';
+  }
+
+  @override
+  String glintSchoolTimeAt(String time) {
+    return 'School time at $time';
+  }
+
+  @override
   String get lookTitle => 'Look';
 
   @override
@@ -1363,6 +1373,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get parentPinHouseholdSubtitle =>
       'Enter the Parent PIN your other TVs use, and this TV uses it too';
+
+  @override
+  String get parentPinFromHa => 'Set in Home Assistant';
+
+  @override
+  String get parentPinFromHaBody =>
+      'Each adult\'s parent PIN is set in Home Assistant (Hearth > Configure > Parent PINs), and any of them works here. To change one, change it there.';
 
   @override
   String get parentPinConfirm => 'Enter the PIN again';
@@ -2565,7 +2582,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileLockNow => 'Lock now';
 
   @override
-  String get profileLockOnSleep => 'Lock when the TV wakes';
+  String get profileLockOnSleep => 'Log out when the TV sleeps';
 
   @override
   String get profileLockEveryTime => 'Every time';
@@ -2577,7 +2594,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileLockNeedsGoogleLock =>
-      'Opens Google TV\'s profile chooser when the TV wakes, so a profile with a PIN asks for it before it opens. Kids profiles are left alone.';
+      'Opens Google TV\'s profile chooser as the TV goes to sleep, kids profiles too, so whoever turns it on next picks who\'s watching and a profile with a PIN asks for it. Leaving a kids profile is still up to Google TV\'s kids lock.';
 
   @override
   String aboutTvName(String name) {
@@ -3679,4 +3696,71 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get haPairEnded =>
       'The request ended before it was confirmed. Try again.';
+
+  @override
+  String timeUpForGroup(String group) {
+    return 'Time\'s up for $group today';
+  }
+
+  @override
+  String timeUpPaused(String reason) {
+    return 'Paused: $reason';
+  }
+
+  @override
+  String get timeUpPausedNoReason => 'Paused for now';
+
+  @override
+  String get timeUpBedtime => 'It\'s bedtime';
+
+  @override
+  String get timeUpSchoolTime => 'It\'s school time';
+
+  @override
+  String get timeUpLocked => 'Locked for now';
+
+  @override
+  String timeUpUntil(String time) {
+    return 'Until $time';
+  }
+
+  @override
+  String get askForMoreTime => 'Ask an adult for more time';
+
+  @override
+  String askMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String askWaiting(int minutes) {
+    return 'Asked for $minutes min; waiting for an adult';
+  }
+
+  @override
+  String askApproved(int minutes) {
+    return 'An adult added $minutes min';
+  }
+
+  @override
+  String get askDenied => 'An adult said not now';
+
+  @override
+  String get askExpired => 'No adult answered in time. You can ask again.';
+
+  @override
+  String askCooldown(int minutes) {
+    return 'You can ask again in $minutes min';
+  }
+
+  @override
+  String get askNoPerson =>
+      'This profile isn\'t set up in Home Assistant yet, so it can\'t ask.';
+
+  @override
+  String get askUnreachable =>
+      'Couldn\'t reach Home Assistant. Try again in a moment.';
+
+  @override
+  String get askFailed => 'Couldn\'t ask just now. Try again in a moment.';
 }

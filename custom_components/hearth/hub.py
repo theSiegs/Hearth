@@ -22,21 +22,28 @@ from .const import (
     CONF_KIND,
     CONF_MODEL,
     CONF_PERSON,
+    CONF_PUSH_TOPIC,
     CONF_SECRET_HASH,
     CONF_SW_VERSION,
     CONNECTED_WITHIN,
+    KIND_MOBILE,
     MAX_EVENT_POSTS,
     MAX_PENDING_PAIRINGS,
     MAX_STATUS_POSTS,
     PAIRING_EXPIRES,
     PAIRING_INTERVAL_PER_ADDRESS,
     SIGNAL_DEVICE_ADDED,
+    SIGNAL_PAIRINGS,
     SIGNAL_STATUS,
     STATUS_WINDOW,
     STORAGE_KEY,
     STORAGE_VERSION,
 )
+from .asks import Asks
+from .commands import Commands
+from .push import PushChannel, new_topic
 from .household import Household
+from .parent_pin import EVENT_PARENT_PIN_LOCKED_OUT
 
 
 def hash_secret(secret: str) -> str:
@@ -60,6 +67,8 @@ class Pairing:
     person: str | None = None
     # Set once approved: the secret, handed to the device once
     secret: str | None = None
+    # A phone's ntfy topic, made when it's approved (push.py)
+    push_topic: str | None = None
     denied: bool = False
 
 
@@ -95,6 +104,9 @@ class DeviceState:
     seen: datetime | None = None
     posts: list[datetime] = field(default_factory=list)
     event_posts: list[datetime] = field(default_factory=list)
+    # Wrong parent PINs in a row, and the lockout they earned (kept until a restart)
+    pin_failures: int = 0
+    pin_locked_until: datetime | None = None
 
 
 class HearthHub:
@@ -110,6 +122,11 @@ class HearthHub:
         self._pairings: dict[str, Pairing] = shared["pairings"]
         self._asked_at: dict[str, datetime] = shared["asked_at"]
         self.household = Household(hass, self)
+        self.asks = Asks(hass, self)
+        # One-shot commands for the TVs (hearth.play_on_tv), handed over in their state documents
+        self.commands = Commands(hass)
+        # "Something changed" pings to the phones, when the household has a push server
+        self.push = PushChannel(hass, self)
 
     # The devices
 
@@ -169,8 +186,18 @@ class HearthHub:
     @callback
     def update_status(self, device_id: str, status: dict[str, Any]) -> None:
         state = self.state(device_id)
+        # A TV checks the Parent PIN itself: a lockout there is told as for a phone that asked here
+        before = (state.status or {}).get("pin_lockouts")
+        after = status.get("pin_lockouts")
+        if before is not None and after is not None and after > before:
+            self.hass.bus.async_fire(
+                EVENT_PARENT_PIN_LOCKED_OUT, {"device_id": device_id, "lockouts": after - before, "retry_in": None}
+            )
         state.status = status
         state.seen = dt_util.utcnow()
+        # What the TV ran of its commands leaves the queue (its answer no longer carries them)
+        if status.get("commands_done"):
+            self.commands.take_done(device_id, status["commands_done"])
         self._store.async_delay_save(self._data_to_save, 30)
         async_dispatcher_send(self.hass, SIGNAL_STATUS.format(device_id))
         self.household.recompute()
@@ -194,6 +221,7 @@ class HearthHub:
         devices = {k: v for k, v in self.devices.items() if k != device_id}
         self.hass.config_entries.async_update_entry(self.entry, data={**self.entry.data, CONF_DEVICES: devices})
         self._states.pop(device_id, None)
+        self.commands.forget(device_id)
         await self._store.async_save(self._data_to_save())
         self.household.recompute()
 
@@ -238,7 +266,13 @@ class HearthHub:
             expires=now + PAIRING_EXPIRES,
         )
         self._pairings[pairing.pairing_id] = pairing
+        async_dispatcher_send(self.hass, SIGNAL_PAIRINGS)
         return pairing
+
+    def pending_pairings(self) -> list[Pairing]:
+        """The devices waiting for an administrator to check their code."""
+        self._drop_expired()
+        return [p for p in self._pairings.values() if p.secret is None and not p.denied]
 
     def pairing(self, pairing_id: str) -> Pairing | None:
         self._drop_expired()
@@ -257,6 +291,8 @@ class HearthHub:
         if pairing is None or pairing.denied:
             return False
         secret = secrets.token_urlsafe(32)
+        # A phone gets its own push topic; pairing again makes a new one, as it does a new secret
+        topic = new_topic() if pairing.kind == KIND_MOBILE else None
         devices = {
             **self.devices,
             pairing.device_id: {
@@ -266,18 +302,23 @@ class HearthHub:
                 CONF_SW_VERSION: pairing.sw_version,
                 CONF_SECRET_HASH: hash_secret(secret),
                 CONF_PERSON: person,
+                **({CONF_PUSH_TOPIC: topic} if topic else {}),
             },
         }
         self.hass.config_entries.async_update_entry(self.entry, data={**self.entry.data, CONF_DEVICES: devices})
         pairing.secret = secret
+        pairing.person = person
+        pairing.push_topic = topic
         pairing.expires = dt_util.utcnow() + APPROVED_EXPIRES
         async_dispatcher_send(self.hass, SIGNAL_DEVICE_ADDED, pairing.device_id)
+        async_dispatcher_send(self.hass, SIGNAL_PAIRINGS)
         return True
 
     def deny(self, pairing_id: str) -> None:
         pairing = self.pairing(pairing_id)
         if pairing is not None:
             pairing.denied = True
+            async_dispatcher_send(self.hass, SIGNAL_PAIRINGS)
 
     def collect(self, pairing: Pairing) -> str | None:
         """The approved secret, once: the pairing ends with it."""

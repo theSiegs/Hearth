@@ -1576,6 +1576,18 @@ abstract class AppLocalizations {
   /// **'Headlines'**
   String get peekHeadline;
 
+  /// Glint home's time tile (a kids profile, Home Assistant's Hearth integration): bedtime starts soon; {time} is a time of day, such as 8:30 PM
+  ///
+  /// In en, this message translates to:
+  /// **'Bedtime at {time}'**
+  String glintBedtimeAt(String time);
+
+  /// Glint home's time tile: school time starts soon; {time} is a time of day, such as 8:00 AM
+  ///
+  /// In en, this message translates to:
+  /// **'School time at {time}'**
+  String glintSchoolTimeAt(String time);
+
   /// Settings page title, also its row in the page that opens it
   ///
   /// In en, this message translates to:
@@ -2328,6 +2340,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter the Parent PIN your other TVs use, and this TV uses it too'**
   String get parentPinHouseholdSubtitle;
+
+  /// Settings > Family > Parent PIN, when the Hearth integration in Home Assistant sets the parent PINs
+  ///
+  /// In en, this message translates to:
+  /// **'Set in Home Assistant'**
+  String get parentPinFromHa;
+
+  /// Shown when the Parent PIN is opened on a TV whose parent PINs come from Home Assistant
+  ///
+  /// In en, this message translates to:
+  /// **'Each adult\'s parent PIN is set in Home Assistant (Hearth > Configure > Parent PINs), and any of them works here. To change one, change it there.'**
+  String get parentPinFromHaBody;
 
   /// PIN screen title: confirming the new parent PIN
   ///
@@ -4248,7 +4272,7 @@ abstract class AppLocalizations {
   /// Settings > Profiles: locking an adult profile with Google TV's profile lock
   ///
   /// In en, this message translates to:
-  /// **'Lock when the TV wakes'**
+  /// **'Log out when the TV sleeps'**
   String get profileLockOnSleep;
 
   /// Settings > Profiles: locking an adult profile with Google TV's profile lock
@@ -4266,7 +4290,7 @@ abstract class AppLocalizations {
   /// Settings > Profiles: locking an adult profile with Google TV's profile lock
   ///
   /// In en, this message translates to:
-  /// **'Opens Google TV\'s profile chooser when the TV wakes, so a profile with a PIN asks for it before it opens. Kids profiles are left alone.'**
+  /// **'Opens Google TV\'s profile chooser as the TV goes to sleep, kids profiles too, so whoever turns it on next picks who\'s watching and a profile with a PIN asks for it. Leaving a kids profile is still up to Google TV\'s kids lock.'**
   String get profileLockNeedsGoogleLock;
 
   /// About: the TV's own name (Google TV's device name), under Hearth's version
@@ -6152,6 +6176,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The request ended before it was confirmed. Try again.'**
   String get haPairEnded;
+
+  /// Time's up card (a kids profile, Home Assistant's Hearth integration): an app's group has no time left today; {group} is the group's name, such as Games
+  ///
+  /// In en, this message translates to:
+  /// **'Time\'s up for {group} today'**
+  String timeUpForGroup(String group);
+
+  /// Time's up card: a family pause from Home Assistant holds the apps; {reason} is the reason an adult gave, such as Dinner
+  ///
+  /// In en, this message translates to:
+  /// **'Paused: {reason}'**
+  String timeUpPaused(String reason);
+
+  /// Time's up card: a family pause from Home Assistant, with no reason given
+  ///
+  /// In en, this message translates to:
+  /// **'Paused for now'**
+  String get timeUpPausedNoReason;
+
+  /// Time's up card: the kid's bedtime lock is on
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s bedtime'**
+  String get timeUpBedtime;
+
+  /// Time's up card: the kid's school time lock is on
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s school time'**
+  String get timeUpSchoolTime;
+
+  /// Time's up card: another lock from Home Assistant is on
+  ///
+  /// In en, this message translates to:
+  /// **'Locked for now'**
+  String get timeUpLocked;
+
+  /// Time's up card: when the pause or lock ends; {time} is a time of day, such as 7:00 PM
+  ///
+  /// In en, this message translates to:
+  /// **'Until {time}'**
+  String timeUpUntil(String time);
+
+  /// Time's up card: above the buttons a kid picks an amount of more time with
+  ///
+  /// In en, this message translates to:
+  /// **'Ask an adult for more time'**
+  String get askForMoreTime;
+
+  /// Time's up card: a button asking for this many more minutes
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min'**
+  String askMinutes(int minutes);
+
+  /// Time's up card: the request for more time was sent and no adult has answered yet
+  ///
+  /// In en, this message translates to:
+  /// **'Asked for {minutes} min; waiting for an adult'**
+  String askWaiting(int minutes);
+
+  /// Time's up card: an adult said yes to the request for more time
+  ///
+  /// In en, this message translates to:
+  /// **'An adult added {minutes} min'**
+  String askApproved(int minutes);
+
+  /// Time's up card: an adult said no to the request for more time
+  ///
+  /// In en, this message translates to:
+  /// **'An adult said not now'**
+  String get askDenied;
+
+  /// Time's up card: the request for more time expired without an answer
+  ///
+  /// In en, this message translates to:
+  /// **'No adult answered in time. You can ask again.'**
+  String get askExpired;
+
+  /// Time's up card: after an adult said not now, the kid waits before asking again
+  ///
+  /// In en, this message translates to:
+  /// **'You can ask again in {minutes} min'**
+  String askCooldown(int minutes);
+
+  /// Time's up card: Home Assistant doesn't know whose profile this is
+  ///
+  /// In en, this message translates to:
+  /// **'This profile isn\'t set up in Home Assistant yet, so it can\'t ask.'**
+  String get askNoPerson;
+
+  /// Time's up card: the request couldn't be sent
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach Home Assistant. Try again in a moment.'**
+  String get askUnreachable;
+
+  /// Time's up card: Home Assistant refused the request for another reason
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t ask just now. Try again in a moment.'**
+  String get askFailed;
 }
 
 class _AppLocalizationsDelegate

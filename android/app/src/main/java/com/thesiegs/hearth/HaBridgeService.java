@@ -154,6 +154,12 @@ public class HaBridgeService extends Service {
         if (status != null) status.onProfileChanged();
     }
 
+    /** Posts the status now for a fresh answer (main thread); nothing when the reporter isn't running. */
+    static void refreshNow() {
+        HaStatusReporter status = sStatus;
+        if (status != null) status.refreshNow();
+    }
+
     // --- The service ---
 
     @Override

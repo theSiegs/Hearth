@@ -20,6 +20,8 @@ import 'dart:typed_data';
 
 import 'package:flauncher/actions.dart';
 import 'package:flauncher/flauncher_channel.dart';
+import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/models/ha_lock_state.dart';
 import 'package:flauncher/models/app.dart';
 import 'package:flauncher/models/category.dart';
 import 'package:flauncher/models/watch_next_program.dart';
@@ -38,6 +40,7 @@ import 'package:flauncher/widgets/glint/glint_look.dart';
 import 'package:flauncher/widgets/glint/glint_tile.dart';
 import 'package:flauncher/widgets/settings/notifications_panel.dart';
 import 'package:flauncher/widgets/settings/settings_panel.dart';
+import 'package:flauncher/widgets/time_up_card.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:provider/provider.dart';
@@ -373,6 +376,12 @@ class ProfileFace extends StatelessWidget {
   final Uint8List? avatar;
   const ProfileFace({super.key, required this.name, this.avatar});
 
+  /// A person's name as Glint's Family shows it: the first name only, lowercase ("Alex Rivera" is "alex").
+  static String shownName(String name) {
+    final first = name.trim().split(RegExp(r"\s+")).first;
+    return (first.isEmpty ? name.trim() : first).toLowerCase();
+  }
+
   @override
   Widget build(BuildContext context) => GlintTile(
     picture: avatar == null || avatar!.isEmpty ? null : MemoryImage(avatar!),
@@ -386,7 +395,8 @@ class ProfileFace extends StatelessWidget {
           Text(name.characters.first.toUpperCase(), style: GlintLook.display(40)),
         ],
         const Spacer(),
-        Text(name, style: GlintLook.primary.copyWith(fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
+        Text(shownName(name),
+            style: GlintLook.primary.copyWith(fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
       ],
     ),
   );
@@ -550,7 +560,7 @@ class NotificationsFace extends StatelessWidget {
             Row(
               children: [
                 Expanded(child: _label(n.appLabel)),
-                if (items.length > 1) Text("${items.length}", style: GlintLook.label.copyWith(color: GlintLook.ember)),
+                if (items.length > 1) Text("${items.length}", style: GlintLook.label.copyWith(color: GlintLook.accentText())),
               ],
             ),
             const Spacer(),
@@ -700,4 +710,91 @@ class PeekFace extends StatelessWidget {
       );
     },
   );
+}
+
+/// Time, for a kid: why apps are held now (a family pause, bedtime, school time, a group's time up today) and until
+/// when, else that bedtime or school time starts within the hour; with nothing to open and no word from Home Assistant,
+/// the home's "Nothing to watch right now". Words only, no buttons on the face (Glint's rule): select opens the time's
+/// up card, where a kid can ask an adult for more time.
+class TimeUpFace extends StatelessWidget {
+  final HaLockState state;
+
+  /// The profile has nothing it can open (no apps, nothing to continue).
+  final bool nothingToOpen;
+  final DateTime Function() clock;
+  const TimeUpFace({super.key, required this.state, this.nothingToOpen = false, this.clock = DateTime.now});
+
+  /// A bedtime or school time this close shows as coming.
+  static const Duration soonWithin = Duration(hours: 1);
+
+  /// Something holds the kid's apps now.
+  static bool held(HaLockState s) => s.paused || s.lockKind != null || s.timeUp.isNotEmpty;
+
+  /// When the next bedtime or school time starts, if it's within [soonWithin].
+  static DateTime? soon(HaLockState s, DateTime now) {
+    final at = s.nextLockAt;
+    if (!s.kids || at == null) return null;
+    if (s.nextLockKind != HaLockKind.bedtime && s.nextLockKind != HaLockKind.schoolTime) return null;
+    final left = at.difference(now);
+    return left > Duration.zero && left <= soonWithin ? at : null;
+  }
+
+  /// The tile has something to say.
+  static bool shows(HaLockState s, {required bool nothingToOpen, required DateTime now}) =>
+      nothingToOpen || held(s) || soon(s, now) != null;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    String time(DateTime at) => MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(at),
+        alwaysUse24HourFormat: MediaQuery.maybeAlwaysUse24HourFormatOf(context) ?? false);
+    final s = state;
+    IconData icon = Icons.nightlight_round;
+    String title;
+    DateTime? until;
+    if (s.paused) {
+      icon = Icons.pause_circle_outline;
+      title = s.pauseReason != null ? l10n.timeUpPaused(s.pauseReason!) : l10n.timeUpPausedNoReason;
+      until = s.pauseUntil;
+    } else if (s.lockKind != null) {
+      (icon, title) = switch (s.lockKind!) {
+        HaLockKind.bedtime => (Icons.nightlight_round, l10n.timeUpBedtime),
+        HaLockKind.schoolTime => (Icons.school_outlined, l10n.timeUpSchoolTime),
+        HaLockKind.pause => (Icons.pause_circle_outline, l10n.timeUpPausedNoReason),
+        HaLockKind.other => (Icons.lock_outline, l10n.timeUpLocked),
+      };
+      until = s.lockUntil;
+    } else if (s.timeUp.isNotEmpty) {
+      icon = Icons.hourglass_bottom;
+      title = l10n.timeUpForGroup(s.timeUp.map((g) => g.name).join(", "));
+    } else if (nothingToOpen) {
+      title = l10n.homeNothingToWatch;
+    } else {
+      final at = soon(s, clock())!;
+      final school = s.nextLockKind == HaLockKind.schoolTime;
+      icon = school ? Icons.school_outlined : Icons.nightlight_round;
+      title = school ? l10n.glintSchoolTimeAt(time(at)) : l10n.glintBedtimeAt(time(at));
+    }
+    final sub = until == null ? null : l10n.timeUpUntil(time(until));
+    final opens = held(s) || nothingToOpen;
+    return GlintTile(
+      key: const Key("glint_time_up"),
+      // A change (an adult's answer, a new hold) lights the edge until the tile is selected
+      fresh: Object.hash(title, sub),
+      onPressed: opens
+          ? () => showTimeUpDialog(context, context.read<FLauncherChannel>(), null,
+              heldByPause: s.paused, fallback: l10n.homeNothingToWatch)
+          : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Icon(icon, color: GlintLook.secondary, size: 26, shadows: GlintLook.textShadow),
+          const SizedBox(height: 6),
+          Text(title, style: GlintLook.primary.copyWith(fontSize: 20), maxLines: 2, overflow: TextOverflow.ellipsis),
+          if (sub != null) Text(sub, style: GlintLook.secondaryText, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ],
+      ),
+    );
+  }
 }

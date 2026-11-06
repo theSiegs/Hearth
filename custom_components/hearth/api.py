@@ -16,16 +16,21 @@ import re
 from typing import Any
 
 from aiohttp import web
+import voluptuous as vol
 
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
+from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.util.network import is_local
 
-from .const import DOMAIN, KIND_TV, KINDS, MAX_STATUS_BYTES, PAIRING_EXPIRES
+from .const import CONF_PUSH_SERVER, CONF_ROLES, CONTRACT, DOMAIN, KIND_MOBILE, KIND_TV, KINDS, MAX_STATUS_BYTES, PAIRING_EXPIRES
 from .hub import HearthHub, collect_secret, find_pairing
+from .push import clean_server, push_answer
 from .notifications import notify_pairing
+from . import parent_pin
+from .asks import AskError
 from .status import clean_status, text
 from .watch import MAX_EVENTS, clean_started
 
@@ -126,7 +131,11 @@ class PairStartView(HomeAssistantView):
 
 class PairStatusView(HomeAssistantView):
     """GET /api/hearth/pair/{pairing_id} (header X-Hearth-Nonce) -> {"status": "pending" | "denied"} or, once,
-    {"status": "approved", "device_id", "secret"}. An unknown or expired pairing is 404."""
+    {"status": "approved", "device_id", "secret", "person", "role": "kid" | "adult" | null, "urls": {"internal",
+    "external"}}: whose phone it is, and where Home Assistant answers, at
+    home and away (Home Assistant Cloud's when it's set up), either null when not known; a phone's app signs in there
+    with Home Assistant's own login. A phone's answer also has "push": {"server", "topic"} (its ntfy channel, push.py)
+    or null when the household has no push server. An unknown or expired pairing is 404."""
 
     url = "/api/hearth/pair/{pairing_id}"
     name = "api:hearth:pair:status"
@@ -145,7 +154,44 @@ class PairStatusView(HomeAssistantView):
         secret = collect_secret(hass, pairing)
         if secret is None:
             return web.json_response({"status": "pending"})
-        return web.json_response({"status": "approved", "device_id": pairing.device_id, "secret": secret})
+        # Whose phone it is, and whether they're a kid or an adult (as set on Hearth's page; null when not set). The
+        # entry's options are read even while it reloads (approving the device reloads it)
+        entries = hass.config_entries.async_entries(DOMAIN)
+        options = entries[0].options if entries else {}
+        roles = options.get(CONF_ROLES, {})
+        return web.json_response(
+            {
+                "status": "approved",
+                "contract": CONTRACT,
+                "device_id": pairing.device_id,
+                "secret": secret,
+                "urls": _urls(hass),
+                "person": pairing.person,
+                "role": roles.get(pairing.person) if pairing.person else None,
+                # A phone's push channel: where to listen for "changed" (push.py); null without a push server
+                "push": push_answer(_server(options), pairing.push_topic) if pairing.kind == KIND_MOBILE else None,
+            }
+        )
+
+
+def _server(options) -> str | None:
+    try:
+        return clean_server(options.get(CONF_PUSH_SERVER))
+    except vol.Invalid:
+        return None
+
+
+def _urls(hass: HomeAssistant) -> dict[str, str | None]:
+    def url(**kwargs) -> str | None:
+        try:
+            return get_url(hass, **kwargs)
+        except NoURLAvailableError:
+            return None
+
+    return {
+        "internal": url(allow_external=False, allow_cloud=False),
+        "external": url(allow_internal=False, allow_ip=False, prefer_cloud=True),
+    }
 
 
 class StatusView(HomeAssistantView):
@@ -172,7 +218,13 @@ class StatusView(HomeAssistantView):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
         hub.update_status(device_id, status)
         # What the device is told: each profile's (or the phone's person's) limits today
-        return web.json_response({"ok": True, "state": hub.household.document_for(device_id)})
+        state = hub.household.document_for(device_id)
+        answer: dict[str, Any] = {"ok": True, "contract": CONTRACT, "state": state}
+        if hub.kind(device_id) == KIND_MOBILE:
+            # The phone has this version now: it isn't pinged for it; and where to listen for the next (or null)
+            hub.push.delivered(device_id, state["version"])
+            answer["push"] = hub.push.answer_for(device_id)
+        return web.json_response(answer)
 
 
 class EventsView(HomeAssistantView):
@@ -216,6 +268,107 @@ class EventsView(HomeAssistantView):
         return web.json_response({"ok": True, "added": added})
 
 
+class VerifyPinView(HomeAssistantView):
+    """POST /api/hearth/device/{device_id}/verify_pin (header X-Hearth-Secret): {"pin": "1234"} -> {"ok": true, "person":
+    "person.alex"} or {"ok": false}.
+
+    Checks the adults' parent PINs (Configure > Parent PINs), any of them; the answer says whose it was, and
+    hearth_parent_pin_used tells automations. The device never gets a PIN or a hash. After
+    parent_pin.FREE_TRIES wrong ones in a row the device waits, longer each time: 429 {"error": "locked_out",
+    "retry_in": s}, and a wrong answer says its own "retry_in" once it starts one. 404 "no_pin" when none is set (the
+    device uses its own). Any paired device may ask."""
+
+    url = "/api/hearth/device/{device_id}/verify_pin"
+    name = "api:hearth:device:verify_pin"
+    requires_auth = False
+
+    async def post(self, request: web.Request, device_id: str) -> web.Response:
+        hass: HomeAssistant = request.app["hass"]
+        if not _local(request):
+            return _error(HTTPStatus.FORBIDDEN, "not_local")
+        hub = _hub(hass)
+        if hub is None:
+            return _error(HTTPStatus.SERVICE_UNAVAILABLE, "not_set_up")
+        if not hub.authorized(device_id, request.headers.get(HEADER_SECRET)):
+            return _error(HTTPStatus.UNAUTHORIZED, "not_paired")
+        stored = parent_pin.stored_pins(hub.entry.options)
+        if not stored:
+            return _error(HTTPStatus.NOT_FOUND, "no_pin")
+        state = hub.state(device_id)
+        now = dt_util.utcnow()
+        if wait := parent_pin.retry_in(state.pin_locked_until, now):
+            return web.json_response({"error": "locked_out", "retry_in": wait}, status=HTTPStatus.TOO_MANY_REQUESTS)
+        body = await _json_body(request)
+        pin = body.get("pin") if isinstance(body, dict) else None
+        if not isinstance(pin, str):
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        # Counted before the slow check, so parallel guesses can't all slip in under the free tries
+        state.pin_failures += 1
+        if person := await hass.async_add_executor_job(parent_pin.whose, stored, pin):
+            state.pin_failures = 0
+            state.pin_locked_until = None
+            hass.bus.async_fire(parent_pin.EVENT_PARENT_PIN_USED, {"device_id": device_id, "person": person})
+            return web.json_response({"ok": True, "person": person})
+        answer: dict[str, Any] = {"ok": False}
+        if wait_for := parent_pin.lockout(state.pin_failures):
+            state.pin_locked_until = dt_util.utcnow() + wait_for
+            answer["retry_in"] = parent_pin.retry_in(state.pin_locked_until, dt_util.utcnow())
+            hass.bus.async_fire(
+                parent_pin.EVENT_PARENT_PIN_LOCKED_OUT,
+                {"device_id": device_id, "failures": state.pin_failures, "retry_in": answer["retry_in"]},
+            )
+        return web.json_response(answer)
+
+
+class AskView(HomeAssistantView):
+    """POST /api/hearth/device/{device_id}/ask (header X-Hearth-Secret): {"minutes": 15|30|45|60, "group": "all" or a
+    group id, "note": short text, "profile_id": a TV's profile (a phone asks for its own person)} -> {"ok": true,
+    "request": {id, status, minutes, asked_minutes, group, expires}}. 409 already_open (with that request), 429 cooldown
+    (with retry_in) after a "not now", 400 for anything else wrong, 404 no_person when the profile is nobody's. The
+    answer comes in the person's state document ("request") with the next status answers."""
+
+    url = "/api/hearth/device/{device_id}/ask"
+    name = "api:hearth:device:ask"
+    requires_auth = False
+
+    async def post(self, request: web.Request, device_id: str) -> web.Response:
+        hass: HomeAssistant = request.app["hass"]
+        if not _local(request):
+            return _error(HTTPStatus.FORBIDDEN, "not_local")
+        hub = _hub(hass)
+        if hub is None:
+            return _error(HTTPStatus.SERVICE_UNAVAILABLE, "not_set_up")
+        if not hub.authorized(device_id, request.headers.get(HEADER_SECRET)):
+            return _error(HTTPStatus.UNAUTHORIZED, "not_paired")
+        if hub.too_many_events(device_id):
+            return _error(HTTPStatus.TOO_MANY_REQUESTS, "too_often")
+        body = await _json_body(request)
+        if not isinstance(body, dict) or not isinstance(body.get("minutes", 15), int):
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        if hub.kind(device_id) == KIND_TV:
+            profile_id = text(body.get("profile_id"), 64) or (hub.state(device_id).status or {}).get("profile_id")
+            person = hub.household.profile_person(profile_id) if profile_id else None
+        else:
+            person = hub.household.device_person(device_id)
+        if not person:
+            return _error(HTTPStatus.NOT_FOUND, "no_person")
+        try:
+            ask = hub.asks.ask(
+                person, body.get("minutes", 15), text(body.get("group"), 64) or "all", text(body.get("note"), 200), device_id
+            )
+        except AskError as err:
+            if err.code == "already_open":
+                return web.json_response(
+                    {"error": "already_open", "request": err.detail.device_view()}, status=HTTPStatus.CONFLICT
+                )
+            if err.code == "cooldown":
+                return web.json_response(
+                    {"error": "cooldown", "retry_in": err.detail}, status=HTTPStatus.TOO_MANY_REQUESTS
+                )
+            return _error(HTTPStatus.BAD_REQUEST, err.code)
+        return web.json_response({"ok": True, "request": ask.device_view()})
+
+
 def async_register_views(hass: HomeAssistant) -> None:
-    for view in (PairStartView, PairStatusView, StatusView, EventsView):
+    for view in (PairStartView, PairStatusView, StatusView, EventsView, VerifyPinView, AskView):
         hass.http.register_view(view())

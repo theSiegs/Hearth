@@ -759,6 +759,20 @@
     "@peekHeadline": {
         "description": "Peek tiles: no tiles, lines of text on the picture at the top left"
     },
+    "glintBedtimeAt": "Bedtime at {time}",
+    "@glintBedtimeAt": {
+        "description": "Glint home's time tile (a kids profile, Home Assistant's Hearth integration): bedtime starts soon; {time} is a time of day, such as 8:30 PM",
+        "placeholders": {
+            "time": {"type": "String"}
+        }
+    },
+    "glintSchoolTimeAt": "School time at {time}",
+    "@glintSchoolTimeAt": {
+        "description": "Glint home's time tile: school time starts soon; {time} is a time of day, such as 8:00 AM",
+        "placeholders": {
+            "time": {"type": "String"}
+        }
+    },
     "lookTitle": "Look",
     "@lookTitle": {
         "description": "Settings page title, also its row in the page that opens it"
@@ -1437,6 +1451,14 @@
     "parentPinHouseholdSubtitle": "Enter the Parent PIN your other TVs use, and this TV uses it too",
     "@parentPinHouseholdSubtitle": {
         "description": "PIN screen: under Your other TVs' Parent PIN"
+    },
+    "parentPinFromHa": "Set in Home Assistant",
+    "@parentPinFromHa": {
+        "description": "Settings > Family > Parent PIN, when the Hearth integration in Home Assistant sets the parent PINs"
+    },
+    "parentPinFromHaBody": "Each adult's parent PIN is set in Home Assistant (Hearth > Configure > Parent PINs), and any of them works here. To change one, change it there.",
+    "@parentPinFromHaBody": {
+        "description": "Shown when the Parent PIN is opened on a TV whose parent PINs come from Home Assistant"
     },
     "parentPinConfirm": "Enter the PIN again",
     "@parentPinConfirm": {
@@ -3095,7 +3117,7 @@
     "@profileLockNow": {
         "description": "Settings > Profiles: locking an adult profile with Google TV's profile lock"
     },
-    "profileLockOnSleep": "Lock when the TV wakes",
+    "profileLockOnSleep": "Log out when the TV sleeps",
     "@profileLockOnSleep": {
         "description": "Settings > Profiles: locking an adult profile with Google TV's profile lock"
     },
@@ -3112,7 +3134,7 @@
             }
         }
     },
-    "profileLockNeedsGoogleLock": "Opens Google TV's profile chooser when the TV wakes, so a profile with a PIN asks for it before it opens. Kids profiles are left alone.",
+    "profileLockNeedsGoogleLock": "Opens Google TV's profile chooser as the TV goes to sleep, kids profiles too, so whoever turns it on next picks who's watching and a profile with a PIN asks for it. Leaving a kids profile is still up to Google TV's kids lock.",
     "@profileLockNeedsGoogleLock": {
         "description": "Settings > Profiles: locking an adult profile with Google TV's profile lock"
     },
@@ -4561,5 +4583,94 @@
     "haPairEnded": "The request ended before it was confirmed. Try again.",
     "@haPairEnded": {
         "description": "Home Assistant pairing: expired"
+    },
+    "timeUpForGroup": "Time's up for {group} today",
+    "@timeUpForGroup": {
+        "description": "Time's up card (a kids profile, Home Assistant's Hearth integration): an app's group has no time left today; {group} is the group's name, such as Games",
+        "placeholders": {
+            "group": {"type": "String"}
+        }
+    },
+    "timeUpPaused": "Paused: {reason}",
+    "@timeUpPaused": {
+        "description": "Time's up card: a family pause from Home Assistant holds the apps; {reason} is the reason an adult gave, such as Dinner",
+        "placeholders": {
+            "reason": {"type": "String"}
+        }
+    },
+    "timeUpPausedNoReason": "Paused for now",
+    "@timeUpPausedNoReason": {
+        "description": "Time's up card: a family pause from Home Assistant, with no reason given"
+    },
+    "timeUpBedtime": "It's bedtime",
+    "@timeUpBedtime": {
+        "description": "Time's up card: the kid's bedtime lock is on"
+    },
+    "timeUpSchoolTime": "It's school time",
+    "@timeUpSchoolTime": {
+        "description": "Time's up card: the kid's school time lock is on"
+    },
+    "timeUpLocked": "Locked for now",
+    "@timeUpLocked": {
+        "description": "Time's up card: another lock from Home Assistant is on"
+    },
+    "timeUpUntil": "Until {time}",
+    "@timeUpUntil": {
+        "description": "Time's up card: when the pause or lock ends; {time} is a time of day, such as 7:00 PM",
+        "placeholders": {
+            "time": {"type": "String"}
+        }
+    },
+    "askForMoreTime": "Ask an adult for more time",
+    "@askForMoreTime": {
+        "description": "Time's up card: above the buttons a kid picks an amount of more time with"
+    },
+    "askMinutes": "{minutes} min",
+    "@askMinutes": {
+        "description": "Time's up card: a button asking for this many more minutes",
+        "placeholders": {
+            "minutes": {"type": "int"}
+        }
+    },
+    "askWaiting": "Asked for {minutes} min; waiting for an adult",
+    "@askWaiting": {
+        "description": "Time's up card: the request for more time was sent and no adult has answered yet",
+        "placeholders": {
+            "minutes": {"type": "int"}
+        }
+    },
+    "askApproved": "An adult added {minutes} min",
+    "@askApproved": {
+        "description": "Time's up card: an adult said yes to the request for more time",
+        "placeholders": {
+            "minutes": {"type": "int"}
+        }
+    },
+    "askDenied": "An adult said not now",
+    "@askDenied": {
+        "description": "Time's up card: an adult said no to the request for more time"
+    },
+    "askExpired": "No adult answered in time. You can ask again.",
+    "@askExpired": {
+        "description": "Time's up card: the request for more time expired without an answer"
+    },
+    "askCooldown": "You can ask again in {minutes} min",
+    "@askCooldown": {
+        "description": "Time's up card: after an adult said not now, the kid waits before asking again",
+        "placeholders": {
+            "minutes": {"type": "int"}
+        }
+    },
+    "askNoPerson": "This profile isn't set up in Home Assistant yet, so it can't ask.",
+    "@askNoPerson": {
+        "description": "Time's up card: Home Assistant doesn't know whose profile this is"
+    },
+    "askUnreachable": "Couldn't reach Home Assistant. Try again in a moment.",
+    "@askUnreachable": {
+        "description": "Time's up card: the request couldn't be sent"
+    },
+    "askFailed": "Couldn't ask just now. Try again in a moment.",
+    "@askFailed": {
+        "description": "Time's up card: Home Assistant refused the request for another reason"
     }
 }

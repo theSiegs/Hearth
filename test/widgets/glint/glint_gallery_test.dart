@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/gradients.dart';
+import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/models/ha_lock_state.dart';
 import 'package:flauncher/models/watch_next_program.dart';
 import 'package:flauncher/models/weather_data.dart';
 import 'package:flauncher/providers/apps_service.dart';
@@ -97,6 +99,8 @@ void main() {
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Material(
           child: Container(
             decoration: const BoxDecoration(
@@ -112,6 +116,7 @@ void main() {
                 sized(230, 111, CalendarFace(events: [event])),
                 sized(230, 111, NotificationsFace(items: [note, note])),
                 sized(111, 111, const ProfileFace(name: "Alex")),
+                sized(230, 111, TimeUpFace(state: HaLockState(paired: true, kids: true, paused: true, pauseReason: "Dinner", pauseUntil: now.add(const Duration(minutes: 30))))),
                 sized(230, 111, AppFace(app: fakeApp(packageName: "com.example.tv", name: "Example TV"), category: null, wide: true)),
                 sized(111, 111, AppFace(app: fakeApp(packageName: "com.example.b", name: "Music"), category: null)),
                 sized(111, 111, const AllAppsFace()),

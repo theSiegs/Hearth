@@ -28,6 +28,7 @@ import 'package:provider/provider.dart';
 
 import 'focusable_settings_tile.dart';
 import 'household_page.dart';
+import 'message_dialog.dart';
 import 'kids_profiles_page.dart';
 import 'profile_pairing_page.dart';
 import 'settings_page.dart';
@@ -45,7 +46,9 @@ class FamilySettingsPage extends StatelessWidget {
     final l = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
     final hasPin = context.select<SettingsService, bool>((s) => s.hasParentPin);
-    final householdPin = context.select<SettingsService, bool>((s) => s.householdParentPinOffered != null);
+    final fromHa = context.select<SettingsService, bool>((s) => s.haParentPinsManaged);
+    final householdPin =
+        context.select<SettingsService, bool>((s) => s.householdParentPinOffered != null) && !fromHa;
     return SettingsPage(
       title: l.familyTitle,
       children: [
@@ -53,8 +56,12 @@ class FamilySettingsPage extends StatelessWidget {
           autofocus: !householdPin,
           leading: const Icon(Icons.lock_outline),
           title: Text(l.parentPinTitle, style: textTheme.bodyMedium),
-          trailing: Text(hasPin ? l.parentPinOn : l.parentPinOff, style: textTheme.bodySmall),
-          onPressed: () => _editParentPin(context),
+          trailing: Text(fromHa ? l.parentPinFromHa : (hasPin ? l.parentPinOn : l.parentPinOff),
+              style: textTheme.bodySmall),
+          // Home Assistant sets each adult's: nothing to change here
+          onPressed: () => fromHa
+              ? showMessageDialog(context, title: l.parentPinTitle, message: l.parentPinFromHaBody)
+              : _editParentPin(context),
         ),
         // This TV had its own Parent PIN when it joined the household, and the other TVs use another one
         if (householdPin)
@@ -99,7 +106,7 @@ class FamilySettingsPage extends StatelessWidget {
     if (settings.hasParentPin) {
       final current = await showDialog<String>(
         context: context,
-        builder: (_) => ParentPinDialog(title: l.parentPinCurrent, verify: settings.verifyParentPin),
+        builder: (_) => ParentPinDialog(title: l.parentPinCurrent, verify: settings.checkParentPin),
       );
       if (current == null || !context.mounted) return;
       final bool? remove = await showDialog<bool>(
@@ -116,6 +123,7 @@ class FamilySettingsPage extends StatelessWidget {
       if (remove == null || !context.mounted) return;
       if (remove) {
         await settings.setParentPin(null);
+        if (context.mounted) unawaited(forgetHaParentPins(context.read<FLauncherChannel?>()));
         // The streaming apps' profile PINs were saved under the parent PIN: they go with it
         if (context.mounted) await context.read<FLauncherChannel>().removeAllProfilePins();
         return;

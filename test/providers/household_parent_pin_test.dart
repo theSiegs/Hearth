@@ -11,6 +11,12 @@ class _FakeChannel extends FLauncherChannel {
   String state = "none";
   String? hash;
   final List<String?> given = [];
+  // What the Java side kept from Home Assistant's state document (the hashes stay there, sealed)
+  bool haKept = false;
+  bool haManaged = false;
+
+  @override
+  Future<Map<dynamic, dynamic>?> getHaParentPins() async => {"kept": haKept, "managed": haManaged};
 
   @override
   Future<Map<dynamic, dynamic>?> getHouseholdParentPin() async =>
@@ -76,6 +82,41 @@ void main() {
       settings = SettingsService(prefs);
       channel = _FakeChannel();
       sync = HouseholdParentPin(channel, prefs, settings);
+    });
+
+    test("Home Assistant's parent PINs replace this TV's and the household's, checked on the Java side", () async {
+      await settings.setParentPin("9999");
+      final asked = <String>[];
+      settings.haPinChecker = (pin) async {
+        asked.add(pin);
+        return pin == "2468";
+      };
+      channel
+        ..state = "live"
+        ..hash = b
+        ..haKept = true
+        ..haManaged = true;
+      await sync.tick();
+      expect(settings.haParentPinsManaged, isTrue);
+      expect(await settings.checkParentPin("2468"), isTrue);
+      expect(await settings.checkParentPin("9999"), isFalse);
+      expect(asked, ["2468", "9999"]);
+      expect(settings.householdParentPinOffered, isNull);
+      expect(channel.given, isEmpty);
+      // No hash of Home Assistant's is kept on this side
+      expect(prefs.getKeys().where((k) => k.contains("ha_parent_pins") && prefs.get(k) is! bool), isEmpty);
+
+      // Removed in Home Assistant, or unpaired: the last ones stay, no longer managed
+      channel.haManaged = false;
+      await sync.tick();
+      expect(settings.haParentPinsManaged, isFalse);
+      expect(await settings.checkParentPin("2468"), isTrue);
+
+      // A PIN of the TV's own set here replaces them
+      await settings.setParentPin("1111");
+      expect(settings.haParentPinsKept, isFalse);
+      expect(await settings.checkParentPin("1111"), isTrue);
+      expect(asked, hasLength(3));
     });
 
     test("joined without a Parent PIN: the household's is this TV's after one round", () async {

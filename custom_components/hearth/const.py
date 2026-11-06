@@ -3,6 +3,9 @@
 from datetime import timedelta
 
 DOMAIN = "hearth"
+# The device API's and the household summary's shape (docs/home-assistant-integration.md, Contract): goes up only
+# when a field changes meaning or type, becomes required, or goes; never for an added field
+CONTRACT = 1
 
 # Config entry data: the household's Hearth devices (TVs, phones), by the device's own stable id
 CONF_DEVICES = "devices"
@@ -45,10 +48,24 @@ CONF_PERSON = "person"
 CONF_PROFILES = "profiles"
 CONF_GROUPS = "groups"
 CONF_GROUP_APPS = "group_apps"
+# Groups whose time isn't screen time: not counted in All screen time, not held when it runs out
+CONF_OUTSIDE_ALL = "outside_all"
+# People whose phone may share with a launcher's tile exchange (scrubbed layouts only): a parent's choice
+CONF_TILE_EXCHANGE = "tile_exchange_share"
+# Options: {person: "kid" | "adult"}, set on Hearth's page
+CONF_ROLES = "roles"
+# Options: {device_id: media_player entity}: a TV's own media player (the androidtv or cast one), for apps' tiles
+CONF_MEDIA_PLAYERS = "media_players"
 # Options: [{"entity_id", "person"}]: the person is locked while any of their lock entities is on
 CONF_LOCKS = "locks"
+# Options: the ntfy server phones are pinged through when their state changes (push.py); none: no pings
+CONF_PUSH_SERVER = "push_server"
+# A phone's own random ntfy topic (entry data, made when it pairs)
+CONF_PUSH_TOPIC = "push_topic"
 
 SIGNAL_PEOPLE = "hearth_people"
+# A device asked to pair, or its pairing was answered
+SIGNAL_PAIRINGS = "hearth_pairings"
 
 EVENT_BUDGET_REACHED = "hearth_budget_reached"
 EVENT_PLAYING_TOGETHER = "hearth_playing_together"
@@ -60,4 +77,6 @@ SIGNAL_WATCH = "hearth_watch"
 MAX_EVENT_POSTS = 10
 
 # Android app categories a device may report for its apps (ApplicationInfo.category, lower case)
-APP_CATEGORIES = ("game", "video", "audio", "image", "social", "news", "maps", "productivity", "accessibility")
+APP_CATEGORIES = (
+    "game", "video", "audio", "image", "social", "messaging", "news", "maps", "productivity", "accessibility"
+)

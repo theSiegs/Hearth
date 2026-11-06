@@ -6,6 +6,50 @@
 ## Unreleased
 
 - **Glint home** (test, Settings > Home screen > Look > Glint home): the home screen as live tiles of frosted glass over the picture, in the design language of Glint, the household's phone launcher. Three rows of tiles run on to the right: the clock, what you were watching (its poster, the title and how far you got), the weather, today's next event, what's on around the house (another TV playing something, someone in a car; with Home Assistant), the newest notifications, who's watching, the Favorites apps, then All apps (an A to Z list), Search, the Home Assistant panel and Settings. An app's colour shows as a strip down its tile's left edge. Live tiles turn to their next item slowly, one tile at a time and never the selected one. Left alone for 45 seconds, the glass goes clear and the picture shows through; the next key brings it back. Hold OK on an app for its menu. Glint motion (under the switch) sets how much the tiles move: Lively, Easy (the default, one tile now and then), Calm (tiles change only between visits) or Still. A tile with something new (a notification, a change around the house) lights its edge in the accent with one sweep of light round it, again when you come back to the home if you haven't looked yet. The A to Z list shows each app's own icon on an accent square. Off by default; the classic home is unchanged.
+- **Home Assistant: push to phones.** With an ntfy server set (Hearth's page, Devices > Push to phones, or Configure), Home Assistant pings a paired phone on its own random topic when its state changes, so it updates at once instead of at its next check. The ping says only "changed"; the phone fetches the rest with its secret. Off unless a server is set.
+- **Home Assistant: play on a TV.** `hearth.play_on_tv` starts a YouTube video (in HearthTube), an app or a link on a Hearth TV, in a chosen profile if you like, from an automation, a dashboard or a phone. The TV takes it with its next status (within about 2 minutes while it's on) and `hearth_command_done` says how it went. Home Assistant's side only: the TV side is still to come.
+- **Home Assistant: media rooms.** The household summary and every phone's state carry the house's media players by room (`media_rooms`), with an Echo's "Now Playing" twin, a console's Music Assistant player and the like put together under the one player to control, for Glint's Music to show what's playing where.
+- **Home Assistant: a shared Switch.** Nintendo's limits are the whole console's, so holding one kid held everyone. Now a kid's Nintendo hold can follow a "playing" sensor (on while they're the one playing): the Switch is held only while they play, and a brother or sister with time left can use it. With Nintendo's own data that can be up to about 10 minutes late either way. The Switch also waits out bonus time from the Nintendo app, and a weekday held past midnight gets its limit and bedtime back.
+
+- **Home Assistant: new apps sort themselves.** Nobody is asked any more: a new app goes to a group that lists it, else its kind (games, video, social, messaging; from the app, or a category a Glint phone sends), else Other. Hearth's page shows what was sorted lately and every app with its group, and moving one is a tap; your choice always wins. New built-in groups **Social** and **Messaging**; Messaging doesn't count as screen time unless you tick it.
+- **Home Assistant:** second parents (adults on Hearth's page) can answer requests for more time; each TV can be given its media player on Hearth's page, for Glint's TV tile.
+
+- **Home Assistant: ask for more time.** A kid's TV or phone asks for 15, 30, 45 or 60 more minutes; the adults get a notification (and a card on Hearth's page) with quick answers, the first answer wins, and the device hears it with its next status. One open request per kid, and a short wait after "not now".
+- **Home Assistant: family pause.** `hearth.pause` (for some minutes or until a time, with a reason, everyone by default) holds the kids' Hearth devices; `hearth.pause_end` lets them go. Hearth's page has a Pause everyone bar.
+- **Home Assistant: bedtime heads-up.** Each person's state says when their lock ends and when the next bedtime or school time starts (from Family Link's sensors), for devices to wind down; Hearth's page shows "Bedtime in 15 min".
+
+## 2026.11.06 (pre-release)
+
+- **Time's up on the TV, with asking for more.** On a TV connected to Home Assistant, an app a kid can't open now shows Hearth's time's up card instead of a short message: why (a group's time is up, a family pause with its reason, bedtime, school time) and until when. When time is up and nothing else holds them, the kid can ask an adult for 15, 30, 45 or 60 more minutes right there, and the card shows the answer as it comes: waiting, an adult added time, not now (with a short wait before asking again) or no answer in time. The home's "Nothing to watch" card says the same.
+- **A family pause holds the TV's apps** until it ends.
+- **Bedtime heads-up on the TV.** A quiet note 15 and 5 minutes before a kid's bedtime or school time ("Bedtime in 15 min"), with no sound.
+
+## 2026.11.05 (pre-release)
+
+- **Parent PINs from Home Assistant are checked there.** A connected TV asks Home Assistant whether a PIN is an adult's, and its answer (and its lockout after wrong guesses) is final whenever it's reachable. The TV's copy of the PINs, for when Home Assistant is down, is now kept encrypted with an Android Keystore key (it was kept in the clear), and Home Assistant sends it again only when a PIN changes.
+
+- **Home Assistant: Hearth's own page.** A Hearth entry in Home Assistant's sidebar (administrators only) with a guided setup and five tabs: **Today** (each kid's time left, what's playing, extra time in a tap, the TVs and phones), **Kids** (daily limits for school days and other days, screen time sources, bedtime and school-time locks, Family Link, Family Safety and Nintendo, YouTube's watch log and blocks), **Devices** (pair a TV or phone by checking its code, TV profiles), **Apps** (groups, their apps, what isn't screen time, new apps) and **Family** (kids and adults, each adult's parent PIN, Glint tile sharing, school days). It follows Home Assistant's theme and works on a phone.
+- **Home Assistant:** the household summary for an adult's app (`hearth/household`, with a subscription), and a paired phone is told Home Assistant's addresses so it can sign in there.
+
+## 2026.11.04 (pre-release)
+
+- **A parent PIN for each adult, from Home Assistant.** Each adult's own 4-digit parent PIN is set in Home Assistant (Hearth > Configure > Parent PINs). A connected TV takes them in place of its own Parent PIN, accepts any adult's (HearthTube's PIN checks too), and shows **Set in Home Assistant** in Settings > Family. The TV keeps them, so they work with Home Assistant down; disconnected, it keeps the last ones until a PIN is set on the TV. Each lockout after wrong guesses is reported, and Home Assistant fires an event for it. A TV without the integration keeps its own PIN as before.
+- **Home Assistant: phones check the parent PIN.** A paired phone asks Home Assistant whether a PIN is an adult's (`verify_pin`) and is told whose; it never gets a PIN. Wrong guesses lock it out for longer each time.
+- **Home Assistant: tile exchange sharing.** A parent chooses whose phone may share with the launcher's tile exchange (Configure > Tile exchange sharing); the person's state says `tile_exchange_share`.
+- **Home Assistant:** the Glint launcher and HearthTube Mobile are never paused.
+
+## 2026.11.03 (pre-release)
+
+- **Home Assistant: Not screen time.** A group (music, say) can be left out of All screen time (Configure > Not screen time): its minutes count only in the group, and its apps stay usable when All screen time runs out, on the TVs too. The Screen time today sensor lists each group's packages (`groups_apps`).
+- **Home Assistant: All screen time locks Family Link devices.** When All screen time runs out, Family Link's daily limit for the day goes to 0 instead of pausing every app, so the apps a parent gave unlimited time (YouTube Music, say) still work; the limit is put back when there's time again, and before midnight. Apps with unlimited time are never paused for a group either.
+
+## 2026.11.02 (pre-release)
+
+- **Log out when the TV sleeps** is now on by default (every time the TV sleeps) on TVs where it was never set; a TV where it was chosen, or turned off, keeps that choice.
+
+## 2026.11.01 (pre-release)
+
+- **Log out when the TV sleeps** (was Lock when the TV wakes): the profile chooser now opens as the TV goes to sleep, or once it has slept the chosen time, so the next person never sees the last profile's home. It now logs out of kids profiles too; before, a TV left in a kid's profile woke straight into it.
 
 ## 2026.10.87 (pre-release)
 
