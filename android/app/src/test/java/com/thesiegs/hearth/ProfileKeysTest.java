@@ -2,6 +2,7 @@ package com.thesiegs.hearth;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -89,5 +90,37 @@ public class ProfileKeysTest {
         assertEquals("Sam Lee", GoogleTvAccount.accountIn("Logged in as Sam Lee, click to choose an account"));
         assertNull(GoogleTvAccount.accountIn("Settings"));
         assertNull(GoogleTvAccount.accountIn(null));
+    }
+
+    @Test
+    public void theChoosersCurrentAccountNeverNamesAKidsUser() {
+        // A kid's user (serial 12) is on and the chooser, which runs in the owner's user, marks an adult's account
+        // there current: the kid's user keeps its name, whatever Hearth knows of the adult
+        assertNotNull(LauncherAccessibilityService.whyCurrentDoesNotName(true, "Robin", true, "Sam", null, 12, 0));
+        assertNotNull(LauncherAccessibilityService.whyCurrentDoesNotName(true, "Robin", true, "Sam", null, 12,
+                ProfileUsers.UNKNOWN));
+        // Nor is a kid's user named from it when it has no name yet, or its name left the chooser: picks name it
+        assertNotNull(LauncherAccessibilityService.whyCurrentDoesNotName(true, null, false, "Sam", null, 12,
+                ProfileUsers.UNKNOWN));
+        assertNotNull(LauncherAccessibilityService.whyCurrentDoesNotName(true, "Robin", false, "Sam", null, 12,
+                ProfileUsers.UNKNOWN));
+    }
+
+    @Test
+    public void theChoosersCurrentAccountNamesAnUnnamedUserUnlessItIsAnothers() {
+        // The owner's user with no name yet: its current account names it
+        assertNull(LauncherAccessibilityService.whyCurrentDoesNotName(false, null, false, "Alex", null, 0,
+                ProfileUsers.UNKNOWN));
+        assertNull(LauncherAccessibilityService.whyCurrentDoesNotName(false, null, false, "Alex", null, 0, 0));
+        // Supervision unreadable: still not an account Hearth knows as another user's
+        assertNotNull(LauncherAccessibilityService.whyCurrentDoesNotName(null, "Robin", true, "Alex", null, 12, 0));
+        assertNull(LauncherAccessibilityService.whyCurrentDoesNotName(null, "Robin", true, "Alex", null, 12,
+                ProfileUsers.UNKNOWN));
+        // A just-added profile Google TV marks current before it has started doesn't rename the one running
+        assertNotNull(LauncherAccessibilityService.whyCurrentDoesNotName(false, "Alex", true, "Sam", "Sam", 0,
+                ProfileUsers.UNKNOWN));
+        // ...unless the running one's name is gone from the chooser (renamed)
+        assertNull(LauncherAccessibilityService.whyCurrentDoesNotName(false, "Alex", false, "Sam", "Sam", 0,
+                ProfileUsers.UNKNOWN));
     }
 }

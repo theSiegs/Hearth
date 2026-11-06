@@ -928,9 +928,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
             Boolean locked = ContentPin.lockedFromTile(descriptions.get(i), names.get(i).equals(current));
             if (locked != null) ProfileUsers.setLocked(this, names.get(i), locked);
         }
-        // The current account's tile names the running profile user, unless a switch is still settling. Not when
-        // it's a just-added profile that was picked but never started: Google TV can mark that one current while
-        // the last profile still runs, and it mustn't rename the profile that's actually running.
+        // The current account's tile names the running profile user, unless a switch is still settling (see
+        // whyCurrentDoesNotName for when it doesn't)
         String known = mActiveSerial == ProfileUsers.UNKNOWN ? null : ProfileUsers.getName(this, mActiveSerial);
         if (current != null && mActiveSerial != ProfileUsers.UNKNOWN && mCandidateSerial == ProfileUsers.UNKNOWN) {
             if (known != null && ProfileUsers.isAdults(this, mActiveSerial)) {
@@ -938,11 +937,16 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 onAccountLoggedIn(current, "chooser's current account");
             } else if (current.equals(known)) {
                 // Already known
-            } else if (known == null || !names.contains(known) || !current.equals(mUnstartedPick)) {
-                nameSerial(mActiveSerial, current, "chooser's current account");
             } else {
-                Log.i(TAG, "Chooser marks " + LogNames.of(current) + " current, but serial " + mActiveSerial + " (" + LogNames.of(known)
-                        + ") is running: not renaming");
+                String whyNot = whyCurrentDoesNotName(ProfileUsers.isSupervised(this, mActiveSerial), known,
+                        names.contains(known), current, mUnstartedPick, mActiveSerial,
+                        ProfileUsers.serialOf(this, current));
+                if (whyNot == null) {
+                    nameSerial(mActiveSerial, current, "chooser's current account");
+                } else {
+                    Log.i(TAG, "Chooser marks " + LogNames.of(current) + " current; serial " + mActiveSerial + " stays "
+                            + LogNames.of(known) + ": " + whyNot);
+                }
             }
         }
         List<String> due = new ArrayList<>();
@@ -951,6 +955,26 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
         Log.i(TAG, "Chooser shows " + LogNames.of(names) + "; photos due: " + LogNames.of(due));
         photographChooserTile();
+    }
+
+    /**
+     * Why the chooser's current-account tile mustn't name the running profile user (one that isn't a known adults'
+     * user), or null when it may.
+     * - A kid's user: the chooser runs in the owner's user and marks that user's account current even while a kid's
+     *   user runs (2026-11-05: an adult's tile while a kid's profile was on). A kid's user is named by the pick that
+     *   started it (learnProfileUserName).
+     * - An account Hearth knows as another profile user's: naming would take it from that one.
+     * - A just-added profile that was picked but never started: Google TV can mark that one current while the last
+     *   profile still runs.
+     */
+    static String whyCurrentDoesNotName(Boolean supervised, String known, boolean knownListed, String current,
+            String unstartedPick, long activeSerial, long currentSerial) {
+        if (Boolean.TRUE.equals(supervised)) return "a kid's user (the chooser marks the owner's user's account)";
+        if (currentSerial != ProfileUsers.UNKNOWN && currentSerial != activeSerial) {
+            return "that's serial " + currentSerial + "'s";
+        }
+        if (known != null && knownListed && current.equals(unstartedPick)) return "a new profile that hasn't started";
+        return null;
     }
 
     // Profile photos, taken from whichever tile has focus once it's settled (ChooserPhotos says which tiles may be).
