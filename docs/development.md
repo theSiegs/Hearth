@@ -20,7 +20,7 @@ installs, and the Watch Next provider.
 flutter pub get
 dart run build_runner build                                         # mocks and Drift code
 dart run drift_dev schema generate drift_schemas/ test/generated_migrations/
-flutter analyze
+flutter analyze --no-fatal-infos                                    # as CI runs it
 flutter test
 node test/js/phone_seal_test.js                                     # the phone pages' encryption
 cd android && ./gradlew :app:testDebugUnitTest                      # the Java side's unit tests
@@ -31,7 +31,9 @@ SQLite comes with the `sqlite3` package: its build hook downloads a prebuilt, ch
 
 ```sh
 flutter build apk --debug          # installs as com.thesiegs.hearth.debug, next to a release build
-flutter build apk --release        # needs signing, below
+flutter build apk --release        # signed with KEYSTORE_FILE, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
+                                   # (or storeFile, storePassword, keyAlias, keyPassword in android/local.properties);
+                                   # unsigned without them
 ```
 
 A debug build is a separate app (`com.thesiegs.hearth.debug`), so it can sit next to the real one. To test Hearth as
@@ -58,6 +60,7 @@ shows what's off). Reinstalling or force-stopping Hearth switches its accessibil
 | `android/.../Ha*.java` | Home Assistant notifications server, panel, status webhook, phone setup |
 | `android/.../ProfileUsers.java`, `GoogleTvAccount.java`, `AppWatchers.java`, `Agent*.java`, `KidsProfiles.java`, `ProfileAppAccess.java` | Google TV profiles: kids' as Android users, adults' as accounts in the owner's user (whose is on, from Google TV's home); whose Continue Watching entry is; Hearth on the kids profiles |
 | `android/.../ProfileProvider.java` | The provider HearthTube reads ([contract](provider-contract.md)) |
+| `android/.../Household*.java` | Household sync: TV keys, the member list, exchanges, joining, notices ([design](household-sync.md)) |
 | `drift_schemas/` | Database schema history, for migration tests |
 | `tool/` | Developer tools (below) |
 
@@ -119,7 +122,7 @@ starts on in a pre-release and off in a release, and is set again when the insta
 leaves early development, `PRERELEASE` can go back to "tags with a `-`". Every release must be signed with the same key, or installed copies can't update.
 
 `.github/workflows/ci.yml` analyzes, runs the Flutter, Java and phone-page tests and builds a debug APK on every
-push. CodeQL scans every push too.
+push and pull request. CodeQL scans every push too.
 
 **Turning a streaming app version's PIN entry off for everyone:** list it in `pin-entry/disabled.json` on `master`
 (see `pin-entry/README.md`). Installed copies read it at most every 12 hours while a PIN is saved.

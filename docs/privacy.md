@@ -4,7 +4,9 @@
 > setup steps may change or be incomplete.
 
 Hearth has no ads, analytics, crash reporting or trackers, and no Hearth account or server. Your settings, layouts,
-profile pairings and backups stay on the TV. So does each profile's watch history: the titles apps say are playing,
+profile pairings and backups stay on the TV (with household sync on, profiles' looks, layouts, pictures, pairings and
+saved PINs, the Parent PIN as a salted hash and Home Assistant notifications also go, encrypted, to the household's
+other TVs on your home network). So does each profile's watch history: the titles apps say are playing,
 and the Continue Watching entries Hearth keeps for each profile (forgotten after 90 days, or when you remove a card).
 A kids profile's history is kept the same way, under that kid's profile only, and with household sync on it goes to
 the household's other TVs for that kid's own row there (never an adult's or another kid's).
@@ -20,12 +22,13 @@ Only for the features below, and only when they're on.
 | Weather | `api.open-meteo.com`, `geocoding-api.open-meteo.com` | The place you chose (or its coordinates) |
 | Search | `www.wikidata.org`, `api.themoviedb.org`, `image.tmdb.org` | What you search for; the titles found |
 | Continue Watching artwork | The image hosts the streaming apps name | Requests for those images, with no cookies or referrer, over https (http only on your home network); cached for 30 days |
-| Continue Watching artwork, when a card has none Hearth can read | `www.wikidata.org`, `api.themoviedb.org`, `image.tmdb.org` | The card's title (not for YouTube or HearthTube videos); each title once, the answer kept on the TV |
+| Continue Watching artwork, when a card has none Hearth can read | `www.wikidata.org`, `api.themoviedb.org`, `image.tmdb.org` | The card's title (not for YouTube or HearthTube videos); each title once (one not found is tried again after a week), the answer kept on the TV |
 | Updates | `api.github.com`, GitHub release downloads | A check for new releases of Hearth and HearthTube |
 | Streaming app PINs | `raw.githubusercontent.com` (Hearth's repository) | Requests for the list of app versions Hearth doesn't type PINs in and for the PIN screen recipes, at most twice a day while a PIN is saved |
 | Approve switches from my phone | Your Home Assistant | While Google TV's PIN screen waits for an answer: a notification to the phone you chose (whose profile, Allow and Deny), and a listen for its answer |
-| Home Assistant map (people) | `tile.openstreetmap.org` | Requests for the map tiles around your home zone (about 17 km across), once, then kept on the TV; never a person's position |
+| Home Assistant map (people) | `tile.openstreetmap.org` | Requests for the map tiles around your home zone (about 17 km across), once, then kept on the TV (fetched again after 30 days); never a person's position |
 | Home Assistant | The address you enter | Notifications' button actions, the dashboard, and TV status (see [Home Assistant](home-assistant.md)) |
+| Home Assistant dashboard images | The https hosts a dashboard's Markdown cards name | Requests for those images; kept on the TV for 30 days |
 
 Using the Breezy Weather app instead of Open-Meteo makes Hearth read weather from that app on the TV and connect to
 nothing for it.
@@ -63,6 +66,7 @@ as Wikidata asks.
 | Calendars (read only) | The date and time in the top bar show the active profile's Google calendars that are synced to the TV: only that profile's own account's calendars, read on the TV and sent nowhere. Hearth never adds or changes events. Asked for in Settings → Home screen → Status bar → Calendars; in a kids profile (whose Hearth can't show the request) a parent's Fix grants it there over adb, and only for Hearth. |
 | Network state | The data usage's connection line (Wi-Fi, Ethernet, VPN, no internet). |
 | Start at boot | Brings Hearth and its services back after a restart. |
+| Device admin (no policies; Hearth's helper in kids profiles only) | Keeps Google TV from removing Hearth from a kids profile when the profile starts. Set over the TV's own debugging connection. |
 
 **Hearth on the kids profiles** uses the TV's own debugging connection (Android asks you to allow it once) to install
 Hearth's two apps in your kids profiles and keep them there, including a kids profile added later. It connects
