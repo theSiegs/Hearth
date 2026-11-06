@@ -459,6 +459,55 @@ then sends the same object as an event whenever it changes, at most every 2 seco
 Hearth's page opens on a tab from its link: `/hearth#today`, `#kids`, `#devices`, `#apps`, `#family`, and
 `#approvals` (Today, where requests for more time and devices waiting to pair are shown first).
 
+### Play on a TV
+
+**Proposed for the TV; built in Home Assistant.** `hearth.play_on_tv` starts something on a paired Hearth TV, from an
+automation, a dashboard or a phone (Glint calls it as any Home Assistant service): `device_id` (the TV's Hearth device
+id, or its device in Home Assistant: a device selector gives that), `what` and, optionally, `profile`.
+
+- `what` is a **YouTube video** (an 11-character id, or a `youtube.com` / `youtu.be` link), played in HearthTube; an
+  **app** (its package name, `com.example.app`), opened; or any other **http(s) link**, opened as a link. Anything else
+  (another scheme, `intent:`, `file:`, `javascript:`) is refused.
+- `profile` is a TV profile id as Hearth reports it (`user:10`, `user:0:alex`), or a person mapped to one profile (to
+  more than one: the one this TV has reported). Without it, whoever is in front.
+- Home Assistant can't reach a TV, so it **queues a one-shot command** in the TV's state document, and the TV takes it
+  with its next status answer: within about 2 seconds after it posts, at least every 2 minutes while it's on. The
+  service answers (when asked for a response) `{"id", "device_id", "expires"}`. A TV that hasn't posted in 15 minutes
+  (not connected) is refused; a phone isn't a TV.
+- A new play for the same TV replaces one still waiting (only the last ask is played). A command waits 3 minutes,
+  then it's dropped. Commands are kept while the household reloads (an options change), not over a restart.
+- `hearth_command_done` (`device_id`, `id`, `type: "play"`, `result`, `error`) tells how it went, once: `ok`, `failed`
+  or `refused` as the TV says, `replaced` by a newer one, or `expired` when the TV never took it.
+
+What the TV gets, in its state document (the document's `version` changes with it; always a list, empty when there's
+nothing to do):
+
+```json
+"commands": [
+  {"id": "k3Jx9QmT2bVw8LpZ", "type": "play", "video_id": "aBcDeFgHiJk", "profile_id": "user:10",
+   "created": "2026-11-06T18:00:00+00:00", "expires": "2026-11-06T18:03:00+00:00"}
+]
+```
+
+Exactly one of `video_id`, `package` or `url`; `profile_id` null for whoever is in front. What the TV must do
+(not built yet; an added field, so `contract` stays 1, and a TV that doesn't know `commands` ignores it as before):
+
+1. For each command whose `id` it hasn't run, and not past `expires` (by Home Assistant's clock, as near as the TV's
+   is): run it once. Keep the ids it ran (or refused) until they're gone from the document, since the same command
+   comes again in every answer until the TV says it's done.
+2. `profile_id` other than the one in front: switch to it as a pick on Google TV's profile chooser would (a locked
+   profile asks for its PIN or a phone's approval as usual); if that isn't done within the command's time, it's
+   `failed`, `profile`. An unknown profile is `refused`, `no_profile`.
+3. Play it as if picked on the TV, under the same rules: in a kids profile a held app, time that's up, a lock, a pause
+   or a parent's YouTube block refuses it (`refused`, `held`, `locked` or `blocked`); a video goes to HearthTube
+   (its own blocks and allowance apply there), never to YouTube's own app; an app that isn't installed is `failed`,
+   `not_installed`; a link opens in what the TV has for it (in a kids profile only an app that profile may use).
+   A TV whose screen is off may turn it on first, if it can; otherwise `failed`, `screen_off`.
+4. Say what happened in its next status post, at once (as for any change):
+   `"commands_done": [{"id": "k3Jx9QmT2bVw8LpZ", "result": "ok" | "failed" | "refused", "error": "held"}]` (a bare
+   id means `ok`; `error` is a short reason, at most 64 characters; at most 20). Home Assistant drops those from the
+   queue; an id it doesn't know is ignored, so saying one again is harmless.
+
 ### Media rooms
 
 For a phone's "what's playing where" (Glint's Music), the household summary and every phone's state document (a kid's
@@ -537,7 +586,8 @@ or ended), `hearth_enforced`, `hearth_new_app`, `hearth_parent_pin_used`, `heart
 
 Per person with a TV profile: **Last video started** (see [A kids profile's YouTube](#a-kids-profiles-youtube)).
 
-Services: `hearth.add_bonus`, `hearth.set_budget`, `hearth.pause`, `hearth.pause_end`;
+Services: `hearth.add_bonus`, `hearth.set_budget`, `hearth.pause`, `hearth.pause_end`, `hearth.play_on_tv` (event
+`hearth_command_done`, see [Play on a TV](#play-on-a-tv));
 `hearth.get_watch_log`, `hearth.watch_digest`, `hearth.block_video`, `hearth.block_channel`, `hearth.block_word` and
 their `unblock_` twins. Event `hearth_video_started`.
 
@@ -570,7 +620,8 @@ wrong secret (it was removed: stop posting and offer to pair again); 429 `too_of
 Assistant's IP ban. The 200 answer carries the device's state document, `{"ok": true, "contract": 1, "state": {...}}` (see
 [What a device gets](#what-a-device-gets)). Every device endpoint answers 503 `not_set_up` while the integration is
 loading: try again, don't unpair. A device may also send `app_categories`, `{"<package>": "game" | "video" | ...}`
-(Android's category, lower case), which helps sort its apps into Video, Games, Social or Messaging.
+(Android's category, lower case), which helps sort its apps into Video, Games, Social or Messaging. A TV's document also carries `commands` (one-shot commands such as a play,
+see [Play on a TV](#play-on-a-tv)), and the TV says which it ran in `commands_done`.
 
 **Events** (a TV only). `POST /api/hearth/device/<device_id>/events` with the same header and
 `{"events": [...]}`, at most 50, each `{"type": "video_started", "profile_id", "t" (ms), "v" (video id), "title",

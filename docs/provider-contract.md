@@ -114,6 +114,19 @@ at most 256 KB. Hearth keeps the latest per profile for a parent to see in its s
 (`kid_unblocks`). Same callers as above; returns a Bundle with `ok` true, null when it isn't JSON or is too big. In a
 profile's agent it's passed on to Hearth and returns null when it couldn't be (Hearth not connected): send it again later.
 
+## Proposed: playing a video from Home Assistant
+
+Not built; no column or call changes, so the version stays 10. Home Assistant's `hearth.play_on_tv` hands a paired TV a
+one-shot command in its state document ([home-assistant-integration.md](home-assistant-integration.md#play-on-a-tv)).
+For a YouTube video (`video_id`) Hearth starts HearthTube itself, the way it opens a search result in its app: an
+`ACTION_VIEW` of `https://www.youtube.com/watch?v=<video_id>` aimed at `com.thesiegs.hearthtube`, in the profile the
+command names, after Hearth has switched to it and `profile_ready` is 1. Nothing new is asked of HearthTube: it plays a
+link as it does today, and holds the video to the active profile's `parent_blocks`, `youtube_minutes_left` and
+`schedule_locked` as for any other video. Hearth refuses the command before starting HearthTube when the profile's
+YouTube time is used up or it is locked, so the kid isn't shown a video that stops at once. If HearthTube later wants
+to tell such a start apart (to say "Sent from Home Assistant", say), that is an added intent extra, still no new
+version here.
+
 ## History
 
 - **10** (2026-10-28): added `kid_unblocks` and the `report_kid_blocks` call (a kids profile's own hides up, a parent's

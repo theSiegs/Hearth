@@ -5,6 +5,7 @@
 
 ## Unreleased
 
+- **Home Assistant: play on a TV.** `hearth.play_on_tv` starts a YouTube video (in HearthTube), an app or a link on a Hearth TV, in a chosen profile if you like, from an automation, a dashboard or a phone. The TV takes it with its next status (within about 2 minutes while it's on) and `hearth_command_done` says how it went. Home Assistant's side only: the TV side is still to come.
 - **Home Assistant: media rooms.** The household summary and every phone's state carry the house's media players by room (`media_rooms`), with an Echo's "Now Playing" twin, a console's Music Assistant player and the like put together under the one player to control, for Glint's Music to show what's playing where.
 - **Home Assistant: a shared Switch.** Nintendo's limits are the whole console's, so holding one kid held everyone. Now a kid's Nintendo hold can follow a "playing" sensor (on while they're the one playing): the Switch is held only while they play, and a brother or sister with time left can use it. With Nintendo's own data that can be up to about 10 minutes late either way. The Switch also waits out bonus time from the Nintendo app, and a weekday held past midnight gets its limit and bedtime back.
 

@@ -27,7 +27,8 @@ from .websocket import async_register_commands
 from .pause import end_pause, set_pause
 from . import panel
 from .apps import ACTION_PREFIX
-from .const import DOMAIN
+from .commands import is_profile_id, what_to_play
+from .const import DOMAIN, KIND_TV
 from .hub import HearthHub
 from .limits import DAY_TYPES
 from .watch import CHANNELS, MAX_BLOCKS, MAX_LOG, VIDEOS, WORDS, channel_id_of, clean_word, video_id_of
@@ -164,7 +165,84 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     hass.services.async_register(DOMAIN, "pause", pause, schema=PAUSE_SCHEMA)
     hass.services.async_register(DOMAIN, "pause_end", pause_end, schema=PAUSE_END_SCHEMA)
     _register_watch_services(hass)
+    _register_play_on_tv(hass)
     return True
+
+
+PLAY_ON_TV_SCHEMA = vol.Schema(
+    {
+        vol.Required("device_id"): vol.Any(cv.string, vol.All(cv.ensure_list, vol.Length(min=1, max=1), [cv.string])),
+        vol.Required("what"): cv.string,
+        vol.Optional("profile"): vol.Any(None, cv.string),
+    }
+)
+
+
+def _register_play_on_tv(hass: HomeAssistant) -> None:
+    """hearth.play_on_tv: a URL, a video or an app on a paired Hearth TV, handed over with its next status answer."""
+
+    def tv_of(hub: HearthHub, given: str) -> str:
+        """The TV's Hearth device id, also from its Home Assistant device id (a device selector gives that)."""
+        if given in hub.devices:
+            device_id = given
+        else:
+            device = dr.async_get(hass).async_get(given)
+            device_id = next(
+                (
+                    ident
+                    for domain, ident in (device.identifiers if device else ())
+                    if domain == DOMAIN and ident in hub.devices
+                ),
+                None,
+            )
+        if device_id is None:
+            raise ServiceValidationError(f"{given} isn't one of the household's Hearth devices")
+        if hub.kind(device_id) != KIND_TV:
+            raise ServiceValidationError(f"{hub.devices[device_id].get('name') or device_id} isn't a TV")
+        return device_id
+
+    def profile_of(hub: HearthHub, device_id: str, given: str | None) -> str | None:
+        """A TV profile id as Hearth reports it (user:10), also from a person mapped to one."""
+        if not given:
+            return None
+        given = given.strip()
+        if is_profile_id(given):
+            return given
+        household = hub.household
+        if given not in household.people():
+            raise ServiceValidationError(f"{given} is neither a TV profile id (user:10) nor one of the household's people")
+        theirs = sorted(p for p, who in household.profile_people().items() if who == given)
+        status = hub.state(device_id).status or {}
+        on_this_tv = set(status.get("usage_today") or {}) | ({status["profile_id"]} if status.get("profile_id") else set())
+        if len(theirs) > 1:
+            theirs = [p for p in theirs if p in on_this_tv] or theirs
+        if len(theirs) != 1:
+            raise ServiceValidationError(
+                f"{given} has {'no' if not theirs else 'more than one'} TV profile here: give the profile id"
+            )
+        return theirs[0]
+
+    @callback
+    def play_on_tv(call: ServiceCall) -> ServiceResponse:
+        entries = hass.config_entries.async_loaded_entries(DOMAIN)
+        if not entries:
+            raise ServiceValidationError("Hearth isn't set up")
+        hub: HearthHub = entries[0].runtime_data
+        given = call.data["device_id"]
+        device_id = tv_of(hub, given[0] if isinstance(given, list) else given)
+        target = what_to_play(call.data["what"])
+        if target is None:
+            raise ServiceValidationError("Give a link, a YouTube video (an id or a link) or an app's package name")
+        profile_id = profile_of(hub, device_id, call.data.get("profile"))
+        if not hub.connected(device_id):
+            raise ServiceValidationError(f"{hub.devices[device_id].get('name') or device_id} isn't connected")
+        # In the TV's state document from now on: its next status answer carries it
+        command = hub.commands.play(device_id, target, profile_id)
+        return {"id": command.id, "device_id": device_id, "expires": command.expires.isoformat()}
+
+    hass.services.async_register(
+        DOMAIN, "play_on_tv", play_on_tv, schema=PLAY_ON_TV_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    )
 
 
 def _register_watch_services(hass: HomeAssistant) -> None:

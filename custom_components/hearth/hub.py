@@ -38,6 +38,7 @@ from .const import (
     STORAGE_VERSION,
 )
 from .asks import Asks
+from .commands import Commands
 from .household import Household
 from .parent_pin import EVENT_PARENT_PIN_LOCKED_OUT
 
@@ -117,6 +118,8 @@ class HearthHub:
         self._asked_at: dict[str, datetime] = shared["asked_at"]
         self.household = Household(hass, self)
         self.asks = Asks(hass, self)
+        # One-shot commands for the TVs (hearth.play_on_tv), handed over in their state documents
+        self.commands = Commands(hass)
 
     # The devices
 
@@ -185,6 +188,9 @@ class HearthHub:
             )
         state.status = status
         state.seen = dt_util.utcnow()
+        # What the TV ran of its commands leaves the queue (its answer no longer carries them)
+        if status.get("commands_done"):
+            self.commands.take_done(device_id, status["commands_done"])
         self._store.async_delay_save(self._data_to_save, 30)
         async_dispatcher_send(self.hass, SIGNAL_STATUS.format(device_id))
         self.household.recompute()
@@ -208,6 +214,7 @@ class HearthHub:
         devices = {k: v for k, v in self.devices.items() if k != device_id}
         self.hass.config_entries.async_update_entry(self.entry, data={**self.entry.data, CONF_DEVICES: devices})
         self._states.pop(device_id, None)
+        self.commands.forget(device_id)
         await self._store.async_save(self._data_to_save())
         self.household.recompute()
 

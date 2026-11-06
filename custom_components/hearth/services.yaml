@@ -203,3 +203,20 @@ pause_end:
         entity:
           domain: person
           multiple: true
+
+play_on_tv:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: hearth
+    what:
+      required: true
+      example: "https://youtu.be/aBcDeFgHiJk"
+      selector:
+        text:
+    profile:
+      example: user:10
+      selector:
+        text:

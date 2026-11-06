@@ -478,6 +478,15 @@
           "description": "A word or words; videos whose title has it are hidden (titles only)."
         }
       }
+    },
+    "play_on_tv": {
+      "name": "Play on a TV",
+      "description": "Starts a link, a YouTube video (in HearthTube) or an app on a Hearth TV. The TV takes it with its next status, within about 2 minutes while it's on, and plays it as if picked there: a kids profile's limits and blocks still apply. Answers the command's id; hearth_command_done says how it went.",
+      "fields": {
+        "device_id": {"name": "TV", "description": "The Hearth TV (its device, or its Hearth device id)."},
+        "what": {"name": "What", "description": "A link (http or https), a YouTube video id or link, or an app's package name (com.example.app)."},
+        "profile": {"name": "Profile", "description": "Optional: the TV profile to play it in (an id like user:10, or a person with one profile on the TV). The TV switches to it first, asking for its PIN as usual."}
+      }
     }
   }
 }

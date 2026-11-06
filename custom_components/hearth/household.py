@@ -287,6 +287,8 @@ class Household:
     @callback
     def recompute(self) -> None:
         now = dt_util.now()
+        # A TV's commands that waited too long are told as expired
+        self.hub.commands.prune()
         today = now.date()
         new_day = self.limits.new_day(today)
         options = self.options
@@ -630,6 +632,9 @@ class Household:
                     for profile_id, person in sorted(profiles.items())
                     if person
                 },
+                # One-shot commands waiting for this TV (hearth.play_on_tv): it runs each id once and says so in its
+                # next status (commands_done)
+                "commands": self.hub.commands.document_for(device_id),
             }
             # The adults' parent PINs (hashes, never a PIN): a paired TV asks verify_pin, and keeps these (sealed) to
             # check PINs with Home Assistant down. Sent only when they changed since the TV's copy (its

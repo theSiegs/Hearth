@@ -128,7 +128,40 @@ def clean_status(raw: Any) -> dict[str, Any] | None:
     status["app_categories"] = _categories(raw.get("app_categories"))
     # Categories from a shared catalog (a Glint phone's), for apps that don't declare one: below the declared ones
     status["catalog_categories"] = _categories(raw.get("catalog_categories"))
+    # The one-shot commands (commands.py) the TV ran, or couldn't, since its last post
+    status["commands_done"] = _commands_done(raw.get("commands_done"))
     return status
+
+
+# What a TV says it did with a command; anything else it says counts as "failed"
+COMMAND_RESULTS = ("ok", "failed", "refused")
+MAX_COMMANDS_DONE = 20
+_COMMAND_ID = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
+
+
+def _commands_done(value: Any) -> list[dict[str, Any]]:
+    """[{"id", "result": ok | failed | refused, "error": a short reason}] (a bare id is "ok"), at most
+    MAX_COMMANDS_DONE."""
+    if not isinstance(value, list):
+        return []
+    out: list[dict[str, Any]] = []
+    for item in value[:MAX_COMMANDS_DONE]:
+        if isinstance(item, str):
+            item = {"id": item, "result": "ok"}
+        if not isinstance(item, dict):
+            continue
+        command_id = item.get("id")
+        if not isinstance(command_id, str) or not _COMMAND_ID.match(command_id):
+            continue
+        result = item.get("result")
+        out.append(
+            {
+                "id": command_id,
+                "result": result if result in COMMAND_RESULTS else "failed",
+                "error": text(item.get("error"), 64),
+            }
+        )
+    return out
 
 
 def _categories(value: Any) -> dict[str, str]:
