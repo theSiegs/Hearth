@@ -42,7 +42,11 @@ enum PeekPlace {
   column,
 
   /// No tiles: Metro lines of text on the picture itself, at the top left, one thing per line.
-  headline;
+  headline,
+
+  /// No peek on the home, which stays calm: a top shelf over the dock (what the selected app has to continue, else a
+  /// quiet line) and, Down from the dock, a page of live tiles (DockShelf, GlancePage).
+  shelf;
 
   static PeekPlace fromName(String? name) =>
       values.where((p) => p.name == name?.trim().toLowerCase()).firstOrNull ?? off;

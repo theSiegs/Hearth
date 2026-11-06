@@ -741,7 +741,7 @@
     },
     "peek": "Peek tiles",
     "@peek": {
-        "description": "Settings row on the dock home: live tiles (weather, next event, notifications, the house) that show what's going on without being selected. Select steps through Off, Above the dock and Top right"
+        "description": "Settings row on the dock home: live tiles (weather, next event, notifications, the house) that show what's going on without being selected. Select steps through Off, Above the dock, Top right, Headlines and Top shelf + glance page"
     },
     "peekOff": "Off",
     "@peekOff": {
@@ -754,6 +754,25 @@
     "peekColumn": "Top right",
     "@peekColumn": {
         "description": "Peek tiles: a column at the top right, under the clock"
+    },
+    "peekShelf": "Top shelf + glance page",
+    "@peekShelf": {
+        "description": "Peek tiles: no tiles on the home; above the dock, what the selected app has to continue (or a quiet line), and Down from the dock opens a page of live tiles"
+    },
+    "shelfPickUp": "Pick up where you left off",
+    "@shelfPickUp": {
+        "description": "Top shelf above the dock, with no app selected (or a Hearth tile): programs from every app to continue"
+    },
+    "shelfMinutesLeft": "{minutes} min left today",
+    "@shelfMinutesLeft": {
+        "description": "Top shelf, in a kids profile with Home Assistant: minutes left today for the selected app's group",
+        "placeholders": {
+            "minutes": {"type": "int"}
+        }
+    },
+    "shelfNoTimeLeft": "No time left today",
+    "@shelfNoTimeLeft": {
+        "description": "Top shelf, in a kids profile with Home Assistant: the selected app's group has no minutes left today"
     },
     "peekHeadline": "Headlines",
     "@peekHeadline": {

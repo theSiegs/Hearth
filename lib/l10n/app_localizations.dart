@@ -1546,7 +1546,7 @@ abstract class AppLocalizations {
   /// **'Still'**
   String get glintMotionStill;
 
-  /// Settings row on the dock home: live tiles (weather, next event, notifications, the house) that show what's going on without being selected. Select steps through Off, Above the dock and Top right
+  /// Settings row on the dock home: live tiles (weather, next event, notifications, the house) that show what's going on without being selected. Select steps through Off, Above the dock, Top right, Headlines and Top shelf + glance page
   ///
   /// In en, this message translates to:
   /// **'Peek tiles'**
@@ -1569,6 +1569,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Top right'**
   String get peekColumn;
+
+  /// Peek tiles: no tiles on the home; above the dock, what the selected app has to continue (or a quiet line), and Down from the dock opens a page of live tiles
+  ///
+  /// In en, this message translates to:
+  /// **'Top shelf + glance page'**
+  String get peekShelf;
+
+  /// Top shelf above the dock, with no app selected (or a Hearth tile): programs from every app to continue
+  ///
+  /// In en, this message translates to:
+  /// **'Pick up where you left off'**
+  String get shelfPickUp;
+
+  /// Top shelf, in a kids profile with Home Assistant: minutes left today for the selected app's group
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min left today'**
+  String shelfMinutesLeft(int minutes);
+
+  /// Top shelf, in a kids profile with Home Assistant: the selected app's group has no minutes left today
+  ///
+  /// In en, this message translates to:
+  /// **'No time left today'**
+  String get shelfNoTimeLeft;
 
   /// Peek tiles: no tiles, lines of text on the picture at the top left
   ///

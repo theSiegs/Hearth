@@ -51,6 +51,7 @@ class LookSettingsPage extends StatelessWidget {
         PeekPlace.row: localizations.peekRow,
         PeekPlace.column: localizations.peekColumn,
         PeekPlace.headline: localizations.peekHeadline,
+        PeekPlace.shelf: localizations.peekShelf,
       };
 
   static Map<GlintMotion, String> glintMotions(AppLocalizations localizations) => {

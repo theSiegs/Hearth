@@ -54,6 +54,8 @@ final class HaAllowance {
     static final String LOCKS_KEY = "locks";
     /** The groups with no time left today, [{id, name}], kept for asking for more (HaLocks). */
     static final String TIME_UP_GROUPS_KEY = "time_up_groups";
+    /** Every group with a limit, [{id, name, minutes_left, apps, except}], for the home to say what's left (HaLocks). */
+    static final String GROUPS_LEFT_KEY = "groups_left";
     private static final String[] LOCK_FIELDS = {"pause", "lock", "next_lock", "request"};
 
     /** The integration's group of every app: its time up holds every app (but these). */
@@ -203,6 +205,7 @@ final class HaAllowance {
                 JSONObject outOfTime = new JSONObject();
                 // The groups with none left, {id, name}, for asking for more of them (HaLocks)
                 JSONArray timeUpGroups = new JSONArray();
+                JSONArray groupsLeft = new JSONArray();
                 String allOutOfTime = null;
                 JSONArray allExcept = null;
                 for (int i = 0; groups != null && i < groups.length(); i++) {
@@ -210,6 +213,13 @@ final class HaAllowance {
                     if (group == null || group.isNull("minutes_left")) continue;
                     int left = Math.max(0, group.optInt("minutes_left", 0));
                     JSONArray apps = group.optJSONArray("apps");
+                    String groupName = group.optString("name", "");
+                    groupsLeft.put(new JSONObject()
+                            .put("id", group.optString("id", ""))
+                            .put("name", groupName.trim().isEmpty() ? group.optString("id", "") : groupName)
+                            .put("minutes_left", left)
+                            .put("apps", apps != null ? apps : new JSONArray())
+                            .put("except", group.optJSONArray("except") != null ? group.optJSONArray("except") : new JSONArray()));
                     if (left == 0) {
                         String name = group.optString("name", "");
                         if (name.trim().isEmpty()) name = group.optString("id", "");
@@ -233,6 +243,7 @@ final class HaAllowance {
                 entry.put("youtube_minutes_left", least == null ? JSONObject.NULL : least);
                 entry.put("out_of_time", outOfTime);
                 if (timeUpGroups.length() > 0) entry.put(TIME_UP_GROUPS_KEY, timeUpGroups);
+                if (groupsLeft.length() > 0) entry.put(GROUPS_LEFT_KEY, groupsLeft);
                 if (allOutOfTime != null) entry.put("all_out_of_time", allOutOfTime);
                 if (allOutOfTime != null && allExcept != null) entry.put("all_except", allExcept);
                 entry.put("schedule_locked", person != null && person.optBoolean("locked", false));

@@ -35,7 +35,10 @@ import 'package:flauncher/providers/launcher_state.dart';
 import 'package:flauncher/providers/wallpaper_service.dart';
 import 'package:flauncher/widgets/apps_grid.dart';
 import 'package:flauncher/widgets/frosted_glass.dart';
+import 'package:flauncher/widgets/glint/dock_shelf.dart';
+import 'package:flauncher/widgets/glint/glance_page.dart';
 import 'package:flauncher/widgets/glint/peek.dart';
+import 'package:flauncher/widgets/app_card.dart';
 import 'package:flauncher/widgets/glint/glint_home.dart';
 import 'package:flauncher/widgets/painted_once.dart';
 import 'package:flauncher/widgets/category_container_common.dart';
@@ -98,6 +101,15 @@ class _FLauncherState extends State<FLauncher> {
 
   /// Continue Watching has something to show (set as the home builds).
   bool _recentsAvailable = false;
+
+  /// Peek: Top shelf + glance page. The shelf above the dock follows the dock's selection: the app it's on (null: none
+  /// yet, or a tile that isn't an app) and a count of its moves, which is all that changes the shelf.
+  final FocusNode _shelfFocusNode = FocusNode(canRequestFocus: false, skipTraversal: true);
+  String? _shelfPackage;
+  int _shelfGeneration = 0;
+
+  /// The glance page is up over the home (Down from the dock, with the top shelf).
+  bool _glanceOpen = false;
 
   /// A search's results are in the dock's spot (Continue Watching's place), as Continue Watching takes it.
   bool _showingSearch = false;
@@ -338,6 +350,7 @@ class _FLauncherState extends State<FLauncher> {
     if (_searchTyping) setState(() => _searchTyping = false);
     if (_homeSearch?.active ?? false) _endSearch(focusDock: false);
     if (_showingRecents) setState(() => _showingRecents = false);
+    if (_glanceOpen) setState(() => _glanceOpen = false);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _focusHome();
@@ -397,6 +410,11 @@ class _FLauncherState extends State<FLauncher> {
 
   /// Android's Back while searching: closes the search box, else ends the search. False when there's no search.
   bool _searchBack() {
+    // Android's Back comes here first (HomeSearch.backHandler): the glance page closes before anything else
+    if (_glanceOpen) {
+      _closeGlance();
+      return true;
+    }
     if (_searchTyping) {
       _cancelSearchEntry();
       return true;
@@ -449,13 +467,16 @@ class _FLauncherState extends State<FLauncher> {
     _belowDockFocusNode.dispose();
     _dockFocusNode.dispose();
     _recentsFocusNode.dispose();
+    _shelfFocusNode.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
   void _onFocusMoved() {
     if (_dockFocusNode.hasFocus) {
-      _lastDockFocus = FocusManager.instance.primaryFocus;
+      final focus = FocusManager.instance.primaryFocus;
+      if (focus != _lastDockFocus) _followShelf(focus);
+      _lastDockFocus = focus;
     }
     _noticeSelectionGone();
     _followTopBarFocus();
@@ -589,6 +610,48 @@ class _FLauncherState extends State<FLauncher> {
     return true;
   }
 
+  /// The selection moved on the dock: with the top shelf, it shows what the app now selected has to continue.
+  void _followShelf(FocusNode? focus) {
+    if (!mounted || PeekPlace.fromName(context.read<SettingsService>().peek) != PeekPlace.shelf) return;
+    final package = focus?.context?.findAncestorWidgetOfExactType<AppCard>()?.application.packageName;
+    setState(() {
+      _shelfPackage = package;
+      _shelfGeneration++;
+    });
+  }
+
+  /// Keys on the dock with the top shelf: Up goes into the shelf's cards (when it has some), Down opens the glance
+  /// page. With a search going, Up is the search's as before.
+  KeyEventResult _shelfDockKey(FocusNode node, KeyEvent event) {
+    if (_homeSearch?.active ?? false) return _searchUpFromDock(node, event);
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      // Into the shelf's cards; with none, to the top bar as from any first row
+      if (event is KeyDownEvent) {
+        final card = _firstFocusable(_shelfFocusNode);
+        if (card != null) {
+          card.requestFocus();
+        } else {
+          _appBarKey.currentState?.focusTopBar();
+        }
+      }
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      if (event is KeyDownEvent) setState(() => _glanceOpen = true);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  void _closeGlance() {
+    if (!_glanceOpen) return;
+    setState(() => _glanceOpen = false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusDock();
+    });
+  }
+
   void _focusDock() {
     final last = _lastDockFocus;
     final target = last != null && last.context != null && _dockFocusNode.descendants.contains(last)
@@ -683,7 +746,9 @@ class _FLauncherState extends State<FLauncher> {
                   builder: (_, visible, _) => DetailsScrim(visible: visible),
                 ),
               ),
-              Consumer<LauncherState>(
+              ExcludeFocus(
+                excluding: _glanceOpen,
+                child: Consumer<LauncherState>(
                   builder: (_, state, child) => Visibility(
                       visible: state.launcherVisible,
                       replacement: const Center(child: AlternativeLauncherView()),
@@ -705,6 +770,9 @@ class _FLauncherState extends State<FLauncher> {
                                 child: Consumer<AppsService>(
                                     builder: (context, appsService, _) => _homeBody(context, appsService)))),
                   )),
+              ),
+              // The glance page, down from the dock (Peek: Top shelf + glance page); built only while it's up
+              if (_glanceOpen) Positioned.fill(child: GlancePage(onClose: _closeGlance)),
               // Typing or saying a search, over the home
               if (_searchTyping)
                 Positioned.fill(
@@ -817,6 +885,10 @@ class _FLauncherState extends State<FLauncher> {
     // Empty sections (often "Non-TV Apps") are left out below the dock; they'd only say "This category is empty".
     // With a single section left, its heading is dropped too. Everything below the dock wraps as a grid,
     // so a "row" section doesn't become one long sideways-scrolling strip.
+    final peek = PeekPlace.fromName(context.watch<SettingsService>().peek);
+    // With the top shelf, Continue Watching lives in the shelf: no row of its own taking the dock's place
+    final bool shelf = peek == PeekPlace.shelf;
+    if (shelf) continueWatchingActive = false;
     final search = context.watch<HomeSearch?>();
     final bool showSearch = (search?.active ?? false) && _showingSearch;
     final bool showRecents = continueWatchingActive && _showingRecents && !showSearch;
@@ -832,7 +904,6 @@ class _FLauncherState extends State<FLauncher> {
     final List<LauncherSection> belowDock =
         sections.where((s) => s != favorites && !(s is Category && s.applications.isEmpty)).toList();
 
-    final peek = PeekPlace.fromName(context.watch<SettingsService>().peek);
     final bool dockShown = !showRecents && !showSearch && !_topBarFocused;
     // Up on the top bar is a look at what's going on: the peek stays (it gives way to the rows the top bar opens)
     final bool peekShown = !showRecents && !showSearch && !showOverlay;
@@ -942,6 +1013,9 @@ class _FLauncherState extends State<FLauncher> {
                     ),
                   ),
                 ),
+                if (shelf)
+                  _shelfAndDock(favorites, dockShown: dockShown, showSearch: showSearch)
+                else
                 ExcludeFocus(
                   excluding: showRecents || showSearch,
                   child: Focus(
@@ -983,12 +1057,49 @@ class _FLauncherState extends State<FLauncher> {
         ),
         Focus(
           focusNode: _belowDockFocusNode,
-          child: _sections(belowDock,
-              firstCategoryAlreadyFound: true, showTitles: false, allGrids: true),
+          // With the top shelf, Down from the dock opens the glance page instead (its All apps has the rest)
+          child: shelf
+              ? const SizedBox.shrink()
+              : _sections(belowDock, firstCategoryAlreadyFound: true, showTitles: false, allGrids: true),
         ),
       ],
     );
   }
+
+  /// The top shelf over the dock (Peek: Top shelf + glance page). The shelf is outside the dock's own focus node, so
+  /// the home's landing and Down from the top bar still find the dock first: opening an app stays one press away.
+  Widget _shelfAndDock(Category favorites, {required bool dockShown, required bool showSearch}) => _swapAnimation(
+        visible: dockShown,
+        hiddenOffset: const Offset(0, 1.6),
+        fade: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ExcludeFocus(
+              excluding: showSearch,
+              child: DockShelf(
+                key: const Key("dock_shelf"),
+                package: _shelfPackage,
+                generation: _shelfGeneration,
+                focusNode: _shelfFocusNode,
+                onDown: _focusDock,
+              ),
+            ),
+            ExcludeFocus(
+              excluding: showSearch,
+              child: Focus(
+                focusNode: _dockFocusNode,
+                onKeyEvent: _shelfDockKey,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8, bottom: 24),
+                  // Not the first section: Up is the shelf's (_shelfDockKey), not straight to the top bar
+                  child: HomeDock(key: Key(favorites.id.toString()), category: favorites),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
 
   /// Shown when the profile can open nothing at all (a kids profile at bedtime, or before apps are approved). With
   /// Home Assistant it says why (a pause, a bedtime, time up) and until when, and lets a kid ask for more time.

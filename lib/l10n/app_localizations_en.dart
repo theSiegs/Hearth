@@ -882,6 +882,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get peekColumn => 'Top right';
 
   @override
+  String get peekShelf => 'Top shelf + glance page';
+
+  @override
+  String get shelfPickUp => 'Pick up where you left off';
+
+  @override
+  String shelfMinutesLeft(int minutes) {
+    return '$minutes min left today';
+  }
+
+  @override
+  String get shelfNoTimeLeft => 'No time left today';
+
+  @override
   String get peekHeadline => 'Headlines';
 
   @override

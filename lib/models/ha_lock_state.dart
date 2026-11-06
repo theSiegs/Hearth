@@ -92,6 +92,21 @@ class HaTimeUpGroup {
   const HaTimeUpGroup(this.id, this.name);
 }
 
+/// A group with a daily limit and its minutes left today. All screen time lists no apps: it counts every app but
+/// [except].
+class HaGroupLeft {
+  final String? id;
+  final String name;
+  final int minutesLeft;
+  final List<String> apps;
+  final List<String> except;
+
+  const HaGroupLeft(this.id, this.name, this.minutesLeft, {this.apps = const [], this.except = const []});
+
+  /// Whether [package]'s minutes count in this group.
+  bool counts(String package) => apps.isEmpty ? !except.contains(package) : apps.contains(package);
+}
+
 /// What the Hearth integration last said about the active profile: a family pause, the lock on now, the next bedtime
 /// or school time, the latest request for more time and the groups out of time. Without Home Assistant, [none].
 class HaLockState {
@@ -113,6 +128,9 @@ class HaLockState {
   final HaRequest? request;
   final List<HaTimeUpGroup> timeUp;
 
+  /// Every group with a limit and its minutes left (empty without the integration, or from an older Hearth).
+  final List<HaGroupLeft> groups;
+
   const HaLockState({
     this.paired = false,
     this.kids = false,
@@ -125,6 +143,7 @@ class HaLockState {
     this.nextLockAt,
     this.request,
     this.timeUp = const [],
+    this.groups = const [],
   });
 
   static const none = HaLockState();
@@ -137,6 +156,8 @@ class HaLockState {
     final next = map["nextLock"];
     final request = map["request"];
     final timeUp = map["timeUp"];
+    final groups = map["groups"];
+    List<String> strings(Object? list) => [if (list is List) for (final s in list) if (s is String) s];
     return HaLockState(
       paired: map["paired"] == true,
       kids: map["kids"] == true,
@@ -152,6 +173,13 @@ class HaLockState {
         if (timeUp is List)
           for (final group in timeUp)
             if (group is Map && _text(group["name"]) != null) HaTimeUpGroup(_text(group["id"]), _text(group["name"])!),
+      ],
+      groups: [
+        if (groups is List)
+          for (final group in groups)
+            if (group is Map && _text(group["name"]) != null && group["minutesLeft"] is int)
+              HaGroupLeft(_text(group["id"]), _text(group["name"])!, group["minutesLeft"] as int,
+                  apps: strings(group["apps"]), except: strings(group["except"])),
       ],
     );
   }
@@ -169,6 +197,12 @@ class HaLockState {
     if (all.isNotEmpty) return "all";
     final withId = timeUp.where((g) => g.id != null);
     return withId.isNotEmpty ? withId.first.id! : "all";
+  }
+
+  /// The fewest minutes left today in any group [package] counts in (null: no limit, or no word from the integration).
+  int? minutesLeftFor(String package) {
+    final counted = groups.where((g) => g.counts(package)).map((g) => g.minutesLeft);
+    return counted.isEmpty ? null : counted.reduce((a, b) => a < b ? a : b);
   }
 
   /// How long until the kid may ask again after an adult's "not now" (null: they may ask).

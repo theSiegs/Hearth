@@ -82,6 +82,38 @@ final class HaLocks {
         JSONObject request = locks.optJSONObject("request");
         if (request != null) out.put("request", requestForFlutter(request));
         out.put("timeUp", timeUpGroups(entry));
+        out.put("groups", groupsLeft(entry));
+        return out;
+    }
+
+    /**
+     * Every group with a limit and its minutes left today, [{id, name, minutesLeft, apps, except}] (All screen time's
+     * apps are empty: every app but its exceptions), as the last state document said. Empty from an older Hearth's
+     * store or without the integration.
+     */
+    static List<Map<String, Object>> groupsLeft(JSONObject entry) {
+        List<Map<String, Object>> groups = new ArrayList<>();
+        JSONArray kept = entry != null ? entry.optJSONArray(HaAllowance.GROUPS_LEFT_KEY) : null;
+        for (int i = 0; kept != null && i < kept.length(); i++) {
+            JSONObject group = kept.optJSONObject(i);
+            if (group == null) continue;
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", text(group, "id"));
+            map.put("name", text(group, "name"));
+            map.put("minutesLeft", Math.max(0, group.optInt("minutes_left", 0)));
+            map.put("apps", strings(group.optJSONArray("apps")));
+            map.put("except", strings(group.optJSONArray("except")));
+            groups.add(map);
+        }
+        return groups;
+    }
+
+    private static List<String> strings(JSONArray array) {
+        List<String> out = new ArrayList<>();
+        for (int i = 0; array != null && i < array.length(); i++) {
+            String value = array.optString(i, "");
+            if (!value.isEmpty()) out.add(value);
+        }
         return out;
     }
 

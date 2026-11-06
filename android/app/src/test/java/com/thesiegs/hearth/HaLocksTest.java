@@ -87,6 +87,25 @@ public class HaLocksTest {
     }
 
     @Test
+    public void everyGroupWithALimitAndItsMinutesLeft() throws Exception {
+        JSONObject profiles = HaAllowance.profilesFromDocument(new JSONObject("{\"profiles\": {\"user:10\": {\"groups\": ["
+                + "{\"id\": \"games\", \"name\": \"Games\", \"minutes_left\": 20, \"apps\": [\"com.example.game\"]},"
+                + "{\"id\": \"all\", \"name\": \"All screen time\", \"minutes_left\": -1, \"apps\": [],"
+                + " \"except\": [\"com.example.music\"]},"
+                + "{\"id\": \"music\", \"minutes_left\": null, \"apps\": [\"com.example.music\"]}]}}}"));
+        Map<String, Object> card = HaLocks.forFlutter(profiles.optJSONObject("user:10"), true, true, 1L);
+        @SuppressWarnings("unchecked") List<Map<String, Object>> groups = (List<Map<String, Object>>) card.get("groups");
+        assertEquals(2, groups.size());
+        assertEquals("Games", groups.get(0).get("name"));
+        assertEquals(20, groups.get(0).get("minutesLeft"));
+        assertEquals(java.util.Collections.singletonList("com.example.game"), groups.get(0).get("apps"));
+        assertEquals(0, groups.get(1).get("minutesLeft"));
+        assertTrue(((List<?>) groups.get(1).get("apps")).isEmpty());
+        assertEquals(java.util.Collections.singletonList("com.example.music"), groups.get(1).get("except"));
+        assertTrue(((List<?>) HaLocks.forFlutter(null, false, false, 1L).get("groups")).isEmpty());
+    }
+
+    @Test
     public void nothingFromHomeAssistantIsAnEmptyCard() {
         Map<String, Object> card = HaLocks.forFlutter(null, false, true, 1L);
         assertEquals(false, card.get("paired"));

@@ -92,6 +92,11 @@ void main() {
       await settings.setPeek("headline");
       await tester.tap(find.text("Peek tiles"));
       await tester.pumpAndSettle();
+      expect(settings.peek, "shelf");
+      expect(find.text("Top shelf + glance page"), findsOneWidget);
+
+      await tester.tap(find.text("Peek tiles"));
+      await tester.pumpAndSettle();
       expect(settings.peek, "off");
 
       // The Glint home has no dock to sit over
