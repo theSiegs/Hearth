@@ -49,9 +49,9 @@ Change its look in **Settings → Home screen → Look**, or turn it off to get 
 
 **Continue Watching** shows what apps put in Google TV's Watch Next list, most recent first, with cover art. It shows
 the current profile's own list. Hearth also keeps each profile's own history on the TV: what apps say is playing,
-which adds shows from apps that don't use Watch Next (with the app's icon instead of cover art), and entries an app
+which adds shows from apps that don't use Watch Next (with the title's picture from TMDB when Hearth finds an exact match, else the app's icon), and entries an app
 dropped when someone else used it (Netflix lists only its current profile's), until that profile opens the app again.
-A kids profile gets the same: once a parent's **Fix** (Settings → Profiles → Kids profiles) has let Hearth see
+A kids profile gets the same: once a parent's **Fix** (Settings → Family → Kids profiles) has let Hearth see
 what plays there, what the kid watches is kept for their own row only, never an adult's or another kid's.
 With household sync on, each person's titles follow them to the household's other TVs, kids' included (a kid's
 only ever in their own row), with their cover art, and one taken out or finished on one TV goes from the others. Choose which apps appear, the card size and how many in
@@ -82,7 +82,7 @@ Notification access.
 **Calendar.** With calendar access allowed (**Settings → Home screen → Status bar → Calendars**), the date and time
 in the top bar can be selected: they show the rest of today's events, and OK shows the next 7 days. The events come
 from the profile's own Google calendars synced to the TV; each profile turns its calendars on or off there. In a kids
-profile, a parent's **Fix** (Settings → Profiles → Kids profiles) lets Hearth read that profile's calendars.
+profile, a parent's **Fix** (Settings → Family → Kids profiles) lets Hearth read that profile's calendars.
 
 **Search.** Type or speak a title. Results show where you can watch it now, from US availability data (titles in
 services you have come first). Netflix, Apple TV, HBO Max and Paramount+ open straight on the title; other services
@@ -100,7 +100,7 @@ now), so Google TV's home shows for a moment first. Their Continue Watching come
 profile sees what was watched while it was on. The first switch to an adult's profile Hearth hasn't seen waits
 about 15 seconds on Google TV's home, in case it's a new kids profile Google TV is still setting up.
 
-**Profile Pairing** (**Settings → Profiles → Profile Pairing**). When Hearth opens Netflix, Disney+, Apple TV,
+**Profile Pairing** (**Settings → Family → Profile Pairing**). When Hearth opens Netflix, Disney+, Apple TV,
 HBO Max or Paramount+, it picks the app profile that matches your Google TV profile: by name, or the one you pair it
 with. Open each app once from Hearth so it can learn the app's profiles.
 
@@ -118,24 +118,24 @@ Hearth types it behind a "logging in as" card when the app asks, never showing i
   encrypted on the phone, with a one-time key from the QR code, before they reach the TV.
 - **Type saved PINs** turns all of it off for the TV; the apps then ask as usual.
 - **Recent PIN entries** lists the last 20 (app, time, outcome; never a name or a PIN).
-- After two PINs in a row the app doesn't take, Hearth stops typing it until you save it again. If an app's PIN screen
+- After two PINs in a row the app doesn't take (one, for Paramount+'s content PIN), Hearth stops typing it until you save it again. If an app's PIN screen
   changes, Hearth pauses for that app until an update, and Hearth's repository can turn an app version off.
 - PINs are encrypted with a key that never leaves the TV. The first time, a screen explains what Hearth will do,
   including that streaming services' terms may not allow an app to do this for you.
 
-**Lock Profile** (**Settings → Profiles**). Uses Google TV's own profile lock, so Google TV asks for your
+**Lock now** (**Settings → Profiles**). Uses Google TV's own profile lock, so Google TV asks for your
 profile's PIN to come back. Turn the PIN on for your account in Google TV first. You can also:
 - hold the profile button in the top bar;
 - hold the remote's profile button (a press opens the profile chooser straight away). Hearth sets this button up
   once in **Settings → TV & power → Remote → Remote buttons**, where you can change it, or restore it to Google TV's
   own (the chooser only);
-- map another remote button to "Lock Profile";
+- map another remote button to "Lock now";
 - set **Log out when the TV sleeps** (every time, or after some minutes asleep): Hearth opens Google TV's profile
   chooser as the TV goes to sleep (or once it has slept that long), so whoever turns it on next picks who's watching,
   and a profile with a PIN asks for it before it opens. It works from kids profiles too; leaving one is still up to
   Google TV's kids lock. It is on (every time) until you choose otherwise.
 
-**Approve switches from my phone** (**Settings → Profiles**, in your own profile; needs Home Assistant and its phone
+**Approve switches from my phone** (**Settings → Profiles → Unlock from my phone**, in your own profile; needs Home Assistant and its phone
 app). When Google TV asks for your PIN to open your profile, your phone gets a notification with Allow and Deny.
 Allow, and Hearth enters your Google TV PIN; Deny, or no answer, leaves Google's PIN screen as it is. The PIN can always
 be typed with the remote instead: pressing a key on the PIN screen withdraws the phone's request. Choose your phone and
@@ -167,7 +167,7 @@ Hearth treats a profile as a kids profile when Family Link supervises it.
 
 - **Screen time.** When Google TV shows its bedtime or "time's up" screen, Hearth stays out of the way and returns
   when the kid is allowed back. Remote button remaps pause while those screens show.
-- **Parent PIN** (**Settings → Profiles → Parent PIN**). Kids see their own settings plus one "Parent settings" row;
+- **Parent PIN** (**Settings → Family → Parent PIN**). Kids see their own settings plus one "Parent settings" row;
   anything that could undo your setup asks for the PIN. With household sync on, the household's TVs share one Parent
   PIN: a TV that joins without one takes it, and a change on one TV reaches the others. A TV that had its own,
   different PIN when it joined keeps it until you choose **Use your other TVs' Parent PIN** in **Settings → Family**
@@ -193,7 +193,7 @@ Hearth treats a profile as a kids profile when Family Link supervises it.
 
   A kids profile you add later gets Hearth too, once you've switched away from it. The same connection lets Hearth
   close the streaming apps adults share when the profile changes, so they ask who's watching.
-- **Kids profiles** (**Settings → Profiles → Kids profiles**) shows each kid as **Ready** or **Needs a fix**, with
+- **Kids profiles** (**Settings → Family → Kids profiles**) shows each kid as **Ready** or **Needs a fix**, with
   one **Fix** for those that need it. Select a kid to manage what's theirs without switching to their profile:
   - **YouTube time per day**: how long HearthTube may play each day. With Home Assistant (optional), a limit shared
     with the family's other devices can count too, and the stricter one wins. Adults have no YouTube limit.
