@@ -6,12 +6,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group("GlanceHaFeed.parse", () {
-    test("people by name, away for not_home; lists with something left, most first", () {
+    test("everyone by name (no place for someone with no tracker), away for not_home; lists with something left, most first", () {
       final parsed = GlanceHaFeed.parse(
         '{"people": [["Sam Rivera", "not_home"], ["Alex", "home"], ["Robin", "unavailable"], ["Kim", "Grandma_s"]],'
         ' "lists": [["Shopping", "0"], ["Chores", "3"], ["Packing", 5]]}',
       );
-      expect([for (final p in parsed.people) "${p.name}: ${p.where}"], ["Alex: home", "Kim: Grandma s", "Sam Rivera: away"]);
+      expect([for (final p in parsed.people) "${p.name}: ${p.where}"], ["Alex: home", "Kim: Grandma s", "Robin: ", "Sam Rivera: away"]);
       expect([for (final l in parsed.lists) "${l.name}: ${l.open}"], ["Packing: 5", "Chores: 3"]);
     });
 

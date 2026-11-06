@@ -21,7 +21,6 @@ import 'dart:math' as math;
 import 'package:flauncher/actions.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/models/ha_lock_state.dart';
-import 'package:flauncher/models/weather_data.dart';
 import 'package:flauncher/providers/calendars.dart';
 import 'package:flauncher/providers/ha_panel_service.dart';
 import 'package:flauncher/providers/notifications_service.dart';
@@ -29,6 +28,8 @@ import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/weather_service.dart';
 import 'package:flauncher/quiet_failure.dart';
 import 'package:flauncher/widgets/glint/glance_feed.dart';
+import 'package:flauncher/widgets/glint/glance_rotation.dart';
+import 'package:flauncher/widgets/glint/glance_weather.dart';
 import 'package:flauncher/widgets/glint/glint_apps_page.dart';
 import 'package:flauncher/widgets/glint/glint_faces.dart';
 import 'package:flauncher/widgets/glint/glint_house_feed.dart';
@@ -44,9 +45,13 @@ import 'package:provider/provider.dart';
 
 /// The glance page (Peek: Top shelf + glance page), down from the dock: its own page over a dark backdrop that hides
 /// the home (the top bar stays). Live tiles on a clean two-column grid inside the TV's safe area: a kid's time (what's
-/// held, the minutes left in each group), the family and where they are, today (the date, the weather, what's on),
-/// the to-do lists and what's going on around the house; then a small row of ways out (All apps, Home Assistant's
-/// panel, notifications, Settings).
+/// held, the minutes left in each group), today (the date, what's on), the weather, the family and where they are, the
+/// to-do lists and what's going on around the house; then a small row of ways out (All apps, Home Assistant's panel,
+/// notifications, Settings).
+///
+/// The tiles are live: while one isn't selected, its face turns slowly through what it has (one page-wide
+/// [GlanceRotation], one tile at a time). The selected tile holds still. Pressing a tile always opens that tile's own
+/// view ([GlanceView]), whatever its face shows.
 ///
 /// It slides up and fades in, its tiles following one after another, and plays that backwards as it goes ([leave]).
 /// It's only built while it's up: Home Assistant is followed only then. Back, or Up from its top row, asks to close
@@ -69,14 +74,18 @@ class GlancePage extends StatefulWidget {
   State<GlancePage> createState() => GlancePageState();
 }
 
-class GlancePageState extends State<GlancePage> with SingleTickerProviderStateMixin {
+class GlancePageState extends State<GlancePage> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final FocusNode _focusNode = FocusNode(debugLabel: "glance_page");
   late final GlintHouseFeed _house;
   late final GlanceHaFeed _family;
   late final HaLockFeed _lock;
   late final AnimationController _show;
   late final bool _moves;
+  final GlanceRotation _rotation = GlanceRotation();
+  final Set<String> _turning = {};
   bool _leaving = false;
+  bool _viewOpen = false;
+  bool _resumed = true;
 
   /// Each person's Google TV profile photo, looked up once per page (null: none). The family tile waits until everyone
   /// on it has been looked up, so a face never swaps on its own.
@@ -86,6 +95,7 @@ class GlancePageState extends State<GlancePage> with SingleTickerProviderStateMi
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final channel = context.read<FLauncherChannel>();
     _moves = GlintMotion.fromName(context.read<SettingsService>().glintMotion).pace.moves;
     _show = AnimationController(
@@ -96,6 +106,7 @@ class GlancePageState extends State<GlancePage> with SingleTickerProviderStateMi
     _house = GlintHouseFeed(channel.getHaConnection)..addListener(_changed);
     _family = GlanceHaFeed(channel.getHaConnection)..addListener(_changed);
     _lock = HaLockFeed(channel.getHaLockState)..addListener(_changed);
+    _turn();
     // The first tile takes the selection as the page opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -106,10 +117,21 @@ class GlancePageState extends State<GlancePage> with SingleTickerProviderStateMi
     });
   }
 
+  /// The tiles turn only while they can be seen and may move: not at Motion: Still, not while Hearth is behind
+  /// something else, not under a tile's view, not as the page goes.
+  void _turn() => _rotation.running = _moves && _resumed && !_viewOpen && !_leaving;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _resumed = state == AppLifecycleState.resumed;
+    _turn();
+  }
+
   /// Plays the page out, then [GlancePage.onGone]. It takes no keys meanwhile.
   void leave() {
     if (_leaving) return;
     setState(() => _leaving = true);
+    _turn();
     _show.reverse().whenCompleteOrCancel(() {
       if (mounted) widget.onGone?.call();
     });
@@ -147,6 +169,8 @@ class GlancePageState extends State<GlancePage> with SingleTickerProviderStateMi
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _rotation.dispose();
     for (final feed in <ChangeNotifier>[_house, _family, _lock]) {
       feed
         ..removeListener(_changed)
@@ -174,14 +198,15 @@ class GlancePageState extends State<GlancePage> with SingleTickerProviderStateMi
     return KeyEventResult.ignored;
   }
 
-  @override
-  Widget build(BuildContext context) {
+  /// What the page shows now; [GlanceView]s read it too, so a view shows what's current.
+  GlanceInputs _inputs(BuildContext context) {
     final settings = context.watch<SettingsService>();
+    final now = DateTime.now();
     final notifications = () {
       final n = context.watch<NotificationsService?>();
       return n != null && n.hasPermission && settings.showNotificationsWidgetInStatusBar ? n.notifications : null;
     }();
-    final all = glanceTiles(
+    return GlanceInputs(
       lock: _lock.state,
       // Shown once everyone on it has been looked up
       people: _family.people.every((p) => _photos.containsKey(p.name)) ? _family.people : const [],
@@ -189,13 +214,54 @@ class GlancePageState extends State<GlancePage> with SingleTickerProviderStateMi
       connection: _family.connection,
       lists: _family.lists,
       house: _house.items,
-      weather: context.watch<WeatherService?>()?.weatherData,
-      events: context.watch<CalendarService?>()?.today().take(4).toList() ?? const [],
+      // The TV's own weather (Settings), else Home Assistant's
+      weather: GlanceWeather.fromHearth(context.watch<WeatherService?>()?.weatherData, now) ?? _family.weatherAt(now),
+      events: context.watch<CalendarService?>()?.today().take(GlanceInputs.eventCount).toList() ?? const [],
       notifications: notifications,
       haPanel: settings.haPanelEnabled,
+      now: now,
     );
+  }
+
+  /// Opens a tile's view over the page; the tiles hold still under it.
+  Future<void> _open(GlanceView view) async {
+    if (_viewOpen || _leaving) return;
+    setState(() => _viewOpen = true);
+    _turn();
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierColor: Colors.black54,
+        builder: (_) => ListenableBuilder(
+          listenable: Listenable.merge([_family, _house, _lock]),
+          builder: (context, _) => GlanceViewPanel(view: view, inputs: _inputs(context)),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _viewOpen = false);
+        _turn();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = context.watch<SettingsService>();
+    final all = glanceTilesFor(_inputs(context));
     final tiles = [for (final t in all) if (!t.action) t];
     final actions = [for (final t in all) if (t.action) t];
+    // Tell the rotation how many faces each tile has, and forget tiles that went
+    final ids = {for (final t in tiles) t.id};
+    for (final gone in _turning.difference(ids)) {
+      _rotation.remove(gone);
+    }
+    _turning
+      ..clear()
+      ..addAll(ids);
+    for (final t in tiles) {
+      _rotation.setFaces(t.id, t.faces);
+    }
     final opening = !_show.isCompleted;
 
     return Material(
@@ -265,7 +331,11 @@ class GlancePageState extends State<GlancePage> with SingleTickerProviderStateMi
               top: g.top(i),
               width: g.tileWidth,
               height: g.tileHeight,
-              child: _TileIn(delay: delay(i), moves: _moves, child: Builder(builder: tile.build)),
+              child: _TileIn(
+                delay: delay(i),
+                moves: _moves,
+                child: GlanceLiveTile(tile: tile, rotation: _rotation, onOpen: _open),
+              ),
             ),
         ],
       ),
@@ -296,7 +366,7 @@ class GlancePageState extends State<GlancePage> with SingleTickerProviderStateMi
                     key: ValueKey(action.id),
                     delay: delay(tiles.length + i),
                     moves: _moves,
-                    child: Builder(builder: action.build),
+                    child: Builder(builder: (context) => action.build(context, 0, null)),
                   ),
                 ],
               ],
@@ -421,16 +491,86 @@ String glanceName(String name) {
   return first.characters.first.toUpperCase() + first.characters.skip(1).string;
 }
 
+/// A place as the glance page shows it: capitalised ("school" is "School"); a quiet dash for someone Home Assistant
+/// can't place.
+String glancePlace(String where) {
+  final w = where.trim();
+  if (w.isEmpty) return "—";
+  return w.characters.first.toUpperCase() + w.characters.skip(1).string;
+}
+
+/// What pressing a tile opens: one per tile, whatever its face shows.
+enum GlanceView { screenTime, today, weather, family, lists, house }
+
 /// One tile on the glance page; an [action] is a small one in the row of ways out.
+///
+/// [build] makes the tile's face for face number [face] (of [faces]) with [onPressed] as what pressing it does. The
+/// page hands every face of a tile the same [onPressed], opening the tile's [view]: what a tile shows never changes
+/// what pressing it does. Tiles without a [view] (the ways out, a kid's time) do their own one thing.
 class GlanceTile {
   final String id;
   final bool action;
-  final Widget Function(BuildContext context) build;
-  const GlanceTile(this.id, this.build, {this.action = false});
+  final int faces;
+  final GlanceView? view;
+  final Widget Function(BuildContext context, int face, VoidCallback? onPressed) build;
+  const GlanceTile(this.id, this.build, {this.action = false, this.faces = 1, this.view});
 }
 
-/// The glance page's tiles, in order: a kid's time first, then today, the family, the to-do lists and the house, then the ways out (All apps, Home Assistant, notifications, Settings). Only tiles with
-/// something to say are there; today always is.
+/// Everything the glance page shows, at one moment.
+class GlanceInputs {
+  final HaLockState lock;
+  final List<GlancePerson> people;
+  final Map<String, Uint8List?> photos;
+  final ({String url, String token})? connection;
+  final List<GlanceList> lists;
+  final List<GlintHouseItem> house;
+  final GlanceWeather? weather;
+  final List<CalendarEvent> events;
+  final List<NotificationItem>? notifications;
+  final bool haPanel;
+  final DateTime now;
+
+  /// How many of today's events the page takes.
+  static const int eventCount = 6;
+
+  GlanceInputs({
+    required this.lock,
+    this.people = const [],
+    this.photos = const {},
+    this.connection,
+    this.lists = const [],
+    this.house = const [],
+    this.weather,
+    this.events = const [],
+    this.notifications,
+    this.haPanel = false,
+    DateTime? now,
+  }) : now = now ?? DateTime.now();
+
+  /// Today's events still to come (or on now, or all day).
+  List<CalendarEvent> get upcoming => [for (final e in events) if (e.allDay || e.end.isAfter(now)) e];
+
+  /// Everyone on the family tile, each with their face.
+  List<GlanceMember> get members => [
+    for (final p in people)
+      GlanceMember(
+        glanceName(p.name),
+        p.where,
+        // Keyed by whose it is: one person's face never carries over to the next
+        PersonFace(
+          key: ValueKey("face:${p.name}"),
+          name: glanceName(p.name),
+          photo: photos[p.name],
+          picture: p.picture == null ? null : HaPanelService.pictureRequest(p.picture!, connection),
+          size: GlanceFamilyFace.faceSize,
+        ),
+      ),
+  ];
+}
+
+/// The glance page's tiles, in order: a kid's time first, then today, the weather, the family, the to-do lists and
+/// the house, then the ways out (All apps, Home Assistant, notifications, Settings). Only tiles with something to say
+/// are there; today always is.
 List<GlanceTile> glanceTiles({
   required HaLockState lock,
   List<GlancePerson> people = const [],
@@ -438,77 +578,109 @@ List<GlanceTile> glanceTiles({
   ({String url, String token})? connection,
   List<GlanceList> lists = const [],
   List<GlintHouseItem> house = const [],
-  WeatherData? weather,
+  GlanceWeather? weather,
   List<CalendarEvent> events = const [],
   List<NotificationItem>? notifications,
   bool haPanel = false,
-}) {
-  final now = DateTime.now();
+  DateTime? now,
+}) => glanceTilesFor(GlanceInputs(
+  lock: lock,
+  people: people,
+  photos: photos,
+  connection: connection,
+  lists: lists,
+  house: house,
+  weather: weather,
+  events: events,
+  notifications: notifications,
+  haPanel: haPanel,
+  now: now,
+));
+
+List<GlanceTile> glanceTilesFor(GlanceInputs d) {
   final tiles = <GlanceTile>[];
-  if (TimeUpFace.shows(lock, nothingToOpen: false, now: now)) {
-    tiles.add(GlanceTile("time", (_) => TimeUpFace(state: lock)));
+  final lock = d.lock;
+  if (TimeUpFace.shows(lock, nothingToOpen: false, now: d.now)) {
+    tiles.add(GlanceTile("time", (_, _, _) => TimeUpFace(state: lock)));
   }
   if (lock.kids && lock.groups.isNotEmpty) {
+    final rows = [for (final g in lock.groups) (g.name, g.minutesLeft <= 0 ? "none today" : "${g.minutesLeft} min")];
     tiles.add(GlanceTile(
       "screen-time",
-      (_) => GlanceTableFace(
-        label: "Screen time left",
-        rows: [for (final g in lock.groups) (g.name, g.minutesLeft <= 0 ? "none today" : "${g.minutesLeft} min")],
-      ),
+      view: GlanceView.screenTime,
+      faces: GlanceTableFace.pagesOf(rows.length),
+      (_, face, onPressed) => GlanceTableFace(label: "Screen time left", rows: rows, face: face, onPressed: onPressed),
     ));
   }
   // Today is always there: ahead of what Home Assistant brings a moment later, so the page doesn't shift under the
   // selection as it arrives
-  tiles.add(GlanceTile("today", (_) => GlanceTodayFace(weather: weather, events: events)));
-  if (people.isNotEmpty) {
+  final upcoming = d.upcoming;
+  tiles.add(GlanceTile(
+    "today",
+    view: GlanceView.today,
+    faces: math.max(1, upcoming.length),
+    (_, face, onPressed) => GlanceTodayFace(events: upcoming, face: face, onPressed: onPressed, clock: () => d.now),
+  ));
+  final weather = d.weather;
+  if (weather != null) {
+    tiles.add(GlanceTile(
+      "weather",
+      view: GlanceView.weather,
+      faces: GlanceWeatherFace.facesOf(weather),
+      (_, face, onPressed) => GlanceWeatherFace(weather: weather, face: face, onPressed: onPressed, clock: () => d.now),
+    ));
+  }
+  if (d.people.isNotEmpty) {
+    final members = d.members;
     tiles.add(GlanceTile(
       "family",
-      (_) => GlanceFamilyFace(members: [
-        for (final p in people)
-          GlanceMember(
-            glanceName(p.name),
-            p.where,
-            // Keyed by whose it is: one person's face never carries over to the next
-            PersonFace(
-              key: ValueKey("face:${p.name}"),
-              name: glanceName(p.name),
-              photo: photos[p.name],
-              picture: p.picture == null ? null : HaPanelService.pictureRequest(p.picture!, connection),
-              size: GlanceFamilyFace.faceSize,
-            ),
-          ),
-      ]),
+      view: GlanceView.family,
+      faces: GlanceFamilyFace.facesOf(members),
+      (_, face, onPressed) => GlanceFamilyFace(members: members, face: face, onPressed: onPressed),
     ));
   }
-  if (lists.isNotEmpty) {
+  if (d.lists.isNotEmpty) {
+    final lists = d.lists;
     tiles.add(GlanceTile(
       "lists",
-      (_) => GlanceTableFace(label: "To do", rows: [for (final l in lists) (l.name, "${l.open} left")]),
+      view: GlanceView.lists,
+      faces: GlanceListsFace.facesOf(lists),
+      (_, face, onPressed) => GlanceListsFace(lists: lists, face: face, onPressed: onPressed),
     ));
   }
-  if (house.isNotEmpty) tiles.add(GlanceTile("house", (_) => GlanceHouseFace(items: house)));
+  if (d.house.isNotEmpty) {
+    final house = d.house;
+    tiles.add(GlanceTile(
+      "house",
+      view: GlanceView.house,
+      faces: house.length,
+      (_, face, onPressed) => GlanceHouseFace(items: house, face: face, onPressed: onPressed),
+    ));
+  }
 
   tiles.add(GlanceTile(
     "all-apps",
     action: true,
-    (context) => GlanceAction(icon: Icons.apps_rounded, name: "All apps", onPressed: () => GlintAppsPage.open(context)),
+    (context, _, _) =>
+        GlanceAction(icon: Icons.apps_rounded, name: "All apps", onPressed: () => GlintAppsPage.open(context)),
   ));
-  if (haPanel) {
+  if (d.haPanel) {
     tiles.add(GlanceTile(
       "home-assistant",
       action: true,
-      (context) => GlanceAction(
+      (context, _, _) => GlanceAction(
         icon: Icons.home_outlined,
         name: "Home",
         onPressed: () => Actions.maybeInvoke(context, const OpenHaPanelIntent()),
       ),
     ));
   }
+  final notifications = d.notifications;
   if (notifications != null) {
     tiles.add(GlanceTile(
       "notifications",
       action: true,
-      (context) => GlanceAction(
+      (context, _, _) => GlanceAction(
         icon: notifications.isEmpty ? Icons.notifications_none_rounded : Icons.notifications_rounded,
         name: "Notifications",
         count: notifications.length,
@@ -520,7 +692,7 @@ List<GlanceTile> glanceTiles({
   tiles.add(GlanceTile(
     "settings",
     action: true,
-    (context) => GlanceAction(
+    (context, _, _) => GlanceAction(
       icon: Icons.settings_outlined,
       name: "Settings",
       onPressed: () =>
@@ -528,6 +700,32 @@ List<GlanceTile> glanceTiles({
     ),
   ));
   return tiles;
+}
+
+/// A tile on the page, live: its face follows the [rotation]'s index for it (only this tile rebuilds when it turns),
+/// it tells the rotation when it has the selection (so it holds still), and pressing it opens its own view through
+/// [onOpen] (the same, whatever face is up).
+class GlanceLiveTile extends StatelessWidget {
+  final GlanceTile tile;
+  final GlanceRotation rotation;
+  final ValueChanged<GlanceView> onOpen;
+  const GlanceLiveTile({super.key, required this.tile, required this.rotation, required this.onOpen});
+
+  @override
+  Widget build(BuildContext context) {
+    final view = tile.view;
+    // One action per tile, made from the tile alone, never from the face
+    final VoidCallback? onPressed = view == null ? null : () => onOpen(view);
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (focused) => rotation.focus(tile.id, focused),
+      child: ValueListenableBuilder<int>(
+        valueListenable: rotation.indexOf(tile.id),
+        builder: (context, index, _) => tile.build(context, tile.faces <= 1 ? 0 : index % tile.faces, onPressed),
+      ),
+    );
+  }
 }
 
 /// Small tracked caps over a face.
@@ -545,7 +743,11 @@ class _Fading extends StatelessWidget {
   Widget build(BuildContext context) => AnimatedSwitcher(
     duration: const Duration(milliseconds: 280),
     layoutBuilder: (current, previous) => Stack(
-      alignment: align == TextAlign.end ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: switch (align) {
+        TextAlign.end => Alignment.centerRight,
+        TextAlign.center => Alignment.center,
+        _ => Alignment.centerLeft,
+      },
       children: [...previous, ?current],
     ),
     child: Text(
@@ -559,91 +761,41 @@ class _Fading extends StatelessWidget {
   );
 }
 
-/// Turns through [children] one at a time, every [pace], with a soft cross-fade and a small rise. Holds the first
-/// when nothing may move (Motion: Still) or there's only one.
-class GlanceCycle extends StatefulWidget {
-  final List<Widget> children;
-  final Duration pace;
-  const GlanceCycle({super.key, required this.children, this.pace = const Duration(seconds: 6)});
+/// A tile's face turning: the old face fades out as the new one fades in, slowly (no cut, no slide). Instant at
+/// Motion: Still.
+class GlanceFaceSwitch extends StatelessWidget {
+  final int face;
+  final Widget child;
+  final AlignmentGeometry alignment;
+  const GlanceFaceSwitch({super.key, required this.face, required this.child, this.alignment = Alignment.topLeft});
 
-  @override
-  State<GlanceCycle> createState() => _GlanceCycleState();
-}
-
-class _GlanceCycleState extends State<GlanceCycle> {
-  Timer? _timer;
-  int _index = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _start();
-  }
-
-  @override
-  void didUpdateWidget(GlanceCycle old) {
-    super.didUpdateWidget(old);
-    if (_index >= widget.children.length) _index = 0;
-    if (old.children.length != widget.children.length || old.pace != widget.pace) _start();
-  }
-
-  void _start() {
-    _timer?.cancel();
-    _timer = null;
-    final moves = GlintMotion.fromName(context.read<SettingsService>().glintMotion).pace.moves;
-    if (!moves || widget.children.length < 2) return;
-    _timer = Timer.periodic(widget.pace, (_) {
-      if (mounted) setState(() => _index = (_index + 1) % widget.children.length);
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
+  static const Duration time = Duration(milliseconds: 600);
 
   @override
   Widget build(BuildContext context) {
-    if (widget.children.isEmpty) return const SizedBox.shrink();
-    final i = _index < widget.children.length ? _index : 0;
+    final settings = Provider.of<SettingsService?>(context, listen: false);
+    final moves = settings == null || GlintMotion.fromName(settings.glintMotion).pace.moves;
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      layoutBuilder: (current, previous) =>
-          Stack(alignment: Alignment.topLeft, children: [...previous, ?current]),
-      transitionBuilder: (child, animation) => FadeTransition(
-        opacity: animation,
-        child: SlideTransition(
-          position: Tween(begin: const Offset(0, 0.2), end: Offset.zero).animate(animation),
-          child: child,
-        ),
-      ),
-      child: KeyedSubtree(key: ValueKey(i), child: widget.children[i]),
+      duration: moves ? time : Duration.zero,
+      switchInCurve: Curves.easeInOut,
+      switchOutCurve: Curves.easeInOut,
+      layoutBuilder: (current, previous) => Stack(alignment: alignment, children: [...previous, ?current]),
+      child: KeyedSubtree(key: ValueKey(face), child: child),
     );
   }
 }
 
-/// Today: the date, the weather now, and what's on today, turning through the events. The time itself is the top
-/// bar's.
+/// Today: the date, and what's on today, one event to a face. The time itself is the top bar's.
 class GlanceTodayFace extends StatelessWidget {
-  final WeatherData? weather;
   final List<CalendarEvent> events;
+  final int face;
+  final VoidCallback? onPressed;
   final DateTime Function() clock;
-  const GlanceTodayFace({super.key, this.weather, this.events = const [], this.clock = DateTime.now});
+  const GlanceTodayFace(
+      {super.key, this.events = const [], this.face = 0, this.onPressed, this.clock = DateTime.now});
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<SettingsService>();
-    String time(DateTime t) {
-      try {
-        return DateFormat(settings.timeFormat).format(t);
-      } catch (_) {
-        return DateFormat("h:mm").format(t);
-      }
-    }
-
     final now = clock();
     String date;
     try {
@@ -651,73 +803,32 @@ class GlanceTodayFace extends StatelessWidget {
     } catch (_) {
       date = DateFormat("EEE, MMM d").format(now);
     }
-    final w = weather;
-    final hiLo = w == null
-        ? ""
-        : [
-            if (w.todayMaxTemp != null) "H ${w.todayMaxTemp}°",
-            if (w.todayMinTemp != null) "L ${w.todayMinTemp}°",
-          ].join("  ");
-    final upcoming = [for (final e in events) if (e.allDay || e.end.isAfter(now)) e];
-    String when(CalendarEvent e) =>
-        e.allDay ? "All day" : (e.isOn(now) ? "Now, until ${time(e.end)}" : time(e.start));
-
+    final e = events.isEmpty ? null : events[face % events.length];
     return GlintTile(
       key: const Key("glance_today"),
+      onPressed: onPressed,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _label("Today"),
+          Row(
+            children: [
+              Expanded(child: _label("Today")),
+              if (events.length > 1)
+                Text("${face % events.length + 1} of ${events.length}", style: GlintLook.label),
+            ],
+          ),
           const SizedBox(height: 2),
           Text(date, style: GlintLook.primary.copyWith(fontSize: 19), maxLines: 1, overflow: TextOverflow.ellipsis),
           const Spacer(),
-          if (w != null && w.currentTemp != null)
-            Row(
-              children: [
-                Icon(WeatherData.iconFor(w.currentConditionCode),
-                    color: const Color(0xFFFFE0B8), size: 18, shadows: GlintLook.textShadow),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: _Fading(
-                    [
-                      "${w.currentTemp}°",
-                      if (w.currentCondition?.isNotEmpty ?? false) w.currentCondition!,
-                      if (hiLo.isNotEmpty) hiLo,
-                    ].join("   "),
-                    GlintLook.secondaryText,
-                  ),
-                ),
-              ],
-            ),
           SizedBox(
-            height: 20,
-            child: upcoming.isEmpty
-                ? Text("Nothing else on today", style: GlintLook.secondaryText, maxLines: 1)
-                : GlanceCycle(
-                    pace: const Duration(seconds: 5),
-                    children: [
-                      for (final e in upcoming)
-                        Row(
-                          children: [
-                            if (e.color != null)
-                              Container(
-                                width: 8,
-                                height: 8,
-                                margin: const EdgeInsets.only(right: 8),
-                                decoration: BoxDecoration(
-                                    color: Color(e.color!).withValues(alpha: 1), shape: BoxShape.circle),
-                              ),
-                            Text(when(e), style: GlintLook.secondaryText.copyWith(color: GlintLook.accentText())),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(e.summary,
-                                  style: GlintLook.secondaryText, maxLines: 1, overflow: TextOverflow.ellipsis),
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
+            height: 40,
+            child: e == null
+                ? Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Text("Nothing else on today", style: GlintLook.secondaryText, maxLines: 1),
+                  )
+                : GlanceFaceSwitch(face: face, child: GlanceEventLine(event: e, now: now)),
           ),
         ],
       ),
@@ -725,7 +836,191 @@ class GlanceTodayFace extends StatelessWidget {
   }
 }
 
-/// One person on the family tile: their name as shown, where they are, their face.
+/// One event: when (in the accent) over what.
+class GlanceEventLine extends StatelessWidget {
+  final CalendarEvent event;
+  final DateTime now;
+  const GlanceEventLine({super.key, required this.event, required this.now});
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = Provider.of<SettingsService?>(context, listen: false);
+    String time(DateTime t) {
+      try {
+        return DateFormat(settings?.timeFormat ?? "h:mm a").format(t);
+      } catch (_) {
+        return DateFormat("h:mm").format(t);
+      }
+    }
+
+    final e = event;
+    final when = e.allDay ? "All day" : (e.isOn(now) ? "Now, until ${time(e.end)}" : time(e.start));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            if (e.color != null)
+              Container(
+                width: 8,
+                height: 8,
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(color: Color(e.color!).withValues(alpha: 1), shape: BoxShape.circle),
+              ),
+            Text(when, style: GlintLook.secondaryText.copyWith(color: GlintLook.accentText())),
+          ],
+        ),
+        Text(e.summary,
+            style: GlintLook.primary.copyWith(fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis),
+      ],
+    );
+  }
+}
+
+/// The weather: now (the sky, the temperature, today's high and low), then the next hours, then the coming days, a
+/// face each.
+class GlanceWeatherFace extends StatelessWidget {
+  final GlanceWeather weather;
+  final int face;
+  final VoidCallback? onPressed;
+  final DateTime Function() clock;
+  const GlanceWeatherFace(
+      {super.key, required this.weather, this.face = 0, this.onPressed, this.clock = DateTime.now});
+
+  /// Now, and the hours and the days when there are some.
+  static int facesOf(GlanceWeather w) => 1 + (w.hours.isNotEmpty ? 1 : 0) + (w.days.isNotEmpty ? 1 : 0);
+
+  @override
+  Widget build(BuildContext context) {
+    final fahrenheit = Provider.of<SettingsService?>(context, listen: false)?.useFahrenheit ?? false;
+    final faces = <(String, Widget Function())>[
+      ("Weather", () => GlanceWeatherNow(weather: weather, fahrenheit: fahrenheit)),
+      if (weather.hours.isNotEmpty)
+        ("Next hours", () => GlanceWeatherHours(weather: weather, fahrenheit: fahrenheit)),
+      if (weather.days.isNotEmpty) ("Coming days", () => GlanceWeatherDays(weather: weather, fahrenheit: fahrenheit)),
+    ];
+    final i = face % faces.length;
+    return GlintTile(
+      key: const Key("glance_weather"),
+      onPressed: onPressed,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      child: GlanceFaceSwitch(
+        face: i,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _label(faces[i].$1),
+            const SizedBox(height: 4),
+            Expanded(child: faces[i].$2()),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The weather now: the sky, the temperature, and today's high and low.
+class GlanceWeatherNow extends StatelessWidget {
+  final GlanceWeather weather;
+  final bool fahrenheit;
+  const GlanceWeatherNow({super.key, required this.weather, required this.fahrenheit});
+
+  @override
+  Widget build(BuildContext context) {
+    final w = weather;
+    String deg(double? c) => GlanceWeather.degrees(c, fahrenheit: fahrenheit);
+    final hiLo = [if (w.high != null) "H ${deg(w.high)}", if (w.low != null) "L ${deg(w.low)}"].join("  ");
+    return Row(
+      children: [
+        Icon(w.icon, color: const Color(0xFFFFE0B8), size: 34, shadows: GlintLook.textShadow),
+        const SizedBox(width: 12),
+        Text(deg(w.temp), style: GlintLook.display(40)),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (w.condition != null)
+                Text(w.condition!,
+                    style: GlintLook.primary.copyWith(fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis),
+              if (hiLo.isNotEmpty) Text(hiLo, style: GlintLook.secondaryText, maxLines: 1),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A few hours or days side by side: a label over an icon over a temperature.
+class _ForecastRow extends StatelessWidget {
+  final List<(String, IconData, String)> items;
+  const _ForecastRow(this.items);
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      for (final (label, icon, value) in items)
+        Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(label, style: GlintLook.secondaryText, maxLines: 1, overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 2),
+              Icon(icon, color: const Color(0xFFFFE0B8), size: 20, shadows: GlintLook.textShadow),
+              const SizedBox(height: 2),
+              Text(value, style: GlintLook.primary.copyWith(fontSize: 16), maxLines: 1),
+            ],
+          ),
+        ),
+    ],
+  );
+}
+
+String _hour(DateTime t) {
+  try {
+    return DateFormat.j().format(t);
+  } catch (_) {
+    return DateFormat("h a").format(t);
+  }
+}
+
+/// The next hours.
+class GlanceWeatherHours extends StatelessWidget {
+  final GlanceWeather weather;
+  final bool fahrenheit;
+  const GlanceWeatherHours({super.key, required this.weather, required this.fahrenheit});
+
+  @override
+  Widget build(BuildContext context) => _ForecastRow([
+    for (final h in weather.hours) (_hour(h.time), h.icon, GlanceWeather.degrees(h.temp, fahrenheit: fahrenheit)),
+  ]);
+}
+
+/// The coming days: high and low.
+class GlanceWeatherDays extends StatelessWidget {
+  final GlanceWeather weather;
+  final bool fahrenheit;
+  const GlanceWeatherDays({super.key, required this.weather, required this.fahrenheit});
+
+  @override
+  Widget build(BuildContext context) => _ForecastRow([
+    for (final day in weather.days)
+      (
+        DateFormat.E().format(day.date),
+        day.icon,
+        [
+          GlanceWeather.degrees(day.high, fahrenheit: fahrenheit),
+          if (day.low != null) GlanceWeather.degrees(day.low, fahrenheit: fahrenheit),
+        ].join(" / "),
+      ),
+  ]);
+}
+
+/// One person on the family tile: their name as shown, where they are ("" when Home Assistant can't place them), their
+/// face.
 class GlanceMember {
   final String name;
   final String where;
@@ -733,30 +1028,57 @@ class GlanceMember {
   const GlanceMember(this.name, this.where, this.face);
 }
 
-/// The family: everyone at once, each a face with their name and where they are under it. Where someone is
-/// cross-fades when it changes; more people than fit turn through in pages.
+/// The family: everyone at once, each a face with their name and where they are under it (a quiet dash for someone
+/// Home Assistant can't place); more people than fit in a row take more than one face. Then, a face each, one person
+/// at a time, larger: each of those Home Assistant can place.
 class GlanceFamilyFace extends StatelessWidget {
   final List<GlanceMember> members;
-  const GlanceFamilyFace({super.key, required this.members});
+  final int face;
+  final VoidCallback? onPressed;
+  const GlanceFamilyFace({super.key, required this.members, this.face = 0, this.onPressed});
 
   static const double faceSize = 40;
 
   /// At most this many side by side.
   static const int perPage = 6;
 
+  /// Everyone, in rows of at most [perPage], split evenly ("6 + 1" is "4 + 3").
+  static List<List<T>> pagesOf<T>(List<T> all) {
+    if (all.isEmpty) return const [];
+    final count = (all.length / perPage).ceil();
+    final per = (all.length / count).ceil();
+    return [for (var i = 0; i < all.length; i += per) all.sublist(i, math.min(i + per, all.length))];
+  }
+
+  /// The ones with a place, one at a time.
+  static List<T> placed<T extends Object>(List<T> all, String Function(T) where) =>
+      [for (final m in all) if (where(m).isNotEmpty) m];
+
+  /// Everyone (a face or more), then each person with a place; one person alone has just the one face.
+  static int facesOf(List<GlanceMember> members) {
+    if (members.length < 2) return 1;
+    return pagesOf(members).length + placed(members, (m) => m.where).length;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final pages = pagesOf(members);
+    final one = members.length < 2 ? const <GlanceMember>[] : placed(members, (m) => m.where);
+    final count = pages.length + one.length;
+    final i = count == 0 ? 0 : face % count;
+    final small = members.length > 4;
+
     Widget person(GlanceMember m) => Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         m.face,
         const SizedBox(height: 6),
         Text(m.name,
-            style: GlintLook.primary.copyWith(fontSize: 16),
+            style: GlintLook.primary.copyWith(fontSize: small ? 14 : 16),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center),
-        _Fading(m.where, GlintLook.secondaryText),
+        _Fading(m.where.isEmpty ? "—" : m.where, GlintLook.secondaryText, align: TextAlign.center),
       ],
     );
     Widget page(List<GlanceMember> some) => Row(
@@ -764,99 +1086,315 @@ class GlanceFamilyFace extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [for (final m in some) Expanded(child: Center(child: person(m)))],
     );
-    final pages = [
-      for (var i = 0; i < members.length; i += perPage) members.sublist(i, math.min(i + perPage, members.length)),
-    ];
+    Widget spotlight(GlanceMember m) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          SizedBox(width: 60, height: 60, child: FittedBox(child: m.face)),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _label("Family"),
+                const SizedBox(height: 2),
+                Text(m.name,
+                    style: GlintLook.primary.copyWith(fontSize: 20), maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(glancePlace(m.where), style: GlintLook.secondaryText, maxLines: 1, overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
     return GlintTile(
       key: const Key("glance_family"),
+      onPressed: onPressed,
       padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
-      child: Center(
-        child: pages.length == 1
-            ? page(pages.single)
-            : GlanceCycle(pace: const Duration(seconds: 8), children: [for (final p in pages) page(p)]),
+      child: GlanceFaceSwitch(
+        face: i,
+        alignment: Alignment.center,
+        child: Center(child: i < pages.length ? page(pages[i]) : spotlight(one[i - pages.length])),
       ),
     );
   }
 }
 
-/// A few names and values, one to a line (the screen time left in each group, the to-do lists); more than fit turn
-/// through in pages. Each value cross-fades when it changes.
+/// A few names and values, one to a line (the screen time left in each group); more than fit take more than one face.
+/// Each value cross-fades when it changes.
 class GlanceTableFace extends StatelessWidget {
   final String label;
   final List<(String, String)> rows;
-  const GlanceTableFace({super.key, required this.label, required this.rows});
+  final int face;
+  final VoidCallback? onPressed;
+  const GlanceTableFace(
+      {super.key, required this.label, required this.rows, this.face = 0, this.onPressed});
 
   static const int perPage = 3;
 
+  static int pagesOf(int rows) => math.max(1, (rows / perPage).ceil());
+
   @override
   Widget build(BuildContext context) {
-    Widget page(List<(String, String)> some) => Column(
-      key: ValueKey(some.map((r) => r.$1).join("|")),
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final (name, value) in some)
-          Padding(
-            padding: const EdgeInsets.only(top: 3),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(name,
-                      style: GlintLook.primary.copyWith(fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis),
-                ),
-                const SizedBox(width: 12),
-                _Fading(value, GlintLook.secondaryText, align: TextAlign.end),
-              ],
-            ),
-          ),
-      ],
-    );
     final pages = [
       for (var i = 0; i < rows.length; i += perPage) rows.sublist(i, math.min(i + perPage, rows.length)),
     ];
+    final i = pages.isEmpty ? 0 : face % pages.length;
     return GlintTile(
+      onPressed: onPressed,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _label(label),
           const SizedBox(height: 2),
-          if (pages.length == 1)
-            page(pages.single)
-          else
-            GlanceCycle(pace: const Duration(seconds: 7), children: [for (final p in pages) page(p)]),
+          if (pages.isNotEmpty) GlanceFaceSwitch(face: i, child: _table(pages[i])),
         ],
       ),
     );
   }
 }
 
-/// Around the house, one thing at a time: another TV playing something, someone in a car.
-class GlanceHouseFace extends StatelessWidget {
-  final List<GlintHouseItem> items;
-  const GlanceHouseFace({super.key, required this.items});
+/// Names and values, one to a line.
+Widget _table(List<(String, String)> rows) => Column(
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    for (final (name, value) in rows)
+      Padding(
+        padding: const EdgeInsets.only(top: 3),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(name,
+                  style: GlintLook.primary.copyWith(fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+            const SizedBox(width: 12),
+            _Fading(value, GlintLook.secondaryText, align: TextAlign.end),
+          ],
+        ),
+      ),
+  ],
+);
+
+/// The to-do lists: how much is left on each, then, a face each, the next things on each list.
+class GlanceListsFace extends StatelessWidget {
+  final List<GlanceList> lists;
+  final int face;
+  final VoidCallback? onPressed;
+  const GlanceListsFace({super.key, required this.lists, this.face = 0, this.onPressed});
+
+  /// The lists' faces: how much is left on them (in pages of [GlanceTableFace.perPage]), then each list with its next
+  /// things.
+  static int facesOf(List<GlanceList> lists) =>
+      GlanceTableFace.pagesOf(lists.length) + lists.where((l) => l.next.isNotEmpty).length;
+
+  /// How many of a list's next things its face shows.
+  static const int shown = 2;
 
   @override
-  Widget build(BuildContext context) => GlintTile(
-    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-    child: GlanceCycle(
-      pace: const Duration(seconds: 6),
-      children: [
-        for (final item in items)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+  Widget build(BuildContext context) {
+    final rows = [for (final l in lists) (l.name, "${l.open} left")];
+    final pages = [
+      for (var i = 0; i < rows.length; i += GlanceTableFace.perPage)
+        rows.sublist(i, math.min(i + GlanceTableFace.perPage, rows.length)),
+    ];
+    final withNext = [for (final l in lists) if (l.next.isNotEmpty) l];
+    final count = pages.length + withNext.length;
+    final i = count == 0 ? 0 : face % count;
+    Widget body;
+    if (i < pages.length) {
+      body = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [_label("To do"), const SizedBox(height: 2), _table(pages[i])],
+      );
+    } else {
+      final l = withNext[i - pages.length];
+      body = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
             children: [
-              _label(item.label),
-              const SizedBox(height: 4),
-              Text(item.line,
-                  style: GlintLook.primary.copyWith(fontSize: 18), maxLines: 2, overflow: TextOverflow.ellipsis),
-              if (item.detail != null)
-                Text(item.detail!, style: GlintLook.secondaryText, maxLines: 1, overflow: TextOverflow.ellipsis),
+              Expanded(child: _label("To do · ${l.name}")),
+              Text("${l.open} left", style: GlintLook.label),
             ],
           ),
+          const SizedBox(height: 4),
+          for (final item in l.next.take(shown))
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Row(
+                children: [
+                  Icon(Icons.radio_button_unchecked, size: 14, color: GlintLook.secondary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(item,
+                        style: GlintLook.primary.copyWith(fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      );
+    }
+    return GlintTile(
+      key: const Key("glance_lists"),
+      onPressed: onPressed,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      child: GlanceFaceSwitch(face: i, child: body),
+    );
+  }
+}
+
+/// Around the house, one thing to a face: another TV playing something, someone in a car.
+class GlanceHouseFace extends StatelessWidget {
+  final List<GlintHouseItem> items;
+  final int face;
+  final VoidCallback? onPressed;
+  const GlanceHouseFace({super.key, required this.items, this.face = 0, this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final i = items.isEmpty ? 0 : face % items.length;
+    return GlintTile(
+      key: const Key("glance_house"),
+      onPressed: onPressed,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: items.isEmpty
+          ? const SizedBox.shrink()
+          : GlanceFaceSwitch(face: i, child: _houseItem(items[i])),
+    );
+  }
+}
+
+Widget _houseItem(GlintHouseItem item, {int lines = 2}) => Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    _label(item.label),
+    const SizedBox(height: 4),
+    Text(item.line, style: GlintLook.primary.copyWith(fontSize: 18), maxLines: lines, overflow: TextOverflow.ellipsis),
+    if (item.detail != null)
+      Text(item.detail!, style: GlintLook.secondaryText, maxLines: 1, overflow: TextOverflow.ellipsis),
+  ],
+);
+
+/// A tile's view, over the glance page: everything the tile has, at once and still. Back closes it.
+class GlanceViewPanel extends StatelessWidget {
+  final GlanceView view;
+  final GlanceInputs inputs;
+  const GlanceViewPanel({super.key, required this.view, required this.inputs});
+
+  static String titleOf(GlanceView view) => switch (view) {
+    GlanceView.screenTime => "Screen time left",
+    GlanceView.today => "Today",
+    GlanceView.weather => "Weather",
+    GlanceView.family => "Family",
+    GlanceView.lists => "To do",
+    GlanceView.house => "Around the house",
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final d = inputs;
+    final fahrenheit = Provider.of<SettingsService?>(context, listen: false)?.useFahrenheit ?? false;
+    const gap = SizedBox(height: 14);
+    final List<Widget> body = switch (view) {
+      GlanceView.screenTime => [
+        _table([for (final g in d.lock.groups) (g.name, g.minutesLeft <= 0 ? "none today" : "${g.minutesLeft} min")]),
       ],
-    ),
-  );
+      GlanceView.today => [
+        Text(DateFormat("EEEE, MMMM d").format(d.now), style: GlintLook.primary.copyWith(fontSize: 19)),
+        if (d.upcoming.isEmpty) ...[gap, Text("Nothing else on today", style: GlintLook.secondaryText)],
+        for (final e in d.upcoming) ...[gap, GlanceEventLine(event: e, now: d.now)],
+      ],
+      GlanceView.weather => [
+        if (d.weather != null) ...[
+          SizedBox(height: 56, child: GlanceWeatherNow(weather: d.weather!, fahrenheit: fahrenheit)),
+          if (d.weather!.hours.isNotEmpty) ...[
+            gap,
+            _label("Next hours"),
+            SizedBox(height: 72, child: GlanceWeatherHours(weather: d.weather!, fahrenheit: fahrenheit)),
+          ],
+          if (d.weather!.days.isNotEmpty) ...[
+            gap,
+            _label("Coming days"),
+            SizedBox(height: 72, child: GlanceWeatherDays(weather: d.weather!, fahrenheit: fahrenheit)),
+          ],
+        ],
+      ],
+      GlanceView.family => [
+        for (final m in d.members)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              children: [
+                m.face,
+                const SizedBox(width: 14),
+                Expanded(child: Text(m.name, style: GlintLook.primary.copyWith(fontSize: 17))),
+                Text(m.where.isEmpty ? "No location" : glancePlace(m.where), style: GlintLook.secondaryText),
+              ],
+            ),
+          ),
+      ],
+      GlanceView.lists => [
+        for (final l in d.lists) ...[
+          Row(
+            children: [
+              Expanded(child: Text(l.name, style: GlintLook.primary.copyWith(fontSize: 17))),
+              Text("${l.open} left", style: GlintLook.secondaryText),
+            ],
+          ),
+          for (final item in l.next)
+            Padding(
+              padding: const EdgeInsets.only(left: 12, top: 2),
+              child: Text("·  $item", style: GlintLook.secondaryText, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+          gap,
+        ],
+      ],
+      GlanceView.house => [
+        for (final item in d.house) ...[_houseItem(item, lines: 3), gap],
+      ],
+    };
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent &&
+            {LogicalKeyboardKey.goBack, LogicalKeyboardKey.escape, LogicalKeyboardKey.browserBack}
+                .contains(event.logicalKey)) {
+          Navigator.of(context).maybePop();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Center(
+        child: Material(
+          type: MaterialType.transparency,
+          child: Container(
+            key: Key("glance_view_${view.name}"),
+            constraints: const BoxConstraints(maxWidth: 560, maxHeight: 440),
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+            decoration: BoxDecoration(
+              color: const Color(0xF01A1714),
+              borderRadius: BorderRadius.circular(GlintLook.corner + 4),
+              border: Border.all(color: GlintLook.line),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [_label(titleOf(view)), const SizedBox(height: 12), ...body],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// A way out, small, in the row along the bottom: an icon and a name (and, for notifications, how many).

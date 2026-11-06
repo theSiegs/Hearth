@@ -21,7 +21,7 @@ void main() {
     final tiles = glanceTiles(lock: HaLockState.none, people: people, photos: photos, connection: connection);
     final family = tiles.firstWhere((t) => t.id == "family");
     // The tile's builder makes the family face; its members are what it shows
-    return (family.build(_NoContext()) as GlanceFamilyFace).members;
+    return (family.build(_NoContext(), 0, null) as GlanceFamilyFace).members;
   }
 
   test("a TV profile is looked for by the whole name, then the first name", () {
