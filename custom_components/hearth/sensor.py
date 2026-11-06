@@ -24,6 +24,7 @@ from homeassistant.util import dt as dt_util
 from . import HearthConfigEntry
 from .const import KIND_MOBILE, KIND_TV, SIGNAL_WATCH, TV_STATES
 from .counting import ALL
+from .schooldays import DAY_TYPES
 from .entity import HearthEntity, HearthPersonEntity, async_add_device_entities
 
 BOTH = frozenset({KIND_TV, KIND_MOBILE})
@@ -116,7 +117,7 @@ async def async_setup_entry(
     for person in household.youtube_people():
         people.append(PersonLastVideoStarted(hub, person, "last_video_started"))
     async_add_entities(people)
-    async_add_entities([AppsToSort(hub)])
+    async_add_entities([AppsToSort(hub), DayType(hub)])
 
 
 class HearthSensor(HearthEntity, SensorEntity):
@@ -186,7 +187,7 @@ class PersonScreenTime(_TodaySoFar):
     def extra_state_attributes(self) -> dict[str, Any]:
         day = self.day
         if day is None:
-            return {}
+            return {"exceptions": self.hub.household.exceptions_of(self.person)}
         names = {device_id: d.get("name") or device_id for device_id, d in self.hub.devices.items()}
         names.update({f"source:{s.id}": s.name for s in self.hub.household.sources})
         return {
@@ -201,6 +202,8 @@ class PersonScreenTime(_TodaySoFar):
             # Each group's packages (All screen time: every app), and the groups whose time isn't in it
             "groups_apps": self.hub.household.group_packages(),
             "not_screen_time": sorted(self.hub.household.outside_all()),
+            # An adult's allows and School time taken off (hearth.allow, hearth.school_time_off)
+            "exceptions": self.hub.household.exceptions_of(self.person),
         }
 
 
@@ -352,3 +355,45 @@ class AppsToSort(SensorEntity):
                 for e in self.hub.household.apps.new_apps()[:50]
             ]
         }
+
+
+class DayType(SensorEntity):
+    """Today's day type (school, half_day, day_off, weekend, no_school), from School days: for the schedule, and for
+    anything else that wants to know."""
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+    _attr_translation_key = "day_type"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = list(DAY_TYPES)
+
+    def __init__(self, hub) -> None:
+        from homeassistant.helpers.device_registry import DeviceInfo
+
+        from .const import DOMAIN
+
+        self.hub = hub
+        self._attr_unique_id = f"{hub.entry.entry_id}_day_type"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, "household")}, name=f"Hearth: {hub.entry.title}", manufacturer="Hearth", model="Household"
+        )
+
+    async def async_added_to_hass(self) -> None:
+        from .const import SIGNAL_PEOPLE
+
+        self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_PEOPLE, self._changed))
+
+    @callback
+    def _changed(self, _new_day: bool = False) -> None:
+        self.async_write_ha_state()
+
+    @property
+    def native_value(self) -> str:
+        school = self.hub.household.school
+        today = dt_util.now().date()
+        return school.day_type if school.day == today else school.decide_type(today)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        school = self.hub.household.school
+        return {"school_budget": school.school, "decided_by": school.reason}

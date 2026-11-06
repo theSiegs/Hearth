@@ -32,6 +32,11 @@ from .const import CONF_DEVICES, CONF_KIND, CONF_PUSH_TOPIC, DOMAIN, KIND_MOBILE
 from .push import new_topic
 from .hub import HearthHub
 from .limits import DAY_TYPES
+from .asks import CONF_OFFER_MORE
+from .const import EVENT_BUDGET_REACHED
+from .counting import ALL
+from .exceptions import END_OF_DAY, SCHOOL_TIME_END, at_time, end_of_day
+from . import family_link as fl
 from .watch import CHANNELS, MAX_BLOCKS, MAX_LOG, VIDEOS, WORDS, channel_id_of, clean_word, video_id_of
 
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.NUMBER, Platform.SENSOR]
@@ -165,9 +170,175 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
     hass.services.async_register(DOMAIN, "pause", pause, schema=PAUSE_SCHEMA)
     hass.services.async_register(DOMAIN, "pause_end", pause_end, schema=PAUSE_END_SCHEMA)
+    _register_exception_services(hass, loaded_household, group_id)
     _register_watch_services(hass)
     _register_play_on_tv(hass)
     return True
+
+
+ALLOW_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            vol.Required("people"): vol.All(cv.ensure_list, [cv.entity_id], vol.Length(min=1)),
+            vol.Exclusive("app", "what"): cv.string,
+            vol.Exclusive("group", "what"): cv.string,
+            vol.Optional("until", default=END_OF_DAY): vol.Any(vol.In((END_OF_DAY, SCHOOL_TIME_END)), cv.time, cv.datetime),
+            vol.Optional("reason"): cv.string,
+        }
+    ),
+    cv.has_at_least_one_key("app", "group"),
+)
+ALLOW_END_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            vol.Optional("id"): cv.string,
+            vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id]),
+            vol.Exclusive("app", "what"): cv.string,
+            vol.Exclusive("group", "what"): cv.string,
+        }
+    ),
+    cv.has_at_least_one_key("id", "people"),
+)
+EXPLAIN_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            vol.Required("person"): cv.entity_id,
+            vol.Exclusive("app", "what"): cv.string,
+            vol.Exclusive("group", "what"): cv.string,
+        }
+    ),
+    cv.has_at_least_one_key("app", "group"),
+)
+SCHOOL_TIME_OFF_SCHEMA = vol.Schema(
+    {
+        vol.Required("people"): vol.All(cv.ensure_list, [cv.entity_id], vol.Length(min=1)),
+        vol.Optional("date"): cv.date,
+        vol.Optional("from"): cv.time,
+        vol.Optional("reason"): cv.string,
+    }
+)
+SCHOOL_TIME_OFF_CANCEL_SCHEMA = vol.Schema(
+    {
+        vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id]),
+        vol.Optional("date"): cv.date,
+    }
+)
+
+
+def _register_exception_services(hass: HomeAssistant, loaded_household, group_id) -> None:
+    """hearth.allow / allow_end / explain, and hearth.school_time_off / school_time_off_cancel."""
+
+    def people_of(household, given: list[str]) -> list[str]:
+        unknown = [p for p in given if p not in household.people()]
+        if unknown:
+            raise ServiceValidationError(f"Not the household's: {', '.join(unknown)}")
+        return list(dict.fromkeys(given))
+
+    def what(household, data) -> tuple[str | None, str | None]:
+        if data.get("group") is not None:
+            given = data["group"].strip()
+            if given.casefold() == ALL:
+                return None, ALL
+            found = group_id(household, given)
+            if household.group(found) is None:
+                raise ServiceValidationError(f"No group {given}")
+            return None, found
+        app = (data.get("app") or "").strip()
+        if not app:
+            raise ServiceValidationError("Give an app (its package name) or a group")
+        return app, None
+
+    def until_for(household, person: str, until, now: datetime) -> datetime:
+        if until == END_OF_DAY:
+            return end_of_day(now)
+        if until == SCHOOL_TIME_END:
+            child = household.family_link_child(person)
+            end = fl.school_time_end(hass, child) if child else None
+            if end is None or end <= now:
+                raise ServiceValidationError(f"{household.person_name(person)} has no School time left today")
+            return end
+        if isinstance(until, datetime):
+            at = until if until.tzinfo else until.replace(tzinfo=dt_util.get_default_time_zone())
+            if at <= now:
+                raise ServiceValidationError("That time has passed")
+            return at
+        return at_time(now, until)
+
+    @callback
+    def allow(call: ServiceCall) -> ServiceResponse:
+        """People may use an app or a group until a time: nothing Hearth holds holds it for them meanwhile."""
+        household = loaded_household()
+        people = people_of(household, call.data["people"])
+        app, group = what(household, call.data)
+        now = dt_util.now()
+        until = {p: until_for(household, p, call.data["until"], now) for p in people}
+        allowed = household.allows.add(until, app, group, call.data.get("reason"))
+        household.recompute()
+        return {"id": allowed.id, "until": {p: dt_util.as_local(u).isoformat() for p, u in until.items()}}
+
+    @callback
+    def allow_end(call: ServiceCall) -> ServiceResponse:
+        household = loaded_household()
+        app = group = None
+        if call.data.get("app") is not None or call.data.get("group") is not None:
+            app, group = what(household, call.data)
+        ended = household.allows.end(call.data.get("id"), call.data.get("people"), app, group)
+        household.recompute()
+        return {"ended": ended}
+
+    @callback
+    def explain(call: ServiceCall) -> ServiceResponse:
+        household = loaded_household()
+        person = people_of(household, [call.data["person"]])[0]
+        app, group = what(household, call.data)
+        return household.explain(person, app, group)
+
+    async def school_time_off(call: ServiceCall) -> ServiceResponse:
+        """School time off for the people on a date (today by default), from a time if given; Hearth puts it back
+        on their next school day, inside each one's window."""
+        household = loaded_household()
+        people = people_of(household, call.data["people"])
+        missing = [household.person_name(p) for p in people if household.family_link_child(p) is None]
+        if missing:
+            raise ServiceValidationError(f"No Family Link for {', '.join(missing)} (Configure > Enforce)")
+        today = dt_util.now().date()
+        day = call.data.get("date") or today
+        if day < today:
+            raise ServiceValidationError("That day has passed")
+        ids = household.scheduler.take_off(people, day, call.data.get("from"), call.data.get("reason"))
+        hass.async_create_task(household.scheduler.async_tick())
+        return {"ids": ids}
+
+    async def school_time_off_cancel(call: ServiceCall) -> ServiceResponse:
+        household = loaded_household()
+        people = people_of(household, call.data["people"]) if call.data.get("people") else None
+        changed = household.scheduler.cancel(people, call.data.get("date"))
+        hass.async_create_task(household.scheduler.async_tick())
+        return {"ids": changed}
+
+    hass.services.async_register(
+        DOMAIN, "allow", allow, schema=ALLOW_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    )
+    hass.services.async_register(
+        DOMAIN, "allow_end", allow_end, schema=ALLOW_END_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    )
+    hass.services.async_register(
+        DOMAIN, "explain", explain, schema=EXPLAIN_SCHEMA, supports_response=SupportsResponse.ONLY
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "school_time_off",
+        school_time_off,
+        schema=SCHOOL_TIME_OFF_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        "school_time_off_cancel",
+        school_time_off_cancel,
+        schema=SCHOOL_TIME_OFF_CANCEL_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
 
 
 PLAY_ON_TV_SCHEMA = vol.Schema(
@@ -371,6 +542,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     if school := hub.household.school.watched_entities():
         entry.async_on_unload(async_track_state_change_event(hass, school, school_then_recompute))
     entry.async_on_unload(async_track_time_interval(hass, recompute, timedelta(minutes=1)))
+
+    # The schedule (day types, School time off and back, the website list): every minute, and once now
+    async def schedule_tick(_now=None) -> None:
+        await hub.household.scheduler.async_tick()
+
+    entry.async_on_unload(async_track_time_interval(hass, schedule_tick, timedelta(minutes=1)))
+    entry.async_create_background_task(hass, schedule_tick(), "hearth schedule")
+    # Chores: a to-do list changed
+    if lists := hub.household.chores.lists():
+        entry.async_on_unload(async_track_state_change_event(hass, lists, hub.household.chores.async_changed))
+
+    @callback
+    def offer_more(event) -> None:
+        """A group ran out: the adults are offered to give more, where the household chose to."""
+        for raw in hub.entry.options.get(CONF_OFFER_MORE, []):
+            if raw.get("person") == event.data.get("person") and raw.get("group") == event.data.get("group"):
+                hub.asks.offer(raw["person"], raw["group"], int(raw.get("minutes") or 30))
+
+    entry.async_on_unload(hass.bus.async_listen(EVENT_BUDGET_REACHED, offer_more))
     # And whenever a screen time source changes
     if entities := hub.household.source_entities():
         entry.async_on_unload(async_track_state_change_event(hass, entities, recompute))

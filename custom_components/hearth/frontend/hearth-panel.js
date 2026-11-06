@@ -413,7 +413,10 @@ class HearthPanel extends HTMLElement {
         const person = d.person;
         const kept = (cfg.enforce || []).filter((e) => e.person !== person);
         const fl = this._value(`#enf-fl-${CSS.escape(person)}`);
-        if (fl) kept.push({ kind: "family_link", person, entity_id: fl });
+        const schoolApps = (this._value(`#enf-fl-school-${CSS.escape(person)}`) || "")
+          .split(/[\s,]+/)
+          .filter((p) => p.includes("."));
+        if (fl) kept.push({ kind: "family_link", person, entity_id: fl, school_time_apps: schoolApps });
         const fs = this._value(`#enf-fs-${CSS.escape(person)}`);
         if (fs) {
           const platforms = [...this.shadowRoot.querySelectorAll(`[data-fs-platform="${person}"]:checked`)].map((x) => x.value);
@@ -515,7 +518,7 @@ class HearthPanel extends HTMLElement {
         await this._loadConfig();
         return;
       case "school-save": {
-        const fields = ["entity", "school_states", "calendar", "calendar_mode", "keywords", "year_start", "year_end", "days_off", "extra_school_days"];
+        const fields = ["entity", "school_states", "calendar", "calendar_mode", "keywords", "year_start", "year_end", "days_off", "extra_school_days", "half_days", "half_states", "half_keywords", "half_day_budget"];
         const value = {};
         for (const f of fields) {
           const v = this._value(`#school-${f}`);
@@ -948,6 +951,8 @@ class HearthPanel extends HTMLElement {
       <div class="form">
         <label class="field">Family Link (phones and tablets lock; unlimited apps keep working)
           <select id="enf-fl-${esc(kid.id)}">${this._entityOptions(cfg.choices?.family_link, fl?.entity_id || "", "Not used")}</select></label>
+        <label class="field">Family Link: during School time, pause these apps (package names)
+          <input id="enf-fl-school-${esc(kid.id)}" type="text" value="${esc((fl ? fl.school_time_apps || [] : ["com.google.android.apps.messaging"]).join(", "))}" placeholder="com.google.android.apps.messaging"></label>
         <label class="field">Microsoft Family Safety
           <select id="enf-fs-${esc(kid.id)}">${this._entityOptions(cfg.choices?.family_safety, fs?.entity_id || "", "Not used")}</select></label>
         <div class="checks">${(cfg.platforms || []).map((p) => `<label class="check"><input type="checkbox" data-fs-platform="${esc(kid.id)}" value="${esc(p)}" ${(fs?.platforms || ["Xbox"]).includes(p) ? "checked" : ""}> ${esc(p)}</label>`).join("")}</div>
@@ -1177,13 +1182,19 @@ class HearthPanel extends HTMLElement {
         ${input("year_end", "School year ends", "", "date")}
         ${area("days_off", "Days off (one per line, or a range like 2026-12-21..2027-01-02)", "2026-11-26")}
         ${area("extra_school_days", "Extra school days", "")}
+        ${area("half_days", "Half days (school ends early)", "2026-11-25")}
+        <label class="field">A half day takes<select id="school-half_day_budget">
+          <option value="other_days" ${s.half_day_budget !== "school_days" ? "selected" : ""}>The other-day budget</option>
+          <option value="school_days" ${s.half_day_budget === "school_days" ? "selected" : ""}>The school-day budget</option></select></label>
         ${input("entity", "An entity that says it's a school day (optional)", "input_boolean.school_day")}
         ${input("school_states", "Its school-day states", "on, school")}
+        ${input("half_states", "Its half-day states", "half, half_day")}
         ${input("calendar", "A calendar (optional)", "calendar.school")}
         <label class="field">Its events are<select id="school-calendar_mode">
           <option value="off_days" ${s.calendar_mode !== "school_days" ? "selected" : ""}>Days off</option>
           <option value="school_days" ${s.calendar_mode === "school_days" ? "selected" : ""}>School days</option></select></label>
         ${input("keywords", "Only events with these words (days off)", "closed, break, holiday")}
+        ${input("half_keywords", "Events with these words are half days", "early dismissal, half day")}
       </div>
       <div class="actions"><button class="btn primary" data-action="school-save">Save</button></div>
     </section>`;

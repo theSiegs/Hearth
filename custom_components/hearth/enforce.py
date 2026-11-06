@@ -16,6 +16,14 @@ add, per person, the parental controls of other integrations (Configure > Enforc
   the limit and the Suspend software setting it had (kept with what's held). The limit is a setting of the Switch's (of
   every day, or of this weekday), not of today only, so it's put back before midnight.
 
+- School time (Family Link): the apps chosen per person ("During School time, pause these apps", Google Messages by
+  default in the form) are paused while the child's School time is on (any of their devices says so), through the same
+  hold: Family Link's pause_app keeps one saved setting per child and app, and any resume puts it back, so Hearth is the
+  only one pausing and resuming, and an app is resumed only when no reason to hold it is left (its group out of time,
+  School time). Chosen apps may include ones a budget never holds (Messages), never Hearth's own or Family Link's.
+
+An adult's allow (hearth.allow, exceptions.py) takes its app or group out of every hold above while it lasts.
+
 What's held is kept with Home Assistant's storage helper, so only what Hearth held is let go, after a restart too. A
 group gets time again (a bonus, a new day, a higher budget) and its apps are let go. Right after Home Assistant starts,
 nothing is let go for a few minutes: the sources haven't all reported yet, and the counts would look low.
@@ -38,6 +46,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .counting import ALL
+from .exceptions import Lifted
 
 if TYPE_CHECKING:
     from .household import PersonDay
@@ -94,6 +103,26 @@ def essential(package: str) -> bool:
     return package in ESSENTIAL or package.startswith("com.android.") or package == "android"
 
 
+# Never paused for School time either: what holds the rest, and the system
+NEVER_PAUSED = frozenset(
+    {
+        "com.thesiegs.hearth",
+        "com.thesiegs.hearth.mobile",
+        "com.thesiegs.glint",
+        "com.google.android.gms",
+        "com.google.android.apps.kids.familylink",
+        "com.google.android.apps.kids.familylinkhelper",
+        "com.android.settings",
+        "com.android.vending",
+    }
+)
+DEFAULT_SCHOOL_TIME_APPS = ("com.google.android.apps.messaging",)
+
+
+def school_pausable(package: str) -> bool:
+    return package not in NEVER_PAUSED and package != "android" and "." in package and " " not in package
+
+
 @dataclass(frozen=True)
 class Enforcer:
     """One parental control holding one person's apps."""
@@ -107,6 +136,8 @@ class Enforcer:
     # "playing" sensor, or friend presence). With any, the Switch is held only while one of them is on, so a brother
     # or sister with time left can play
     playing: tuple[str, ...] = ()
+    # Family Link: apps paused while the child's School time is on
+    school_apps: tuple[str, ...] = ()
 
     @property
     def key(self) -> str:
@@ -127,27 +158,41 @@ def enforcers_from_options(options: dict[str, Any]) -> list[Enforcer]:
         elif kind == NINTENDO:
             groups = groups or DEFAULT_NINTENDO_GROUPS
         playing = tuple(e for e in raw.get("playing") or () if isinstance(e, str)) if kind == NINTENDO else ()
-        found.append(Enforcer(kind, person, entity_id, groups, platforms, playing))
+        school_apps = (
+            tuple(p.strip() for p in raw.get("school_time_apps") or () if isinstance(p, str) and school_pausable(p.strip()))
+            if kind == FAMILY_LINK
+            else ()
+        )
+        found.append(Enforcer(kind, person, entity_id, groups, platforms, playing, school_apps))
     return found
 
 
-def out_of_time(day: PersonDay | None, groups: tuple[str, ...]) -> list[str]:
-    """The person's groups (of [groups], or any) with no minutes left."""
+def out_of_time(day: PersonDay | None, groups: tuple[str, ...], lifted: Lifted | None = None) -> list[str]:
+    """The person's groups (of [groups], or any) with no minutes left, but those an allow lifts."""
     if day is None:
         return []
     return sorted(
         group_id
         for group_id, state in day.limits.items()
-        if state.minutes_left == 0 and (not groups or group_id in groups)
+        if state.minutes_left == 0
+        and (not groups or group_id in groups)
+        and not (lifted is not None and lifted.group(group_id))
     )
 
 
 def wanted(
-    enforcer: Enforcer, day: PersonDay | None, apps_of, now: datetime | None = None, playing: bool | None = None
+    enforcer: Enforcer,
+    day: PersonDay | None,
+    apps_of,
+    now: datetime | None = None,
+    playing: bool | None = None,
+    lifted: Lifted | None = None,
+    groups_of_app=None,
 ) -> set[str]:
-    """What the enforcer should hold now: packages for Family Link, platforms for Family Safety, the Switch for
-    Nintendo ([playing]: whether the person is the one on a shared Switch, None when that isn't known)."""
-    closed = out_of_time(day, enforcer.groups)
+    """What the enforcer should hold now for budgets: packages for Family Link, platforms for Family Safety, the
+    Switch for Nintendo ([playing]: whether the person is the one on a shared Switch, None when that isn't known).
+    What an allow lifts ([lifted]; an app's groups from [groups_of_app]) isn't held."""
+    closed = out_of_time(day, enforcer.groups, lifted)
     if enforcer.kind == FAMILY_SAFETY:
         return set(enforcer.platforms) if closed else set()
     if enforcer.kind == NINTENDO:
@@ -166,7 +211,20 @@ def wanted(
         held = set()
     for group_id in closed:
         packages |= {p for p in apps_of(group_id, enforcer.person) if not essential(p)}
+    if lifted:
+        packages = {p for p in packages if not lifted.app(p, groups_of_app(p) if groups_of_app else None)}
     return held | set(sorted(packages)[:MAX_PACKAGES])
+
+
+def school_wanted(enforcer: Enforcer, school_time: bool, lifted: Lifted | None = None, groups_of_app=None) -> set[str]:
+    """The School-time apps to pause now (Family Link): while School time is on, but those an allow lifts."""
+    if enforcer.kind != FAMILY_LINK or not school_time:
+        return set()
+    return {
+        p
+        for p in enforcer.school_apps
+        if not (lifted and lifted.app(p, groups_of_app(p) if groups_of_app else None))
+    }
 
 
 @dataclass
@@ -226,17 +284,30 @@ class Enforcement:
         return found
 
     @callback
-    def update(self, enforcers: list[Enforcer], days: dict[str, PersonDay], apps_of) -> None:
-        """[apps_of]: a group id's packages for a person (for All screen time, every app of theirs)."""
+    def update(
+        self,
+        enforcers: list[Enforcer],
+        days: dict[str, PersonDay],
+        apps_of,
+        lifted_of=None,
+        school_time_of=None,
+        groups_of_app=None,
+    ) -> None:
+        """[apps_of]: a group id's packages for a person (for All screen time, every app of theirs). [lifted_of]: what
+        a person's allows lift (Lifted); [school_time_of]: whether an enforcer's child is in School time now;
+        [groups_of_app]: an app's groups."""
         self.enforcers = enforcers
         now = dt_util.now()
-        wanted_now = {
-            e.key: wanted(e, days.get(e.person), apps_of, now, self._playing(e)) for e in enforcers
-        }
-        # An app a parent gave unlimited time in Family Link is never paused: it stays usable, as on a locked device
+        wanted_now: dict[str, set[str]] = {}
         for e in enforcers:
+            lifted = lifted_of(e.person) if lifted_of else None
+            budget = wanted(e, days.get(e.person), apps_of, now, self._playing(e), lifted, groups_of_app)
+            # An app a parent gave unlimited time in Family Link is never paused for a budget: it stays usable, as on
+            # a locked device. The School-time apps are the parent's own choice, so they are paused all the same.
             if e.kind == FAMILY_LINK:
-                wanted_now[e.key] -= self._always_allowed(e.entity_id)
+                budget -= self._always_allowed(e.entity_id)
+            school = school_wanted(e, bool(school_time_of and school_time_of(e)), lifted, groups_of_app)
+            wanted_now[e.key] = budget | school
         # What an enforcer no longer configured held is let go
         for key in self.held:
             wanted_now.setdefault(key, set())

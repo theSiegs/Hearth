@@ -8,6 +8,11 @@ A household says how it knows, in any mix (Configure > School days); the first t
 3. A calendar: either its events (those whose title has one of the words, or any when no words are given) mean no
    school, or its events are the school days.
 4. The rule: Monday to Friday, within the school year when one is given.
+
+Today also has a day type, for the schedule (schedule.py) and the household's day type sensor: school, half_day,
+day_off (a weekday of the school year that isn't a school day), weekend, or no_school (a weekday outside the school
+year). A half day is a school day that ends early: a date typed in as one, an entity state that says so (half, by
+default), or a calendar event whose title has one of the half-day words.
 """
 
 from __future__ import annotations
@@ -28,6 +33,16 @@ CONF_SCHOOL_DAYS = "school_days"
 CALENDAR_OFF = "off_days"
 CALENDAR_SCHOOL = "school_days"
 DEFAULT_SCHOOL_STATES = ("on", "school", "true", "yes")
+DEFAULT_HALF_STATES = ("half", "half_day")
+
+# Today's day type
+SCHOOL = "school"
+HALF_DAY = "half_day"
+DAY_OFF = "day_off"
+WEEKEND = "weekend"
+NO_SCHOOL = "no_school"
+DAY_TYPES = (SCHOOL, HALF_DAY, DAY_OFF, WEEKEND, NO_SCHOOL)
+SCHOOL_BUDGET = "school_days"
 
 _RANGE = re.compile(r"^(\d{4}-\d{2}-\d{2})\s*(?:\.\.|to|–|-\s)\s*(\d{4}-\d{2}-\d{2})$")
 
@@ -63,6 +78,11 @@ class SchoolDaysConfig:
     year_end: date | None = None
     days_off: set[date] = field(default_factory=set)
     extra_school_days: set[date] = field(default_factory=set)
+    half_days: set[date] = field(default_factory=set)
+    half_states: tuple[str, ...] = DEFAULT_HALF_STATES
+    half_keywords: tuple[str, ...] = ()
+    # The budget a half day takes: other days (as before half days were known) or school days
+    half_day_budget: str = "other_days"
 
     @classmethod
     def from_options(cls, options: dict[str, Any]) -> SchoolDaysConfig:
@@ -87,17 +107,23 @@ class SchoolDaysConfig:
             year_end=day(raw.get("year_end")),
             days_off=parse_dates(raw.get("days_off")),
             extra_school_days=parse_dates(raw.get("extra_school_days")),
+            half_days=parse_dates(raw.get("half_days")),
+            half_states=words(raw.get("half_states")) or DEFAULT_HALF_STATES,
+            half_keywords=words(raw.get("half_keywords")),
+            half_day_budget=SCHOOL_BUDGET if raw.get("half_day_budget") == SCHOOL_BUDGET else "other_days",
         )
 
 
-def by_rule(config: SchoolDaysConfig, today: date) -> bool:
-    if today.weekday() >= 5:
-        return False
+def in_school_year(config: SchoolDaysConfig, today: date) -> bool:
     if config.year_start and today < config.year_start:
         return False
     if config.year_end and today > config.year_end:
         return False
     return True
+
+
+def by_rule(config: SchoolDaysConfig, today: date) -> bool:
+    return today.weekday() < 5 and in_school_year(config, today)
 
 
 class SchoolDays:
@@ -109,7 +135,10 @@ class SchoolDays:
         self.day: date | None = None
         self.school = False
         self.reason = "rule"
+        self.day_type = NO_SCHOOL
         self._calendar_answer: tuple[date, bool | None] | None = None
+        # Whether the calendar said today is a half day (an event with a half-day word)
+        self._calendar_half: tuple[date, bool] | None = None
 
     def configure(self, options: dict[str, Any]) -> None:
         self.config = SchoolDaysConfig.from_options(options)
@@ -135,6 +164,33 @@ class SchoolDays:
                 return answer, "calendar"
         return by_rule(config, today), "rule"
 
+    def _half_by_entity(self) -> bool:
+        config = self.config
+        state = self.hass.states.get(config.entity) if config.entity else None
+        return state is not None and state.state.lower() in config.half_states
+
+    def decide_type(self, today: date) -> str:
+        """Today's day type: school, half_day, day_off, weekend or no_school."""
+        config = self.config
+        if today in config.days_off:
+            return DAY_OFF if today.weekday() < 5 else WEEKEND
+        if today in config.half_days:
+            return HALF_DAY
+        school, reason = self.decide(today)
+        if reason == "entity" and self._half_by_entity():
+            return HALF_DAY
+        if school:
+            if reason == "calendar" and self._calendar_half == (today, True):
+                return HALF_DAY
+            return SCHOOL
+        if today.weekday() >= 5:
+            return WEEKEND
+        return DAY_OFF if in_school_year(config, today) else NO_SCHOOL
+
+    def budget_is_school(self, day_type: str) -> bool:
+        """Whether a day of this type takes the school-day budget (a half day: as chosen, other days by default)."""
+        return day_type == SCHOOL or (day_type == HALF_DAY and self.config.half_day_budget == SCHOOL_BUDGET)
+
     async def async_refresh(self, today: date | None = None) -> bool:
         """Works out today's answer (asking the calendar once a day, again if it failed); says whether it changed."""
         today = today or dt_util.now().date()
@@ -142,7 +198,9 @@ class SchoolDays:
             self._calendar_answer = (today, await self._ask_calendar(today))
         before = (self.day, self.school)
         self.day = today
-        self.school, self.reason = self.decide(today)
+        _school, self.reason = self.decide(today)
+        self.day_type = self.decide_type(today)
+        self.school = self.budget_is_school(self.day_type)
         return before != (self.day, self.school)
 
     async def _ask_calendar(self, today: date) -> bool | None:
@@ -163,6 +221,9 @@ class SchoolDays:
             return None
         events = ((response or {}).get(config.calendar) or {}).get("events") or []
         titles = [str(e.get("summary") or "").lower() for e in events]
+        self._calendar_half = (today, any(k in t for t in titles for k in config.half_keywords))
+        if self._calendar_half[1]:
+            return True
         if config.calendar_mode == CALENDAR_SCHOOL:
             return bool(titles)
         matching = [t for t in titles if not config.keywords or any(k in t for k in config.keywords)]

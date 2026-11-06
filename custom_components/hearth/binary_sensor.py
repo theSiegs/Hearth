@@ -189,4 +189,8 @@ class SchoolDay(BinarySensorEntity):
     @property
     def extra_state_attributes(self) -> dict:
         school = self.hub.household.school
-        return {"decided_by": school.reason, "day": school.day.isoformat() if school.day else None}
+        return {
+            "decided_by": school.reason,
+            "day": school.day.isoformat() if school.day else None,
+            "day_type": school.day_type,
+        }

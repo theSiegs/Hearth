@@ -6,6 +6,10 @@ household summary's approvals), and the first adult to answer decides, once: mor
 (add_bonus), maybe another amount than asked; "not now" starts a cooldown before that person may ask again. The asking
 device sees the answer in its next status answer (the person's state document, "request").
 
+An offer goes the other way (Configure > Offer more time): when a chosen group of a kid's runs out, the adults are
+asked whether to give some more, with the same buttons; nothing is asked of the kid, and their devices aren't told
+about it as a request of theirs. "Not now" to an offer starts no cooldown.
+
 Requests are kept outside the entry (an options change reloads it) but not across a restart: one left open then
 expires, as it would have in the meantime.
 """
@@ -34,6 +38,8 @@ OPEN_FOR = timedelta(minutes=30)
 SHOWN_FOR = timedelta(hours=2)
 COOLDOWN = timedelta(minutes=10)
 MAX_NOTE = 120
+# Options: [{"person", "group", "minutes"}]: offer the adults more time when that group runs out
+CONF_OFFER_MORE = "offer_more"
 
 PENDING = "pending"
 APPROVED = "approved"
@@ -54,6 +60,8 @@ class Ask:
     granted: int | None = None
     answered: datetime | None = None
     answered_by: str | None = None
+    # Offered to the adults when the group ran out, not asked by the kid
+    offered: bool = False
 
     @property
     def expires(self) -> datetime:
@@ -85,6 +93,7 @@ class Ask:
             "device_id": self.device_id,
             "asked": self.asked.isoformat(),
             "expires": self.expires.isoformat(),
+            "offered": self.offered,
         }
 
 
@@ -135,7 +144,7 @@ class Asks:
 
     def latest_for(self, person: str) -> Ask | None:
         self._tidy()
-        mine = [a for a in self._s.asks.values() if a.person == person]
+        mine = [a for a in self._s.asks.values() if a.person == person and not a.offered]
         return max(mine, key=lambda a: a.asked) if mine else None
 
     def get(self, ask_id: str) -> Ask | None:
@@ -172,6 +181,30 @@ class Asks:
         return ask
 
     @callback
+    def offer(self, person: str, group: str, minutes: int) -> Ask | None:
+        """The adults are offered to give [minutes] more of [group] (it just ran out); one open per person."""
+        if self.hub.household.group(group) is None or minutes <= 0:
+            return None
+        self._tidy()
+        if any(a.person == person and a.status == PENDING for a in self._s.asks.values()):
+            return None
+        ask = Ask(
+            id=secrets.token_urlsafe(9),
+            person=person,
+            minutes=int(minutes),
+            group=group,
+            note="",
+            device_id="",
+            asked=dt_util.utcnow(),
+            offered=True,
+        )
+        self._s.asks[ask.id] = ask
+        self.hass.bus.async_fire(EVENT_MORE_TIME_REQUESTED, ask.approval_view(self.hub.household.person_name))
+        self._tell_adults(ask)
+        async_dispatcher_send(self.hass, SIGNAL_PAIRINGS)
+        return ask
+
+    @callback
     def answer(self, ask_id: str, minutes: int | None, by: str | None) -> Ask:
         """The first answer decides: minutes (any of the amounts, or another positive number) is more time, None is
         "not now". A later answer, or one to an expired request, is refused (not_open)."""
@@ -183,7 +216,8 @@ class Asks:
         ask.answered_by = by
         if minutes is None or minutes <= 0:
             ask.status = DENIED
-            self._s.cooldown[ask.person] = now + COOLDOWN
+            if not ask.offered:
+                self._s.cooldown[ask.person] = now + COOLDOWN
         else:
             ask.status = APPROVED
             ask.granted = int(minutes)
@@ -213,11 +247,17 @@ class Asks:
         who = self.hub.household.person_name(ask.person)
         group = self.hub.household.group(ask.group)
         what = "" if ask.group == "all" or group is None else f" of {group.name}"
-        message = f"{who} asks for {ask.minutes} more minutes{what}." + (f" “{ask.note}”" if ask.note else "")
+        if ask.offered:
+            name = "screen time" if ask.group == "all" or group is None else group.name
+            title = f"{who}'s {name} is used up"
+            message = f"Give {who} {ask.minutes} more minutes today?"
+        else:
+            title = "More time?"
+            message = f"{who} asks for {ask.minutes} more minutes{what}." + (f" “{ask.note}”" if ask.note else "")
         persistent_notification.async_create(
             self.hass,
             message + " Answer on Hearth's page or your phone.",
-            title="More time?",
+            title=title,
             notification_id=f"hearth_more_{ask.id}",
         )
         phone = self._phone()
@@ -232,7 +272,7 @@ class Asks:
                 phone[0],
                 phone[1],
                 {
-                    "title": "More time?",
+                    "title": title,
                     "message": message,
                     "data": {"tag": f"hearth_more_{ask.id}", "actions": actions},
                 },

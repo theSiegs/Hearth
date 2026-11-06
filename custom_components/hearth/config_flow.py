@@ -22,6 +22,10 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import (
     BooleanSelector,
     DateSelector,
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
+    TimeSelector,
     EntitySelector,
     EntitySelectorConfig,
     SelectOptionDict,
@@ -50,6 +54,8 @@ from .limits import BUILTIN_GROUPS, GAMES, VIDEO, slug
 from .apps import CONF_APP_WATCH, CONF_ASK_NOTIFY, OTHER, options_with_app_in_group, update_notification
 from .enforce import (
     CONF_ENFORCE,
+    DEFAULT_SCHOOL_TIME_APPS,
+    school_pausable,
     DEFAULT_FS_GROUPS,
     DEFAULT_NINTENDO_GROUPS,
     FAMILY_LINK,
@@ -59,7 +65,10 @@ from .enforce import (
     PLATFORMS,
 )
 from .notifications import pairing_notification_id
-from .schooldays import CALENDAR_OFF, CALENDAR_SCHOOL, CONF_SCHOOL_DAYS
+from .schooldays import CALENDAR_OFF, CALENDAR_SCHOOL, CONF_SCHOOL_DAYS, SCHOOL_BUDGET
+from .schedule import CONF_SCHEDULE, CONF_SITE_LIST
+from .chores import CONF_CHORES, DEFAULT_MINUTES
+from .asks import AMOUNTS, CONF_OFFER_MORE
 from .sources import CONF_SOURCES, CONF_TITLES
 from . import parent_pin
 from .push import clean_server
@@ -142,6 +151,10 @@ class HearthOptionsFlow(OptionsFlow):
                 "locks",
                 "enforce",
                 "school_days",
+                "schedule",
+                "site_list",
+                "chores",
+                "offer_more",
                 "sort_apps",
                 "new_apps",
                 "add_group",
@@ -469,7 +482,17 @@ class HearthOptionsFlow(OptionsFlow):
             person = user_input[CONF_PERSON]
             kept = [e for e in enforce if e.get("person") != person]
             if user_input.get("family_link"):
-                kept.append({"kind": FAMILY_LINK, "person": person, "entity_id": user_input["family_link"]})
+                kept.append(
+                    {
+                        "kind": FAMILY_LINK,
+                        "person": person,
+                        "entity_id": user_input["family_link"],
+                        # Paused while their School time is on (none: nothing)
+                        "school_time_apps": [
+                            p.strip() for p in user_input.get("school_time_apps") or [] if school_pausable(p.strip())
+                        ],
+                    }
+                )
             if user_input.get("family_safety"):
                 kept.append(
                     {
@@ -496,6 +519,9 @@ class HearthOptionsFlow(OptionsFlow):
             {
                 vol.Required(CONF_PERSON): PERSON_SELECTOR,
                 vol.Optional("family_link"): EntitySelector(EntitySelectorConfig(integration="familylink")),
+                vol.Optional("school_time_apps", default=list(DEFAULT_SCHOOL_TIME_APPS)): self._app_selector(
+                    list(DEFAULT_SCHOOL_TIME_APPS)
+                ),
                 vol.Optional("family_safety"): EntitySelector(
                     EntitySelectorConfig(integration="microsoft_family_safety", domain="sensor")
                 ),
@@ -613,6 +639,144 @@ class HearthOptionsFlow(OptionsFlow):
                 vol.Optional("extra_school_days", description=suggested("extra_school_days")): TextSelector(
                     TextSelectorConfig(multiline=True)
                 ),
+                vol.Optional("half_days", description=suggested("half_days")): TextSelector(
+                    TextSelectorConfig(multiline=True)
+                ),
+                vol.Optional("half_states", description=suggested("half_states")): TextSelector(),
+                vol.Optional("half_keywords", description=suggested("half_keywords")): TextSelector(),
+                vol.Optional(
+                    "half_day_budget", description={"suggested_value": current.get("half_day_budget", "other_days")}
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[
+                            SelectOptionDict(value="other_days", label="The other-day budget"),
+                            SelectOptionDict(value=SCHOOL_BUDGET, label="The school-day budget"),
+                        ]
+                    )
+                ),
             }
         )
         return self.async_show_form(step_id="school_days", data_schema=schema)
+
+    def _notify_selector(self) -> SelectSelector:
+        phones = sorted(
+            f"notify.{name}" for name in self.hass.services.async_services().get("notify", {}) if name.startswith("mobile_app_")
+        )
+        return SelectSelector(SelectSelectorConfig(options=[SelectOptionDict(value=p, label=p) for p in phones], custom_value=True))
+
+    def _group_selector(self, multiple: bool = False, with_all: bool = True) -> SelectSelector:
+        groups = [
+            SelectOptionDict(value=g.id, label=g.name) for g in self._household().groups if with_all or g.id != ALL
+        ]
+        return SelectSelector(SelectSelectorConfig(options=groups, multiple=multiple))
+
+    async def async_step_schedule(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """What each day type does to the kids' Family Link (schedule.py): School time off on days off, School time
+        ending early on half days, extra time on both."""
+        options = self._options()
+        current: dict[str, Any] = dict(options.get(CONF_SCHEDULE) or {})
+        if user_input is not None:
+            kept = {k: v for k, v in user_input.items() if v not in (None, "", [])}
+            return self.async_create_entry(data={**options, CONF_SCHEDULE: kept})
+
+        def suggested(key: str, default: Any = None) -> dict[str, Any]:
+            return {"suggested_value": current.get(key, default)}
+
+        minutes = NumberSelector(
+            NumberSelectorConfig(min=0, max=720, step=5, unit_of_measurement="min", mode=NumberSelectorMode.BOX)
+        )
+        schema = vol.Schema(
+            {
+                vol.Optional("day_off_school_time_off", default=bool(current.get("day_off_school_time_off"))): BooleanSelector(),
+                vol.Optional("day_off_bonus", description=suggested("day_off_bonus", 0)): minutes,
+                vol.Optional("half_day_hours_early", description=suggested("half_day_hours_early", 0)): NumberSelector(
+                    NumberSelectorConfig(min=0, max=12, step=0.5, unit_of_measurement="h", mode=NumberSelectorMode.BOX)
+                ),
+                vol.Optional("half_day_bonus", description=suggested("half_day_bonus", 0)): minutes,
+                vol.Optional("bonus_family_link", default=current.get("bonus_family_link", True)): BooleanSelector(),
+                vol.Optional("bonus_group", description=suggested("bonus_group")): self._group_selector(),
+                vol.Optional("people", description=suggested("people")): EntitySelector(
+                    EntitySelectorConfig(domain="person", multiple=True)
+                ),
+                vol.Optional("notify", description=suggested("notify")): self._notify_selector(),
+                vol.Optional("watchdog", description=suggested("watchdog", "10:00:00")): TimeSelector(),
+            }
+        )
+        return self.async_show_form(step_id="schedule", data_schema=schema)
+
+    async def async_step_site_list(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """A website block list synced into each kid's Family Link every day (familylink.sync_site_list)."""
+        options = self._options()
+        current: dict[str, Any] = dict(options.get(CONF_SITE_LIST) or {})
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            url = (user_input.get("url") or "").strip()
+            if url and not url.startswith("https://"):
+                errors["url"] = "not_https"
+            else:
+                kept = {k: v for k, v in {**user_input, "url": url}.items() if v not in (None, "", [])}
+                return self.async_create_entry(data={**options, CONF_SITE_LIST: kept})
+        schema = vol.Schema(
+            {
+                vol.Optional("url", description={"suggested_value": current.get("url")}): TextSelector(
+                    TextSelectorConfig(type=TextSelectorType.URL)
+                ),
+                vol.Optional("time", description={"suggested_value": current.get("time", "07:30:00")}): TimeSelector(),
+                vol.Optional("people", description={"suggested_value": current.get("people")}): EntitySelector(
+                    EntitySelectorConfig(domain="person", multiple=True)
+                ),
+            }
+        )
+        return self.async_show_form(step_id="site_list", data_schema=schema, errors=errors)
+
+    async def async_step_chores(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """A person's chores list: each item checked off adds minutes to a group today. Choosing a person again
+        replaces theirs; no list stops it."""
+        options = self._options()
+        chores: list[dict[str, Any]] = list(options.get(CONF_CHORES, []))
+        if user_input is not None:
+            person = user_input[CONF_PERSON]
+            kept = [c for c in chores if c.get("person") != person]
+            if user_input.get("todo") and user_input.get("group"):
+                kept.append(
+                    {
+                        "person": person,
+                        "todo": user_input["todo"],
+                        "group": user_input["group"],
+                        "minutes": int(user_input.get("minutes") or DEFAULT_MINUTES),
+                    }
+                )
+            return self.async_create_entry(data={**options, CONF_CHORES: kept})
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_PERSON): PERSON_SELECTOR,
+                vol.Optional("todo"): EntitySelector(EntitySelectorConfig(domain="todo")),
+                vol.Optional("group"): self._group_selector(),
+                vol.Optional("minutes", default=DEFAULT_MINUTES): NumberSelector(
+                    NumberSelectorConfig(min=1, max=240, step=1, unit_of_measurement="min", mode=NumberSelectorMode.BOX)
+                ),
+            }
+        )
+        return self.async_show_form(step_id="chores", data_schema=schema)
+
+    async def async_step_offer_more(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """When one of these groups of a person's runs out, the adults are offered to give more. Choosing a person
+        again replaces theirs; no groups stops it."""
+        options = self._options()
+        offers: list[dict[str, Any]] = list(options.get(CONF_OFFER_MORE, []))
+        if user_input is not None:
+            person = user_input[CONF_PERSON]
+            kept = [o for o in offers if o.get("person") != person]
+            minutes = int(user_input.get("minutes") or 30)
+            kept += [{"person": person, "group": g, "minutes": minutes} for g in user_input.get("groups") or []]
+            return self.async_create_entry(data={**options, CONF_OFFER_MORE: kept})
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_PERSON): PERSON_SELECTOR,
+                vol.Optional("groups", default=[]): self._group_selector(multiple=True),
+                vol.Optional("minutes", default="30"): SelectSelector(
+                    SelectSelectorConfig(options=[str(m) for m in AMOUNTS])
+                ),
+            }
+        )
+        return self.async_show_form(step_id="offer_more", data_schema=schema)

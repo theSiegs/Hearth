@@ -254,6 +254,7 @@ OPTION_SCHEMAS: dict[str, Any] = {
                 vol.Optional("groups"): [_ID],
                 vol.Optional("platforms"): [vol.In(PLATFORMS)],
                 vol.Optional("playing"): [cv.entity_id],
+                vol.Optional("school_time_apps"): [cv.string],
             }
         )
     ],

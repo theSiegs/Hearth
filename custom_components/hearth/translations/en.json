@@ -78,6 +78,16 @@
       },
       "person_last_video_started": {
         "name": "Last video started"
+      },
+      "day_type": {
+        "name": "Day type",
+        "state": {
+          "school": "School day",
+          "half_day": "Half day",
+          "day_off": "Day off",
+          "weekend": "Weekend",
+          "no_school": "No school"
+        }
       }
     },
     "binary_sensor": {
@@ -133,7 +143,11 @@
           "remove_group": "Remove a group",
           "tile_exchange": "Tile exchange sharing",
           "parent_pin": "Parent PINs",
-        "push": "Push to phones (ntfy)"
+          "push": "Push to phones (ntfy)",
+          "schedule": "Schedule (days off, half days)",
+          "site_list": "Website block list",
+          "chores": "Chores earn time",
+          "offer_more": "Offer more time"
         }
       },
       "people": {
@@ -265,14 +279,21 @@
           "year_start": "First day of the school year",
           "year_end": "Last day of the school year",
           "days_off": "Days off",
-          "extra_school_days": "Extra school days"
+          "extra_school_days": "Extra school days",
+          "half_days": "Half days",
+          "half_states": "The entity's states that mean a half day",
+          "half_keywords": "Calendar events that mean a half day",
+          "half_day_budget": "A half day takes"
         },
         "data_description": {
           "entity": "A helper an automation keeps, the Workday integration's sensor, an input_boolean. Unavailable passes the question on.",
           "school_states": "Separated by commas. Leave empty for on, school, true, yes.",
           "keywords": "Separated by commas, for a calendar of days off: closed, break, holiday. Empty: any event.",
           "days_off": "Dates (2026-11-26) or ranges (2026-12-24..2027-01-01), separated by commas or new lines.",
-          "extra_school_days": "Same, for days that are school days although they'd be off."
+          "extra_school_days": "Same, for days that are school days although they'd be off.",
+          "half_days": "School days that end early, as dates or ranges. Schedule says what a half day does.",
+          "half_states": "Separated by commas. Leave empty for half, half_day.",
+          "half_keywords": "Words in an event's title (early dismissal, half day), separated by commas."
         }
       },
       "enforce": {
@@ -285,8 +306,55 @@
           "platforms": "Family Safety: platforms to lock",
           "groups": "Family Safety: lock while one of these groups is out of time",
           "nintendo": "Nintendo: the person's Switch (its Max screentime today)",
-          "nintendo_groups": "Nintendo: suspend while one of these groups is out of time",
-          "nintendo_playing": "A shared Switch: held only while this person is the one playing (their playing sensor)"
+          "nintendo_groups": "Nintendo: suspend while one of these groups is out of time",
+          "nintendo_playing": "A shared Switch: held only while this person is the one playing (their playing sensor)",
+          "school_time_apps": "Family Link: during School time, pause these apps"
+        },
+        "data_description": {
+          "school_time_apps": "Paused while the person's Family Link School time is on (any of their devices), and resumed when it ends. Google Messages by default: it stays installed and keeps incoming texts. Empty: nothing."
+        }
+      },
+      "schedule": {
+        "title": "Schedule",
+        "description": "What each kind of day does to the kids' Family Link (the day type comes from School days). On a day off, School time can be switched off for the day; Hearth puts it back at the start of the next school day, inside each kid's own window. On a half day, School time can end some hours early. Both can give extra time: as Family Link's daily limit for today only (the weekday's limit plus the extra), and/or as Hearth bonus minutes on a group. At the watchdog time on a school day, the adults are told if anyone's School time is still off.",
+        "data": {
+          "day_off_school_time_off": "Day off: School time off",
+          "day_off_bonus": "Day off: extra minutes",
+          "half_day_hours_early": "Half day: School time ends this many hours early",
+          "half_day_bonus": "Half day: extra minutes",
+          "bonus_family_link": "Extra minutes as Family Link's daily limit today",
+          "bonus_group": "Extra minutes also as a Hearth bonus on this group",
+          "people": "Who (empty: everyone with Family Link in Enforce)",
+          "notify": "Tell this phone (empty: the one that answers requests for more time)",
+          "watchdog": "Watchdog time on school days"
+        }
+      },
+      "site_list": {
+        "title": "Website block list",
+        "description": "Every day at this time, each person's Family Link blocked sites are brought in step with a published list (familylink.sync_site_list): new domains are added, and only what the list itself added before is taken out. A failure for one person is logged and the others go on.",
+        "data": {
+          "url": "The list's address (https)",
+          "time": "Every day at",
+          "people": "Who (empty: everyone with Family Link in Enforce)"
+        }
+      },
+      "chores": {
+        "title": "Chores earn time",
+        "description": "Each chore checked off on the person's to-do list adds minutes to a group today, then goes from the list. A chore can say its own worth: \"Dishes +30\". Choosing a person again replaces theirs; no list stops it.",
+        "data": {
+          "person": "Person",
+          "todo": "Their chores list",
+          "group": "Adds to",
+          "minutes": "Minutes a chore is worth"
+        }
+      },
+      "offer_more": {
+        "title": "Offer more time",
+        "description": "When one of these groups of the person's runs out, the adults are asked whether to give some more (the phone that answers requests for more time, and Hearth's page). Nothing is asked of the kid. Choosing a person again replaces theirs; no groups stops it.",
+        "data": {
+          "person": "Person",
+          "groups": "When one of these runs out",
+          "minutes": "Offer"
         }
       }
     },
@@ -297,7 +365,8 @@
       "bad_pin": "Give 4 digits.",
       "pins_differ": "The two PINs differ.",
       "not_adult": "Only an adult has a parent PIN: mark them as an adult on Hearth's page (Family) first.",
-      "bad_server": "Give the server's address, like https://ntfy.example.com (no user name, password or query)."
+      "bad_server": "Give the server's address, like https://ntfy.example.com (no user name, password or query).",
+      "not_https": "The address must start with https://"
     },
     "abort": {
       "no_profiles": "No TV has reported its profiles yet. Pair a TV and let it post its status first.",
@@ -311,17 +380,32 @@
       "name": "Pause",
       "description": "Holds the people's Hearth devices (dinner time, say) for some minutes or until a time; they stop and show the reason. Everyone in the household when no one is chosen.",
       "fields": {
-        "minutes": {"name": "Minutes", "description": "How long."},
-        "until": {"name": "Until", "description": "Or until this time (tomorrow's, if it has passed today)."},
-        "reason": {"name": "Reason", "description": "What the devices show, such as Dinner."},
-        "people": {"name": "People", "description": "Who; everyone when empty."}
+        "minutes": {
+          "name": "Minutes",
+          "description": "How long."
+        },
+        "until": {
+          "name": "Until",
+          "description": "Or until this time (tomorrow's, if it has passed today)."
+        },
+        "reason": {
+          "name": "Reason",
+          "description": "What the devices show, such as Dinner."
+        },
+        "people": {
+          "name": "People",
+          "description": "Who; everyone when empty."
+        }
       }
     },
     "pause_end": {
       "name": "End the pause",
       "description": "Lets the people go again (everyone paused when no one is chosen).",
       "fields": {
-        "people": {"name": "People", "description": "Who; everyone paused when empty."}
+        "people": {
+          "name": "People",
+          "description": "Who; everyone paused when empty."
+        }
       }
     },
     "add_bonus": {
@@ -492,9 +576,120 @@
       "name": "Play on a TV",
       "description": "Starts a link, a YouTube video (in HearthTube) or an app on a Hearth TV. The TV takes it with its next status, within about 2 minutes while it's on, and plays it as if picked there: a kids profile's limits and blocks still apply. Answers the command's id; hearth_command_done says how it went.",
       "fields": {
-        "device_id": {"name": "TV", "description": "The Hearth TV (its device, or its Hearth device id)."},
-        "what": {"name": "What", "description": "A link (http or https), a YouTube video id or link, or an app's package name (com.example.app)."},
-        "profile": {"name": "Profile", "description": "Optional: the TV profile to play it in (an id like user:10, or a person with one profile on the TV). The TV switches to it first, asking for its PIN as usual."}
+        "device_id": {
+          "name": "TV",
+          "description": "The Hearth TV (its device, or its Hearth device id)."
+        },
+        "what": {
+          "name": "What",
+          "description": "A link (http or https), a YouTube video id or link, or an app's package name (com.example.app)."
+        },
+        "profile": {
+          "name": "Profile",
+          "description": "Optional: the TV profile to play it in (an id like user:10, or a person with one profile on the TV). The TV switches to it first, asking for its PIN as usual."
+        }
+      }
+    },
+    "allow": {
+      "name": "Allow",
+      "description": "Lets people use an app or a group until a time: while it lasts, Hearth holds it nowhere for them (their TVs and phones, Family Link, the School-time pause). Bedtime, School time itself and a family pause still lock them. Returns its id.",
+      "fields": {
+        "people": {
+          "name": "People",
+          "description": "Who."
+        },
+        "app": {
+          "name": "App",
+          "description": "One app, by its package name. Or a group."
+        },
+        "group": {
+          "name": "Group",
+          "description": "A Hearth group (youtube), or all for everything Hearth holds."
+        },
+        "until": {
+          "name": "Until",
+          "description": "A time (tomorrow's if it has passed), school_time_end (the end of their School time today) or end_of_day (the default)."
+        },
+        "reason": {
+          "name": "Reason",
+          "description": "Why, for the record."
+        }
+      }
+    },
+    "allow_end": {
+      "name": "End an allow",
+      "description": "Ends an allow early: by its id, or the people's (of an app or a group, when given). What should hold then holds again.",
+      "fields": {
+        "id": {
+          "name": "Id",
+          "description": "The id hearth.allow returned."
+        },
+        "people": {
+          "name": "People",
+          "description": "Or the people's allows."
+        },
+        "app": {
+          "name": "App",
+          "description": "Only those of this app."
+        },
+        "group": {
+          "name": "Group",
+          "description": "Only those of this group."
+        }
+      }
+    },
+    "explain": {
+      "name": "Explain",
+      "description": "Why an app or a group is held for a person now, or isn't: allowed, until, blocked_by (budget, bedtime, school_time, pause, school_time_apps), and the allows that apply.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "Who."
+        },
+        "app": {
+          "name": "App",
+          "description": "An app, by its package name. Or a group."
+        },
+        "group": {
+          "name": "Group",
+          "description": "A Hearth group, or all."
+        }
+      }
+    },
+    "school_time_off": {
+      "name": "School time off",
+      "description": "Switches the people's Family Link School time off on a date (today by default), from a time if given. Hearth puts it back at the start of their next school day, inside each one's own window, and pins today's hours.",
+      "fields": {
+        "people": {
+          "name": "People",
+          "description": "Who (each needs Family Link in Configure > Enforce)."
+        },
+        "date": {
+          "name": "Date",
+          "description": "The day; today when empty."
+        },
+        "from": {
+          "name": "From",
+          "description": "From this time; the whole day when empty."
+        },
+        "reason": {
+          "name": "Reason",
+          "description": "Why, for the record."
+        }
+      }
+    },
+    "school_time_off_cancel": {
+      "name": "Cancel School time off",
+      "description": "One not started yet is dropped; one already off is put back from today (inside the window, as always).",
+      "fields": {
+        "people": {
+          "name": "People",
+          "description": "Whose; everyone's when empty."
+        },
+        "date": {
+          "name": "Date",
+          "description": "Only that day's."
+        }
       }
     }
   }

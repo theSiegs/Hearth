@@ -45,7 +45,11 @@ from .apps import (
 )
 from .counting import ALL, DeviceUsage, Reading, group_seconds, merge
 from .limits import CONF_APP_GROUPS, OTHER, OTHER_DAY, SCHOOL_DAY, Group, GroupState, Limits, groups_from_options, groups_of
-from .enforce import Enforcement, enforcers_from_options
+from .enforce import FAMILY_LINK, Enforcement, enforcers_from_options
+from .exceptions import Allows, Lifted, end_of_day
+from . import family_link as fl
+from .chores import ChoreWatcher
+from .schedule import Scheduler
 from .watch import WatchLog
 from .pause import PAUSE, lock_kinds, lock_until, next_lock, pause_of
 from . import parent_pin
@@ -105,6 +109,9 @@ class Household:
         self.school.configure(dict(hub.entry.options))
         self.enforcement = Enforcement(hass, hub.entry.entry_id)
         self.watch = WatchLog(hass, hub.entry.entry_id)
+        self.allows = Allows(hass, hub.entry.entry_id)
+        self.scheduler = Scheduler(hass, self, hub.entry.entry_id)
+        self.chores = ChoreWatcher(hass, self)
         self.days: dict[str, PersonDay] = {}
         # The day [days] is of
         self.today: date | None = None
@@ -123,12 +130,16 @@ class Household:
         await self.apps.async_load()
         await self.enforcement.async_load()
         await self.watch.async_load()
+        await self.allows.async_load()
+        await self.scheduler.async_load()
 
     async def async_flush(self) -> None:
         await self.limits.async_flush()
         await self.live.async_flush()
         await self.enforcement.async_flush()
         await self.watch.async_flush()
+        await self.allows.async_flush()
+        await self.scheduler.async_flush()
 
     # The mapping
 
@@ -181,7 +192,18 @@ class Household:
             + watched
             + playing
             + self.school.watched_entities()
+            + self._school_time_sensors()
         )
+
+    def _school_time_sensors(self) -> list[str]:
+        """The School time sensors of the children whose School-time apps are paused (else the minute's recompute
+        would see School time start a minute late)."""
+        children = {
+            child
+            for e in enforcers_from_options(self.options)
+            if e.kind == FAMILY_LINK and e.school_apps and (child := fl.child_of(self.hass, e.entity_id))
+        }
+        return [s.entity_id for child in children for s in fl.school_time_sensors(self.hass, child)]
 
     def _locked_by(self, person: str) -> list[str]:
         return [
@@ -382,7 +404,9 @@ class Household:
         self._look_for_new_apps(categories)
         membership = self.membership()
         # Today's answer as last worked out; if the day turned without a refresh yet, what's known now
-        is_school = self.school.school if self.school.day == today else self.school.decide(today)[0]
+        is_school = (
+            self.school.school if self.school.day == today else self.school.budget_is_school(self.school.decide_type(today))
+        )
         kind = SCHOOL_DAY if is_school else OTHER_DAY
         days: dict[str, PersonDay] = {}
         for person in self.people():
@@ -415,7 +439,15 @@ class Household:
                 return self._person_apps(days.get(person), membership)
             return self._group_apps(groups_by_id[group_id], membership) if group_id in groups_by_id else []
 
-        self.enforcement.update(enforcers_from_options(options), days, apps_of)
+        self.allows.prune()
+        self.enforcement.update(
+            enforcers_from_options(options),
+            days,
+            apps_of,
+            lifted_of=self.allows.lifted,
+            school_time_of=self.in_school_time,
+            groups_of_app=membership,
+        )
         for together, what in [(t, "started") for t in started] + [(t, "ended") for t in ended]:
             self.hass.bus.async_fire(EVENT_PLAYING_TOGETHER, self._together_event(together, what))
         async_dispatcher_send(self.hass, SIGNAL_PEOPLE, new_day)
@@ -559,6 +591,14 @@ class Household:
         membership = self.membership()
         return {g.id: self._group_apps(g, membership) for g in self.groups if g.id != ALL}
 
+    def _lifted_packages(self, lifted: Lifted, membership) -> set[str]:
+        """The packages a person's allows lift: the allowed apps, and the apps of the allowed groups."""
+        found = {p for p in lifted.apps if "." in p}
+        for group in self.groups:
+            if group.id != ALL and group.id in lifted.groups:
+                found |= set(self._group_apps(group, membership))
+        return found
+
     def _person_apps(self, day: PersonDay | None, membership) -> list[str]:
         """Every app of a person's Hearth knows, for holding All screen time: the apps of every group, and those in
         their usage today on any device and from any source (a title's packages); never those of a group outside All
@@ -582,20 +622,28 @@ class Household:
     def _person_document(self, person: str) -> dict[str, Any]:
         day = self.days.get(person)
         membership = self.membership()
+        # An adult's allows: an allowed group is left out (nothing holds it), an allowed app is taken out of every
+        # group and is one of All screen time's exceptions
+        lifted = self.allows.lifted(person)
         groups = []
         for group in self.groups:
             state = day.limits.get(group.id) if day else None
-            if state is None or state.budget_min is None:
+            if state is None or state.budget_min is None or lifted.group(group.id):
                 continue
+            apps = self._group_apps(group, membership)
             entry = {
                 "id": group.id,
                 "name": group.name,
                 "minutes_left": state.minutes_left,
-                "apps": self._group_apps(group, membership),
+                "apps": [p for p in apps if not lifted.app(p, membership(p))] if lifted else apps,
             }
-            # All screen time holds every app but these (a group outside it: music, say)
-            if group.id == ALL and (spared := self._spared(membership)):
-                entry["except"] = sorted(spared)
+            # All screen time holds every app but these (a group outside it: music, say; what an allow lifts)
+            if group.id == ALL:
+                spared = self._spared(membership)
+                if lifted:
+                    spared |= self._lifted_packages(lifted, membership)
+                if spared:
+                    entry["except"] = sorted(spared)
             groups.append(entry)
         return {
             "person": person,
@@ -666,6 +714,109 @@ class Household:
         body["version"] = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()[:16]
         body["contract"] = CONTRACT
         return body
+
+    # School time and exceptions
+
+    def family_link_child(self, person: str) -> str | None:
+        enforcer = next(
+            (e for e in enforcers_from_options(self.options) if e.kind == FAMILY_LINK and e.person == person), None
+        )
+        return fl.child_of(self.hass, enforcer.entity_id) if enforcer else None
+
+    def in_school_time(self, enforcer) -> bool:
+        """The enforcer's child is in School time now (any device of theirs says so), and Hearth hasn't taken it off."""
+        if not enforcer.school_apps:
+            return False
+        child = fl.child_of(self.hass, enforcer.entity_id)
+        if child is None or self.scheduler.off_now(enforcer.person) is not None:
+            return False
+        return fl.school_time_active(self.hass, child)
+
+    def exceptions_of(self, person: str) -> dict[str, Any]:
+        """The person's allows and School time taken off, for their sensor and Hearth's page."""
+        return {
+            "allows": [a.view(person) for a in self.allows.of(person)],
+            "school_time_off": self.scheduler.offs_of(person),
+        }
+
+    def explain(self, person: str, app: str | None = None, group: str | None = None) -> dict[str, Any]:
+        """Why an app or a group is held for the person now, or isn't: allowed, until, blocked_by [{kind, by, until}],
+        exceptions (the allows that apply)."""
+        now = dt_util.now()
+        membership = self.membership()
+        day = self.days.get(person)
+        lifted = self.allows.lifted(person)
+        outside = self.outside_all()
+        if app is not None:
+            groups = membership(app)
+            if groups & outside:
+                groups = groups - {ALL}
+            excepted = lifted.app(app, groups)
+        else:
+            target = self.group(group)
+            groups = {group}
+            if group != ALL and target is not None and target.in_all:
+                groups.add(ALL)
+            excepted = lifted.group(group) or (group != ALL and lifted.group(ALL))
+        midnight = dt_util.as_local(end_of_day(now)).isoformat()
+        blocked: list[dict[str, Any]] = []
+        lifted_holds: list[dict[str, Any]] = []
+        for group_id in sorted(groups):
+            state = day.limits.get(group_id) if day else None
+            if state is not None and state.minutes_left == 0:
+                hold = {"kind": "budget", "by": group_id, "until": midnight}
+                (lifted_holds if excepted or lifted.group(group_id) else blocked).append(hold)
+        for entity_id in (day.locked_by if day else []):
+            if entity_id == PAUSE:
+                pause = pause_of(self.hass, person, now) or {}
+                blocked.append(
+                    {"kind": "pause", "by": "hearth.pause", "until": pause.get("until"), "reason": pause.get("reason")}
+                )
+                continue
+            until = lock_until(self.hass, [entity_id])
+            blocked.append(
+                {
+                    "kind": lock_kinds(self.hass, [entity_id])[0],
+                    "by": entity_id,
+                    "until": dt_util.as_local(until).isoformat() if until else None,
+                }
+            )
+        if app is not None:
+            for enforcer in enforcers_from_options(self.options):
+                if enforcer.person == person and app in enforcer.school_apps and self.in_school_time(enforcer):
+                    child = fl.child_of(self.hass, enforcer.entity_id)
+                    end = fl.school_time_end(self.hass, child) if child else None
+                    hold = {
+                        "kind": "school_time_apps",
+                        "by": enforcer.entity_id,
+                        "until": dt_util.as_local(end).isoformat() if end else None,
+                    }
+                    (lifted_holds if excepted else blocked).append(hold)
+        applying = [
+            a
+            for a in self.allows.of(person)
+            if a.group == ALL
+            or (app is not None and (a.app == app or (a.group is not None and a.group in groups)))
+            or (group is not None and a.group == group)
+        ]
+        if blocked:
+            ends = [b.get("until") for b in blocked]
+            until = None if None in ends else max(ends)
+        elif applying:
+            until = dt_util.as_local(min(a.until[person] for a in applying)).isoformat()
+        else:
+            until = None
+        return {
+            "person": person,
+            "app": app,
+            "group": group,
+            "allowed": not blocked,
+            "until": until,
+            "blocked_by": blocked,
+            "lifted": lifted_holds,
+            "exceptions": [a.view(person) for a in applying],
+            "school_time_off": self.scheduler.offs_of(person),
+        }
 
     # Changes from services and entities
 

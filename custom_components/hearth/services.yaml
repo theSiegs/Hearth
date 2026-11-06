@@ -220,3 +220,93 @@ play_on_tv:
       example: user:10
       selector:
         text:
+
+allow:
+  fields:
+    people:
+      required: true
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    app:
+      example: com.google.android.apps.messaging
+      selector:
+        text:
+    group:
+      example: youtube
+      selector:
+        text:
+    until:
+      default: end_of_day
+      example: school_time_end
+      selector:
+        text:
+    reason:
+      example: Homework video
+      selector:
+        text:
+
+allow_end:
+  fields:
+    id:
+      selector:
+        text:
+    people:
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    app:
+      selector:
+        text:
+    group:
+      selector:
+        text:
+
+explain:
+  fields:
+    person:
+      required: true
+      selector:
+        entity:
+          domain: person
+    app:
+      example: com.google.android.youtube
+      selector:
+        text:
+    group:
+      example: youtube
+      selector:
+        text:
+
+school_time_off:
+  fields:
+    people:
+      required: true
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    date:
+      selector:
+        date:
+    from:
+      example: "12:00"
+      selector:
+        time:
+    reason:
+      example: Field trip
+      selector:
+        text:
+
+school_time_off_cancel:
+  fields:
+    people:
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    date:
+      selector:
+        date:
