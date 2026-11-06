@@ -15,6 +15,12 @@
 - **Home Assistant: family pause.** `hearth.pause` (for some minutes or until a time, with a reason, everyone by default) holds the kids' Hearth devices; `hearth.pause_end` lets them go. Hearth's page has a Pause everyone bar.
 - **Home Assistant: bedtime heads-up.** Each person's state says when their lock ends and when the next bedtime or school time starts (from Family Link's sensors), for devices to wind down; Hearth's page shows "Bedtime in 15 min".
 
+## 2026.11.06 (pre-release)
+
+- **Time's up on the TV, with asking for more.** On a TV connected to Home Assistant, an app a kid can't open now shows Hearth's time's up card instead of a short message: why (a group's time is up, a family pause with its reason, bedtime, school time) and until when. When time is up and nothing else holds them, the kid can ask an adult for 15, 30, 45 or 60 more minutes right there, and the card shows the answer as it comes: waiting, an adult added time, not now (with a short wait before asking again) or no answer in time. The home's "Nothing to watch" card says the same.
+- **A family pause holds the TV's apps** until it ends.
+- **Bedtime heads-up on the TV.** A quiet note 15 and 5 minutes before a kid's bedtime or school time ("Bedtime in 15 min"), with no sound.
+
 ## 2026.11.05 (pre-release)
 
 - **Parent PINs from Home Assistant are checked there.** A connected TV asks Home Assistant whether a PIN is an adult's, and its answer (and its lockout after wrong guesses) is final whenever it's reachable. The TV's copy of the PINs, for when Home Assistant is down, is now kept encrypted with an Android Keystore key (it was kept in the clear), and Home Assistant sends it again only when a PIN changes.
