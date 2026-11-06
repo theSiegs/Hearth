@@ -16,11 +16,11 @@ are never reused for a different meaning.
   2026.10.x answered the same contract at `com.leanbitlab.ltvL.profile`; a client that still accepts it is harmless
 .
 - `content://com.thesiegs.hearth.profile/active`: one row, the columns below. Since version 9 only for
-  `com.thesiegs.hearthtube` signed with one of the certificates below (the row says who is on and whether it's a
+  `com.thesiegs.hearthtube` signed with Hearth's release certificate (below; the row says who is on and whether it's a
   kid); anyone else gets the columns with no row.
 - `content://com.thesiegs.hearth.profile/wallpaper`: Hearth's current wallpaper picture, read-only
   (`FileNotFoundException` when Hearth shows a gradient instead). Since version 5 only for `com.thesiegs.hearthtube`
-  signed with one of the certificates below (a picked wallpaper may be a family photo); anyone else gets
+  signed with Hearth's release certificate (a picked wallpaper may be a family photo); anyone else gets
   `FileNotFoundException`. How HearthTube shows Hearth's wallpaper: docs/wallpaper-sync.md.
 - Observers registered on `/active` are notified whenever a column changes.
 
@@ -57,7 +57,7 @@ answer within a few seconds. Without an agent, a Hearth installed there answers 
 | `kids_profile` | 0/1 | 1 in a Google TV kids profile: the active profile user carries Family Link's supervision restrictions. Independent of which apps a parent approved, and of screen time. |
 | `screen_time_up` | 0/1 | 1 while Google TV's kids screen time is up (bedtime, daily limit): seen from its time's-up / bedtime screens, or from the kid's approved apps being blocked in the kid's own profile user. Back to 0 when they're unblocked (bedtime over, bonus time) or the profile changes. Kept across Hearth restarts. Always 0 outside kids profiles. |
 | `service_running` | 0/1 | 1 while Hearth's accessibility service runs. Without it Hearth sees no profile switches and no screen time, so `profile_id`, `name`, `kids_profile` and `screen_time_up` can't be trusted: treat 0 as "Hearth isn't watching". |
-| `has_parent_pin` | 0/1 | Hearth has a parent PIN (Settings → Profiles → Parent PIN); `verify_parent_pin` can check one. |
+| `has_parent_pin` | 0/1 | Hearth has a parent PIN (Settings → Family → Parent PIN); `verify_parent_pin` can check one. |
 | `accent_color` | text or null | Hearth's accent color as `RRGGBB` hex ("7C4DFF"), or null for Hearth's default. |
 | `time_format` | text | Clock format as an ICU / intl pattern; Hearth's default "h:mm a" when never changed. |
 | `date_format` | text | Date format as an ICU / intl pattern; Hearth's default "EEE, MMM d" when never changed. |
@@ -66,14 +66,14 @@ answer within a few seconds. Without an agent, a Hearth installed there answers 
 | `wallpaper_stamp` | integer | Changes whenever the wallpaper picture does (its file time); 0 when Hearth shows a gradient. Re-read `/wallpaper` when it changes. |
 | `profile_ready` | 0/1 | 1 once Hearth's home is complete for the active profile after a switch or start: its layout restored, its Continue Watching read, and (for a profile other than the owner's) its Hearth agent heard from, or 4 seconds passed. Back to 0 at the next switch. Act on profile-specific state when this turns 1, not on the first change of `profile_id`. |
 | `switch_generation` | integer | Goes up by one at every profile switch (and when Hearth starts). Tells a new visit to a profile from the same one. |
-| `updates_hearthtube` | 0/1 | 1 while Hearth keeps HearthTube up to date: automatic companion updates are on (Settings → System → Updates → HearthTube, **Update automatically**; on by default when Hearth installed HearthTube) and Hearth is HearthTube's installer of record, so Android lets it update without asking. HearthTube's own updater steps aside meanwhile. Changes when the setting does or HearthTube is installed or updated. |
+| `updates_hearthtube` | 0/1 | 1 while Hearth keeps HearthTube up to date: automatic companion updates are on (Settings → System → Updates, **Update automatically**; on by default when Hearth installed HearthTube) and Hearth is HearthTube's installer of record, so Android lets it update without asking. HearthTube's own updater steps aside meanwhile. Changes when the setting does or HearthTube is installed or updated. |
 | `wallpaper_kind` | text | What Hearth's home shows behind everything: "picture" (a picked picture, the day or night one resolved for the time now), "bing" (Bing's photo of the day) or "gradient". For "picture" and "bing", `/wallpaper` opens that file. |
 | `wallpaper_version` | integer | Changes whenever what `wallpaper_kind` names does: another picture, the same one replaced (a new pick, a new day's Bing photo), day turning to night, another gradient while one shows. Positive. Re-open `/wallpaper` (or redraw the gradient) when it changes. |
 | `wallpaper_brightness` | real or null | How light the wallpaper is, 0 (black) to 1 (white): the picture's average luminance as Hearth measured it, or the gradient's. Null until Hearth has measured what's shown now (for a moment after a change, or after day turns to night while Hearth wasn't running). Hearth darkens its row titles' pills the lighter it is. |
 | `wallpaper_gradient` | text (JSON) or null | Hearth's gradient: shown when `wallpaper_kind` is "gradient", and what Hearth falls back to otherwise. `{"type": "linear" or "radial", "colors": ["#AARRGGBB", ...], "stops": [0..1, ...] or null (evenly spaced), "rotation": radians clockwise about the screen's center, "brightness": 0..1}`, plus for linear `"begin"` and `"end"` and for radial `"center"` as `{"x", "y"}` alignments (-1..1 across the screen, x right, y down) and `"radius"` (a fraction of the screen's shorter side). Null before Hearth has described the chosen gradient (a moment after a change, or a Hearth not opened since it was updated). |
 | `wallpaper_title` | text or null | When `wallpaper_kind` is "bing": the photo's title as Bing gives it ("A quiet lake"). Otherwise null; also null for a photo fetched before Hearth kept titles. |
 | `wallpaper_credit` | text or null | When `wallpaper_kind` is "bing": Bing's caption and credit for the photo ("A quiet lake at dawn (© Photographer/Agency)"), to show where the photo is credited. Otherwise null. |
-| `youtube_minutes_left` | integer or null | The active profile's YouTube minutes left today. Hearth works it out itself: the daily limit set for a kids profile in Hearth (Settings → Profiles → Kids profiles → the kid → YouTube time per day; adults have none) less what HearthTube reported playing for it today (`report_playing`). With Home Assistant set up (optional), its say counts too (entity `sensor.hearth_allowance`, its attribute `profiles` or else its state as JSON → this profile's `profile_id` → `youtube_minutes_left`, e.g. a pool shared with the family's other devices) and the smaller wins. Null when there's no limit. At 0 HearthTube stops playing. |
+| `youtube_minutes_left` | integer or null | The active profile's YouTube minutes left today. Hearth works it out itself: the daily limit set for a kids profile in Hearth (Settings → Family → Kids profiles → the kid → YouTube time per day; adults have none) less what HearthTube reported playing for it today (`report_playing`). With Home Assistant set up (optional), its say counts too (entity `sensor.hearth_allowance`, its attribute `profiles` or else its state as JSON → this profile's `profile_id` → `youtube_minutes_left`, e.g. a pool shared with the family's other devices; a TV paired with Hearth's integration takes instead the fewest minutes left in any of the profile's groups holding HearthTube, from its status answers) and the smaller wins. Null when there's no limit. At 0 HearthTube stops playing. |
 | `schedule_locked` | 0/1 | 1 while Home Assistant says the active profile's schedule is locked (bedtime, school time: `schedule_locked` in the same entry). HearthTube doesn't play then. 0 when not, or not known. |
 | `allowance_message` | text or null | What to tell the viewer when it stops, if Home Assistant gives one (`message` in the same entry): set when Home Assistant's minutes are the ones that count, or it locks. |
 | `allowance_checked_at` | integer or null | When Hearth last read the allowance from Home Assistant (epoch ms), today; null when it hasn't today (not set up, unreachable, or a new day). Hearth reads it every minute or so and at each profile change; after a failed read it tries again within 10 minutes. How old a value may be before it no longer counts is the caller's choice. |
@@ -88,9 +88,9 @@ None of these are secret: everything is on screen in Hearth.
 
 ## Calls
 
-`call(uri /active, "verify_parent_pin", pin, null)`: checks a PIN against Hearth's parent PIN without handing out
-the PIN or its hash. Only for `com.thesiegs.hearthtube` signed with one of the two certificates above; anyone else
-gets null. Returns a Bundle: `ok` (boolean), and when locked, `wait_seconds` (int): five wrong tries lock checks for
+`call(uri /active, "verify_parent_pin", pin, null)`: checks a PIN against Hearth's parent PIN (with Home Assistant's
+adults' PINs set, any of those, checked by Home Assistant when it's reachable) without handing out the PIN or its hash.
+Only for `com.thesiegs.hearthtube` signed with Hearth's release certificate above; anyone else gets null. Returns a Bundle: `ok` (boolean), and when locked, `wait_seconds` (int): five wrong tries lock checks for
 a minute.
 
 `call(uri /active, "report_playing", null, extras {"ms": long})`: HearthTube played that long (milliseconds, at most
