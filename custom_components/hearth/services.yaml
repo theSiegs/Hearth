@@ -310,3 +310,21 @@ school_time_off_cancel:
     date:
       selector:
         date:
+
+answer_request:
+  fields:
+    request_id:
+      required: true
+      selector:
+        text:
+    minutes:
+      example: 30
+      selector:
+        number:
+          min: 1
+          max: 600
+          unit_of_measurement: min
+          mode: box
+    deny:
+      selector:
+        boolean:

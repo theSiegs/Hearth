@@ -4,8 +4,9 @@ from datetime import timedelta
 
 DOMAIN = "hearth"
 # The device API's and the household summary's shape (docs/home-assistant-integration.md, Contract): goes up only
-# when a field changes meaning or type, becomes required, or goes; never for an added field
-CONTRACT = 1
+# when a field changes meaning or type, becomes required, or goes; never for an added field. 2: the household summary's
+# headline, lines and actions (glance.py): added fields, but the bump tells an app they are there
+CONTRACT = 2
 
 # Config entry data: the household's Hearth devices (TVs, phones), by the device's own stable id
 CONF_DEVICES = "devices"

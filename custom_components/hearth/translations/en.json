@@ -691,6 +691,24 @@
           "description": "Only that day's."
         }
       }
+    },
+    "answer_request": {
+      "name": "Answer a request for more time",
+      "description": "Answers a kid's request for more time (or an offer): more minutes today, or not now. The first answer wins; a later one is refused. Returns the request as its device sees it.",
+      "fields": {
+        "request_id": {
+          "name": "Request",
+          "description": "The request's id (the household summary's approvals, or the hearth_more_time_requested event)."
+        },
+        "minutes": {
+          "name": "Minutes",
+          "description": "Extra minutes today (1-600). Give this or Deny."
+        },
+        "deny": {
+          "name": "Deny",
+          "description": "Not now (starts a short wait before the kid may ask again)."
+        }
+      }
     }
   }
 }

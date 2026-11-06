@@ -1,7 +1,8 @@
 """The household at a glance, for an adult's app on Home Assistant's WebSocket (docs/home-assistant-integration.md,
 Household summary): people with their screen time and locks, the Hearth devices with what's on, and the devices waiting
 to pair. `hearth/household` answers once; `hearth/household/subscribe` answers the same and sends it again whenever it
-changes (at most every SEND_EVERY). Administrators only. Nothing here is needed for the entities and services, which
+changes (at most every SEND_EVERY). Administrators and adults on Hearth's page (auth.py). Contract 2 adds each person's
+headline, lines and actions and the household's (glance.py). Nothing here is needed for the entities and services, which
 stay as they are.
 """
 
@@ -18,12 +19,15 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_call_later
+from homeassistant.util import dt as dt_util
 
 from .const import CONF_KIND, CONF_MEDIA_PLAYERS, CONF_PERSON, CONF_ROLES, CONTRACT, DOMAIN, SIGNAL_DEVICE_ADDED, KIND_TV, SIGNAL_PAIRINGS, SIGNAL_PEOPLE, SIGNAL_STATUS
 from .counting import ALL
 from . import parent_pin
 from .asks import AskError
 from .media import media_rooms
+from .auth import is_adult_user
+from .glance import household_glance, person_glance
 
 SEND_EVERY = timedelta(seconds=2)
 
@@ -38,6 +42,9 @@ def summary(hub) -> dict[str, Any]:
     roles: dict[str, str] = dict(hub.entry.options.get(CONF_ROLES, {}))
     adults = {p for p, r in roles.items() if r == "adult"}
     profiles = household.profile_people()
+    now = dt_util.now()
+    today = now.date().isoformat()
+    asks = [ask.approval_view(household.person_name) for ask in hub.asks.pending()]
     people = []
     for person in sorted(set(household.people()) | adults | set(roles)):
         day = household.days.get(person)
@@ -83,6 +90,16 @@ def summary(hub) -> dict[str, Any]:
                 ],
             }
         )
+        # Contract 2: what an adult's app shows of them, by Hearth's rules (glance.py)
+        people[-1].update(
+            person_glance(
+                people[-1],
+                [a for a in asks if a["person"] == person],
+                [a.view(person) for a in household.allows.of(person)],
+                [o for o in household.scheduler.offs_of(person) if o["date"] == today],
+                now,
+            )
+        )
     devices = []
     for device_id, device in sorted(hub.devices.items()):
         status = hub.state(device_id).status or {}
@@ -105,7 +122,7 @@ def summary(hub) -> dict[str, Any]:
                 else device.get(CONF_PERSON),
             }
         )
-    approvals = [ask.approval_view(household.person_name) for ask in hub.asks.pending()] + [
+    approvals = asks + [
         {
             "type": "pairing",
             "device_name": p.name,
@@ -123,6 +140,8 @@ def summary(hub) -> dict[str, Any]:
         "not_screen_time": sorted(household.outside_all()),
         # The house's media players by room, twins put together (media.py)
         "media_rooms": media_rooms(household.hass),
+        # Contract 2: the household's headline and actions (glance.py)
+        "household": household_glance(people, approvals),
     }
     body["version"] = hashlib.sha256(json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()[:16]
     return body
@@ -134,21 +153,16 @@ def _hub(hass: HomeAssistant):
 
 
 def _may_read(hass: HomeAssistant, hub, user) -> bool:
-    """An administrator, or a user whose person is an adult on Hearth's page (a second parent who isn't an admin)."""
-    if user.is_admin:
-        return True
-    roles = hub.entry.options.get(CONF_ROLES, {})
-    return any(
-        roles.get(state.entity_id) == "adult" and state.attributes.get("user_id") == user.id
-        for state in hass.states.async_all("person")
-    )
+    """An administrator, or a user whose person is an adult on Hearth's page (auth.py)."""
+    return is_adult_user(hass, hub, user)
 
 
 def _for_reader(body: dict[str, Any], user) -> dict[str, Any]:
     """An adult who isn't an administrator doesn't see pairing codes (pairing is an administrator's)."""
     if user.is_admin:
         return body
-    return {**body, "approvals": [a for a in body["approvals"] if a.get("type") != "pairing"]}
+    approvals = [a for a in body["approvals"] if a.get("type") != "pairing"]
+    return {**body, "approvals": approvals, "household": household_glance(body["people"], approvals)}
 
 
 @websocket_api.websocket_command({vol.Required("type"): "hearth/household"})

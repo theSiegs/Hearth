@@ -23,6 +23,7 @@ from homeassistant.helpers.event import (
 from homeassistant.util import dt as dt_util
 
 from .api import async_register_views
+from .auth import register_service
 from .websocket import async_register_commands
 from .pause import end_pause, set_pause
 from . import panel
@@ -32,7 +33,7 @@ from .const import CONF_DEVICES, CONF_KIND, CONF_PUSH_TOPIC, DOMAIN, KIND_MOBILE
 from .push import new_topic
 from .hub import HearthHub
 from .limits import DAY_TYPES
-from .asks import CONF_OFFER_MORE
+from .asks import CONF_OFFER_MORE, AskError
 from .const import EVENT_BUDGET_REACHED
 from .counting import ALL
 from .exceptions import END_OF_DAY, SCHOOL_TIME_END, at_time, end_of_day
@@ -126,8 +127,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         for kind in days:
             target.set_budget(call.data["person"], group_id(target, call.data["group"]), kind, call.data["minutes"])
 
-    hass.services.async_register(DOMAIN, SERVICE_ADD_BONUS, add_bonus, schema=ADD_BONUS_SCHEMA)
-    hass.services.async_register(DOMAIN, SERVICE_SET_BUDGET, set_budget, schema=SET_BUDGET_SCHEMA)
+    register_service(hass, DOMAIN, SERVICE_ADD_BONUS, add_bonus, schema=ADD_BONUS_SCHEMA)
+    register_service(hass, DOMAIN, SERVICE_SET_BUDGET, set_budget, schema=SET_BUDGET_SCHEMA)
 
     def loaded_household():
         entries = hass.config_entries.async_loaded_entries(DOMAIN)
@@ -168,12 +169,52 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         end_pause(hass, call.data.get("people"))
         household.recompute()
 
-    hass.services.async_register(DOMAIN, "pause", pause, schema=PAUSE_SCHEMA)
-    hass.services.async_register(DOMAIN, "pause_end", pause_end, schema=PAUSE_END_SCHEMA)
+    register_service(hass, DOMAIN, "pause", pause, schema=PAUSE_SCHEMA)
+    register_service(hass, DOMAIN, "pause_end", pause_end, schema=PAUSE_END_SCHEMA)
+    _register_answer_request(hass)
     _register_exception_services(hass, loaded_household, group_id)
     _register_watch_services(hass)
     _register_play_on_tv(hass)
     return True
+
+
+ANSWER_REQUEST_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            vol.Required("request_id"): cv.string,
+            vol.Exclusive("minutes", "answer"): vol.All(vol.Coerce(int), vol.Range(min=1, max=600)),
+            vol.Exclusive("deny", "answer"): vol.All(cv.boolean, True),
+        }
+    ),
+    cv.has_at_least_one_key("minutes", "deny"),
+)
+
+
+def _register_answer_request(hass: HomeAssistant) -> None:
+    """hearth.answer_request: an adult answers a request for more time, as hearth/approvals/answer does on the
+    WebSocket. The first answer wins; a later one is refused."""
+
+    @callback
+    def answer_request(call: ServiceCall) -> ServiceResponse:
+        entries = hass.config_entries.async_loaded_entries(DOMAIN)
+        if not entries:
+            raise ServiceValidationError("Hearth isn't set up")
+        hub: HearthHub = entries[0].runtime_data
+        minutes = None if call.data.get("deny") else call.data["minutes"]
+        try:
+            ask = hub.asks.answer(call.data["request_id"], minutes, call.context.user_id)
+        except AskError as err:
+            raise ServiceValidationError("That request isn't open any more (answered or expired)") from err
+        return ask.device_view()
+
+    register_service(
+        hass,
+        DOMAIN,
+        "answer_request",
+        answer_request,
+        schema=ANSWER_REQUEST_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
 
 
 ALLOW_SCHEMA = vol.All(
@@ -316,23 +357,25 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         hass.async_create_task(household.scheduler.async_tick())
         return {"ids": changed}
 
-    hass.services.async_register(
-        DOMAIN, "allow", allow, schema=ALLOW_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    register_service(
+        hass, DOMAIN, "allow", allow, schema=ALLOW_SCHEMA, supports_response=SupportsResponse.OPTIONAL
     )
-    hass.services.async_register(
-        DOMAIN, "allow_end", allow_end, schema=ALLOW_END_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    register_service(
+        hass, DOMAIN, "allow_end", allow_end, schema=ALLOW_END_SCHEMA, supports_response=SupportsResponse.OPTIONAL
     )
-    hass.services.async_register(
-        DOMAIN, "explain", explain, schema=EXPLAIN_SCHEMA, supports_response=SupportsResponse.ONLY
+    register_service(
+        hass, DOMAIN, "explain", explain, schema=EXPLAIN_SCHEMA, supports_response=SupportsResponse.ONLY
     )
-    hass.services.async_register(
+    register_service(
+        hass,
         DOMAIN,
         "school_time_off",
         school_time_off,
         schema=SCHOOL_TIME_OFF_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
-    hass.services.async_register(
+    register_service(
+        hass,
         DOMAIN,
         "school_time_off_cancel",
         school_time_off_cancel,
@@ -412,8 +455,8 @@ def _register_play_on_tv(hass: HomeAssistant) -> None:
         command = hub.commands.play(device_id, target, profile_id)
         return {"id": command.id, "device_id": device_id, "expires": command.expires.isoformat()}
 
-    hass.services.async_register(
-        DOMAIN, "play_on_tv", play_on_tv, schema=PLAY_ON_TV_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    register_service(
+        hass, DOMAIN, "play_on_tv", play_on_tv, schema=PLAY_ON_TV_SCHEMA, supports_response=SupportsResponse.OPTIONAL
     )
 
 
@@ -469,11 +512,11 @@ def _register_watch_services(hass: HomeAssistant) -> None:
 
         return handle
 
-    hass.services.async_register(
-        DOMAIN, "get_watch_log", get_watch_log, schema=GET_WATCH_LOG_SCHEMA, supports_response=SupportsResponse.ONLY
+    register_service(
+        hass, DOMAIN, "get_watch_log", get_watch_log, schema=GET_WATCH_LOG_SCHEMA, supports_response=SupportsResponse.ONLY
     )
-    hass.services.async_register(
-        DOMAIN, "watch_digest", watch_digest, schema=WATCH_DIGEST_SCHEMA, supports_response=SupportsResponse.ONLY
+    register_service(
+        hass, DOMAIN, "watch_digest", watch_digest, schema=WATCH_DIGEST_SCHEMA, supports_response=SupportsResponse.ONLY
     )
     for kind, field, parse in (
         (VIDEOS, "video", video_id_of),
@@ -489,8 +532,8 @@ def _register_watch_services(hass: HomeAssistant) -> None:
             }
         )
         unschema = vol.Schema({vol.Required("person"): cv.entity_id, vol.Required(field): cv.string})
-        hass.services.async_register(DOMAIN, f"block_{name}", blocking(kind, field, parse, True), schema=schema)
-        hass.services.async_register(DOMAIN, f"unblock_{name}", blocking(kind, field, parse, False), schema=unschema)
+        register_service(hass, DOMAIN, f"block_{name}", blocking(kind, field, parse, True), schema=schema)
+        register_service(hass, DOMAIN, f"unblock_{name}", blocking(kind, field, parse, False), schema=unschema)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bool:
