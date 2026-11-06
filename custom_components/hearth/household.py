@@ -49,6 +49,7 @@ from .enforce import Enforcement, enforcers_from_options
 from .watch import WatchLog
 from .pause import PAUSE, lock_kinds, lock_until, next_lock, pause_of
 from . import parent_pin
+from .media import media_rooms
 from .schooldays import SchoolDays
 from .live import LiveTracker, Observation, Together
 from .sources import (
@@ -655,6 +656,8 @@ class Household:
                 # kid / adult as set on Hearth's page (kind_set); else a kid when they have limits
                 body["person"]["kind"] = role or ("kid" if any(g["minutes_left"] is not None for g in body["person"]["groups"]) else "person")
                 body["person"]["kind_set"] = role is not None
+            # What's playing where in the house is anyone's to see: every room's players, for a phone's Music
+            body["media_rooms"] = media_rooms(self.hass)
         body["version"] = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()[:16]
         body["contract"] = CONTRACT
         return body

@@ -443,6 +443,26 @@ then sends the same object as an event whenever it changes, at most every 2 seco
 Hearth's page opens on a tab from its link: `/hearth#today`, `#kids`, `#devices`, `#apps`, `#family`, and
 `#approvals` (Today, where requests for more time and devices waiting to pair are shown first).
 - `not_screen_time`, and `version` (changes with any of it).
+- `media_rooms`: the house's media players by room, below.
+
+### Media rooms
+
+For a phone's "what's playing where" (Glint's Music), the household summary and every phone's state document (a kid's
+too) carry `media_rooms`: `[{room, area_id, entity_id, also, kind, players}]`, rooms by name, then speaker groups.
+
+- A home often has several `media_player` entities for one thing: an Echo and its "Now Playing" twin, a console and its
+  Music Assistant player, a TV's remote and its Cast player. Entities are one **player** when one's entity_id or name
+  is another's plus a known suffix (`_now_playing`, `_music_assistant`, `_media_player`, `_2`; " (Music Assistant)",
+  " Now Playing", " Media Player"). A player's `entity_id` is the one to control (the integration closest to the thing:
+  Android TV Remote, the receiver's own, Xbox, ESPHome, Alexa Media, Cast, then Music Assistant; an unavailable one
+  last), and `also` holds its twins. `kind`: `tv` (a TV or console), `speaker` or `group`.
+- `players`: every player in the room, each `{name, entity_id, also, kind}`. The room's own `entity_id`, `also` and
+  `kind` are its first player's: its TV, else the first by name.
+- A player counts in the room of its area (any twin's, the entity's or its device's). Players in no area are left out,
+  but speaker groups ("Everywhere"), each listed as a room of its own (`kind: group`, named as the group). Hidden and
+  disabled entities are left out.
+- Read from Home Assistant's registries and entity names only, never from what's playing, so it changes only when the
+  house's setup does. Without Hearth's integration, a phone groups players its own way.
 
 Asks for more time and chore claims will join it when they exist.
 

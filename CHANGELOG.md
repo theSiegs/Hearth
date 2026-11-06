@@ -5,6 +5,7 @@
 
 ## Unreleased
 
+- **Home Assistant: media rooms.** The household summary and every phone's state carry the house's media players by room (`media_rooms`), with an Echo's "Now Playing" twin, a console's Music Assistant player and the like put together under the one player to control, for Glint's Music to show what's playing where.
 - **Home Assistant: a shared Switch.** Nintendo's limits are the whole console's, so holding one kid held everyone. Now a kid's Nintendo hold can follow a "playing" sensor (on while they're the one playing): the Switch is held only while they play, and a brother or sister with time left can use it. With Nintendo's own data that can be up to about 10 minutes late either way. The Switch also waits out bonus time from the Nintendo app, and a weekday held past midnight gets its limit and bedtime back.
 
 - **Home Assistant: new apps sort themselves.** Nobody is asked any more: a new app goes to a group that lists it, else its kind (games, video, social, messaging; from the app, or a category a Glint phone sends), else Other. Hearth's page shows what was sorted lately and every app with its group, and moving one is a tap; your choice always wins. New built-in groups **Social** and **Messaging**; Messaging doesn't count as screen time unless you tick it.

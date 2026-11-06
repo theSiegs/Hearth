@@ -23,6 +23,7 @@ from .const import CONF_KIND, CONF_MEDIA_PLAYERS, CONF_PERSON, CONF_ROLES, CONTR
 from .counting import ALL
 from . import parent_pin
 from .asks import AskError
+from .media import media_rooms
 
 SEND_EVERY = timedelta(seconds=2)
 
@@ -120,6 +121,8 @@ def summary(hub) -> dict[str, Any]:
         "devices": devices,
         "approvals": approvals,
         "not_screen_time": sorted(household.outside_all()),
+        # The house's media players by room, twins put together (media.py)
+        "media_rooms": media_rooms(household.hass),
     }
     body["version"] = hashlib.sha256(json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()[:16]
     return body
