@@ -870,6 +870,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get glintMotionStill => 'Still';
 
   @override
+  String glintBedtimeAt(String time) {
+    return 'Bedtime at $time';
+  }
+
+  @override
+  String glintSchoolTimeAt(String time) {
+    return 'School time at $time';
+  }
+
+  @override
   String get lookTitle => 'Look';
 
   @override

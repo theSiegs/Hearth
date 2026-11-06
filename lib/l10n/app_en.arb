@@ -739,6 +739,20 @@
     "@glintMotionStill": {
         "description": "Glint motion level: nothing moves"
     },
+    "glintBedtimeAt": "Bedtime at {time}",
+    "@glintBedtimeAt": {
+        "description": "Glint home's time tile (a kids profile, Home Assistant's Hearth integration): bedtime starts soon; {time} is a time of day, such as 8:30 PM",
+        "placeholders": {
+            "time": {"type": "String"}
+        }
+    },
+    "glintSchoolTimeAt": "School time at {time}",
+    "@glintSchoolTimeAt": {
+        "description": "Glint home's time tile: school time starts soon; {time} is a time of day, such as 8:00 AM",
+        "placeholders": {
+            "time": {"type": "String"}
+        }
+    },
     "lookTitle": "Look",
     "@lookTitle": {
         "description": "Settings page title, also its row in the page that opens it"

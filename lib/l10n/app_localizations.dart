@@ -1546,6 +1546,18 @@ abstract class AppLocalizations {
   /// **'Still'**
   String get glintMotionStill;
 
+  /// Glint home's time tile (a kids profile, Home Assistant's Hearth integration): bedtime starts soon; {time} is a time of day, such as 8:30 PM
+  ///
+  /// In en, this message translates to:
+  /// **'Bedtime at {time}'**
+  String glintBedtimeAt(String time);
+
+  /// Glint home's time tile: school time starts soon; {time} is a time of day, such as 8:00 AM
+  ///
+  /// In en, this message translates to:
+  /// **'School time at {time}'**
+  String glintSchoolTimeAt(String time);
+
   /// Settings page title, also its row in the page that opens it
   ///
   /// In en, this message translates to:
