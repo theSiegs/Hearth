@@ -22,7 +22,10 @@ import 'dart:async';
 
 import 'package:flauncher/app_image_type.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/apps_service.dart';
+import 'package:flauncher/providers/held_apps.dart';
+import 'package:flauncher/widgets/time_up_card.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/application_info_panel.dart';
 import 'package:flauncher/widgets/card_style.dart';
@@ -80,6 +83,18 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
   late final AppsService _appsService;
   late int _imageRevision;
 
+  /// Why the kid can't open this app now (its group's time is up, a pause, a lock); null: it opens. Set by build.
+  AppHold? _hold;
+
+  /// A held app's art: grey and faded, the same at once with no animation (also with Motion "Still").
+  static const double heldOpacity = 0.4;
+  static const ColorFilter _grey = ColorFilter.matrix(<double>[
+    0.2126, 0.7152, 0.0722, 0, 0,
+    0.2126, 0.7152, 0.0722, 0, 0,
+    0.2126, 0.7152, 0.0722, 0, 0,
+    0, 0, 0, 1, 0,
+  ]);
+
   @override
   void initState() {
     super.initState();
@@ -133,6 +148,10 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
       _appImageLoadFuture = _loadAppBannerOrIcon(_appsService);
     }
     final bool showAppNames = context.select<SettingsService, bool>((s) => s.showAppNamesBelowIcons);
+    // Hearth's own entries (an action rather than an app) are never held
+    _hold = widget.application.action != null
+        ? null
+        : context.select<HeldApps?, AppHold?>((h) => h?.holdOf(widget.application.packageName));
     final CardStyle style = CardStyle.of(context.select<SettingsService, String>((s) => s.themes));
 
     return FocusKeyboardListener(
@@ -155,6 +174,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
                       children: [
                         _notificationBadge(),
                         _tapTarget(context),
+                        if (_hold != null) _heldBadge(context, _hold!),
                         if (_moving) ..._arrows(),
                       ],
                     ),
@@ -221,6 +241,58 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
         },
       );
 
+  /// "0 left" (a group's time is up) or a clock (a pause or a lock holds every app), bottom left on the art.
+  Widget _heldBadge(BuildContext context, AppHold hold) {
+    final l10n = AppLocalizations.of(context)!;
+    return Positioned(
+      left: 8,
+      bottom: 8,
+      child: IgnorePointer(
+        child: Semantics(
+          label: l10n.appOutOfTimeLabel(widget.application.name),
+          child: Container(
+            key: const Key("app_card_held_badge"),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.circular(10)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.schedule, size: 12, color: Colors.white),
+                if (!hold.all) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    l10n.appOutOfTimeBadge,
+                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold, height: 1.0),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The banner or icon: on the card's ink as usual; a held app's grey and faded (ink can't be filtered).
+  Widget _art(ImageProvider image, {BoxFit? fit, double? height}) {
+    if (_hold == null) {
+      return Ink.image(
+        image: image,
+        fit: fit,
+        height: height,
+        onImageError: (e, s) => debugPrint('AppCard image error: $e'),
+      );
+    }
+    return Opacity(
+      key: const Key("app_card_held_art"),
+      opacity: heldOpacity,
+      child: ColorFiltered(
+        colorFilter: _grey,
+        child: Image(image: image, fit: fit, height: height, width: fit == BoxFit.cover ? double.infinity : null),
+      ),
+    );
+  }
+
   Widget _tapTarget(BuildContext context) => Actions(
         actions: <Type, Action<Intent>>{
           ActivateIntent: CallbackAction<ActivateIntent>(
@@ -282,11 +354,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
           if (record == null) return const SizedBox();
 
           if (record.$1 == AppImageType.banner) {
-            return Ink.image(
-              image: record.$2,
-              fit: BoxFit.cover,
-              onImageError: (e, s) => debugPrint('AppCard banner image error: $e'),
-            );
+            return _art(record.$2, fit: BoxFit.cover);
           }
           else {
             return Padding(
@@ -295,11 +363,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
                 children: [
                   Expanded(
                     flex: 2,
-                    child: Ink.image(
-                      image: record.$2,
-                      height: double.maxFinite,
-                      onImageError: (e, s) => debugPrint('AppCard icon image error: $e'),
-                    ),
+                    child: _art(record.$2, height: double.maxFinite),
                   ),
                   Flexible(
                     flex: 3,
@@ -413,6 +477,12 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin, 
       return _onMovingKey(context, key);
     }
     if (key == null || AppCardKeys.validationKeys.contains(key)) {
+      final hold = _hold;
+      if (hold != null) {
+        // Never opened: the time's up card says why, with a way to ask for more
+        pressThenRun(() => showTimeUpDialog(context, context.read<FLauncherChannel>(), hold.group));
+        return KeyEventResult.handled;
+      }
       pressThenRun(() => context.read<AppsService>().launchApp(widget.application));
       return KeyEventResult.handled;
     }

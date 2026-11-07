@@ -3651,6 +3651,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'The request ended before it was confirmed. Try again.';
 
   @override
+  String get appOutOfTimeBadge => '0 left';
+
+  @override
+  String appOutOfTimeLabel(String app) {
+    return '$app, out of time';
+  }
+
+  @override
   String timeUpForGroup(String group) {
     return 'Time\'s up for $group today';
   }

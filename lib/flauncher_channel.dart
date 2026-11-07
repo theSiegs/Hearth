@@ -606,6 +606,11 @@ class FLauncherChannel {
   Future<HaLockState> getHaLockState() async =>
       HaLockState.fromMap(await _methodChannel.invokeMapMethod<dynamic, dynamic>("getHaLockState"));
 
+  /// Of these apps, the ones the active profile can't open now: package -> the group whose time is up, or "" while a
+  /// family pause or a lock holds every app. Empty in an adult's profile.
+  Future<Map<String, String>> getHeldApps(List<String> packages) async =>
+      (await _methodChannel.invokeMapMethod<String, String>("getHeldApps", packages)) ?? const {};
+
   /// Asks the adults for [minutes] more of [group] (an id; "all" by default) for the active kids profile:
   /// {ok, request?, error?, retryIn?}. Errors: already_open (with the open request), cooldown (retryIn seconds),
   /// no_person, not_paired, too_often, unreachable, failed.

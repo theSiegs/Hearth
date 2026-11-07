@@ -4522,6 +4522,17 @@
     "@haPairEnded": {
         "description": "Home Assistant pairing: expired"
     },
+    "appOutOfTimeBadge": "0 left",
+    "@appOutOfTimeBadge": {
+        "description": "Small badge on an app's card on the home (a kids profile): the app's group has no time left today"
+    },
+    "appOutOfTimeLabel": "{app}, out of time",
+    "@appOutOfTimeLabel": {
+        "description": "Screen reader label of an app's card on the home when the kid can't open it now (time up, a pause or bedtime); {app} is the app's name",
+        "placeholders": {
+            "app": {"type": "String"}
+        }
+    },
     "timeUpForGroup": "Time's up for {group} today",
     "@timeUpForGroup": {
         "description": "Time's up card (a kids profile, Home Assistant's Hearth integration): an app's group has no time left today; {group} is the group's name, such as Games",

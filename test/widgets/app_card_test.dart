@@ -1,6 +1,8 @@
 import 'package:flauncher/models/app.dart';
 import 'package:flauncher/models/category.dart';
+import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/providers/apps_service.dart';
+import 'package:flauncher/providers/held_apps.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/app_card.dart';
 import 'package:flutter/material.dart';
@@ -53,9 +55,13 @@ void main() {
   Widget createWidgetUnderTest({
     void Function(AxisDirection)? onMove,
     VoidCallback? onMoveEnd,
+    HeldApps? heldApps,
+    FLauncherChannel? channel,
   }) {
     return MultiProvider(
       providers: [
+        if (heldApps != null) ChangeNotifierProvider<HeldApps?>.value(value: heldApps),
+        if (channel != null) Provider<FLauncherChannel>.value(value: channel),
         ChangeNotifierProvider<AppsService>.value(value: mockAppsService),
         ChangeNotifierProvider<SettingsService>.value(value: mockSettingsService),
         ChangeNotifierProvider<NotificationsService>.value(value: mockNotificationsService),
@@ -203,5 +209,65 @@ void main() {
 
     verify(mockAppsService.launchApp(mockApp)).called(1);
     await tester.pump(const Duration(milliseconds: 600));
+  });
+
+  testWidgets('an app out of time looks it, opens the time up card instead of the app, and comes back at once',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1920, 1080);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    final channel = MockFLauncherChannel();
+    final held = HeldApps(channel, () => const [], start: false);
+    addTearDown(held.dispose);
+
+    await tester.pumpWidget(createWidgetUnderTest(heldApps: held, channel: channel));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key("app_card_held_badge")), findsNothing);
+    expect(find.byKey(const Key("app_card_held_art")), findsNothing);
+
+    held.debugSetHeld({"test.app.package": const AppHold("Games")});
+    // No animation: the look changes on the next frame
+    await tester.pump();
+    expect(find.byKey(const Key("app_card_held_badge")), findsOneWidget);
+    expect(find.text("0 left"), findsOneWidget);
+    final art = tester.widget<Opacity>(find.byKey(const Key("app_card_held_art")));
+    expect(art.opacity, 0.4);
+
+    // Focus stays; pressing shows why, and never opens the app
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    verifyNever(mockAppsService.launchApp(any));
+    expect(find.byKey(const Key("time_up_close")), findsOneWidget);
+    await tester.tap(find.byKey(const Key("time_up_close")));
+    await tester.pumpAndSettle();
+
+    // A pause holds everything: the clock, without "0 left"
+    held.debugSetHeld({"test.app.package": const AppHold(null)});
+    await tester.pump();
+    expect(find.byKey(const Key("app_card_held_badge")), findsOneWidget);
+    expect(find.text("0 left"), findsNothing);
+
+    // Time came back (a bonus, an answered ask): it looks and opens as usual
+    held.debugSetHeld({});
+    await tester.pump();
+    expect(find.byKey(const Key("app_card_held_badge")), findsNothing);
+    expect(find.byKey(const Key("app_card_held_art")), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump(const Duration(milliseconds: 200));
+    verify(mockAppsService.launchApp(mockApp)).called(1);
+    await tester.pumpAndSettle(const Duration(seconds: 1));
+  });
+
+  testWidgets("Hearth's own entries are never held", (WidgetTester tester) async {
+    mockApp = App(packageName: "test.app.package", name: "Test App", version: "1", hidden: false, action: "hearth.settings");
+    final held = HeldApps(MockFLauncherChannel(), () => const [], start: false)
+      ..debugSetHeld({"test.app.package": const AppHold(null)});
+    addTearDown(held.dispose);
+    await tester.pumpWidget(createWidgetUnderTest(heldApps: held));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key("app_card_held_badge")), findsNothing);
   });
 }

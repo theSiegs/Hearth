@@ -6093,6 +6093,18 @@ abstract class AppLocalizations {
   /// **'The request ended before it was confirmed. Try again.'**
   String get haPairEnded;
 
+  /// Small badge on an app's card on the home (a kids profile): the app's group has no time left today
+  ///
+  /// In en, this message translates to:
+  /// **'0 left'**
+  String get appOutOfTimeBadge;
+
+  /// Screen reader label of an app's card on the home when the kid can't open it now (time up, a pause or bedtime); {app} is the app's name
+  ///
+  /// In en, this message translates to:
+  /// **'{app}, out of time'**
+  String appOutOfTimeLabel(String app);
+
   /// Time's up card (a kids profile, Home Assistant's Hearth integration): an app's group has no time left today; {group} is the group's name, such as Games
   ///
   /// In en, this message translates to:

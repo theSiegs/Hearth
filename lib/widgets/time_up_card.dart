@@ -308,7 +308,8 @@ Future<void> showTimeUpDialog(BuildContext context, FLauncherChannel channel, St
           TimeUpCard(
             channel: channel,
             heldGroup: group,
-            heldByPause: group == null,
+            // Nothing named and no pause: a lock (bedtime, School time) holds it, as the card then says
+            heldByPause: group == null && (state.paused || state.lockKind == null),
             initial: state,
             autofocus: state.canAsk,
           ),

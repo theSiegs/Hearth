@@ -540,6 +540,11 @@ public class MainActivity extends FlutterActivity {
             });
             // The Hearth integration's say about the active kids profile, for the time's up card: a pause, the lock
             // on now, the next bedtime, the latest request for more time, the groups out of time (HaLocks)
+            // The apps on Hearth's home the active profile can't open now: {package: group name, "" for all}
+            case "getHeldApps" -> {
+                java.util.List<String> packages = call.arguments();
+                result.success(Allowance.heldApps(this, packages != null ? packages : java.util.List.of()));
+            }
             case "getHaLockState" -> {
                 String key = LauncherAccessibilityService.getActiveProfileKey(this);
                 long now = System.currentTimeMillis();

@@ -106,6 +106,52 @@ final class Allowance {
         return HaAllowance.forProfile(context, profileKey, System.currentTimeMillis()).timeUpGroup(packageName);
     }
 
+    /** In {@link #heldApps}: everything is held (a family pause or a lock), not one group's time. */
+    static final String HELD_ALL = "";
+
+    /**
+     * Which of these apps the active profile can't open now, for Hearth's home to show them out of time: package ->
+     * the group whose time is up, or {@link #HELD_ALL} while a family pause or a lock holds every app. None in an
+     * adult's profile, and never Hearth's own entries or the apps Home Assistant never holds.
+     */
+    static java.util.Map<String, String> heldApps(Context context, java.util.Collection<String> packages) {
+        String profileKey = LauncherAccessibilityService.getActiveProfileKey(context);
+        if (profileKey == null || ProfileUsers.isAdults(context, ProfileUsers.serialOfKey(profileKey))) {
+            return new java.util.HashMap<>();
+        }
+        long now = System.currentTimeMillis();
+        Values values = forProfile(context, profileKey, now);
+        return heldApps(packages, HaAllowance.entryFor(context, profileKey, now), values.youtubeMinutesLeft,
+                "YouTube", now);
+    }
+
+    /** {@link #heldApps(Context, java.util.Collection)} from the profile's entry and its YouTube minutes left. */
+    static java.util.Map<String, String> heldApps(java.util.Collection<String> packages, JSONObject entry,
+            Integer youtubeMinutesLeft, String youtubeName, long now) {
+        java.util.Map<String, String> held = new java.util.HashMap<>();
+        HaAllowance.Values ha = HaAllowance.valuesOf(entry, null);
+        JSONObject lock = HaLocks.locksOf(entry).optJSONObject("lock");
+        Long lockUntil = lock != null ? HaLocks.parseTime(lock.optString("until", null)) : null;
+        boolean locked = lock != null && (lockUntil == null || lockUntil > now);
+        for (String app : packages) {
+            if (app == null) continue;
+            boolean hearthTube = CompanionApps.HEARTHTUBE.equals(app);
+            if (HaAllowance.NEVER_HELD.contains(app) && !hearthTube) continue;
+            String group = hearthTube ? null : ha.timeUpGroup(app, now);
+            if (HaAllowance.PAUSE_HOLD.equals(group) || hearthTube && ha.pausedUntil != null && now < ha.pausedUntil) {
+                held.put(app, HELD_ALL);
+            } else if (group != null) {
+                held.put(app, group);
+            } else if (locked) {
+                held.put(app, HELD_ALL);
+            } else if (hearthTube && youtubeMinutesLeft != null && youtubeMinutesLeft <= 0) {
+                // HearthTube holds YouTube time itself; Hearth's own limit (or Home Assistant's) says it's out
+                held.put(app, youtubeName);
+            }
+        }
+        return held;
+    }
+
     /** Whether the app is held for its group's time (main thread): if so, the kid is told why and it doesn't open. */
     static boolean holdForTime(Context context, String packageName) {
         return holdForTime(context, packageName, false);

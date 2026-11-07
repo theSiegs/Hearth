@@ -47,6 +47,7 @@ import 'package:flauncher/providers/household_looks_service.dart';
 import 'package:flauncher/share/household_join.dart';
 import 'package:flauncher/share/share_wallpapers.dart';
 import 'package:flauncher/providers/update_service.dart';
+import 'package:flauncher/providers/held_apps.dart';
 import 'package:flauncher/providers/profile_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -192,6 +193,14 @@ Future<void> main() async {
             create: (context) => ProfileService(fLauncherChannel, sharedPreferences, context.read<BackupService>(),
                 context.read<SettingsService>(), context.read<AppsService>(),
                 wallpaperService: context.read<WallpaperService>()),
+            lazy: false),
+        // The apps a kids profile can't open now, shown out of time on the home
+        ChangeNotifierProvider(
+            create: (context) {
+              final apps = context.read<AppsService>();
+              return HeldApps(fLauncherChannel, () => apps.applications.map((a) => a.packageName),
+                  profile: Listenable.merge([context.read<ProfileService>(), apps]));
+            },
             lazy: false),
         // Household sync: each profile's look, layout and wallpaper pictures in step across the TVs
         Provider<HouseholdLooksService>(
