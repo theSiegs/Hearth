@@ -1,0 +1,1 @@
+The TV app is now called Hearth TV: Hearth is the name of the whole household system and its Home Assistant integration.

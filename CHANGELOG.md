@@ -5,7 +5,6 @@
 
 ## Unreleased
 
-- **The TV app is Hearth TV.** Hearth is now the name of the household system and its Home Assistant integration; the home screen app on the TV is **Hearth TV** (its name in Android's lists, the setup and the docs). Nothing to reinstall: the app, its id and the release files are the same. The integration shows Hearth's own icon in Home Assistant 2026.3 and later, and its version is now the release version.
 - **Home Assistant: requests reach every adult's phone.** Requests for more time, offers and chores done go to each adult on Hearth's page, on every Home Assistant companion app of theirs (found from their person), as well as the phone chosen in Configure; each adult can be switched off on Hearth's page. A tap opens Hearth's page at that request (`/hearth?ask=<id>`), or on Android the deep link `hearth://ask/<id>` for an adult who chose it. Once a request is answered anywhere, it leaves every phone.
 - **Home Assistant: a kid's own Home Assistant user.** A kid signed in to the Home Assistant app with their own user can read their own minutes left, locks and request (`hearth/me`, and `hearth/me/subscribe` for changes) and ask for more time (`hearth/ask`), the same way their TV or phone does, with the same one-open-request rule and the wait after "not now". Nothing else is open to them: the household, the answers and every `hearth.*` service stay with the adults.
 - **Home Assistant: places.** Configure > Places (and Hearth's page): Home, each kid's School and favorite places, all Home Assistant zones. Each kid gets a Place sensor (home, school, a favorite's key, away or unknown) from their Family Link location while it's fresh (20 minutes), else their person in Home Assistant; never a router or Wi-Fi tracker. A change needs two agreeing readings or three minutes and fires `hearth_place`; Hearth keeps no coordinates. `hearth.allow`, `hearth.pause` and `hearth.school_time_off` take `ends_on` (`arrive` at or `leave` a place): it ends for each kid as they get there (or leave), with Hearth's extra time in Family Link and Family Safety taken back and the adults told; the time stays the cap, and an unknown place never ends anything. Hearth's page shows each kid's place and "until arriving home"; the household summary has each kid's `place`; a kid's own device only hears "ends when you get home".
@@ -32,6 +31,10 @@
 - **Home Assistant: ask for more time.** A kid's TV or phone asks for 15, 30, 45 or 60 more minutes; the adults get a notification (and a card on Hearth's page) with quick answers, the first answer wins, and the device hears it with its next status. One open request per kid, and a short wait after "not now".
 - **Home Assistant: family pause.** `hearth.pause` (for some minutes or until a time, with a reason, everyone by default) holds the kids' Hearth devices; `hearth.pause_end` lets them go. Hearth's page has a Pause everyone bar.
 - **Home Assistant: bedtime heads-up.** Each person's state says when their lock ends and when the next bedtime or school time starts (from Family Link's sensors), for devices to wind down; Hearth's page shows "Bedtime in 15 min".
+
+## 2026.11.09 (pre-release)
+
+- **The TV app is Hearth TV.** Hearth is now the name of the household system and its Home Assistant integration; the home screen app on the TV is **Hearth TV** (its name in Android's lists, the setup and the docs). Nothing to reinstall: the app, its id and the release files are the same. The integration shows Hearth's own icon in Home Assistant 2026.3 and later, and its version is now the release version.
 
 ## 2026.11.08 (pre-release)
 
