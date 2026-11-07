@@ -125,7 +125,13 @@ async def test_in_a_person_s_profile(hass: HomeAssistant, hass_client_no_auth: C
     secret = await _pair(hass, client)
     hass.config_entries.async_update_entry(
         entry,
-        options={"profiles": {"user:10": "person.sam", "user:0:alex": "person.alex", "user:11": "person.alex"}},
+        options={
+            "profiles": {
+                f"{TV_ID}/user:10": "person.sam",
+                f"{TV_ID}/user:0:alex": "person.alex",
+                f"{TV_ID}/user:11": "person.alex",
+            }
+        },
     )
     await hass.async_block_till_done()
     alex_on = {**STATUS, "profile_id": "user:0:alex"}

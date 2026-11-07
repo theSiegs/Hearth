@@ -32,7 +32,7 @@ async def test_the_household_at_a_glance(
     assert body["contract"] == 2
     sam = people["person.sam"]
     assert sam["name"] == "Sam"
-    assert sam["tv_profiles"] == ["user:10"]
+    assert sam["tv_profiles"] == ["name:sam"]
     assert sam["all"]["used_minutes"] == 15
     assert sam["all"]["budget"] is None and sam["all"]["bonus"] == 0
     assert sam["held"] is False and sam["held_by"] == []

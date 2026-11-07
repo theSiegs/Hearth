@@ -152,9 +152,9 @@
       },
       "people": {
         "title": "Who's who on the TVs",
-        "description": "Each Google TV profile the household's TVs have reported, and the person it is. Leave a guest or shared profile empty: its time counts for nobody. A profile not listed (nobody used it today) can be added below by its id, as the TV's Hearth shows it (user:11).",
+        "description": "Each Google TV profile the household's TVs have reported, and the person it is. A profile is listed by its name, once for all the TVs that have it; one from a TV with an older Hearth is listed for that TV only. Leave a guest or shared profile empty: its time counts for nobody. Old mappings by number (user:10) aren't listed: saving drops them. A profile not listed yet can be added below by its name ref (name:sam) or one TV's key (<device id>/user:11).",
         "data": {
-          "profile_id": "Another profile's id",
+          "profile_id": "Another profile's ref or TV key",
           "profile_person": "Its person"
         }
       },
@@ -361,7 +361,7 @@
     "error": {
       "name_taken": "That name is taken.",
       "already_added": "That sensor is a source already.",
-      "bad_profile_id": "Give an id like user:11, and its person.",
+      "bad_profile_id": "Give a ref like name:sam (or a TV's key, <device id>/user:11), and its person.",
       "bad_pin": "Give 4 digits.",
       "pins_differ": "The two PINs differ.",
       "not_adult": "Only an adult has a parent PIN: mark them as an adult on Hearth's page (Family) first.",
@@ -709,6 +709,12 @@
           "description": "Not now (starts a short wait before the kid may ask again)."
         }
       }
+    }
+  },
+  "issues": {
+    "tv_profile_keys": {
+      "title": "Pick the kids' TV profiles again",
+      "description": "Hearth used to map TV profiles by their number ({keys}), but each TV numbers its profiles itself: the same number is a different kid on each TV, so one kid could get another's limits. Those mappings are no longer used. Open Hearth's page (Devices, TV profiles) or Hearth's Configure menu and pick whose each profile is. Profiles are now listed by name, one choice for every TV. Removing or replacing the old entries clears this message."
     }
   }
 }

@@ -1006,7 +1006,10 @@ class HearthPanel extends HTMLElement {
     const persons = (cfg.persons || []).map((p) => ({ value: p.id, label: p.name }));
     const seen = cfg.seen_profiles || {};
     const profiles = cfg.profiles || {};
-    const ids = [...new Set([...Object.keys(seen), ...Object.keys(profiles)])].sort();
+    // seen_profiles: option key -> label ("Sam · Kitchen, Playroom"); old bare keys ("user:10") need picking again
+    const ids = [...new Set([...Object.keys(seen), ...Object.keys(profiles)])].sort((a, b) =>
+      (seen[a] || a).localeCompare(seen[b] || b));
+    const old = (id) => /^user:\d+/.test(id);
     return `${this._pairingCards()}
       <section class="card">
         <h3><ha-icon icon="mdi:link-variant"></ha-icon>Pair a TV or phone</h3>
@@ -1034,13 +1037,14 @@ class HearthPanel extends HTMLElement {
       </section>
       <section class="card">
         <h3><ha-icon icon="mdi:account-switch"></ha-icon>TV profiles</h3>
-        <p class="muted">Each Google TV profile the TVs have reported, and whose it is. A guest or shared profile belongs to nobody.</p>
+        <p class="muted">Each Google TV profile the TVs have reported, by name, and whose it is: one choice covers every TV that has the profile. A guest or shared profile belongs to nobody.</p>
+        ${ids.some(old) ? `<p class="warn">Mappings by number (user:10) no longer count: each TV numbers its profiles itself. Pick the profiles by name below, then set the old ones to Nobody.</p>` : ""}
         ${ids.length ? `<table class="limits"><tbody>${ids
-          .map((id) => `<tr><td>${esc(seen[id] || "Profile")} <span class="muted small">${esc(id)}</span></td>
+          .map((id) => `<tr><td>${esc(seen[id] || id)}</td>
             <td><select data-change="profile" data-profile="${esc(id)}">${this._options(persons, profiles[id] || "", "Nobody")}</select></td></tr>`)
           .join("")}</tbody></table>` : `<p class="muted small">No profiles reported yet: they appear once a paired TV has been used.</p>`}
         <details id="add-profile"><summary>Add a profile no TV has reported yet</summary>
-          <div class="inline"><input id="new-profile-id" placeholder="user:11"><select id="new-profile-person">${this._options(persons, "", "Whose?")}</select>
+          <div class="inline"><input id="new-profile-id" placeholder="name:sam"><select id="new-profile-person">${this._options(persons, "", "Whose?")}</select>
           <button class="btn" data-action="profile-add">Add</button></div>
         </details>
       </section>`;
@@ -1310,6 +1314,7 @@ p { margin: 6px 0 12px; line-height: 1.45; }
 .chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 14px; font-size: 12px;
   background: var(--secondary-background-color, #eee); color: var(--primary-text-color); }
 .chip ha-icon { --mdc-icon-size: 14px; }
+p.warn { color: var(--warning-color, #ffa600); }
 .chip.warn { background: color-mix(in srgb, var(--warning-color, #ffa600) 22%, transparent); }
 .chip.out { background: color-mix(in srgb, var(--error-color, #db4437) 20%, transparent); }
 .chip.play { background: color-mix(in srgb, var(--success-color, #43a047) 20%, transparent); }

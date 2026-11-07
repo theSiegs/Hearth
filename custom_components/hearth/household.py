@@ -54,6 +54,7 @@ from .watch import WatchLog
 from .pause import PAUSE, lock_kinds, lock_until, next_lock, pause_of
 from . import parent_pin
 from .media import media_rooms
+from .profiles import REF_PREFIX, is_ref, split_tv_key, tv_key
 from .schooldays import SchoolDays
 from .live import LiveTracker, Observation, Together
 from .sources import (
@@ -150,14 +151,52 @@ class Household:
     def profile_people(self) -> dict[str, str]:
         return dict(self.options.get(CONF_PROFILES, {}))
 
-    def profile_person(self, profile_id: str) -> str | None:
-        """The person a TV profile is mapped to. Hearth keeps a kids profile's log under its user ("user:10"), which
-        matches a mapping of the same user with its account ("user:10:sam") when there is only one."""
+    def tv_profiles(self, device_id: str) -> dict[str, dict[str, str | None]]:
+        """The profiles a TV has reported, by its own keys ("user:10"): {"name", "ref"}. A TV too old to send refs
+        has none (its profiles are mapped by TV key only)."""
+        status = self.hub.state(device_id).status or {}
+        out: dict[str, dict[str, str | None]] = {}
+        for key, entry in (status.get("profiles") or {}).items():
+            out[key] = {"name": entry.get("name"), "ref": entry.get("ref")}
+        for key, usage in (status.get("usage_today") or {}).items():
+            entry = out.setdefault(key, {"name": None, "ref": None})
+            entry["name"] = entry["name"] or usage.get("profile_name")
+            entry["ref"] = entry["ref"] or usage.get("profile_ref")
+        if key := status.get("profile_id"):
+            entry = out.setdefault(key, {"name": None, "ref": None})
+            entry["name"] = status.get("profile") or entry["name"]
+            entry["ref"] = status.get("profile_ref") or entry["ref"]
+        return out
+
+    def _mapped(self, device_id: str, profile_id: str, known: dict[str, dict[str, str | None]]) -> str | None:
+        """The person one profile of this TV is mapped to: by its household ref first, else by this TV's key."""
         profiles = self.profile_people()
-        if profiles.get(profile_id):
-            return profiles[profile_id]
-        found = {person for key, person in profiles.items() if person and key.startswith(f"{profile_id}:")}
+        ref = (known.get(profile_id) or {}).get("ref")
+        if ref and profiles.get(ref):
+            return profiles[ref]
+        return profiles.get(tv_key(device_id, profile_id)) or None
+
+    def profile_person(self, device_id: str, profile_id: str | None) -> str | None:
+        """The person a TV's profile is mapped to. Never by the bare key: its serial is this TV's own. Hearth keeps a
+        kids profile's log under its user ("user:10"), which matches a mapping of the same user with its account
+        ("user:10:sam") when there is only one."""
+        if not profile_id:
+            return None
+        known = self.tv_profiles(device_id)
+        if person := self._mapped(device_id, profile_id, known):
+            return person
+        prefix = f"{profile_id}:"
+        own = tv_key(device_id, prefix)
+        found = {self._mapped(device_id, key, known) for key in known if key.startswith(prefix)}
+        found |= {person for key, person in self.profile_people().items() if person and key.startswith(own)}
+        found.discard(None)
         return found.pop() if len(found) == 1 else None
+
+    def device_profile_people(self, device_id: str) -> dict[str, str]:
+        """This TV's profiles, by its own keys, and whose each is (the mapped ones only)."""
+        keys = set(self.tv_profiles(device_id))
+        keys |= {split[1] for key in self.profile_people() if (split := split_tv_key(key)) and split[0] == device_id}
+        return {key: person for key in sorted(keys) if (person := self.profile_person(device_id, key))}
 
     def youtube_people(self) -> list[str]:
         """The people with a TV profile: whose videos started can come up, and who can have YouTube blocks."""
@@ -241,15 +280,36 @@ class Household:
             out["next_lock"] = upcoming
         return out
 
-    def seen_profiles(self) -> dict[str, str | None]:
-        """TV profiles the TVs have reported: profile_id -> its name, for the options."""
-        found: dict[str, str | None] = {}
-        for device_id in self.hub.devices:
-            status = self.hub.state(device_id).status or {}
-            for profile_id, usage in (status.get("usage_today") or {}).items():
-                found.setdefault(profile_id, usage.get("profile_name"))
-            if status.get("profile_id"):
-                found[status["profile_id"]] = status.get("profile") or found.get(status["profile_id"])
+    def seen_profiles(self) -> dict[str, str]:
+        """The TV profiles to map, for the options: option key -> how to show it. A profile a TV reports with its
+        household ref is one choice for every TV ("Sam · Kitchen, Playroom"); one without (an older Hearth) is that TV's
+        ("Sam on Playroom"). Keys already mapped are listed too, the old bare ones as needing a new pick."""
+        tvs: dict[str, list[str]] = {}
+        names: dict[str, str | None] = {}
+        for device_id, device in self.hub.devices.items():
+            if device.get(CONF_KIND) != KIND_TV:
+                continue
+            tv_name = device.get("name") or device_id
+            for profile_id, entry in self.tv_profiles(device_id).items():
+                key = entry["ref"] or tv_key(device_id, profile_id)
+                names[key] = names.get(key) or entry["name"]
+                tvs.setdefault(key, [])
+                if tv_name not in tvs[key]:
+                    tvs[key].append(tv_name)
+        found: dict[str, str] = {}
+        for key, on in tvs.items():
+            name = names.get(key) or "Profile"
+            found[key] = f"{name} · {', '.join(sorted(on))}" if is_ref(key) else f"{name} on {on[0]} (this TV only)"
+        for key in self.profile_people():
+            if key in found:
+                continue
+            if is_ref(key):
+                found[key] = f"{key[len(REF_PREFIX):]} · no TV has reported it yet"
+            elif split := split_tv_key(key):
+                tv_name = self.hub.devices.get(split[0], {}).get("name") or "a TV no longer paired"
+                found[key] = f"{split[1]} on {tv_name} (this TV only)"
+            else:
+                found[key] = f"Old mapping {key}: the same number is a different profile on each TV, pick again"
         return found
 
     def known_apps(self) -> dict[str, str]:
@@ -324,8 +384,6 @@ class Household:
         categories: dict[str, str] = {}
         catalog: dict[str, str] = {}
         hints: dict[str, set[str]] = {}
-        profiles = self.profile_people()
-
         def add(person: str, device: str, reading: Reading) -> None:
             items = {}
             for item, seconds in reading.items.items():
@@ -347,6 +405,7 @@ class Household:
             # Yesterday's counts from a device that hasn't posted since midnight don't count today
             fresh = status.get("day") == today.isoformat()
             if device.get(CONF_KIND) == KIND_TV:
+                profiles = self.device_profile_people(device_id)
                 if fresh:
                     for profile_id, usage in (status.get("usage_today") or {}).items():
                         person = profiles.get(profile_id)
@@ -666,7 +725,8 @@ class Household:
             profile_ids = set((status.get("usage_today") or {}).keys())
             if status.get("profile_id"):
                 profile_ids.add(status["profile_id"])
-            profiles = self.profile_people()
+            # By this TV's own keys: what the TV looks its profiles up by
+            profiles = self.device_profile_people(device_id)
             body: dict[str, Any] = {
                 "profiles": {
                     profile_id: self._person_document(profiles[profile_id])

@@ -10,6 +10,8 @@ from custom_components.hearth.const import DOMAIN
 from test_init import NONCE, PHONE_ID, _pair, _post, _set_up
 
 KID = "user:10"
+SAM = "name:sam"
+SAM_LABEL = "Sam · Kitchen (name:sam)"
 
 
 def _today() -> str:
@@ -29,13 +31,14 @@ def _tv_status(hearthtube_s: int = 0, game_s: int = 0, playing: str | None = Non
         "app_package": playing,
         "profile": "Sam",
         "profile_id": KID,
+        "profile_ref": SAM,
         "kids_profile": True,
         "day": _today(),
         "seconds_today": hearthtube_s + game_s,
         "app_categories": {"com.example.game": "game"},
         "usage_today": {
-            KID: {"profile_name": "Sam", "seconds": hearthtube_s + game_s, "apps": apps},
-            "user:0": {"profile_name": "Owner", "seconds": 60, "apps": {"com.example.news": 60}},
+            KID: {"profile_name": "Sam", "profile_ref": SAM, "seconds": hearthtube_s + game_s, "apps": apps},
+            "user:0": {"profile_name": "Owner", "profile_ref": "name:owner", "seconds": 60, "apps": {"com.example.news": 60}},
         },
     }
 
@@ -53,8 +56,8 @@ async def _household_with_sam(hass: HomeAssistant, hass_client_no_auth):
     result = await hass.config_entries.options.async_configure(result["flow_id"], {"next_step_id": "people"})
     assert result["type"] is FlowResultType.FORM
     labels = [str(key) for key in result["data_schema"].schema]
-    assert "Sam (user:10)" in labels and "Owner (user:0)" in labels
-    result = await hass.config_entries.options.async_configure(result["flow_id"], {"Sam (user:10)": "person.sam"})
+    assert SAM_LABEL in labels and "Owner · Kitchen (name:owner)" in labels
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {SAM_LABEL: "person.sam"})
     assert result["type"] is FlowResultType.CREATE_ENTRY
     await hass.async_block_till_done()
     return client, secret
@@ -241,14 +244,19 @@ async def test_a_profile_not_seen_yet_can_be_mapped_by_its_id(
     result = await hass.config_entries.options.async_init(entry.entry_id)
     result = await hass.config_entries.options.async_configure(result["flow_id"], {"next_step_id": "people"})
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {"Sam (user:10)": "person.sam", "profile_id": "nonsense", "profile_person": "person.alex"}
+        result["flow_id"], {SAM_LABEL: "person.sam", "profile_id": "nonsense", "profile_person": "person.alex"}
+    )
+    assert result["errors"] == {"profile_id": "bad_profile_id"}
+    # A bare key is a different profile on each TV: refused
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {SAM_LABEL: "person.sam", "profile_id": "user:11", "profile_person": "person.alex"}
     )
     assert result["errors"] == {"profile_id": "bad_profile_id"}
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {"Sam (user:10)": "person.sam", "profile_id": "user:11", "profile_person": "person.alex"}
+        result["flow_id"], {SAM_LABEL: "person.sam", "profile_id": "name:robin", "profile_person": "person.alex"}
     )
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert entry.options["profiles"] == {KID: "person.sam", "user:11": "person.alex"}
+    assert entry.options["profiles"] == {SAM: "person.sam", "name:robin": "person.alex"}
 
 
 async def test_asking_to_pair_puts_a_notification_in_the_bell(

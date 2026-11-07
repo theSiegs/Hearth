@@ -92,10 +92,11 @@ async def test_what_isn_t_taken(hass: HomeAssistant, hass_client_no_auth: Client
 async def test_a_user_s_log_finds_its_account_profile(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
-    """Hearth keeps a kids profile's log under its user ("user:10"); the mapping may name its account too."""
+    """Hearth keeps a kids profile's log under its user ("user:10"); this TV's mapping may name its account too."""
     client, secret = await _household_with_sam(hass, hass_client_no_auth)
     entry = hass.config_entries.async_entries(DOMAIN)[0]
-    hass.config_entries.async_update_entry(entry, options={**entry.options, "profiles": {f"{KID}:sam": "person.sam"}})
+    profiles = {f"{TV_ID}/{KID}:sam": "person.sam"}
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "profiles": profiles})
     await hass.async_block_till_done()
     response = await _events(client, secret, [_started(int(time.time() * 1000))])
     assert (await response.json())["added"] == 1

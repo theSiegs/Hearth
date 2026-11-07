@@ -150,7 +150,7 @@ How minutes from these are combined, counted once and tied to games: see [Counti
 
 The household maps once (see [Setting it up](#setting-it-up)):
 
-- each **TV profile** (`profile_id`, as Hearth reports it) to a person, or to nobody (a guest or shared profile);
+- each **TV profile** to a person, or to nobody (a guest or shared profile). See [TV profile keys](#tv-profile-keys);
 - each **phone** to its person (asked when it pairs);
 - each **screen time source** to its person;
 - each **gamer account** (Xbox gamertag, Switch user as friend presence names it) to its person (for now, by adding
@@ -158,6 +158,30 @@ The household maps once (see [Setting it up](#setting-it-up)):
 
 Hearth's TVs can suggest the mapping by name (a profile called like a person), for an adult to check. The integration,
 not Hearth, owns this map; Hearth's `profile_id` to name map goes away.
+
+### TV profile keys
+
+A TV names a profile by its own key, `profile_id` (`user:10`, or `user:0:sam` for another account in an adults' user).
+The number is the profile's Android user serial **on that TV**: the same Google TV profile is `user:10` on one TV and
+`user:12` on another. So the options (`profiles`) never map a bare `user:10`. They map:
+
+1. a **household ref**, `name:<slug>` (`name:sam-lee`): the profile's name as Google TV's chooser shows it, the same on
+   every TV, in lower case with words joined by `-`. Each TV reports it beside every key (`profile_ref`, the
+   `profile_ref` of each `usage_today` entry, and the `profiles` table). One choice covers the profile on every TV.
+2. or **one TV's key**, `<device_id>/user:10`: for a TV whose Hearth is older than 2026.11.07 (it reports no refs),
+   or a profile whose name that TV hasn't learned yet.
+
+A TV profile resolves by its ref first, then by its TV key; a TV's `user:0` also matches the one mapped account of the
+same user on that TV (`user:0:sam`). Everything that names a profile (status, the state document's `profiles`,
+`youtube_blocks` and parent PINs' `profiles`, `video_started` events, an ask) uses the TV's own key on the wire; the
+integration resolves it with the device it came from. A profile renamed in Google TV gets a new ref, and needs picking
+again.
+
+**Migration.** Options from before 2026.11.07 map bare keys (`user:10`). Which TV each was picked from is unknown, and
+on a household with several TVs it was wrong on the others (one kid got another's limits). They match nothing now:
+the integration raises a repair issue ("Pick the kids' TV profiles again") listing them, until an adult picks again on
+Hearth's page (Devices > TV profiles, listed by name with the TVs that have them) or in Configure > Who's who on the
+TVs, which drops the old entries when saved.
 
 ## Counting
 
@@ -803,8 +827,8 @@ id, or its device in Home Assistant: a device selector gives that), `what` and, 
 - `what` is a **YouTube video** (an 11-character id, or a `youtube.com` / `youtu.be` link), played in HearthTube; an
   **app** (its package name, `com.example.app`), opened; or any other **http(s) link**, opened as a link. Anything else
   (another scheme, `intent:`, `file:`, `javascript:`) is refused.
-- `profile` is a TV profile id as Hearth reports it (`user:10`, `user:0:alex`), or a person mapped to one profile (to
-  more than one: the one this TV has reported). Without it, whoever is in front.
+- `profile` is a TV profile id as that TV reports it (`user:10`, `user:0:alex`), or a person mapped to one of that TV's
+  profiles. Without it, whoever is in front.
 - Home Assistant can't reach a TV, so it **queues a one-shot command** in the TV's state document, and the TV takes it
   with its next status answer: within about 2 seconds after it posts, at least every 2 minutes while it's on. The
   service answers (when asked for a response) `{"id", "device_id", "expires"}`. A TV that hasn't posted in 15 minutes
@@ -992,8 +1016,8 @@ home](#away-from-home)).
 
 **Events** (a TV only). `POST /api/hearth/device/<device_id>/events` with the same header and
 `{"events": [...]}`, at most 50, each `{"type": "video_started", "profile_id", "t" (ms), "v" (video id), "title",
-"ch" (channel name), "cid" (channel id)}`. `profile_id` is the profile's user (`user:10`), which matches a mapping of
-that user with its account (`user:10:sam`) when there is only one. 200 `{"ok": true, "added": n}` once all are taken:
+"ch" (channel name), "cid" (channel id)}`. `profile_id` is the TV's own key for the profile (`user:10`), resolved
+with the TV it came from as in [TV profile keys](#tv-profile-keys). 200 `{"ok": true, "added": n}` once all are taken:
 an entry of a profile mapped to no one, or one that isn't valid, is dropped, and a resend is harmless, so the TV marks
 them all sent. 403 `not_a_tv` from a phone; 429 `too_often` past 10 posts a minute; 400 for more than 50 or a
 malformed body.

@@ -9,7 +9,6 @@ webhook ID is typed anywhere.
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 import voluptuous as vol
@@ -72,6 +71,7 @@ from .asks import AMOUNTS, CONF_OFFER_MORE
 from .sources import CONF_SOURCES, CONF_TITLES
 from . import parent_pin
 from .push import clean_server
+from .profiles import is_local_key, is_ref, is_tv_key
 
 PERSON_SELECTOR = EntitySelector(EntitySelectorConfig(domain="person"))
 
@@ -187,17 +187,16 @@ class HearthOptionsFlow(OptionsFlow):
         """Each TV profile the TVs have reported, with its person (or nobody: a guest or shared profile)."""
         options = self._options()
         mapped: dict[str, str] = dict(options.get(CONF_PROFILES, {}))
-        seen = self._household().seen_profiles()
-        for profile_id in mapped:
-            seen.setdefault(profile_id, None)
-        labels = {f"{name or 'Profile'} ({profile_id})": profile_id for profile_id, name in sorted(seen.items())}
+        # By household ref (one choice for every TV) or one TV's key; an old bare key isn't offered: saving drops it
+        seen = {key: label for key, label in self._household().seen_profiles().items() if not is_local_key(key)}
+        labels = {f"{label} ({key})": key for key, label in sorted(seen.items(), key=lambda kv: kv[1].lower())}
         errors: dict[str, str] = {}
         if user_input is not None:
             profiles = {labels[label]: person for label, person in user_input.items() if label in labels and person}
-            # A profile no TV has reported yet (nobody used it today): its id typed in, as Hearth shows it
+            # A profile no TV has reported yet: its ref ("name:sam") or one TV's key ("<device id>/user:11")
             extra_id = (user_input.get("profile_id") or "").strip()
             if extra_id:
-                if not re.fullmatch(r"user:\d+(:[a-z0-9._-]+)?", extra_id) or not user_input.get("profile_person"):
+                if not (is_ref(extra_id) or is_tv_key(extra_id)) or not user_input.get("profile_person"):
                     errors["profile_id"] = "bad_profile_id"
                 else:
                     profiles[extra_id] = user_input["profile_person"]

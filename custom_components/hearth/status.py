@@ -10,6 +10,7 @@ import re
 from typing import Any
 
 from .const import APP_CATEGORIES, TV_STATES
+from .profiles import is_local_key, is_ref
 
 _CONTROL = re.compile(r"[\x00-\x1f\x7f-\x9f]")
 
@@ -27,6 +28,8 @@ _TEXT_FIELDS = (
     "media_album",
     "profile",
     "profile_id",
+    # Who profile_id is across the household's TVs ("name:sam"): its serial is this TV's own
+    "profile_ref",
     "screen_time_reason",
     "screen_time_text",
     "screen_time_unlocks_at",
@@ -95,10 +98,32 @@ def _usage_today(value: Any) -> dict[str, dict[str, Any]]:
             continue
         out[key] = {
             "profile_name": text(usage.get("profile_name")),
+            "profile_ref": _ref(usage.get("profile_ref")),
             "seconds": number(usage.get("seconds"), 0, MAX_SECONDS_PER_DAY) or 0,
             "apps": _seconds_by_app(usage.get("apps")),
             "playing": _seconds_by_app(usage.get("playing")),
         }
+    return out
+
+
+def _ref(value: Any) -> str | None:
+    found = text(value, 70)
+    return found if is_ref(found) else None
+
+
+def _profiles(value: Any) -> dict[str, dict[str, Any]]:
+    """Every profile the TV knows, by its own key: {"name", "ref", "kids"}."""
+    if not isinstance(value, dict):
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    for profile_id, entry in value.items():
+        if len(out) >= MAX_PROFILES:
+            break
+        key = text(profile_id, 128)
+        if not is_local_key(key) or not isinstance(entry, dict):
+            continue
+        kids = entry.get("kids")
+        out[key] = {"name": text(entry.get("name")), "ref": _ref(entry.get("ref")), "kids": kids if isinstance(kids, bool) else None}
     return out
 
 
@@ -125,6 +150,8 @@ def clean_status(raw: Any) -> dict[str, Any] | None:
     status["app_seconds_today"] = _seconds_by_app(raw.get("app_seconds_today"))
     status["playing_seconds_today"] = _seconds_by_app(raw.get("playing_seconds_today"))
     status["usage_today"] = _usage_today(raw.get("usage_today"))
+    status["profiles"] = _profiles(raw.get("profiles"))
+    status["profile_ref"] = _ref(raw.get("profile_ref"))
     status["app_categories"] = _categories(raw.get("app_categories"))
     # Categories from a shared catalog (a Glint phone's), for apps that don't declare one: below the declared ones
     status["catalog_categories"] = _categories(raw.get("catalog_categories"))

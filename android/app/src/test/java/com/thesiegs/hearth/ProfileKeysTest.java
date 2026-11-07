@@ -40,6 +40,23 @@ public class ProfileKeysTest {
     }
 
     @Test
+    public void aProfilesHouseholdRefIsItsNameNotItsSerial() {
+        // The same kid is user 10 on one TV and user 12 on another: both say who she is the same way
+        FakeContext one = new FakeContext("com.thesiegs.hearth");
+        FakeContext other = new FakeContext("com.thesiegs.hearth");
+        ProfileUsers.setName(one, 10, "Robin Lee");
+        ProfileUsers.setName(other, 12, "Robin Lee");
+        assertEquals("name:robin-lee", ProfileUsers.householdRef(one, "user:10"));
+        assertEquals(ProfileUsers.householdRef(one, "user:10"), ProfileUsers.householdRef(other, "user:12"));
+        // Another account in an adults' user carries its own
+        assertEquals("name:sam", ProfileUsers.householdRef(one, "user:0:sam"));
+        // A profile whose name this TV hasn't learned, and anything that isn't a key
+        assertNull(ProfileUsers.householdRef(one, "user:11"));
+        assertNull(ProfileUsers.householdRef(one, "Alex"));
+        assertNull(ProfileUsers.householdRef(one, null));
+    }
+
+    @Test
     public void anAppChangesHandsOnlyWhenAnotherProfileOpensIt() {
         String history = AppWatchers.record(null, 100, "user:0");
         assertEquals("100 user:0", history);

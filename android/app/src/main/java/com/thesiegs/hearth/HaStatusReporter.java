@@ -301,7 +301,11 @@ final class HaStatusReporter {
         status.put("app", s.foregroundPackage == null ? JSONObject.NULL : label(pm, s.foregroundPackage));
         status.put("profile", nullable(LauncherAccessibilityService.getActiveProfileName(mContext)));
         // The stable key of the Google TV profile ("user:<serial>"): survives renames, maps a kid to their TV profile
-        status.put("profile_id", nullable(LauncherAccessibilityService.getActiveProfileKey(mContext)));
+        String activeKey = LauncherAccessibilityService.getActiveProfileKey(mContext);
+        status.put("profile_id", nullable(activeKey));
+        // profile_id's serial is this TV's own (one kid is user 10 here and user 12 on the next TV): who the profile
+        // is across the household's TVs, for Home Assistant's mapping
+        status.put("profile_ref", nullable(ProfileUsers.householdRef(mContext, activeKey)));
         boolean kids = ProfileUsers.isKids(mContext);
         status.put("kids_profile", kids);
         status.put("screen_time_up", s.screenTimeLock);
@@ -328,8 +332,12 @@ final class HaStatusReporter {
         for (java.util.Iterator<String> keys = usage.keys(); keys.hasNext(); ) {
             String key = keys.next();
             JSONObject entry = usage.optJSONObject(key);
-            if (entry != null) entry.put("profile_name", nullable(ProfileUsers.displayName(mContext, key)));
+            if (entry != null) {
+                entry.put("profile_name", nullable(ProfileUsers.displayName(mContext, key)));
+                entry.put("profile_ref", nullable(ProfileUsers.householdRef(mContext, key)));
+            }
         }
+        status.put("profiles", profiles(usage, activeKey));
         JSONObject mine = usage.optJSONObject(String.valueOf(LauncherAccessibilityService.getActiveProfileKey(mContext)));
         status.put("day", UsageToday.day(now));
         status.put("seconds_today", mine != null ? mine.optLong("seconds") : 0);
@@ -446,6 +454,28 @@ final class HaStatusReporter {
             if (category != null) categories.put(pkg, category);
         }
         return categories;
+    }
+
+    /**
+     * Every profile this TV knows, by its key here: {"user:10": {"name", "ref", "kids"}}. Home Assistant maps
+     * profiles by ref (the same on every TV) and answers with each key's limits and YouTube blocks, also for a kid who
+     * hasn't used this TV today.
+     */
+    private JSONObject profiles(JSONObject usage, String activeKey) throws JSONException {
+        java.util.Set<String> keys = new java.util.TreeSet<>(ProfilePairing.getHearthProfiles(mContext));
+        for (java.util.Iterator<String> it = usage.keys(); it.hasNext(); ) keys.add(it.next());
+        if (activeKey != null) keys.add(activeKey);
+        JSONObject out = new JSONObject();
+        for (String key : keys) {
+            // Names saved before keys aren't profiles of their own any more
+            if (ProfileUsers.serialOfKey(key) == ProfileUsers.UNKNOWN) continue;
+            JSONObject entry = new JSONObject();
+            entry.put("name", nullable(ProfileUsers.displayName(mContext, key)));
+            entry.put("ref", nullable(ProfileUsers.householdRef(mContext, key)));
+            entry.put("kids", ProfilePairing.isKids(mContext, key));
+            out.put(key, entry);
+        }
+        return out;
     }
 
     /** Posts to the integration; its answer's limits become the profiles' allowance. */

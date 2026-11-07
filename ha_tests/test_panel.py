@@ -27,7 +27,8 @@ async def test_the_page_reads_and_sets_the_household(
     assert answer["success"], answer
     config = answer["result"]
     assert {p["id"] for p in config["persons"]} >= {"person.sam", "person.alex"}
-    assert config["profiles"] == {"user:10": "person.sam"}
+    assert config["profiles"] == {"name:sam": "person.sam"}
+    assert config["seen_profiles"]["name:sam"] == "Sam · Kitchen"
     assert any(g["id"] == "all" for g in config["groups"])
 
     answer = await _ws(ws, {"type": "hearth/config/set", "key": "roles", "value": {"person.sam": "kid", "person.alex": "adult"}})

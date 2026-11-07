@@ -41,7 +41,7 @@ def summary(hub) -> dict[str, Any]:
     household = hub.household
     roles: dict[str, str] = dict(hub.entry.options.get(CONF_ROLES, {}))
     adults = {p for p, r in roles.items() if r == "adult"}
-    profiles = household.profile_people()
+    profiles = household.profile_people()  # option key (a household ref, or one TV's key) -> person
     now = dt_util.now()
     today = now.date().isoformat()
     asks = [ask.approval_view(household.person_name) for ask in hub.asks.pending()]
@@ -117,7 +117,7 @@ def summary(hub) -> dict[str, Any]:
                 "profile": status.get("profile") if tv else None,
                 "media_player": hub.entry.options.get(CONF_MEDIA_PLAYERS, {}).get(device_id),
                 "kids_profile": status.get("kids_profile"),
-                "person": household.profile_person(status["profile_id"])
+                "person": household.profile_person(device_id, status["profile_id"])
                 if tv and status.get("profile_id")
                 else device.get(CONF_PERSON),
             }

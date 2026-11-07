@@ -264,7 +264,7 @@ class EventsView(HomeAssistantView):
         added = 0
         for raw in events:
             entry = clean_started(raw, now_ms)
-            person = household.profile_person(entry["profile_id"]) if entry else None
+            person = household.profile_person(device_id, entry["profile_id"]) if entry else None
             if entry and person and household.watch.add_started(person, entry, device_id):
                 added += 1
         if added:
@@ -351,7 +351,7 @@ class AskView(HomeAssistantView):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
         if hub.kind(device_id) == KIND_TV:
             profile_id = text(body.get("profile_id"), 64) or (hub.state(device_id).status or {}).get("profile_id")
-            person = hub.household.profile_person(profile_id) if profile_id else None
+            person = hub.household.profile_person(device_id, profile_id) if profile_id else None
         else:
             person = hub.household.device_person(device_id)
         if not person:

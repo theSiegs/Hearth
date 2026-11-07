@@ -15,6 +15,7 @@ from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, Supp
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.event import (
     async_track_state_change_event,
     async_track_time_change,
@@ -29,7 +30,8 @@ from .pause import end_pause, set_pause
 from . import panel
 from .apps import ACTION_PREFIX
 from .commands import is_profile_id, what_to_play
-from .const import CONF_DEVICES, CONF_KIND, CONF_PUSH_TOPIC, DOMAIN, KIND_MOBILE, KIND_TV
+from .const import CONF_DEVICES, CONF_KIND, CONF_PROFILES, CONF_PUSH_TOPIC, DOMAIN, KIND_MOBILE, KIND_TV
+from .profiles import ISSUE_PROFILE_KEYS, legacy_keys
 from .push import new_topic
 from .hub import HearthHub
 from .limits import DAY_TYPES
@@ -426,11 +428,11 @@ def _register_play_on_tv(hass: HomeAssistant) -> None:
         household = hub.household
         if given not in household.people():
             raise ServiceValidationError(f"{given} is neither a TV profile id (user:10) nor one of the household's people")
-        theirs = sorted(p for p, who in household.profile_people().items() if who == given)
-        status = hub.state(device_id).status or {}
-        on_this_tv = set(status.get("usage_today") or {}) | ({status["profile_id"]} if status.get("profile_id") else set())
+        # This TV's own keys: the same person is user 10 on one TV and user 12 on another
+        theirs = sorted(p for p, who in household.device_profile_people(device_id).items() if who == given)
         if len(theirs) > 1:
-            theirs = [p for p in theirs if p in on_this_tv] or theirs
+            reported = household.tv_profiles(device_id)
+            theirs = [p for p in theirs if p in reported] or theirs
         if len(theirs) != 1:
             raise ServiceValidationError(
                 f"{given} has {'no' if not theirs else 'more than one'} TV profile here: give the profile id"
@@ -554,6 +556,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
                 },
             },
         )
+    _check_profile_keys(hass, entry)
     hub = HearthHub(hass, entry)
     await hub.async_load()
     entry.runtime_data = hub
@@ -627,6 +630,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     # People and groups come from the entry: when it changes (options, a phone paired), its entities are made again
     entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
     return True
+
+
+def _check_profile_keys(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
+    """TV profiles mapped by a bare key ("user:10", before 2026.11.07) match nothing: the serial is each TV's own, so
+    the same key was a different kid on each TV. A repair issue asks an adult to pick them again (by name) until the
+    options hold none."""
+    old = legacy_keys(entry.options.get(CONF_PROFILES, {}))
+    if not old:
+        ir.async_delete_issue(hass, DOMAIN, ISSUE_PROFILE_KEYS)
+        return
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        ISSUE_PROFILE_KEYS,
+        is_fixable=False,
+        is_persistent=False,
+        severity=ir.IssueSeverity.WARNING,
+        translation_key=ISSUE_PROFILE_KEYS,
+        translation_placeholders={"keys": ", ".join(old)},
+    )
 
 
 async def _async_entry_updated(hass: HomeAssistant, entry: HearthConfigEntry) -> None:

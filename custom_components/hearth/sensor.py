@@ -70,7 +70,11 @@ SENSORS: tuple[HearthSensorDescription, ...] = (
         key="profile",
         translation_key="profile",
         value=lambda s: s.get("profile"),
-        attributes=lambda s: {"profile_id": s.get("profile_id"), "kids_profile": s.get("kids_profile")},
+        attributes=lambda s: {
+            "profile_id": s.get("profile_id"),
+            "profile_ref": s.get("profile_ref"),
+            "kids_profile": s.get("kids_profile"),
+        },
         kinds=TV,
     ),
     HearthSensorDescription(

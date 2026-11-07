@@ -50,6 +50,7 @@ from .limits import (
 from .notifications import pairing_notification_id
 from .schooldays import CONF_SCHOOL_DAYS
 from .sources import CONF_SOURCES, CONF_TITLES
+from .profiles import OPTION_KEY
 from . import parent_pin
 from .push import clean_server
 
@@ -225,7 +226,7 @@ _PERSON = cv.entity_domain("person")
 _ID = vol.All(cv.string, vol.Match(r"^[a-z0-9_]{1,64}$"))
 OPTION_SCHEMAS: dict[str, Any] = {
     CONF_ROLES: vol.Schema({_PERSON: vol.In(ROLES)}),
-    CONF_PROFILES: vol.Schema({vol.Match(r"^user:\d+(:[a-z0-9._-]+)?$"): _PERSON}),
+    CONF_PROFILES: vol.Schema({vol.Match(OPTION_KEY): _PERSON}),
     CONF_GROUPS: [vol.Schema({vol.Required("id"): _ID, vol.Required("name"): cv.string, "apps": [cv.string]})],
     CONF_GROUP_APPS: vol.Schema({_ID: [cv.string]}),
     CONF_OUTSIDE_ALL: [_ID],

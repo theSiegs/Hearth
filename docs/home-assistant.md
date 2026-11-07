@@ -216,7 +216,9 @@ Hearth posts JSON to `<address>/api/webhook/<webhook ID>`:
 | `media_app`, `media_title`, `media_artist`, `media_album`, `media_duration_s` | now playing, from any app's media session (needs notification access) |
 | `now_playing_available` | whether Hearth can see what's playing |
 | `profile` | the Google TV profile's name |
-| `profile_id` | a stable key for the profile (`user:<serial>`, or `user:<serial>:<account>` for another adult's account in the same user), unchanged by renames |
+| `profile_id` | a stable key for the profile on this TV (`user:<serial>`, or `user:<serial>:<account>` for another adult's account in the same user), unchanged by renames; the serial is this TV's own, so another TV has another key for the same profile |
+| `profile_ref` | who the profile is across the household's TVs: `name:<slug>` of its Google TV name (`name:sam-lee`), the same on every TV; null until the TV has learned the name |
+| `profiles` | every profile this TV knows, by its `profile_id`: `{"user:10": {"name": "…", "ref": "name:…", "kids": true}}` |
 | `kids_profile` | `true` in a kids profile |
 | `screen_time_up` | `true` while Google TV's bedtime or time's-up screen is showing |
 | `screen_time_reason`, `screen_time_text`, `screen_time_minutes_left`, `screen_time_unlocks_at`, `screen_time_seen_at` | what that screen said |
@@ -225,7 +227,7 @@ Hearth posts JSON to `<address>/api/webhook/<webhook ID>`:
 | `allowed_apps` | in a kids profile, the apps Family Link currently allows |
 | `day` | the TV's local date (`YYYY-MM-DD`) the usage counts are for |
 | `seconds_today`, `app_seconds_today`, `playing_seconds_today` | the active profile's usage today: seconds any app was in front with the screen on, seconds per app (package) in front, and seconds per app playing (media session). Hearth, Google TV's own screens and the screensaver don't count |
-| `usage_today` | every profile's usage today: `{"<profile_id>": {"profile_name": "…", "seconds": n, "apps": {"<package>": n}, "playing": {"<package>": n}}}` |
+| `usage_today` | every profile's usage today: `{"<profile_id>": {"profile_name": "…", "profile_ref": "name:…", "seconds": n, "apps": {"<package>": n}, "playing": {"<package>": n}}}` |
 
 The usage counts are cumulative for the day (a lost post loses nothing), kept across Hearth restarts, and start again
 at local midnight.

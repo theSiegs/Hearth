@@ -162,6 +162,28 @@ final class ProfileUsers {
         return out.length() > 0 ? out.toString() : "a" + Integer.toHexString(name.hashCode());
     }
 
+    /** What every household ref starts with ({@link #householdRef}). */
+    static final String REF_PREFIX = "name:";
+
+    /**
+     * Who a profile is across the household's TVs ("name:sam-lee"), for Home Assistant. A key's serial is this TV's
+     * own: the same Google TV profile is user 10 on one TV and user 12 on another, but every chooser shows it under
+     * the same name. Null while this TV hasn't learned the profile's name.
+     */
+    static String householdRef(Context context, String key) {
+        long serial = serialOfKey(key);
+        if (serial == UNKNOWN) return null;
+        String account = accountOfKey(key);
+        if (account != null) return REF_PREFIX + account;
+        String name = getName(context, serial);
+        return name == null || name.trim().isEmpty() ? null : refOfName(name);
+    }
+
+    /** A profile name's household ref: its slug ("Sam Lee" is "name:sam-lee"). */
+    static String refOfName(String name) {
+        return REF_PREFIX + slug(name.trim());
+    }
+
     /**
      * The name to show for a key: the profile's learned name ("Profile 11" until it has one), or the key itself
      * for a name saved before keys.
