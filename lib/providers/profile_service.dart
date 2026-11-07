@@ -54,7 +54,7 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
       : _wallpaperService = wallpaperService {
     WidgetsBinding.instance.addObserver(this);
     // A switch can land while Hearth is already in front
-    FLauncherChannel.listenForProfileChanges(check);
+    FLauncherChannel.listenForProfileChanges(recheck);
     FLauncherChannel.listenForProfileSwitching(switchingTo, onCancelled: _clearIncoming);
     check();
   }
@@ -118,7 +118,7 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
       // Kids profiles' blocked apps change with approvals and with bedtime/screen-time limits, and Android doesn't
       // always say so: re-read them whenever Hearth comes back, so the dock never offers a blocked app.
       if (_isKidsProfile) _appsService.refreshState();
-      check();
+      recheck();
     }
   }
 
@@ -150,7 +150,10 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
     await _sharedPreferences.setBool("$kidsLookGivenKeyPrefix$key", true);
   }
 
-  Future<void> check() => _checking ??= _check().whenComplete(() {
+  bool _checkAgain = false;
+
+  /// Reads the active profile and puts its layout in place. A call while a check is running joins it.
+  Future<void> check() => _checking ??= _checkUntilCurrent().whenComplete(() {
         _checking = null;
         // Whatever this check found, its profile's layout is now in place
         final bool changed = !_settledOnce || _layoutReadyKey != _activeProfileKey;
@@ -158,6 +161,21 @@ class ProfileService extends ChangeNotifier with WidgetsBindingObserver {
         _layoutReadyKey = _activeProfileKey;
         if (changed) notifyListeners();
       });
+
+  /// Something may have changed after a running check read the profile (Android announced a switch, Hearth came
+  /// back to the front): check again once it's done instead of taking its answer. A switch announced mid-check was
+  /// otherwise lost until the next resume, and the incoming welcome card waited out its time limit.
+  Future<void> recheck() {
+    if (_checking != null) _checkAgain = true;
+    return check();
+  }
+
+  Future<void> _checkUntilCurrent() async {
+    do {
+      _checkAgain = false;
+      await _check();
+    } while (_checkAgain);
+  }
 
   bool _settledOnce = false;
 

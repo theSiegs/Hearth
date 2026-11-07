@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flauncher/database.dart';
 import 'package:flauncher/providers/backup_service.dart';
 import 'package:flauncher/providers/home_looks.dart';
@@ -286,5 +288,34 @@ void main() {
     await service.check();
 
     expect(service.transition, isNull);
+  });
+
+  test("a switch announced while a check is running is checked again, and ends on the new profile", () async {
+    await prefs.setString(ProfileService.layoutOwnerKey, "user:12");
+    when(channel.getActiveProfileName()).thenAnswer((_) async => "Alex");
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:12");
+    final service = build(_RecordingBackupService(database, prefs, {}));
+    await service.check();
+
+    // Hearth comes back to the front while Android still reports the old profile, and the read is slow
+    final slowName = Completer<String?>();
+    when(channel.getActiveProfileName()).thenAnswer((_) => slowName.future);
+    final resumed = service.recheck();
+    await service.switchingTo("Riley");
+    expect(service.incomingName, "Riley");
+
+    // Android announces the switch mid-check
+    when(channel.getActiveProfileName()).thenAnswer((_) async => "Riley");
+    when(channel.getActiveProfileKey()).thenAnswer((_) async => "user:10");
+    final announced = service.recheck();
+    slowName.complete("Alex");
+    await resumed;
+    await announced;
+
+    expect(service.activeProfileKey, "user:10");
+    expect(service.activeProfileName, "Riley");
+    expect(service.incomingName, isNull);
+    expect(service.transition?.key, "user:10");
+    expect(service.layoutReadyFor("user:10"), isTrue);
   });
 }
