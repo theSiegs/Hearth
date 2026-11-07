@@ -411,7 +411,9 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
   lifted, exceptions, school_time_off}`. `kind` is `budget` (by the group, until midnight), `bedtime`, `school_time`
   or `other` (by the lock entity, until it says), `pause` (until, reason) or `school_time_apps` (by the Family Link
   entity, until School time ends) or `google_tv_limit` (by the TV's device id, with its `device` name, until null; see
-  below). `place` is kept for place rules (none are built yet: a place only ends an exception so far). `until` is when it's allowed again (the latest of the blocks, null when one doesn't
+  below) or `app_limit` (a parent's own Family Link app limit used up on a device: by the Apps with time limits
+  sensor, with `app`, `device`, `limit_minutes` and `used_minutes`, until midnight; Hearth's allows and bonuses don't
+  raise it, so an adult raises or removes it in Family Link; Hearth's own pauses aren't listed here). `place` is kept for place rules (none are built yet: a place only ends an exception so far). `until` is when it's allowed again (the latest of the blocks, null when one doesn't
   say), or, when allowed thanks to an exception, when that ends. `lifted` lists the holds an allow lifts now.
 - **Google TV's own Kids daily limit.** A kids profile can also have a daily limit set in Google TV itself (Family Link's
   or the TV's own Kids profile settings). When it runs out, Google TV shows its time up screen and blocks the whole

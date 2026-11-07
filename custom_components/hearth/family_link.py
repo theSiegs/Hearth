@@ -194,6 +194,42 @@ def device_limit(hass: HomeAssistant, child: str, device: Any) -> dict[str, Any]
     }
 
 
+def app_limits(hass: HomeAssistant, child: str) -> list[dict[str, Any]]:
+    """The child's own Family Link app limits (Apps with time limits: package, name, limit_minutes, enabled), without
+    the apps pause_app holds (Hearth's pauses, a 1-minute limit Hearth puts back itself)."""
+    for state in hass.states.async_all("sensor"):
+        if not state.entity_id.endswith("_apps_with_time_limits") or str(state.attributes.get("child_id")) != child:
+            continue
+        paused = {str(p.get("package")) for p in state.attributes.get("paused_apps") or [] if isinstance(p, dict)}
+        return [
+            {**app, "entity_id": state.entity_id}
+            for app in state.attributes.get("apps") or []
+            if isinstance(app, dict) and app.get("enabled", True) and app.get("package") not in paused
+        ]
+    return []
+
+
+def app_minutes_today(hass: HomeAssistant, child: str, package: str) -> list[tuple[str, float]]:
+    """An app's minutes today on each of the child's devices, from their Daily screen time sensors: (device, minutes)."""
+    found: list[tuple[str, float]] = []
+    for state in hass.states.async_all("sensor"):
+        attrs = state.attributes
+        if (
+            not state.entity_id.endswith("_daily_screen_time")
+            or str(attrs.get("child_id")) != child
+            or not attrs.get("device_id")
+        ):
+            continue
+        for app in attrs.get("apps") or []:
+            if isinstance(app, dict) and app.get("package") == package:
+                try:
+                    minutes = float(app.get("minutes") or 0)
+                except (TypeError, ValueError):
+                    continue
+                found.append((str(attrs.get("device_name") or attrs.get("device_id")), minutes))
+    return found
+
+
 def _int(value: Any) -> int | None:
     try:
         number = float(value)

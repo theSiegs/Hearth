@@ -1017,6 +1017,14 @@ class Household:
         # Google's and Microsoft's own limits, and a parent's own Family Safety lock: they stop a device of theirs
         # whatever Hearth allows
         blocked += self.sync.blocked_by(person, midnight)
+        # A parent's own Family Link app limit: Hearth's allows and bonuses don't raise it
+        if app is not None:
+            packages = {app}
+        elif group is not None and group != ALL and (target := self.group(group)) is not None:
+            packages = set(self._group_apps(target, membership))
+        else:
+            packages = set()
+        blocked += self.sync.app_limits_reached(person, packages, midnight)
         if app is not None:
             for enforcer in enforcers_from_options(self.options):
                 if enforcer.person == person and app in enforcer.school_apps and self.in_school_time(enforcer):

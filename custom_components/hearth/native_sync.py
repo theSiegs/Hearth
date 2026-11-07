@@ -456,6 +456,38 @@ class NativeSync:
                 found[FAMILY_SAFETY] = rows
         return found
 
+    def app_limits_reached(self, person: str, packages: set[str], midnight: str) -> list[dict[str, Any]]:
+        """For hearth.explain: Family Link's own app limits (a parent's, not Hearth's pauses) that an app of these has
+        used up today on a device of the person's. Hearth's allows and bonuses don't raise them, so the device keeps
+        the app closed whatever Hearth says."""
+        from . import family_link as fl
+
+        child = self.household.family_link_child(person)
+        if child is None or not packages:
+            return []
+        found: list[dict[str, Any]] = []
+        for limit in fl.app_limits(self.hass, child):
+            package = limit.get("package")
+            if package not in packages:
+                continue
+            minutes = _int(limit.get("limit_minutes"))
+            if minutes is None or minutes < 0:  # -1 follows the device's limit, -2 unlimited
+                continue
+            for device, used in fl.app_minutes_today(self.hass, child, package):
+                if used >= minutes:
+                    found.append(
+                        {
+                            "kind": "app_limit",
+                            "by": limit["entity_id"],
+                            "app": package,
+                            "device": device,
+                            "limit_minutes": minutes,
+                            "used_minutes": round(used, 1),
+                            "until": midnight,
+                        }
+                    )
+        return found
+
     def blocked_by(self, person: str, midnight: str) -> list[dict[str, Any]]:
         """For hearth.explain: the first-party limits that stop the person now on a device of theirs (device_limit:
         Google's daily limit on a Family Link device, Microsoft's allowance on a platform) and a parent's own Family

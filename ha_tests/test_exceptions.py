@@ -165,6 +165,45 @@ async def test_allow_checks_what_it_is_given(
     assert why["allowed"] is True and why["exceptions"][0]["id"] == answer["id"]
 
 
+async def test_a_parent_s_family_link_app_limit_is_explained(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """A Family Link app limit a parent set holds the app on the phone whatever Hearth allows; Hearth's own pause
+    (pause_app's 1 minute) isn't one."""
+    await _sam_with_family_link(hass, hass_client_no_auth)
+    video = "com.example.video"
+    hass.states.async_set(
+        "sensor.sam_family_link_apps_with_time_limits",
+        "2",
+        {
+            "child_id": "42",
+            "apps": [
+                {"package": video, "name": "Video", "limit_minutes": 120, "enabled": True},
+                {"package": MESSAGES, "name": "Messages", "limit_minutes": 1, "enabled": True},
+            ],
+            "paused_apps": [{"package": MESSAGES, "pause_intact": True, "prior": -1}],
+        },
+    )
+    phone = {"child_id": "42", "device_id": "d1", "device_name": "Sam's phone"}
+    apps = [{"package": video, "minutes": 119.0}, {"package": MESSAGES, "minutes": 5.0}]
+    hass.states.async_set("sensor.sam_phone_daily_screen_time", "124", {**phone, "apps": apps})
+    await _call(hass, "allow", {"people": ["person.sam"], "app": video})
+
+    why = await _call(hass, "explain", {"person": "person.sam", "app": video}, True)
+    assert why["allowed"] is True
+
+    apps[0] = {"package": video, "minutes": 120.8}
+    hass.states.async_set("sensor.sam_phone_daily_screen_time", "126", {**phone, "apps": apps})
+    why = await _call(hass, "explain", {"person": "person.sam", "app": video}, True)
+    assert why["allowed"] is False
+    [held] = why["blocked_by"]
+    assert held["kind"] == "app_limit" and held["app"] == video and held["device"] == "Sam's phone"
+    assert held["limit_minutes"] == 120 and held["used_minutes"] == 120.8
+
+    why = await _call(hass, "explain", {"person": "person.sam", "app": MESSAGES}, True)
+    assert "app_limit" not in [b["kind"] for b in why["blocked_by"]]
+
+
 async def test_google_tv_s_own_limit_is_explained(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
     """Google TV's own Kids daily limit holds the profile whatever Hearth allows: explain says so, by the TV."""
     client, secret = await _household_with_sam(hass, hass_client_no_auth)
