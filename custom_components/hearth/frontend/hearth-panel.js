@@ -926,7 +926,7 @@ class HearthPanel extends HTMLElement {
     const mine = (cfg.locks || []).filter((l) => l.person === kid.id);
     return `<section class="card">
       <h3><ha-icon icon="mdi:bed-clock"></ha-icon>Bedtime and school time</h3>
-      <p class="muted">While any of these is on, ${esc(kid.name)}'s Hearth devices hold their apps. Family Link's bedtime and school time sensors are typical.</p>
+      <p class="muted">While any of these is on, ${esc(kid.name)}'s Hearth devices hold their apps. Family Link's bedtime and school time sensors, or Family Safety's Downtime Active, are typical.</p>
       ${mine.length ? `<ul class="list">${mine
         .map((l) => `<li><ha-icon icon="mdi:lock-clock"></ha-icon><div class="grow">${esc(this._entityName(l.entity_id))}<div class="muted small">${esc(l.entity_id)} · now ${esc(this._hass.states[l.entity_id]?.state ?? "unknown")}</div></div>
           <button class="icon-btn" data-action="lock-remove" data-person="${esc(kid.id)}" data-entity="${esc(l.entity_id)}" aria-label="Remove"><ha-icon icon="mdi:close"></ha-icon></button></li>`)

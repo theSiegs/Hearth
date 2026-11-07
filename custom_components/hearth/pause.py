@@ -8,7 +8,8 @@ it), not across a restart.
 
 A lock entity of Family Link's says when bedtime or school time starts and ends (bedtime_start / bedtime_end,
 schooltime_start / schooltime_end, local times): that's "lock" {by, until} while one is on, and "next_lock" {at, by}
-for the next one today, so a device can wind down before it.
+for the next one today, so a device can wind down before it. Family Safety's Downtime Active sensors (one per child and
+platform) say the same with bedtime_start / bedtime_end, so they are a bedtime here.
 """
 
 from __future__ import annotations
@@ -85,7 +86,7 @@ def lock_kinds(hass: HomeAssistant, by: list[str]) -> list[str]:
         else:
             state = hass.states.get(item)
             attrs = state.attributes if state else {}
-            if "bedtime_end" in attrs or "bedtime_start" in attrs or "bedtime" in item:
+            if "bedtime_end" in attrs or "bedtime_start" in attrs or "bedtime" in item or "downtime" in item:
                 kind = "bedtime"
             elif "schooltime_end" in attrs or "schooltime_start" in attrs or "school" in item:
                 kind = "school_time"
