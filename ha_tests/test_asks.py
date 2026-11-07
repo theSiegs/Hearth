@@ -7,6 +7,7 @@ from pytest_homeassistant_custom_component.common import async_capture_events, a
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
 from custom_components.hearth.asks import EVENT_MORE_TIME_ANSWERED, EVENT_MORE_TIME_REQUESTED
+from test_enforce import _add_enforcer
 from test_init import TV_ID, _post
 from test_people import KID, _household_with_sam, _tv_status
 from test_sources import _option
@@ -92,3 +93,89 @@ async def test_a_request_nobody_answers_expires(
     assert told["id"] == request["id"] and told["status"] == "expired"
     # An expired one doesn't block a new one
     assert (await _ask(client, secret, minutes=15, profile_id="user:10")).status == 200
+
+
+
+FAMILY_SAFETY = "sensor.sam_xbox_screen_time"
+
+
+def _fs_request(hass: HomeAssistant, request_id: str = "r-1", account: str = "123456") -> None:
+    hass.bus.async_fire(
+        "microsoft_family_safety_request",
+        {
+            "entry_id": "x",
+            "account_id": account,
+            "first_name": "Sam",
+            "request_id": request_id,
+            "type": "screenTime",
+            "platform": "Xbox",
+            "app_id": "x:game",
+            "app_name": "A Game",
+            "requested_time": 3600,
+        },
+    )
+
+
+async def test_a_family_safety_request_becomes_an_ask_and_its_answer_goes_back(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client
+) -> None:
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    approve = async_mock_service(hass, "microsoft_family_safety", "approve_request")
+    deny = async_mock_service(hass, "microsoft_family_safety", "deny_request")
+    hass.states.async_set(FAMILY_SAFETY, "10", {"user_id": "123456"})
+    await _option(hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY})
+    asked = async_capture_events(hass, EVENT_MORE_TIME_REQUESTED)
+
+    _fs_request(hass)
+    _fs_request(hass)  # the same request again: one ask
+    _fs_request(hass, "r-9", account="999")  # nobody's
+    await hass.async_block_till_done()
+    assert len(asked) == 1
+    view = asked[0].data
+    assert view["person"] == "person.sam" and view["source"] == "family_safety"
+    assert view["platform"] == "Xbox" and view["app_name"] == "A Game" and view["requested_time"] == 3600
+
+    # It doesn't stand in the way of a request from the TV
+    response = await _ask(client, secret, minutes=15, profile_id="user:10")
+    assert response.status == 200, await response.text()
+    tv_request = (await response.json())["request"]
+    # And the TV is told about its own request only
+    body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
+    assert body["state"]["profiles"][KID]["request"]["id"] == tv_request["id"]
+
+    hub = hass.config_entries.async_entries("hearth")[0].runtime_data
+    bonus_before = hub.household.limits.bonus("person.sam", "all")
+    # 5 minutes is less than Family Safety takes: 15
+    await hass.services.async_call(
+        "hearth", "answer_request", {"request_id": view["id"], "minutes": 5}, blocking=True
+    )
+    await hass.async_block_till_done()
+    assert [c.data for c in approve] == [{"request_id": "r-1", "extension_minutes": 15}]
+    assert deny == []
+    # No Hearth bonus for it
+    assert hub.household.limits.bonus("person.sam", "all") == bonus_before
+
+    _fs_request(hass, "r-2")
+    await hass.async_block_till_done()
+    await hass.services.async_call("hearth", "answer_request", {"request_id": asked[-1].data["id"], "deny": True},
+                                   blocking=True)
+    await hass.async_block_till_done()
+    assert [c.data for c in deny] == [{"request_id": "r-2"}]
+
+
+async def test_a_family_safety_answer_that_fails_is_told(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    await _household_with_sam(hass, hass_client_no_auth)
+    # A Family Safety without approve_request
+    await _add_enforcer(hass, {"kind": "family_safety", "person": "person.sam", "entity_id": "123456"})
+    asked = async_capture_events(hass, EVENT_MORE_TIME_REQUESTED)
+    _fs_request(hass)
+    await hass.async_block_till_done()
+    await hass.services.async_call("hearth", "answer_request", {"request_id": asked[0].data["id"], "minutes": 30},
+                                   blocking=True)
+    await hass.async_block_till_done()
+    from homeassistant.components import persistent_notification
+
+    notifications = persistent_notification._async_get_or_create_notifications(hass)
+    assert any(key.startswith("hearth_more_fs_") for key in notifications)

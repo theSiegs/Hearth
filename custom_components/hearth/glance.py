@@ -74,7 +74,13 @@ def _ask_items(asks: list[dict[str, Any]], names: dict[str, str]) -> list[dict[s
     found = []
     for ask in asks:
         what = _group_word(ask["group"], names)
-        text = f"{what} ran out · give {ask['minutes']}?" if ask.get("offered") else f"asks for {ask['minutes']} more · {what}"
+        if ask.get("offered"):
+            text = f"{what} ran out · give {ask['minutes']}?"
+        elif ask.get("source") == "family_safety":
+            # Family Safety's requested time has no known unit: the adult picks the minutes
+            text = f"asks for more time · {ask.get('platform') or 'family safety'}"
+        else:
+            text = f"asks for {ask['minutes']} more · {what}"
         found.append(_item(text, URGENT, "ask", ask["id"]))
     return found
 

@@ -10,6 +10,13 @@ An offer goes the other way (Configure > Offer more time): when a chosen group o
 asked whether to give some more, with the same buttons; nothing is asked of the kid, and their devices aren't told
 about it as a request of theirs. "Not now" to an offer starts no cooldown.
 
+A request made on an Xbox or Windows PC (Microsoft Family Safety's microsoft_family_safety_request event) becomes an
+ask too, for the person whose Family Safety account it is (Configure > Enforce), once per request id. The adults
+answer it as any other; Hearth then approves it in Family Safety with the minutes chosen (approve_request takes 15 to
+480) or denies it. Family Safety's requested time is passed on as it came (requested_time): its unit isn't documented,
+so it isn't shown, and the adults pick the minutes. It gives no Hearth bonus and starts no cooldown, and it doesn't
+stand in the way of a request from a Hearth device.
+
 Requests are kept outside the entry (an options change reloads it) but not across a restart: one left open then
 expires, as it would have in the meantime.
 """
@@ -21,12 +28,16 @@ from datetime import datetime, timedelta
 import secrets
 from typing import Any
 
+import logging
+
 from homeassistant.components import persistent_notification
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, SIGNAL_PAIRINGS
+
+_LOGGER = logging.getLogger(__name__)
 
 EVENT_MORE_TIME_REQUESTED = "hearth_more_time_requested"
 EVENT_MORE_TIME_ANSWERED = "hearth_more_time_answered"
@@ -40,6 +51,15 @@ COOLDOWN = timedelta(minutes=10)
 MAX_NOTE = 120
 # Options: [{"person", "group", "minutes"}]: offer the adults more time when that group runs out
 CONF_OFFER_MORE = "offer_more"
+
+# Where a request came from: a Hearth device (or an offer), or Microsoft Family Safety
+HEARTH = "hearth"
+FAMILY_SAFETY = "family_safety"
+FS_DOMAIN = "microsoft_family_safety"
+# What a Family Safety request is offered as (its own requested time has no documented unit), and what
+# approve_request takes
+FS_SUGGESTED = 30
+FS_MIN, FS_MAX = 15, 480
 
 PENDING = "pending"
 APPROVED = "approved"
@@ -62,6 +82,16 @@ class Ask:
     answered_by: str | None = None
     # Offered to the adults when the group ran out, not asked by the kid
     offered: bool = False
+    # A Family Safety request: its request id, platform, app and requested time as Microsoft gave them
+    source: str = HEARTH
+    external_id: str | None = None
+    platform: str | None = None
+    app_name: str | None = None
+    requested_time: Any = None
+
+    @property
+    def external(self) -> bool:
+        return self.source != HEARTH
 
     @property
     def expires(self) -> datetime:
@@ -94,6 +124,12 @@ class Ask:
             "asked": self.asked.isoformat(),
             "expires": self.expires.isoformat(),
             "offered": self.offered,
+            "source": self.source,
+            **(
+                {"platform": self.platform, "app_name": self.app_name, "requested_time": self.requested_time}
+                if self.external
+                else {}
+            ),
         }
 
 
@@ -144,7 +180,7 @@ class Asks:
 
     def latest_for(self, person: str) -> Ask | None:
         self._tidy()
-        mine = [a for a in self._s.asks.values() if a.person == person and not a.offered]
+        mine = [a for a in self._s.asks.values() if a.person == person and not a.offered and not a.external]
         return max(mine, key=lambda a: a.asked) if mine else None
 
     def get(self, ask_id: str) -> Ask | None:
@@ -157,7 +193,9 @@ class Asks:
         if minutes not in AMOUNTS or self.hub.household.group(group) is None:
             raise AskError("bad_request")
         self._tidy()
-        open_one = next((a for a in self._s.asks.values() if a.person == person and a.status == PENDING), None)
+        open_one = next(
+            (a for a in self._s.asks.values() if a.person == person and a.status == PENDING and not a.external), None
+        )
         if open_one is not None:
             raise AskError("already_open", open_one)
         now = dt_util.utcnow()
@@ -186,7 +224,7 @@ class Asks:
         if self.hub.household.group(group) is None or minutes <= 0:
             return None
         self._tidy()
-        if any(a.person == person and a.status == PENDING for a in self._s.asks.values()):
+        if any(a.person == person and a.status == PENDING and not a.external for a in self._s.asks.values()):
             return None
         ask = Ask(
             id=secrets.token_urlsafe(9),
@@ -197,6 +235,36 @@ class Asks:
             device_id="",
             asked=dt_util.utcnow(),
             offered=True,
+        )
+        self._s.asks[ask.id] = ask
+        self.hass.bus.async_fire(EVENT_MORE_TIME_REQUESTED, ask.approval_view(self.hub.household.person_name))
+        self._tell_adults(ask)
+        async_dispatcher_send(self.hass, SIGNAL_PAIRINGS)
+        return ask
+
+    @callback
+    def from_family_safety(self, person: str, data: dict[str, Any]) -> Ask | None:
+        """A Family Safety request (its microsoft_family_safety_request event) as an ask of [person]'s; None for a
+        request id already taken."""
+        request_id = str(data.get("request_id") or "")
+        if not request_id:
+            return None
+        self._tidy()
+        if any(a.source == FAMILY_SAFETY and a.external_id == request_id for a in self._s.asks.values()):
+            return None
+        ask = Ask(
+            id=secrets.token_urlsafe(9),
+            person=person,
+            minutes=FS_SUGGESTED,
+            group="all",
+            note="",
+            device_id="",
+            asked=dt_util.utcnow(),
+            source=FAMILY_SAFETY,
+            external_id=request_id,
+            platform=str(data["platform"])[:32] if data.get("platform") else None,
+            app_name=str(data["app_name"])[:80] if data.get("app_name") else None,
+            requested_time=data.get("requested_time"),
         )
         self._s.asks[ask.id] = ask
         self.hass.bus.async_fire(EVENT_MORE_TIME_REQUESTED, ask.approval_view(self.hub.household.person_name))
@@ -216,12 +284,17 @@ class Asks:
         ask.answered_by = by
         if minutes is None or minutes <= 0:
             ask.status = DENIED
-            if not ask.offered:
+            if not ask.offered and not ask.external:
                 self._s.cooldown[ask.person] = now + COOLDOWN
+        elif ask.source == FAMILY_SAFETY:
+            ask.status = APPROVED
+            ask.granted = max(FS_MIN, min(FS_MAX, int(minutes)))
         else:
             ask.status = APPROVED
             ask.granted = int(minutes)
             self.hub.household.add_bonus(ask.person, ask.group, ask.granted)
+        if ask.source == FAMILY_SAFETY:
+            self.hass.async_create_task(self._answer_family_safety(ask), "hearth family safety answer")
         self.hass.bus.async_fire(
             EVENT_MORE_TIME_ANSWERED,
             {"id": ask.id, "person": ask.person, "status": ask.status, "minutes": ask.granted, "by": by},
@@ -231,6 +304,28 @@ class Asks:
         # The device hears it in its next status answer: everyone's documents again now
         self.hub.household.recompute()
         return ask
+
+    async def _answer_family_safety(self, ask: Ask) -> None:
+        """The answer in Family Safety: approve_request with the minutes, or deny_request. A failure is told."""
+        approve = ask.status == APPROVED
+        service = "approve_request" if approve else "deny_request"
+        data: dict[str, Any] = {"request_id": ask.external_id}
+        if approve:
+            data["extension_minutes"] = ask.granted
+        try:
+            if not self.hass.services.has_service(FS_DOMAIN, service):
+                raise ValueError(f"{FS_DOMAIN}.{service} isn't there")
+            await self.hass.services.async_call(FS_DOMAIN, service, data, blocking=True)
+        except Exception as err:  # noqa: BLE001 - told to the adults instead
+            _LOGGER.warning("Hearth couldn't answer the Family Safety request %s: %s", ask.external_id, err)
+            who = self.hub.household.person_name(ask.person)
+            persistent_notification.async_create(
+                self.hass,
+                f"Hearth couldn't {'approve' if approve else 'deny'} {who}'s request in Family Safety ({err}). "
+                "Answer it in the Family Safety app.",
+                title="Family Safety request",
+                notification_id=f"hearth_more_fs_{ask.id}",
+            )
 
     # Telling the adults
 
@@ -251,6 +346,11 @@ class Asks:
             name = "screen time" if ask.group == "all" or group is None else group.name
             title = f"{who}'s {name} is used up"
             message = f"Give {who} {ask.minutes} more minutes today?"
+        elif ask.source == FAMILY_SAFETY:
+            where = f" on {ask.platform}" if ask.platform else ""
+            app = f" for {ask.app_name}" if ask.app_name else ""
+            title = "More time?"
+            message = f"{who} asks for more time{where}{app} (Family Safety)."
         else:
             title = "More time?"
             message = f"{who} asks for {ask.minutes} more minutes{what}." + (f" “{ask.note}”" if ask.note else "")

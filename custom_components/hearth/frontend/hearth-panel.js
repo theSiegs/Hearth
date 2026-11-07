@@ -730,7 +730,9 @@ class HearthPanel extends HTMLElement {
       .map(
         (a) => `<div class="card attention ask">
         <div class="row">${this._avatar(a.person, 36)}<div class="grow">
-          <div class="strong">${esc(a.person_name)} asks for ${a.minutes} more minutes${a.group && a.group !== "all" ? ` of ${esc(this._groupName(a.group))}` : ""}</div>
+          <div class="strong">${a.source === "family_safety"
+            ? `${esc(a.person_name)} asks for more time${a.platform ? ` on ${esc(a.platform)}` : ""}${a.app_name ? ` for ${esc(a.app_name)}` : ""} (Family Safety)`
+            : `${esc(a.person_name)} asks for ${a.minutes} more minutes${a.group && a.group !== "all" ? ` of ${esc(this._groupName(a.group))}` : ""}`}</div>
           ${a.note ? `<div class="muted">“${esc(a.note)}”</div>` : ""}</div></div>
         <div class="actions wrap">
           <button class="btn" data-action="answer" data-request="${esc(a.id)}" data-deny="1">Not now</button>

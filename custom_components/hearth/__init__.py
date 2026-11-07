@@ -40,6 +40,7 @@ from .const import EVENT_BUDGET_REACHED
 from .counting import ALL
 from .exceptions import END_OF_DAY, SCHOOL_TIME_END, at_time, end_of_day
 from . import family_link as fl
+from .enforce import FAMILY_SAFETY, enforcers_from_options, fs_account_of
 from .sites import BLOCKED, BOTH, FROM_CHOICES, LIST_CHOICES, CopySites
 from .watch import CHANNELS, MAX_BLOCKS, MAX_LOG, VIDEOS, WORDS, channel_id_of, clean_word, video_id_of
 
@@ -51,6 +52,8 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 _VIEWS_REGISTERED = f"{DOMAIN}_views"
 
+# Microsoft Family Safety: a child asked for more time on an Xbox or a PC
+EVENT_FS_REQUEST = "microsoft_family_safety_request"
 SERVICE_ADD_BONUS = "add_bonus"
 SERVICE_SET_BUDGET = "set_budget"
 
@@ -643,6 +646,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
                 hub.asks.offer(raw["person"], raw["group"], int(raw.get("minutes") or 30))
 
     entry.async_on_unload(hass.bus.async_listen(EVENT_BUDGET_REACHED, offer_more))
+
+    @callback
+    def family_safety_request(event) -> None:
+        """A request made on an Xbox or a PC: an ask for the person whose Family Safety account it is."""
+        account = event.data.get("account_id")
+        if account in (None, ""):
+            return
+        for enforcer in enforcers_from_options(hub.entry.options):
+            if enforcer.kind == FAMILY_SAFETY and fs_account_of(hass, enforcer.entity_id) == str(account):
+                hub.asks.from_family_safety(enforcer.person, dict(event.data))
+                return
+
+    entry.async_on_unload(hass.bus.async_listen(EVENT_FS_REQUEST, family_safety_request))
     # And whenever a screen time source changes
     if entities := hub.household.source_entities():
         entry.async_on_unload(async_track_state_change_event(hass, entities, recompute))
