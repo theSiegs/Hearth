@@ -9,12 +9,13 @@ from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
-from pytest_homeassistant_custom_component.common import async_mock_service
+from pytest_homeassistant_custom_component.common import async_capture_events, async_mock_service
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
 from custom_components.hearth import enforce
 from custom_components.hearth.const import DOMAIN
 from custom_components.hearth.schooldays import SchoolDays
+from test_enforce import _add_enforcer
 from test_people import _household_with_sam
 from test_sources import _option
 
@@ -245,6 +246,74 @@ async def test_the_website_list_syncs_each_person_and_one_failure_doesn_t_stop_t
     assert all(c.data["url"] == URL for c in calls)
     await _tick(hass, household, freezer, _at(monday, 7, 31))
     assert len(calls) == 2  # Sam's is done for today; Alex's waits before it's tried again
+
+
+async def test_the_website_list_syncs_family_safety_too_on_its_own(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    fl_calls: list[ServiceCall] = []
+    fs_calls: list[ServiceCall] = []
+
+    async def fl_sync(call: ServiceCall) -> None:
+        fl_calls.append(call)
+
+    async def fs_sync(call: ServiceCall) -> None:
+        fs_calls.append(call)
+        if len(fs_calls) == 1:
+            raise HomeAssistantError("Microsoft said no")
+
+    hass.services.async_register("familylink", "sync_site_list", fl_sync)
+    hass.services.async_register("microsoft_family_safety", "sync_site_list", fs_sync)
+    events = async_capture_events(hass, "hearth_schedule")
+    monday = date(2026, 11, 9)
+    household = await _set_up(hass, hass_client_no_auth, freezer, _at(monday, 7), YEAR, {})
+    await _option(
+        hass,
+        "enforce",
+        {"person": "person.sam", "family_link": FAMILY_LINK, "family_safety": "sensor.sam_xbox_screen_time"},
+    )
+    # Alex has Family Safety only, by a typed-in account id
+    await _add_enforcer(hass, {"kind": "family_safety", "person": "person.alex", "entity_id": "123456"})
+    await _option(hass, "site_list", {"url": URL, "time": "07:30:00"})
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    await _tick(hass, household, freezer, _at(monday, 7, 30))
+    assert [c.data for c in fl_calls] == [{"entity_id": FAMILY_LINK, "url": URL}]
+    # Alex first (sorted), whose call fails; Sam's still goes
+    assert [c.data for c in fs_calls] == [
+        {"account_id": "123456", "url": URL},
+        {"entity_id": "sensor.sam_xbox_screen_time", "url": URL},
+    ]
+    seen = [(e.data["action"], e.data["person"], e.data["via"]) for e in events]
+    assert ("site_list", "person.sam", "family_link") in seen
+    assert ("site_list", "person.sam", "family_safety") in seen
+    assert ("site_list_failed", "person.alex", "family_safety") in seen
+
+    await _tick(hass, household, freezer, _at(monday, 7, 31))
+    assert len(fs_calls) == 2  # Alex's waits before it's tried again
+    await _tick(hass, household, freezer, _at(monday, 7, 40))
+    assert len(fs_calls) == 3 and fs_calls[2].data["account_id"] == "123456"
+    assert len(fl_calls) == 1
+    await _tick(hass, household, freezer, _at(monday, 7, 50))
+    assert len(fs_calls) == 3
+
+
+async def test_the_website_list_skips_an_older_family_safety_quietly(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    fl_calls = async_mock_service(hass, "familylink", "sync_site_list")
+    events = async_capture_events(hass, "hearth_schedule")
+    monday = date(2026, 11, 9)
+    household = await _set_up(hass, hass_client_no_auth, freezer, _at(monday, 7), YEAR, {})
+    await _option(
+        hass,
+        "enforce",
+        {"person": "person.sam", "family_link": FAMILY_LINK, "family_safety": "sensor.sam_xbox_screen_time"},
+    )
+    await _option(hass, "site_list", {"url": URL, "time": "07:30:00"})
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    await _tick(hass, household, freezer, _at(monday, 7, 30))
+    assert len(fl_calls) == 1
+    assert [e.data["via"] for e in events] == ["family_link"]
 
 
 async def test_the_website_list_must_be_https(

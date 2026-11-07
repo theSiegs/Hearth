@@ -22,8 +22,9 @@ day. At the watchdog time on a school day, the adults are told about anyone whos
 
 The day's actions run from DAY_START (00:05); a check at CHECK_AT (06:00) tries a School time that didn't go off again
 and tells the adults what didn't apply, so nobody is woken at midnight. Each action runs once a day (kept across a
-restart). The website list (familylink.sync_site_list) is synced once a day at its time, person by person: a failure
-for one is logged and the others go on.
+restart). The website list is synced once a day at its time, person by person, through Family Link
+(familylink.sync_site_list) and Family Safety (microsoft_family_safety.sync_site_list, when it has it) each on its own:
+a failure for one is logged, tried again later, and the others go on. The hearth_schedule events say which with "via".
 
 What's pending is kept with Home Assistant's storage helper.
 """
@@ -43,7 +44,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from . import family_link as fl
-from .enforce import FAMILY_LINK, enforcers_from_options
+from .enforce import FAMILY_LINK, FAMILY_SAFETY, FS_DOMAIN, enforcers_from_options
 from .schooldays import DAY_OFF, HALF_DAY, SCHOOL
 
 if TYPE_CHECKING:
@@ -583,33 +584,62 @@ class Scheduler:
                 "hearth_school_time_watchdog",
             )
 
+    def family_safety_entity(self, person: str) -> str | None:
+        """The person's Family Safety entity or typed-in account id (Configure > Enforce)."""
+        return next(
+            (
+                e.entity_id
+                for e in enforcers_from_options(self.household.options)
+                if e.kind == FAMILY_SAFETY and e.person == person
+            ),
+            None,
+        )
+
+    def site_list_people(self, chosen: tuple[str, ...] = ()) -> list[str]:
+        """The chosen people with Family Link or Family Safety, or everyone with either."""
+        with_any = [
+            e.person
+            for e in enforcers_from_options(self.household.options)
+            if e.kind in (FAMILY_LINK, FAMILY_SAFETY)
+        ]
+        return sorted(set(chosen) & set(with_any)) if chosen else sorted(set(with_any))
+
     async def _site_list(self, now: datetime) -> None:
+        """The website list, once a day: Family Link's and Family Safety's, each on its own (one failing doesn't
+        hold up the other, or another kid). Family Safety is skipped quietly while it has no sync_site_list."""
         sites = SiteListConfig.from_options(self.household.options)
         if not sites.url or now.time() < sites.at:
             return
-        for person in self.people(sites.people):
-            if self._marked(person, "sites"):
-                continue
-            entity_id = self.family_link_entity(person)
-            if entity_id is None:
-                continue
-            key = f"{person}|sites"
-            if self._waiting(key):
-                continue
-            try:
-                await self.hass.services.async_call(
-                    "familylink", "sync_site_list", {"entity_id": entity_id, "url": sites.url}, blocking=True
-                )
-            except Exception as err:  # noqa: BLE001 - one child's list failing mustn't stop the others
-                _LOGGER.warning("Hearth couldn't sync the website list for %s: %s", person, err)
-                self._failed[key] = dt_util.utcnow()
-                # Tried again later today; told once
-                if not self._marked(person, "sites_failed"):
-                    self._mark(person, "sites_failed")
-                    self._event("site_list_failed", person, error=str(err)[:200])
-                continue
-            self._mark(person, "sites")
-            self._event("site_list", person)
+        for person in self.site_list_people(sites.people):
+            fl_entity = self.family_link_entity(person)
+            if fl_entity is not None:
+                await self._sync_sites(person, "family_link", "familylink", {"entity_id": fl_entity, "url": sites.url})
+            fs_entity = self.family_safety_entity(person)
+            if fs_entity is not None and self.hass.services.has_service(FS_DOMAIN, "sync_site_list"):
+                target = {"entity_id": fs_entity} if "." in fs_entity else {"account_id": fs_entity}
+                await self._sync_sites(person, "family_safety", FS_DOMAIN, {**target, "url": sites.url})
+
+    async def _sync_sites(self, person: str, via: str, domain: str, data: dict[str, Any]) -> None:
+        """One side's sync for one person: marked done for the day, or tried again after RETRY (told once)."""
+        # Family Link's marks keep their older names (a restart mid-day doesn't sync twice)
+        mark = "sites" if via == "family_link" else f"sites_{via}"
+        if self._marked(person, mark):
+            return
+        key = f"{person}|{mark}"
+        if self._waiting(key):
+            return
+        try:
+            await self.hass.services.async_call(domain, "sync_site_list", data, blocking=True)
+        except Exception as err:  # noqa: BLE001 - one child's list failing mustn't stop the others
+            _LOGGER.warning("Hearth couldn't sync the website list for %s through %s: %s", person, via, err)
+            self._failed[key] = dt_util.utcnow()
+            # Tried again later today; told once
+            if not self._marked(person, f"{mark}_failed"):
+                self._mark(person, f"{mark}_failed")
+                self._event("site_list_failed", person, via=via, error=str(err)[:200])
+            return
+        self._mark(person, mark)
+        self._event("site_list", person, via=via)
 
     # Telling
 
