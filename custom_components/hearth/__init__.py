@@ -335,6 +335,8 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         ended = [grant.id] if grant is not None else []
         ended += household.allows.end(call.data.get("id"), call.data.get("people"), app, group)
         household.recompute()
+        # Extra time Hearth gave in Family Link or Family Safety for an allow that ended goes too
+        household.sync.allow_ended()
         return {"ended": ended}
 
     @callback

@@ -567,6 +567,8 @@ class Household:
             groups_of_app=membership,
             granted_of=self.grants.lifted,
         )
+        # An adult's allow of All screen time opens Google's and Microsoft's own limits too
+        self.sync.mirror_allows()
         for together, what in [(t, "started") for t in started] + [(t, "ended") for t in ended]:
             self.hass.bus.async_fire(EVENT_PLAYING_TOGETHER, self._together_event(together, what))
         async_dispatcher_send(self.hass, SIGNAL_PEOPLE, new_day)
@@ -980,8 +982,13 @@ class Household:
 
     @callback
     def add_bonus(self, person: str, group: str, minutes: int) -> None:
+        day = self.days.get(person)
+        had_none = bool(day and (state := day.limits.get(ALL)) and state.minutes_left == 0)
         self.limits.set_bonus(person, group, self.limits.bonus(person, group) + minutes)
         self.recompute()
+        if group == ALL and minutes > 0:
+            # All screen time back: Google's and Microsoft's own limits get as much
+            self.sync.mirror_bonus(person, had_none)
 
     @callback
     def set_bonus(self, person: str, group: str, minutes: int) -> None:

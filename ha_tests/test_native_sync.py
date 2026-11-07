@@ -4,6 +4,7 @@ own app is an adult's decision, which Hearth adopts and never overwrites."""
 from datetime import timedelta
 
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_capture_events, async_mock_service
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
@@ -362,3 +363,153 @@ async def test_extra_time_from_family_safety_is_a_grant_until_it_ends(
     assert grants[0].data["end_with"] == "family_safety_cancel_bonus"
     assert dt_util.parse_datetime(grants[0].data["until"]) == until
     assert [c.data["platform"] for c in unlocked] == ["Xbox"]
+
+
+# D. Hearth's "all screen time" in the first-party apps
+
+
+def _remaining(hass: HomeAssistant, minutes) -> None:
+    hass.states.async_set(
+        "sensor.sam_s_phone_screen_time_remaining", str(minutes), {"child_id": CHILD, "device_id": "dev1"}
+    )
+
+
+async def _allow_all(hass: HomeAssistant, until) -> str:
+    response = await hass.services.async_call(
+        DOMAIN,
+        "allow",
+        {"people": ["person.sam"], "group": "all", "until": until},
+        blocking=True,
+        return_response=True,
+    )
+    await hass.async_block_till_done()
+    return response["id"]
+
+
+async def test_allowing_all_screen_time_adds_a_family_link_bonus_where_google_would_block(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+    added = async_mock_service(hass, "familylink", "add_time_bonus")
+    reset = async_mock_service(hass, "familylink", "reset_bonus")
+    await _sam_with_family_link(hass, hass_client_no_auth)
+    _phone(hass)
+    _remaining(hass, 10)
+
+    allow_id = await _allow_all(hass, dt_util.now().replace(hour=13, minute=0).isoformat())
+    assert [c.data for c in added] == [{"entity_id": PHONE, "bonus_minutes": 50}]
+    await _bonus(hass, "all", 0)  # evaluated again: not added twice
+    assert len(added) == 1
+    status = _household(hass).enforcement.status_of("person.sam")["family_link"]
+    assert status["last"]["bonus_added"] == {"Sam's phone": 50}
+
+    # A grant isn't made of Hearth's own bonus
+    assert _household(hass).grants.of("person.sam") == []
+
+    _phone(hass, bonus=50)
+    await hass.services.async_call(DOMAIN, "allow_end", {"id": allow_id}, blocking=True)
+    await hass.async_block_till_done()
+    assert [c.data for c in reset] == [{"entity_id": PHONE}]
+
+
+async def test_a_device_with_time_enough_or_no_limit_gets_no_bonus(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+    added = async_mock_service(hass, "familylink", "add_time_bonus")
+    await _sam_with_family_link(hass, hass_client_no_auth)
+    _phone(hass)
+    _remaining(hass, 240)
+    await _allow_all(hass, dt_util.now().replace(hour=13, minute=0).isoformat())
+    _remaining(hass, "unknown")  # no daily limit
+    await _allow_all(hass, dt_util.now().replace(hour=14, minute=0).isoformat())
+    assert added == []
+
+
+async def test_a_parent_s_bonus_on_top_of_hearth_s_isn_t_reset(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+    async_mock_service(hass, "familylink", "add_time_bonus")
+    reset = async_mock_service(hass, "familylink", "reset_bonus")
+    await _sam_with_family_link(hass, hass_client_no_auth)
+    _phone(hass)
+    _remaining(hass, 0)
+    allow_id = await _allow_all(hass, dt_util.now().replace(hour=13, minute=0).isoformat())
+    _phone(hass, bonus=90)  # Hearth's 60 and a parent's 30
+    await hass.services.async_call(DOMAIN, "allow_end", {"id": allow_id}, blocking=True)
+    await hass.async_block_till_done()
+    assert reset == []
+    status = _household(hass).enforcement.status_of("person.sam")["family_link"]
+    assert status["last"]["bonus_kept"] == [PHONE]
+
+
+async def test_extra_time_given_back_reaches_family_link_too(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+    added = async_mock_service(hass, "familylink", "add_time_bonus")
+    await _sam_with_family_link(hass, hass_client_no_auth)
+    _phone(hass)
+    _remaining(hass, 0)
+    await _budget(hass, "all", 30)
+    await _bonus(hass, "all", 20)  # All screen time back: 35 used of 50, 15 left
+    assert [c.data["bonus_minutes"] for c in added] == [15]
+
+
+async def test_allowing_all_screen_time_gives_family_safety_extra_time(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+    async_mock_service(hass, "microsoft_family_safety", "lock_platform")
+    async_mock_service(hass, "microsoft_family_safety", "unlock_platform")
+    cancelled = async_mock_service(hass, "microsoft_family_safety", "cancel_time_bonus")
+    given: list[ServiceCall] = []
+
+    async def add_time_bonus(call: ServiceCall):
+        given.append(call)
+        return {"platform": call.data["platform"], "applied_until": call.data["until"], "released_hold": False}
+
+    hass.services.async_register(
+        "microsoft_family_safety", "add_time_bonus", add_time_bonus, supports_response=SupportsResponse.OPTIONAL
+    )
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    hass.states.async_set(
+        "binary_sensor.sam_xbox_allowed_now",
+        "on",
+        {"user_id": 123456, "platform": "Xbox", "hold": "none", "allowance_minutes": 60, "used_minutes": 50,
+         "remaining_minutes": 10},
+    )
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY})
+
+    allow_id = await _allow_all(hass, dt_util.now().replace(hour=13, minute=0).isoformat())
+    assert [c.data for c in given] == [
+        {"entity_id": FAMILY_SAFETY, "platform": "Xbox", "until": dt_util.now().replace(hour=13).replace(
+            tzinfo=None).isoformat()}
+    ]
+    await hass.services.async_call(DOMAIN, "allow_end", {"id": allow_id}, blocking=True)
+    await hass.async_block_till_done()
+    assert [c.data["platform"] for c in cancelled] == ["Xbox"]
+
+
+async def test_family_safety_extra_time_unavailable_is_shown_not_raised(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+
+    async def add_time_bonus(call: ServiceCall):
+        raise HomeAssistantError("Microsoft did not apply the extra time (experimental request)")
+
+    hass.services.async_register(
+        "microsoft_family_safety", "add_time_bonus", add_time_bonus, supports_response=SupportsResponse.OPTIONAL
+    )
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    hass.states.async_set(
+        "sensor.sam_xbox_time_remaining", "5", {"user_id": 123456, "allowance_minutes": 60}
+    )
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY})
+    await _allow_all(hass, dt_util.now().replace(hour=13, minute=0).isoformat())
+    status = _household(hass).enforcement.status_of("person.sam")["family_safety"]
+    assert "unavailable" in status["last"]["error"] and status["last"]["ok"] is False
