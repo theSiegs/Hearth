@@ -7,6 +7,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import java.util.Locale;
+
 /**
  * Locking the current adult profile with Google TV's own profile lock: its "Verify your identity" PIN screen
  * (launcherx ProfileLockWrapperActivity). The right PIN goes back to the profile; Back brings up Google TV's account
@@ -20,6 +22,11 @@ import android.util.Log;
  * profiles too: it waits behind the dark screen, so whoever turns the TV on next picks who is watching, and a profile
  * with a PIN asks for it before it opens. With a time chosen, it opens once the TV has slept that long, or on waking
  * if the TV slept too deeply for the timer to run.
+ *
+ * A power-button wake starts Google TV's own home (or a kid's time up screen) over that chooser, so the next person
+ * would land on the last profile's screen. Hearth remembers that it wanted the chooser, and once per wake, a moment
+ * after Google's own start has settled, opens it again if it isn't in front ({@link #reopenOnWake}); never once
+ * someone pressed a key or a profile changed since the wake.
  */
 final class ProfileLock {
     private static final String TAG = "HearthProfileLock";
@@ -28,6 +35,10 @@ final class ProfileLock {
     private static final String ON_SLEEP_KEY = "lock_on_sleep_minutes";
     /** When the screen last went off (wall clock), kept so a Hearth restart while the TV sleeps (an update) still knows. */
     private static final String OFF_AT_KEY = "screen_off_at";
+    /** Hearth opened the chooser for this sleep: the next wake checks it's still in front. */
+    private static final String WANTED_KEY = "chooser_wanted";
+    /** How long after a wake Hearth looks whether the chooser is still in front: Google's own start settles first. */
+    static final long WAKE_RECHECK_MS = 2_500;
     /** "Log out when the TV sleeps" is off. */
     static final int OFF = -1;
     /** Until someone chooses: log out on every sleep. */
@@ -82,7 +93,7 @@ final class ProfileLock {
             if (prefs(app).getLong(OFF_AT_KEY, 0) != offAt) return;
             prefs(app).edit().remove(OFF_AT_KEY).apply();
             Log.i(TAG, "Asleep " + (System.currentTimeMillis() - offAt) / 1000 + " s: opening the profile chooser");
-            showChooser(app);
+            if (showChooser(app)) setWanted(app, true);
         };
         HANDLER.postDelayed(sPending, minutes * 60_000L);
     }
@@ -108,17 +119,50 @@ final class ProfileLock {
 
     /**
      * The TV woke: opens the profile chooser if it slept at least the chosen time and the chooser didn't open while it
-     * slept (the timer doesn't run while the TV sleeps deeply).
+     * slept (the timer doesn't run while the TV sleeps deeply). Returns whether this wake should find the chooser in
+     * front (it opened for the sleep, or just now), for {@link #reopenOnWake} a moment later; asked once per wake.
      */
-    static void onScreenOn(Context context) {
+    static boolean onScreenOn(Context context) {
         cancelPending();
         SharedPreferences prefs = prefs(context);
         long offAt = prefs.getLong(OFF_AT_KEY, 0);
-        prefs.edit().remove(OFF_AT_KEY).apply();
+        boolean wanted = prefs.getBoolean(WANTED_KEY, false);
+        prefs.edit().remove(OFF_AT_KEY).remove(WANTED_KEY).apply();
+        int minutes = lockOnSleepMinutes(context);
+        if (minutes == OFF) return false;
         long now = System.currentTimeMillis();
-        if (!due(lockOnSleepMinutes(context), offAt, now)) return;
+        if (!due(minutes, offAt, now)) return wanted;
         Log.i(TAG, "Woke after " + (now - offAt) / 1000 + " s asleep: opening the profile chooser");
-        showChooser(context);
+        return showChooser(context) || wanted;
+    }
+
+    private static void setWanted(Context context, boolean wanted) {
+        prefs(context).edit().putBoolean(WANTED_KEY, wanted).apply();
+    }
+
+    /**
+     * Whether a window is the chooser or one of the screens Google TV lays over it while someone picks: an account
+     * check, a profile's PIN ("Verify your identity", a kids profile's PIN), the profile lock.
+     */
+    static boolean isChooserLike(String className) {
+        if (className == null) return false;
+        if (className.startsWith(LauncherAccessibilityService.GOOGLE_TV_PACKAGE + ".profile.")) return true;
+        String c = className.toLowerCase(Locale.ROOT);
+        return c.contains("reauth") || c.contains("accountverification") || c.contains("pinactivity");
+    }
+
+    /**
+     * A moment after a wake ({@link #WAKE_RECHECK_MS}): whether to open the chooser again. Only when this wake wanted
+     * it ({@link #onScreenOn}), "Log out when the TV sleeps" is still on, the screen is still on, and what's in front is
+     * known and isn't the chooser (Google TV's home or a kid's time up screen came up over it). Never when someone
+     * pressed a key or the profile changed since the wake (they picked, or pressed Back: theirs to decide), while
+     * "Use Google TV's home" is on, or while Hearth holds back for Google's own setup.
+     */
+    static boolean reopenOnWake(boolean wanted, int minutes, boolean screenOn, String frontClass,
+            boolean keySinceWake, boolean profileChangedSinceWake, boolean googleTvHome, boolean holdingBack) {
+        if (!wanted || minutes == OFF || !screenOn) return false;
+        if (keySinceWake || profileChangedSinceWake || googleTvHome || holdingBack) return false;
+        return frontClass != null && !isChooserLike(frontClass);
     }
 
     /**

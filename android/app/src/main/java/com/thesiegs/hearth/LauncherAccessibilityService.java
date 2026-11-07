@@ -187,6 +187,14 @@ public class LauncherAccessibilityService extends AccessibilityService {
     /** Whether Google TV is suspending apps (a kids profile), as last seen; null until first checked. */
     private Boolean mKidsState;
     private String mLastWindowPackage;
+    /** The class of the last window in front (not Hearth's overlays, the keyboard or a system pop-up). */
+    private String mFrontClass;
+    /** Since this wake: a remote key was pressed (someone is choosing; ProfileLock.reopenOnWake leaves them be). */
+    private boolean mKeySinceWake;
+    /** The profile on at this wake, to tell whether someone picked one before the wake check. */
+    private String mWakeProfileKey;
+    /** A moment after a wake that wanted the profile chooser: opens it again if Google's own start covered it. */
+    private final Runnable mWakeChooserCheck = this::checkChooserAfterWake;
     private String mLastAppPackage;
 
     // The active profile user's serial (ProfileUsers); names are learned from the chooser's current-account tile
@@ -426,8 +434,14 @@ public class LauncherAccessibilityService extends AccessibilityService {
             restartFront();
             HaBridgeService.setScreenOn(on);
             // "Log out when the TV sleeps": Google TV's profile chooser as the TV sleeps (or on waking, if its timer never ran)
+            mHandler.removeCallbacks(mWakeChooserCheck);
             if (on) {
-                ProfileLock.onScreenOn(context);
+                if (ProfileLock.onScreenOn(context)) {
+                    // A power-button wake starts Google TV's home over the chooser: look again once it has settled
+                    mKeySinceWake = false;
+                    mWakeProfileKey = getActiveProfileKey(context);
+                    mHandler.postDelayed(mWakeChooserCheck, ProfileLock.WAKE_RECHECK_MS);
+                }
                 AdSandbox.check(context);
             } else {
                 ProfileLock.onScreenOff(context);
@@ -1287,6 +1301,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         // Nor do the keyboard or a system pop-up (volume, a toast) replace what's in front
         if (!isOverlayPackage(packageName)) {
             mLastWindowPackage = packageName;
+            mFrontClass = className;
             ProfilePairingService.onWindowOf(packageName);
         }
         // Not the keyboard, a system pop-up or the assistant's bar: those come up over the app that's still in use
@@ -2110,6 +2125,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         onUserInput();
         if (event.getAction() == KeyEvent.ACTION_DOWN && event.getDeviceId() != KeyCharacterMap.VIRTUAL_KEYBOARD) {
             ParentPresence.onKey(SystemClock.elapsedRealtime());
+            if (!isPowerKey(event.getKeyCode())) mKeySinceWake = true;
             // Typing the PIN with the remote instead of waiting for the phone (keys Hearth types come from no device)
             if (!ProfilePairingService.isEnteringPin()) {
                 InputDevice device = event.getDevice();
@@ -2162,6 +2178,29 @@ public class LauncherAccessibilityService extends AccessibilityService {
             return true;
         }
         return super.onKeyEvent(event);
+    }
+
+    /** The keys that wake or sleep the TV: pressing one isn't choosing anything. */
+    private static boolean isPowerKey(int code) {
+        return code == KeyEvent.KEYCODE_POWER || code == KeyEvent.KEYCODE_WAKEUP || code == KeyEvent.KEYCODE_SLEEP
+                || code == KeyEvent.KEYCODE_TV_POWER;
+    }
+
+    /**
+     * A moment after a wake that wanted Google TV's profile chooser (ProfileLock.onScreenOn): a power-button wake
+     * starts Google TV's own home over it, or the last kid's time up screen, so the next person would land there.
+     * Opens the chooser again, once, unless ProfileLock.reopenOnWake says to leave it.
+     */
+    private void checkChooserAfterWake() {
+        boolean profileChanged = !TextUtils.equals(mWakeProfileKey, getActiveProfileKey(this));
+        boolean holdingBack = SystemClock.elapsedRealtime() < mGoogleSetupUntil || mNewProfileHold;
+        boolean reopen = ProfileLock.reopenOnWake(true, ProfileLock.lockOnSleepMinutes(this),
+                mInteractive && !mDreaming, mFrontClass, mKeySinceWake, profileChanged, isGoogleTvHome(this),
+                holdingBack);
+        Log.i(TAG, "Wake check: front=" + mFrontClass + " key=" + mKeySinceWake + " profileChanged=" + profileChanged
+                + " googleTvHome=" + isGoogleTvHome(this) + " holdingBack=" + holdingBack
+                + (reopen ? ": opening the profile chooser again" : ": leaving it"));
+        if (reopen) ProfileLock.showChooser(this);
     }
 
     // Kids profiles that haven't approved this app suspend it; screen time screens must stay in front.
