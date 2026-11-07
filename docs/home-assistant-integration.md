@@ -391,6 +391,19 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
   Family Link doesn't pause it (budget or School time), and Family Safety and Nintendo don't hold for an allowed group.
   It ends on its own; what should hold then holds again with the next minute's recompute.
 - `hearth.allow_end` (`id`, or `people` with an optional `app` or `group`) ends one early; returns `{ended: [ids]}`.
+- **Ends on a place.** `hearth.allow`, `hearth.pause` and `hearth.school_time_off` take `ends_on: {arrive: <place>}`
+  or `ends_on: {leave: <place>}`, a place key (`home`, `school`, or a favorite place's key, see [Places](#places)) of
+  each of the people. It ends for each person on their own, exactly as `hearth.allow_end`, `hearth.pause_end` or
+  `hearth.school_time_off_cancel` would for them (Hearth's extra time in Family Link and Family Safety for an allow is
+  taken back too), when their confirmed place changes: `arrive` when it becomes that place, `leave` when a confirmed
+  that place becomes another (known) one. An exception that starts with them already there doesn't end until they
+  come back (arrive) or leave. An unknown or stale place never ends anything: the time stays the cap (an allow's
+  `until`, the end of the day by default; a pause's `minutes` or `until`, the end of the day when it has neither;
+  School time off: its day, and `ends_on` only for today's). The adults are told the way requests reach them ("Sam got
+  home; their allow (screen time) ended."). The allow, the pause and the School time off carry `ends_on` {arrive or
+  leave, `place` (its name), `text`: "ends when Sam gets home, or 21:00"} on the Screen time today sensor, in
+  `hearth.explain` (with the exception, and with a pause in `blocked_by`) and in the household summary. A pause for
+  several people ends per person (each person's pause is their own), so the others stay paused until they move too.
 - Bedtime, School time itself and a family pause still lock the person. An allow lifts Hearth's holds, not those
   locks: a TV can't open one app through a lock without a change on the TV, and Family Link's own bedtime still locks
   the phone. To lift School time, take it off (`hearth.school_time_off`).
@@ -398,7 +411,7 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
   lifted, exceptions, school_time_off}`. `kind` is `budget` (by the group, until midnight), `bedtime`, `school_time`
   or `other` (by the lock entity, until it says), `pause` (until, reason) or `school_time_apps` (by the Family Link
   entity, until School time ends) or `google_tv_limit` (by the TV's device id, with its `device` name, until null; see
-  below). `until` is when it's allowed again (the latest of the blocks, null when one doesn't
+  below). `place` is kept for place rules (none are built yet: a place only ends an exception so far). `until` is when it's allowed again (the latest of the blocks, null when one doesn't
   say), or, when allowed thanks to an exception, when that ends. `lifted` lists the holds an allow lifts now.
 - **Google TV's own Kids daily limit.** A kids profile can also have a daily limit set in Google TV itself (Family Link's
   or the TV's own Kids profile settings). When it runs out, Google TV shows its time up screen and blocks the whole
@@ -468,6 +481,39 @@ attribute present), so an older Family Link or Family Safety keeps working as be
 - **Requests answered in the Family Safety app.** `microsoft_family_safety_request_resolved` with `via: app` closes the
   matching ask as answered there (`answered_in: family_safety`; shown as "answered in the Family Safety app"); `via:
   service` (Hearth's own answer) is left alone. Family Link has no kid requests, so there's nothing to close there.
+
+### Places
+
+Where each kid is, as a place's name: Hearth keeps no coordinates and shows nothing else. Places are Home Assistant
+zones, set in Configure > Places (and on Hearth's page, Family > Places):
+
+- **Home** is always `zone.home`.
+- **School** is each kid's own: a zone per kid.
+- **Favorite places**: any number (up to 20) of a zone and the name to show ("Practice", "Beach house"); each gets a
+  key from its name (`practice`, `beach_house`).
+
+Each kid (everyone in the household but its adults) has a **Place** sensor, `sensor.hearth_<person>_place`. Its state
+is a place key (`home`, `school`, a favorite's key), `away` (anywhere else) or unknown; its attributes are `name` (the
+place's name; "Unknown", or "No location" when there's nothing to go on), `since`, `source` (`family_link` or
+`person`), `accuracy` (metres), `fresh` and `as_of`. Only the state and `name` are recorded (`since`, `source`,
+`accuracy`, `fresh` and `as_of` are `_unrecorded_attributes`). An integration can't keep an entity's state itself out
+of the recorder: exclude `sensor.hearth_*_place` in `recorder:` to keep no history of it at all.
+
+Where it comes from, in order:
+
+1. The kid's **Family Link location tracker** (`device_tracker.<kid>_family_link`: the one of the child of their
+   Family Link enforcer, or the one picked in Configure > Places), while its `location_timestamp` is at most 20 minutes
+   old. Its latitude and longitude are set against the places' zones (their radius); a reading whose `gps_accuracy` is
+   worse than the radius of a zone it could be in is ignored.
+2. Else the kid's **person** entity (`home`, `not_home` or a zone's name), as of when it changed.
+
+A router's, Wi-Fi or Bluetooth tracker (eero and the like) is never used, even if picked. With neither, the place is
+unknown: stale, or "No location" when there's no Family Link tracker and no usable person state.
+
+A change needs **two consecutive readings that agree, or three minutes of them**; going back to the place last
+confirmed counts at once, and a stale reading is unknown at once (unknown never ends anything). Each confirmed change
+from one place to another fires **`hearth_place`** {person, from, to} (place keys only: no coordinates, no accuracy)
+and ends what ends on it ([Exceptions](#exceptions)). Place rules (pause while at a place, say) aren't built.
 
 ### School days and day types
 
@@ -567,7 +613,8 @@ The answer to each status post carries the person's (or, on a TV, each profile's
 
 `groups` lists only groups with a budget; `minutes_left` null is no limit; All screen time may carry `except`, the apps
 it never holds (a Not screen time group's). Each person's part is described under [Ask for more](#ask-for-more) and
-[Pause and locks](#pause-and-locks); a TV's also has every mapped profile's `youtube_blocks`, `people` (each mapped
+[Pause and locks](#pause-and-locks); an allow of theirs that ends on a place is in `allow_ends` [{id, app, group,
+until, text: "ends when you get home"}] (never where they are); a TV's also has every mapped profile's `youtube_blocks`, `people` (each mapped
 profile of that TV by its own key, with its person: a notification's `for` may name a person, and the TV finds their
 profile here) and the [parent PINs](#the-devices-side-of-the-api). Own-limit titles (`open_titles`) aren't built. A TV gets it in the answer to each post (at least every 2 minutes while it's
 on); `version`, a hash of the content, lets it skip an unchanged one. This replaces `sensor.hearth_allowance`:
@@ -645,8 +692,8 @@ and doesn't count as the person's open request.
 
 ### Pause and locks
 
-`hearth.pause` (`minutes`, or `until` a time or date-time; `reason`; `people`, everyone by default) holds the people
-until it ends or `hearth.pause_end` (`people`, everyone by default). A paused person is locked, so a Hearth TV holds
+`hearth.pause` (`minutes`, or `until` a time or date-time; `reason`; `people`, everyone by default; `ends_on`, see
+[Exceptions](#exceptions)) holds the people until it ends or `hearth.pause_end` (`people`, everyone by default). A paused person is locked, so a Hearth TV holds
 their apps as for bedtime, and their state document says `pause` {until, reason}. Every person's document also says,
 while they're locked, `lock` {by: the lock entities and/or "pause", kind: bedtime | school_time | pause | other
 (the first that applies), kinds: all of them, until: when it ends, if known}, and `next_lock`
@@ -681,6 +728,8 @@ then sends the same object as an event whenever it changes, at most every 2 seco
   `error`, `failed_at`, and `last`, what Hearth last did and whether it took: `{at, ok, held, let_go, outcomes
   {item: restored | kept_current | ...}, bonus_added, extra_time, parent_grant, reason, error}`) and
   `answered_elsewhere` (requests answered in the Family Safety app lately).
+- each kid also has `place` {`name`, `fresh`} (where they are, by name only; [Places](#places)): every reader of the
+  summary is an administrator or an adult. An allow and a pause that end on a place carry `ends_on` (above).
 - `not_screen_time`, `contract`, and `version` (changes with any of it).
 - `media_rooms`: the house's media players by room, below.
 - Contract 2: each person's `headline`, `lines` and `actions`, and the household's `household` {`headline`,
@@ -1055,7 +1104,7 @@ them.
 The Configure menu (Settings > Devices & services > Hearth > Configure) still has everything, as a menu:
 
 **Who's who on the TVs**, **Add / Remove a screen time source**, **Add / Remove a title**, **Locks** (bedtime,
-school time), **Enforce limits** (Family Link, Family Safety, Nintendo), **School days**, **Schedule**, **Website
+school time), **Enforce limits** (Family Link, Family Safety, Nintendo), **School days**, **Schedule**, **Places**, **Website
 block list**, **Chores earn time**, **Offer more time**, **Sort new apps**, **Watch for new apps**, **Add a group**, **Add apps to Video or Games**, **Not screen time**, **Remove a group**, **Tile
 exchange sharing** and **Parent PINs**. (Suggested title matches and rules aren't built.)
 
@@ -1080,6 +1129,7 @@ Per person (a device of its own in Home Assistant, "Hearth: <person>"):
 | Playing together today | duration |
 | Held by parental controls | sensor: what Family Link, Family Safety or Nintendo holds now |
 | Locked | binary sensor |
+| Place, for each kid | sensor: a place key, away or unknown (see [Places](#places)) |
 
 Per household: **Playing together** and **School day** (binary sensors), **Apps to sort**, **Day type**. Open requests for more
 time are in the household summary and on Hearth's page, not an entity.
@@ -1087,7 +1137,7 @@ time are in the household summary and on Hearth's page, not an entity.
 Events: `hearth_budget_reached` (person, group, group_name), `hearth_more_time_requested` and
 `hearth_more_time_answered` (as in [Ask for more](#ask-for-more)), `hearth_playing_together` (title, people, started
 or ended), `hearth_enforced`, `hearth_new_app`, `hearth_parent_pin_used`, `hearth_parent_pin_locked_out`,
-`hearth_schedule`, `hearth_chore_done`.
+`hearth_schedule`, `hearth_chore_done`, `hearth_place` (person, from, to).
 
 Per person with a TV profile: **Last video started** (see [A kids profile's YouTube](#a-kids-profiles-youtube)).
 

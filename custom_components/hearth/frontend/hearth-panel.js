@@ -400,6 +400,37 @@ class HearthPanel extends HTMLElement {
       case "source-remove":
         await this._setOption("sources", (cfg.sources || []).filter((s) => s.id !== d.id), "Source removed");
         return;
+      case "place-save": {
+        const places = this._placesOption();
+        const school = this._value(`#place-school-${CSS.escape(d.person)}`);
+        const tracker = this._value(`#place-tracker-${CSS.escape(d.person)}`);
+        delete places.school[d.person];
+        delete places.trackers[d.person];
+        if (school) places.school[d.person] = school;
+        if (tracker) places.trackers[d.person] = tracker;
+        await this._setOption("places", places, "Places saved");
+        return;
+      }
+      case "place-fav-add": {
+        const zone = this._value("#place-fav-zone");
+        if (!zone) return this._notify("Pick the place's zone");
+        const name = this._value("#place-fav-name") || this._entityName(zone);
+        const places = this._placesOption();
+        const taken = new Set(places.favorites.map((f) => f.key));
+        let base = name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 32) || "place";
+        if (["home", "school", "away", "unknown"].includes(base)) base = `${base}_place`;
+        let key = base;
+        for (let n = 2; taken.has(key); n++) key = `${base}_${n}`;
+        places.favorites.push({ key, zone, name: name.slice(0, 40) });
+        await this._setOption("places", places, "Place added");
+        return;
+      }
+      case "place-fav-remove": {
+        const places = this._placesOption();
+        places.favorites = places.favorites.filter((f) => f.key !== d.key);
+        await this._setOption("places", places, "Place removed");
+        return;
+      }
       case "lock-add": {
         const entityId = this._value(`#lock-entity-${CSS.escape(d.person)}`);
         if (!entityId) return this._notify("Pick a sensor");
@@ -754,7 +785,7 @@ class HearthPanel extends HTMLElement {
       const p = paused[0].pause;
       const until = new Date(p.until).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
       return `<div class="card pause on"><div class="row"><ha-icon icon="mdi:silverware-fork-knife"></ha-icon>
-        <div class="grow"><div class="strong">${esc(p.reason || "Paused")} until ${esc(until)}</div>
+        <div class="grow"><div class="strong">${esc(p.reason || "Paused")} until ${p.ends_on ? `${esc(this._endsOn(p.ends_on))} or ` : ""}${esc(until)}</div>
         <div class="muted small">${esc(paused.map((x) => x.name).join(", "))}: their Hearth TVs and phones are on hold.</div></div>
         <button class="btn primary" data-action="pause-end">End pause</button></div></div>`;
     }
@@ -777,6 +808,13 @@ class HearthPanel extends HTMLElement {
     if (s?.locked && !s.pause)
       chips.push(`<span class="chip warn"><ha-icon icon="mdi:lock"></ha-icon>Locked${s.locked_by?.length ? `: ${esc(s.locked_by.filter((e) => e !== "pause").map((e) => this._entityName(e)).join(", "))}` : ""}${s.lock?.until ? ` until ${esc(new Date(s.lock.until).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}` : ""}</span>`);
     if (s?.pause) chips.push(`<span class="chip warn"><ha-icon icon="mdi:pause"></ha-icon>${esc(s.pause.reason || "Paused")}</span>`);
+    const place = s?.place;
+    if (place) {
+      const now = this._config.places_now?.[kid.id] || {};
+      const source = { family_link: "Family Link", person: "Home Assistant" }[now.source] || "";
+      const title = place.fresh ? `From ${source || "its source"}` : place.name === "No location" ? "No Family Link location and no person location" : "No fresh reading";
+      chips.push(`<span class="chip ${place.fresh ? "" : "dim"}" title="${esc(title)}"><ha-icon icon="mdi:map-marker${place.fresh ? "" : "-question"}-outline"></ha-icon>${esc(place.name === "No location" ? "no location" : place.name)}${place.fresh && source ? ` · ${esc(source)}` : ""}</span>`);
+    }
     if (playing) chips.push(`<span class="chip play"><ha-icon icon="mdi:play-circle"></ha-icon>${esc(playing.app || playing.package || "Playing")}${playing.device ? ` · ${esc(playing.device)}` : ""}</span>`);
     if (left === 0) chips.push(`<span class="chip out"><ha-icon icon="mdi:timer-off"></ha-icon>Out of time</span>`);
     if (s?.next_lock) {
@@ -826,7 +864,7 @@ class HearthPanel extends HTMLElement {
     const time = (iso) => (iso ? new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "");
     const chips = [];
     for (const a of s.allows || [])
-      chips.push(`<span class="chip"><ha-icon icon="mdi:check-circle-outline"></ha-icon>${esc(a.group === "all" ? "All screen time" : a.group || a.app)} allowed${a.until ? ` until ${esc(time(a.until))}` : ""}</span>`);
+      chips.push(`<span class="chip"><ha-icon icon="mdi:check-circle-outline"></ha-icon>${esc(a.group === "all" ? "All screen time" : a.group || a.app)} allowed${a.ends_on ? ` until ${esc(this._endsOn(a.ends_on))}${a.until ? ` or ${esc(time(a.until))}` : ""}` : a.until ? ` until ${esc(time(a.until))}` : ""}</span>`);
     for (const g of s.grants || []) {
       const what = { device: "Devices", switch: "Switch", app: g.target?.value, platform: g.target?.value }[g.target?.kind] || g.target?.value;
       chips.push(`<span class="chip warn" title="${esc(g.reason || "")}"><ha-icon icon="mdi:account-key"></ha-icon>${esc(what)} open ${esc(g.source)}${g.until ? ` until ${esc(time(g.until))}` : ""}${
@@ -1191,6 +1229,7 @@ class HearthPanel extends HTMLElement {
       ${this._pinsCard()}
       ${this._sharingCard()}
       ${this._schoolCard()}
+      ${this._placesCard()}
       <section class="card">
         <h3><ha-icon icon="mdi:cog-outline"></ha-icon>More settings</h3>
         <p class="muted">Titles with a limit of their own are still in the integration's Configure menu.</p>
@@ -1223,6 +1262,45 @@ class HearthPanel extends HTMLElement {
       <div class="checks">${kids
         .map((k) => `<label class="check"><input type="checkbox" data-change="tile-share" data-person="${esc(k.id)}" ${on.has(k.id) ? "checked" : ""}> ${esc(k.name)}</label>`)
         .join("") || `<span class="muted small">No kids yet.</span>`}</div>
+    </section>`;
+  }
+
+  _placesOption() {
+    const p = this._config.places || {};
+    return { school: { ...(p.school || {}) }, trackers: { ...(p.trackers || {}) }, favorites: [...(p.favorites || [])] };
+  }
+
+  // How an exception that ends on a place reads: "until arriving home", "until leaving school"
+  _endsOn(e) {
+    if (!e) return "";
+    const place = e.place && !["Home", "School"].includes(e.place) ? e.place : (e.place || "").toLowerCase();
+    return e.arrive ? `arriving ${e.arrive === "home" ? "home" : `at ${place}`}` : `leaving ${place}`;
+  }
+
+  _placesCard() {
+    const p = this._config.places || {};
+    const zones = (this._config.zones || []).map((z) => ({ value: z.entity_id, label: `${z.name} (${z.entity_id})` }));
+    const trackers = this._config.choices?.location || [];
+    const kids = this._kids();
+    return `<section class="card">
+      <h3><ha-icon icon="mdi:map-marker-outline"></ha-icon>Places</h3>
+      <p class="muted">Places are Home Assistant zones. Hearth keeps no coordinates and shows only the place's name, from each kid's Family Link location (or their person in Home Assistant when it's older than 20 minutes). Home is always your home zone. A Wi-Fi or router tracker is never used.</p>
+      ${kids.length ? `<ul class="list">${kids
+        .map((k) => `<li class="wrap">${this._avatar(k.id, 32)}<div class="grow">${esc(k.name)}</div>
+          <select id="place-school-${esc(k.id)}" aria-label="${esc(k.name)}'s school">${this._options(zones, p.school?.[k.id], "School: none")}</select>
+          <select id="place-tracker-${esc(k.id)}" aria-label="${esc(k.name)}'s Family Link location">${this._entityOptions(trackers, p.trackers?.[k.id], "Family Link location: found by Hearth")}</select>
+          <button class="btn" data-action="place-save" data-person="${esc(k.id)}">Save</button></li>`)
+        .join("")}</ul>` : `<p class="muted small">No kids yet.</p>`}
+      <div class="strong">Favorite places</div>
+      ${(p.favorites || []).length ? `<ul class="list">${p.favorites
+        .map((f) => `<li><div class="grow">${esc(f.name)} <span class="muted small">${esc(f.key)} · ${esc(this._entityName(f.zone))}</span></div>
+          <button class="icon-btn" data-action="place-fav-remove" data-key="${esc(f.key)}" aria-label="Remove"><ha-icon icon="mdi:delete-outline"></ha-icon></button></li>`)
+        .join("")}</ul>` : `<p class="muted small">None yet.</p>`}
+      <div class="row wrap">
+        <select id="place-fav-zone" aria-label="Zone">${this._options(zones, "", "Zone")}</select>
+        <input id="place-fav-name" placeholder="Name, e.g. Practice" maxlength="40">
+        <button class="btn primary" data-action="place-fav-add">Add</button>
+      </div>
     </section>`;
   }
 
@@ -1373,6 +1451,7 @@ p.warn { color: var(--warning-color, #ffa600); }
 .chip.out { background: color-mix(in srgb, var(--error-color, #db4437) 20%, transparent); }
 .chip.play { background: color-mix(in srgb, var(--success-color, #43a047) 20%, transparent); }
 .chip.small { padding: 1px 6px; font-size: 11px; }
+.chip.dim { opacity: .6; }
 .native { margin-top: 8px; display: flex; flex-direction: column; gap: 2px; }
 .warn-text { color: var(--warning-color, #b26a00); }
 .error-text { color: var(--error-color, #db4437); }
