@@ -195,6 +195,10 @@ pause:
         entity:
           domain: person
           multiple: true
+    ends_on:
+      example: '{"arrive": "home"}'
+      selector:
+        object:
 
 pause_end:
   fields:
@@ -246,6 +250,10 @@ allow:
       example: Homework video
       selector:
         text:
+    ends_on:
+      example: '{"arrive": "home"}'
+      selector:
+        object:
 
 allow_end:
   fields:
@@ -299,6 +307,10 @@ school_time_off:
       example: Field trip
       selector:
         text:
+    ends_on:
+      example: '{"arrive": "school"}'
+      selector:
+        object:
 
 school_time_off_cancel:
   fields:

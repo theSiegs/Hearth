@@ -54,7 +54,8 @@ from . import family_link as fl
 from .chores import ChoreWatcher
 from .schedule import Scheduler
 from .watch import WatchLog
-from .pause import PAUSE, lock_kinds, lock_until, next_lock, pause_of
+from .pause import PAUSE, end_pause, lock_kinds, lock_until, next_lock, pause_ends_on, pause_of
+from .places import Places, happened, matches
 from . import parent_pin
 from .media import media_rooms
 from .profiles import REF_PREFIX, is_ref, split_tv_key, tv_key
@@ -118,6 +119,7 @@ class Household:
         self.sync = NativeSync(hass, self, hub.entry.entry_id)
         self.scheduler = Scheduler(hass, self, hub.entry.entry_id)
         self.chores = ChoreWatcher(hass, self)
+        self.places = Places(hass, self)
         self.days: dict[str, PersonDay] = {}
         # The day [days] is of
         self.today: date | None = None
@@ -783,7 +785,22 @@ class Household:
             **({"request": ask.device_view()} if (ask := self.hub.asks.latest_for(person)) else {}),
             # What a parent blocked here, for HearthTube in the person's kids profiles (a TV's Hearth passes it on)
             "youtube_blocks": self.watch.blocks_document(person),
+            # Their own allows that end on a place: "ends when you get home". Never where they are
+            **({"allow_ends": ends} if (ends := self._allow_ends(person)) else {}),
         }
+
+    def _allow_ends(self, person: str) -> list[dict[str, Any]]:
+        return [
+            {
+                "id": a.id,
+                "app": a.app,
+                "group": a.group,
+                "until": dt_util.as_local(a.until[person]).isoformat(),
+                "text": self.places.ends_on_view(person, a.ends_on, you=True)["text"],
+            }
+            for a in self.allows.of(person)
+            if a.ends_on
+        ]
 
     def document_for(self, device_id: str) -> dict[str, Any]:
         """The device's state document: per TV profile (or, for a phone, its person) what's left today."""
@@ -866,11 +883,71 @@ class Household:
     def exceptions_of(self, person: str) -> dict[str, Any]:
         """The person's allows and School time taken off, for their sensor and Hearth's page."""
         return {
-            "allows": [a.view(person) for a in self.allows.of(person)],
+            "allows": self.allow_views(person),
             # A parent's change in the Family Link, Nintendo or Family Safety app that lifts one of Hearth's holds
             "grants": [g.view() for g in self.grants.of(person)],
-            "school_time_off": self.scheduler.offs_of(person),
+            "school_time_off": self.off_views(person),
         }
+
+    def allow_views(self, person: str, allows=None) -> list[dict[str, Any]]:
+        """The person's allows as shown: an ends_on says its place and "ends when Sam gets home, or 21:00"."""
+        out = []
+        for allow in self.allows.of(person) if allows is None else allows:
+            view = allow.view(person)
+            if allow.ends_on:
+                view["ends_on"] = self.places.ends_on_view(person, allow.ends_on, allow.until[person])
+            out.append(view)
+        return out
+
+    def off_views(self, person: str) -> list[dict[str, Any]]:
+        out = []
+        for view in self.scheduler.offs_of(person):
+            if view.get("ends_on"):
+                view["ends_on"] = self.places.ends_on_view(person, view["ends_on"])
+            out.append(view)
+        return out
+
+    def pause_view(self, person: str) -> dict[str, Any] | None:
+        """The pause's ends_on as shown, while the person's pause has one."""
+        found = pause_ends_on(self.hass, person)
+        return self.places.ends_on_view(person, found[0], found[1]) if found else None
+
+    @callback
+    def place_changed(self, person: str, came_from: str | None, went_to: str) -> None:
+        """A confirmed change of the person's place: what ends on it ends for them, as allow_end, pause_end and
+        school_time_off_cancel would, and the adults are told."""
+        ended: list[tuple[dict[str, str], str]] = []
+        for allow in list(self.allows.of(person)):
+            if matches(allow.ends_on, came_from, went_to) and self.allows.end_for(allow.id, person):
+                group = self.group(allow.group) if allow.group else None
+                what = (
+                    "screen time" if allow.group == "all" else group.name if group else allow.group or allow.app
+                )
+                ended.append((allow.ends_on, f"their allow ({what}) ended"))
+        if (pause := pause_ends_on(self.hass, person)) and matches(pause[0], came_from, went_to):
+            end_pause(self.hass, [person])
+            ended.append((pause[0], "their pause ended"))
+        offs = [
+            off
+            for off in self.scheduler.ending_on_place(person, dt_util.now().date())
+            if matches(off.ends_on, came_from, went_to)
+        ]
+        for off in offs:
+            self.scheduler.end_one(off)
+            ended.append((off.ends_on, "School time is back on"))
+        if not ended:
+            return
+        self.recompute()
+        # Extra time Hearth gave in Family Link or Family Safety for an allow that ended goes too
+        self.sync.allow_ended()
+        if offs:
+            self.hass.async_create_task(self.scheduler.async_tick(), "hearth school time back")
+        who = self.person_name(person)
+        lines = [
+            f"{happened(ends_on, who, self.places.place_name(person, next(iter(ends_on.values()))))}; {what}."
+            for ends_on, what in ended
+        ]
+        self.hub.asks.tell(f"{who}: {self.places.place_name(person, went_to)}", " ".join(lines), f"hearth_place_{person}")
 
     def explain(self, person: str, app: str | None = None, group: str | None = None) -> dict[str, Any]:
         """Why an app or a group is held for the person now, or isn't: allowed, until, blocked_by [{kind, by, until}],
@@ -902,9 +979,10 @@ class Household:
         for entity_id in (day.locked_by if day else []):
             if entity_id == PAUSE:
                 pause = pause_of(self.hass, person, now) or {}
-                blocked.append(
-                    {"kind": "pause", "by": "hearth.pause", "until": pause.get("until"), "reason": pause.get("reason")}
-                )
+                item = {"kind": "pause", "by": "hearth.pause", "until": pause.get("until"), "reason": pause.get("reason")}
+                if ends_on := self.pause_view(person):
+                    item["ends_on"] = ends_on
+                blocked.append(item)
                 continue
             until = lock_until(self.hass, [entity_id])
             blocked.append(
@@ -966,8 +1044,8 @@ class Household:
             "until": until,
             "blocked_by": blocked,
             "lifted": lifted_holds,
-            "exceptions": [a.view(person) for a in applying] + granted,
-            "school_time_off": self.scheduler.offs_of(person),
+            "exceptions": self.allow_views(person, applying) + granted,
+            "school_time_off": self.off_views(person),
         }
 
     @callback

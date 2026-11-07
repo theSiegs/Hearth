@@ -28,6 +28,7 @@ from .asks import AskError
 from .media import media_rooms
 from .auth import is_adult_user
 from .glance import household_glance, person_glance
+from .places import SIGNAL_PLACES
 
 SEND_EVERY = timedelta(seconds=2)
 
@@ -88,7 +89,7 @@ def summary(hub) -> dict[str, Any]:
                 "held_by": sorted(k for k, v in held.items() if v.get("held")),
                 # An adult's allows (hearth.allow), and a parent's changes in their own apps that lift one of
                 # Hearth's holds (grants.py)
-                "allows": [a.view(person) for a in household.allows.of(person)],
+                "allows": household.allow_views(person),
                 "grants": [g.view() for g in household.grants.of(person)],
                 # Google's own daily limit per Family Link device, Microsoft's allowance per platform
                 "first_party": household.sync.first_party(person),
@@ -104,13 +105,18 @@ def summary(hub) -> dict[str, Any]:
                 ],
             }
         )
+        # Where a kid is, by name only (no coordinates): every reader of the summary is an adult (_may_read)
+        if (place := household.places.summary(person)) is not None:
+            people[-1]["place"] = place
+        if people[-1].get("pause") and (ends_on := household.pause_view(person)):
+            people[-1]["pause"] = {**people[-1]["pause"], "ends_on": ends_on}
         # Contract 2: what an adult's app shows of them, by Hearth's rules (glance.py)
         people[-1].update(
             person_glance(
                 people[-1],
                 [a for a in asks if a["person"] == person],
-                [a.view(person) for a in household.allows.of(person)],
-                [o for o in household.scheduler.offs_of(person) if o["date"] == today],
+                people[-1]["allows"],
+                [o for o in household.off_views(person) if o["date"] == today],
                 now,
                 people[-1]["grants"],
                 people[-1]["answered_elsewhere"],
@@ -233,6 +239,7 @@ def ws_household_subscribe(
 
     unsubs = [
         async_dispatcher_connect(hass, SIGNAL_PEOPLE, changed),
+        async_dispatcher_connect(hass, SIGNAL_PLACES, changed),
         async_dispatcher_connect(hass, SIGNAL_PAIRINGS, changed),
         async_dispatcher_connect(hass, SIGNAL_DEVICE_ADDED, device_added),
     ]

@@ -41,6 +41,8 @@ class Allow:
     group: str | None = None
     reason: str = ""
     created: datetime = field(default_factory=dt_util.utcnow)
+    # Ends for a person sooner when their place says so: {"arrive": <place key>} or {"leave": <place key>} (places.py)
+    ends_on: dict[str, str] | None = None
 
     def view(self, person: str | None = None) -> dict[str, Any]:
         people = [person] if person else sorted(self.until)
@@ -55,6 +57,8 @@ class Allow:
                 else {p: dt_util.as_local(u).isoformat() for p, u in sorted(self.until.items())}
             ),
             "reason": self.reason,
+            # Only when it has one, so an allow without it looks as before
+            **({"ends_on": dict(self.ends_on)} if self.ends_on else {}),
         }
 
 
@@ -88,6 +92,7 @@ class Allows:
                 self.allows[raw["id"]] = Allow(
                     raw["id"], until, raw.get("app"), raw.get("group"), raw.get("reason") or "",
                     dt_util.parse_datetime(raw.get("created") or "") or dt_util.utcnow(),
+                    dict(raw["ends_on"]) if isinstance(raw.get("ends_on"), dict) and raw["ends_on"] else None,
                 )
 
     def _data(self) -> dict[str, Any]:
@@ -100,6 +105,7 @@ class Allows:
                     "group": a.group,
                     "reason": a.reason,
                     "created": a.created.isoformat(),
+                    "ends_on": a.ends_on,
                 }
                 for a in self.allows.values()
             ]
@@ -111,12 +117,21 @@ class Allows:
     async def async_flush(self) -> None:
         await self._store.async_save(self._data())
 
-    def add(self, until: dict[str, datetime], app: str | None, group: str | None, reason: str | None) -> Allow:
+    def add(
+        self,
+        until: dict[str, datetime],
+        app: str | None,
+        group: str | None,
+        reason: str | None,
+        ends_on: dict[str, str] | None = None,
+    ) -> Allow:
         self.prune()
         if len(self.allows) >= MAX_ALLOWS:
             # The oldest goes: a runaway automation mustn't grow this without end
             del self.allows[min(self.allows.values(), key=lambda a: a.created).id]
-        allow = Allow(secrets.token_hex(6), until, app, group, (reason or "").strip()[:MAX_REASON])
+        allow = Allow(
+            secrets.token_hex(6), until, app, group, (reason or "").strip()[:MAX_REASON], ends_on=ends_on or None
+        )
         self.allows[allow.id] = allow
         self._save()
         return allow
@@ -146,6 +161,17 @@ class Allows:
         if ended:
             self._save()
         return ended
+
+    def end_for(self, allow_id: str, person: str) -> bool:
+        """Ends one allow for one person (their place said so); the others' part goes on."""
+        allow = self.allows.get(allow_id)
+        if allow is None or person not in allow.until:
+            return False
+        del allow.until[person]
+        if not allow.until:
+            del self.allows[allow_id]
+        self._save()
+        return True
 
     def prune(self, now: datetime | None = None) -> bool:
         """Drops what has ended; says whether anything did."""

@@ -72,6 +72,7 @@ from .sources import CONF_SOURCES, CONF_TITLES
 from . import parent_pin
 from .push import clean_server
 from .profiles import is_local_key, is_ref, is_tv_key
+from .places import CONF_PLACES, FAVORITES, MAX_FAVORITES, MAX_NAME, SCHOOLS, TRACKERS, favorite_key
 
 PERSON_SELECTOR = EntitySelector(EntitySelectorConfig(domain="person"))
 
@@ -152,6 +153,7 @@ class HearthOptionsFlow(OptionsFlow):
                 "enforce",
                 "school_days",
                 "schedule",
+                "places",
                 "site_list",
                 "chores",
                 "offer_more",
@@ -757,6 +759,66 @@ class HearthOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="chores", data_schema=schema)
+
+    async def async_step_places(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Places are zones (places.py): a kid's school zone and Family Link tracker (choosing a kid again replaces
+        theirs), and favorite places added or removed."""
+        options = self._options()
+        places: dict[str, Any] = dict(options.get(CONF_PLACES) or {})
+        schools: dict[str, str] = dict(places.get(SCHOOLS) or {})
+        trackers: dict[str, str] = dict(places.get(TRACKERS) or {})
+        favorites: list[dict[str, str]] = [dict(f) for f in places.get(FAVORITES) or []]
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            if person := user_input.get(CONF_PERSON):
+                schools.pop(person, None)
+                trackers.pop(person, None)
+                if user_input.get("school"):
+                    schools[person] = user_input["school"]
+                if user_input.get("tracker"):
+                    trackers[person] = user_input["tracker"]
+            gone = set(user_input.get("remove_favorites") or [])
+            favorites = [f for f in favorites if f.get("key") not in gone]
+            name = (user_input.get("favorite_name") or "").strip()[:MAX_NAME]
+            if name and not user_input.get("favorite_zone"):
+                errors["favorite_zone"] = "no_favorite_zone"
+            elif zone := user_input.get("favorite_zone"):
+                if len(favorites) >= MAX_FAVORITES:
+                    errors["favorite_zone"] = "too_many_favorites"
+                else:
+                    state = self.hass.states.get(zone)
+                    name = name or (state.name if state else zone.split(".", 1)[1].replace("_", " ").title())
+                    key = favorite_key(name, {f["key"] for f in favorites})
+                    favorites.append({"key": key, "zone": zone, "name": name})
+            if not errors:
+                return self.async_create_entry(
+                    data={**options, CONF_PLACES: {SCHOOLS: schools, TRACKERS: trackers, FAVORITES: favorites}}
+                )
+        zone = EntitySelector(EntitySelectorConfig(domain="zone"))
+        schema = vol.Schema(
+            {
+                vol.Optional(CONF_PERSON): PERSON_SELECTOR,
+                vol.Optional("school"): zone,
+                # Family Link's only: a router's or Wi-Fi tracker is never used
+                vol.Optional("tracker"): EntitySelector(
+                    EntitySelectorConfig(integration="familylink", domain="device_tracker")
+                ),
+                vol.Optional("favorite_zone"): zone,
+                vol.Optional("favorite_name"): TextSelector(),
+                vol.Optional("remove_favorites", default=[]): SelectSelector(
+                    SelectSelectorConfig(
+                        options=[
+                            SelectOptionDict(value=f["key"], label=f"{f['name']} ({f['key']})") for f in favorites
+                        ],
+                        multiple=True,
+                    )
+                ),
+            }
+        )
+        listed = ", ".join(f"{f['name']} ({f['key']})" for f in favorites) or "none"
+        return self.async_show_form(
+            step_id="places", data_schema=schema, errors=errors, description_placeholders={"favorites": listed}
+        )
 
     async def async_step_offer_more(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """When one of these groups of a person's runs out, the adults are offered to give more. Choosing a person

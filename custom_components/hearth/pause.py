@@ -32,9 +32,28 @@ def _pauses(hass: HomeAssistant) -> dict[str, dict[str, Any]]:
     return hass.data.setdefault(f"{DOMAIN}_pauses", {})
 
 
-def set_pause(hass: HomeAssistant, people: list[str], until: datetime, reason: str | None) -> None:
+def set_pause(
+    hass: HomeAssistant,
+    people: list[str],
+    until: datetime,
+    reason: str | None,
+    ends_on: dict[str, str] | None = None,
+) -> None:
+    """Each person's pause is their own, so one that ends on a place ends for each person as they get there."""
     for person in people:
-        _pauses(hass)[person] = {"until": until, "reason": (reason or "").strip()[:MAX_REASON]}
+        _pauses(hass)[person] = {
+            "until": until,
+            "reason": (reason or "").strip()[:MAX_REASON],
+            "ends_on": dict(ends_on) if ends_on else None,
+        }
+
+
+def pause_ends_on(hass: HomeAssistant, person: str) -> tuple[dict[str, str], datetime] | None:
+    """The person's pause's ends_on and its cap, while it lasts and has one."""
+    pause = _pauses(hass).get(person)
+    if pause is None or not pause.get("ends_on") or pause["until"] <= dt_util.now():
+        return None
+    return pause["ends_on"], pause["until"]
 
 
 def end_pause(hass: HomeAssistant, people: list[str] | None) -> None:

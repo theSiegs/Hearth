@@ -88,6 +88,9 @@
           "weekend": "Weekend",
           "no_school": "No school"
         }
+      },
+      "person_place": {
+        "name": "Place"
       }
     },
     "binary_sensor": {
@@ -147,7 +150,8 @@
           "schedule": "Schedule (days off, half days)",
           "site_list": "Website block list",
           "chores": "Chores earn time",
-          "offer_more": "Offer more time"
+          "offer_more": "Offer more time",
+          "places": "Places (home, school, favorite places)"
         }
       },
       "people": {
@@ -356,6 +360,18 @@
           "groups": "When one of these runs out",
           "minutes": "Offer"
         }
+      },
+      "places": {
+        "title": "Places",
+        "description": "Places are Home Assistant zones: Hearth keeps no coordinates and shows only a place's name. Home is always zone.home. Give a kid their school's zone (and, if Hearth doesn't find it, their Family Link location tracker): choosing a kid again replaces theirs. Add a favorite place by its zone and the name to show, or remove favorites. A router's or Wi-Fi tracker is never used. Favorites now: {favorites}.",
+        "data": {
+          "person": "Kid",
+          "school": "Their school's zone",
+          "tracker": "Their Family Link location tracker (if not found)",
+          "favorite_zone": "Add a favorite place: its zone",
+          "favorite_name": "Its name",
+          "remove_favorites": "Remove favorite places"
+        }
       }
     },
     "error": {
@@ -366,7 +382,9 @@
       "pins_differ": "The two PINs differ.",
       "not_adult": "Only an adult has a parent PIN: mark them as an adult on Hearth's page (Family) first.",
       "bad_server": "Give the server's address, like https://ntfy.example.com (no user name, password or query).",
-      "not_https": "The address must start with https://"
+      "not_https": "The address must start with https://",
+      "no_favorite_zone": "Pick the favorite place's zone.",
+      "too_many_favorites": "That's as many favorite places as Hearth keeps (20)."
     },
     "abort": {
       "no_profiles": "No TV has reported its profiles yet. Pair a TV and let it post its status first.",
@@ -378,7 +396,7 @@
   "services": {
     "pause": {
       "name": "Pause",
-      "description": "Holds the people's Hearth devices (dinner time, say) for some minutes or until a time; they stop and show the reason. Everyone in the household when no one is chosen.",
+      "description": "Holds the people's Hearth devices (dinner time, say) for some minutes, until a time, or until they arrive at or leave a place; they stop and show the reason. Everyone in the household when no one is chosen.",
       "fields": {
         "minutes": {
           "name": "Minutes",
@@ -395,6 +413,10 @@
         "people": {
           "name": "People",
           "description": "Who; everyone when empty."
+        },
+        "ends_on": {
+          "name": "Ends on",
+          "description": "Or ends sooner, for each person, when they arrive at a place or leave one: {\"arrive\": \"home\"}, {\"leave\": \"school\"} or a favorite place's key. The time (the end of the day when none is given) stays the cap; an unknown or stale place never ends it."
         }
       }
     },
@@ -613,6 +635,10 @@
         "reason": {
           "name": "Reason",
           "description": "Why, for the record."
+        },
+        "ends_on": {
+          "name": "Ends on",
+          "description": "Or ends sooner, for each person, when they arrive at a place or leave one: {\"arrive\": \"home\"}, {\"leave\": \"school\"} or a favorite place's key. The time stays the cap; an unknown or stale place never ends it."
         }
       }
     },
@@ -675,6 +701,10 @@
         "reason": {
           "name": "Reason",
           "description": "Why, for the record."
+        },
+        "ends_on": {
+          "name": "Ends on",
+          "description": "Today only: School time comes back sooner, for each person, when they arrive at a place or leave one: {\"arrive\": \"school\"}, {\"leave\": \"home\"} or a favorite place's key. An unknown or stale place never ends it."
         }
       }
     },

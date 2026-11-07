@@ -436,6 +436,18 @@ class Asks:
             )
         )
 
+    def tell(self, title: str, message: str, tag: str) -> None:
+        """News for the adults, the way requests reach them: a notification here, and on the chosen phone."""
+        persistent_notification.async_create(self.hass, message, title=title, notification_id=tag)
+        phone = self._phone()
+        if phone is None:
+            return
+        self.hass.async_create_task(
+            self.hass.services.async_call(
+                phone[0], phone[1], {"title": title, "message": message, "data": {"tag": tag}}, blocking=False
+            )
+        )
+
     def _clear_notification(self, ask: Ask) -> None:
         persistent_notification.async_dismiss(self.hass, f"hearth_more_{ask.id}")
         phone = self._phone()

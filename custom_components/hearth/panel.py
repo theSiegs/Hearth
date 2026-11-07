@@ -48,6 +48,7 @@ from .limits import (
     slug,
 )
 from .notifications import pairing_notification_id
+from .places import CONF_PLACES, FAVORITES, MAX_FAVORITES, MAX_NAME, RESERVED, SCHOOLS, TRACKERS
 from .schooldays import CONF_SCHOOL_DAYS
 from .sources import CONF_SOURCES, CONF_TITLES
 from .profiles import OPTION_KEY
@@ -106,6 +107,8 @@ def _entity_choices(hass: HomeAssistant) -> dict[str, list[dict[str, Any]]]:
     out["app_lists"] = []
     out["media_player"] = []
     out["nintendo_playing"] = []
+    # Family Link's location trackers only (a router's or Wi-Fi tracker is never a place's source)
+    out["location"] = []
     for entry in registry.entities.values():
         if entry.disabled_by is not None:
             continue
@@ -135,6 +138,8 @@ def _entity_choices(hass: HomeAssistant) -> dict[str, list[dict[str, Any]]]:
             out["nintendo_playing"].append(item)
         if entry.domain == "media_player":
             out["media_player"].append(item)
+        if entry.domain == "device_tracker" and entry.platform == "familylink":
+            out["location"].append(item)
     for found in out.values():
         found.sort(key=lambda i: i["name"].lower())
     return out
@@ -218,7 +223,21 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
         ),
         "known_apps": household.known_apps(),
         "choices": _entity_choices(hass),
+        # Configure > Places, the zones to pick from, and where each kid is now (a place's name, never coordinates)
+        "places": dict(options.get(CONF_PLACES) or {}),
+        "zones": sorted(
+            ({"entity_id": s.entity_id, "name": s.name} for s in hass.states.async_all("zone")),
+            key=lambda z: z["name"].lower(),
+        ),
+        "places_now": {person: household.places.page(person) for person in household.places.people()},
     }
+
+
+def _unique_keys(favorites: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    keys = [f["key"] for f in favorites]
+    if len(set(keys)) != len(keys):
+        raise vol.Invalid("Each favorite place needs its own key")
+    return favorites
 
 
 # What the page may write to the options, each checked as the Configure menu would leave it
@@ -266,6 +285,25 @@ OPTION_SCHEMAS: dict[str, Any] = {
     CONF_MEDIA_PLAYERS: vol.Schema({cv.string: cv.entity_domain("media_player")}),
     CONF_ASK_NOTIFY: vol.Any(None, cv.string),
     CONF_PUSH_SERVER: clean_server,
+    CONF_PLACES: vol.Schema(
+        {
+            vol.Optional(SCHOOLS): vol.Schema({_PERSON: cv.entity_domain("zone")}),
+            vol.Optional(TRACKERS): vol.Schema({_PERSON: cv.entity_domain("device_tracker")}),
+            vol.Optional(FAVORITES): vol.All(
+                [
+                    vol.Schema(
+                        {
+                            vol.Required("key"): vol.All(_ID, vol.NotIn(RESERVED)),
+                            vol.Required("zone"): cv.entity_domain("zone"),
+                            vol.Required("name"): vol.All(cv.string, vol.Length(min=1, max=MAX_NAME)),
+                        }
+                    )
+                ],
+                vol.Length(max=MAX_FAVORITES),
+                _unique_keys,
+            ),
+        }
+    ),
 }
 
 

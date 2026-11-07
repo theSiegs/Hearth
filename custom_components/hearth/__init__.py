@@ -27,6 +27,7 @@ from .api import async_register_views
 from .auth import register_service
 from .websocket import async_register_commands
 from .pause import end_pause, set_pause
+from .places import ARRIVE, LEAVE
 from . import panel
 from .apps import ACTION_PREFIX
 from .commands import is_profile_id, what_to_play
@@ -74,6 +75,16 @@ SET_BUDGET_SCHEMA = vol.Schema(
         vol.Optional("days", default="both"): vol.In(["school_days", "other_days", "weekday", "weekend", "both"]),
     }
 )
+# Ends sooner when the person's place says so: arriving at a place, or leaving one (places.py)
+ENDS_ON_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            vol.Exclusive(ARRIVE, "ends_on"): vol.All(cv.string, vol.Length(min=1, max=40)),
+            vol.Exclusive(LEAVE, "ends_on"): vol.All(cv.string, vol.Length(min=1, max=40)),
+        }
+    ),
+    cv.has_at_least_one_key(ARRIVE, LEAVE),
+)
 PAUSE_SCHEMA = vol.All(
     vol.Schema(
         {
@@ -81,9 +92,11 @@ PAUSE_SCHEMA = vol.All(
             vol.Exclusive("until", "how_long"): vol.Any(cv.datetime, cv.time),
             vol.Optional("reason"): cv.string,
             vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id]),
+            # With no minutes or until, the end of the day is its cap
+            vol.Optional("ends_on"): ENDS_ON_SCHEMA,
         }
     ),
-    cv.has_at_least_one_key("minutes", "until"),
+    cv.has_at_least_one_key("minutes", "until", "ends_on"),
 )
 PAUSE_END_SCHEMA = vol.Schema({vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id])})
 GET_WATCH_LOG_SCHEMA = vol.Schema(
@@ -99,6 +112,16 @@ WATCH_DIGEST_SCHEMA = vol.Schema(
         vol.Optional("days", default=7): vol.All(vol.Coerce(int), vol.Range(min=1, max=31)),
     }
 )
+
+
+def _place_ends_on(household, people: list[str], given: dict | None) -> dict[str, str] | None:
+    """A service's ends_on, checked against each person's places."""
+    if not given:
+        return None
+    try:
+        return household.places.check(people, given)
+    except ValueError as err:
+        raise ServiceValidationError(str(err)) from err
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
@@ -151,6 +174,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         now = dt_util.now()
         if "minutes" in call.data:
             until = now + timedelta(minutes=call.data["minutes"])
+        elif "until" not in call.data:
+            until = end_of_day(now)
         elif isinstance(call.data["until"], datetime):
             until = dt_util.as_local(call.data["until"]) if call.data["until"].tzinfo else call.data["until"].replace(
                 tzinfo=dt_util.get_default_time_zone()
@@ -167,7 +192,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         unknown = [p for p in people if p not in household.people()]
         if unknown:
             raise ServiceValidationError(f"Not the household's: {', '.join(unknown)}")
-        set_pause(hass, people, until, call.data.get("reason"))
+        ends_on = _place_ends_on(household, people, call.data.get("ends_on"))
+        set_pause(hass, people, until, call.data.get("reason"), ends_on)
         household.recompute()
 
     @callback
@@ -233,6 +259,7 @@ ALLOW_SCHEMA = vol.All(
             vol.Exclusive("group", "what"): cv.string,
             vol.Optional("until", default=END_OF_DAY): vol.Any(vol.In((END_OF_DAY, SCHOOL_TIME_END)), cv.time, cv.datetime),
             vol.Optional("reason"): cv.string,
+            vol.Optional("ends_on"): ENDS_ON_SCHEMA,
         }
     ),
     cv.has_at_least_one_key("app", "group"),
@@ -264,6 +291,7 @@ SCHOOL_TIME_OFF_SCHEMA = vol.Schema(
         vol.Optional("date"): cv.date,
         vol.Optional("from"): cv.time,
         vol.Optional("reason"): cv.string,
+        vol.Optional("ends_on"): ENDS_ON_SCHEMA,
     }
 )
 SCHOOL_TIME_OFF_CANCEL_SCHEMA = vol.Schema(
@@ -321,9 +349,13 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         app, group = what(household, call.data)
         now = dt_util.now()
         until = {p: until_for(household, p, call.data["until"], now) for p in people}
-        allowed = household.allows.add(until, app, group, call.data.get("reason"))
+        ends_on = _place_ends_on(household, people, call.data.get("ends_on"))
+        allowed = household.allows.add(until, app, group, call.data.get("reason"), ends_on)
         household.recompute()
-        return {"id": allowed.id, "until": {p: dt_util.as_local(u).isoformat() for p, u in until.items()}}
+        answer = {"id": allowed.id, "until": {p: dt_util.as_local(u).isoformat() for p, u in until.items()}}
+        if ends_on:
+            answer["ends_on"] = ends_on
+        return answer
 
     @callback
     def allow_end(call: ServiceCall) -> ServiceResponse:
@@ -359,7 +391,10 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         day = call.data.get("date") or today
         if day < today:
             raise ServiceValidationError("That day has passed")
-        ids = household.scheduler.take_off(people, day, call.data.get("from"), call.data.get("reason"))
+        ends_on = _place_ends_on(household, people, call.data.get("ends_on"))
+        if ends_on and day != today:
+            raise ServiceValidationError("ends_on works for today's School time off only")
+        ids = household.scheduler.take_off(people, day, call.data.get("from"), call.data.get("reason"), ends_on)
         hass.async_create_task(household.scheduler.async_tick())
         return {"ids": ids}
 
@@ -633,6 +668,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     if school := hub.household.school.watched_entities():
         entry.async_on_unload(async_track_state_change_event(hass, school, school_then_recompute))
     entry.async_on_unload(async_track_time_interval(hass, recompute, timedelta(minutes=1)))
+
+    # Where the kids are (places.py): whenever a tracker, a person or a place's zone changes, and every minute (a
+    # reading goes stale without a change)
+    @callback
+    def places_update(_event_or_now=None) -> None:
+        hub.household.places.update()
+
+    entry.async_on_unload(async_track_time_interval(hass, places_update, timedelta(minutes=1)))
+    if watched := hub.household.places.watched_entities():
+        entry.async_on_unload(async_track_state_change_event(hass, watched, places_update))
+    places_update()
 
     # The schedule (day types, School time off and back, the website list): every minute, and once now
     async def schedule_tick(_now=None) -> None:

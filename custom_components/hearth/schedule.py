@@ -145,6 +145,8 @@ class Off:
     # The weekly window when it was taken off: ISO weekday -> [start, end] (HH:MM)
     windows: dict[str, list[str]] = field(default_factory=dict)
     failed_at: datetime | None = None
+    # Put back sooner, that day, when the person's place says so: {"arrive" | "leave": <place key>} (places.py)
+    ends_on: dict[str, str] | None = None
 
     def view(self) -> dict[str, Any]:
         return {
@@ -155,6 +157,7 @@ class Off:
             "reason": self.reason,
             "applied": self.applied,
             "restore_from": self.restore_from.isoformat() if self.restore_from else None,
+            **({"ends_on": dict(self.ends_on)} if self.ends_on else {}),
         }
 
 
@@ -200,6 +203,7 @@ class Scheduler:
                     bool(raw.get("applied")),
                     date.fromisoformat(raw["restore_from"]) if raw.get("restore_from") else None,
                     dict(raw.get("windows") or {}),
+                    ends_on=dict(raw["ends_on"]) if isinstance(raw.get("ends_on"), dict) and raw["ends_on"] else None,
                 )
             except (KeyError, ValueError):
                 continue
@@ -220,6 +224,7 @@ class Scheduler:
                     "applied": o.applied,
                     "restore_from": o.restore_from.isoformat() if o.restore_from else None,
                     "windows": o.windows,
+                    "ends_on": o.ends_on,
                 }
                 for o in self.offs.values()
             ],
@@ -275,7 +280,14 @@ class Scheduler:
 
     # Services
 
-    def take_off(self, people: list[str], day: date, start: time | None, reason: str | None) -> list[str]:
+    def take_off(
+        self,
+        people: list[str],
+        day: date,
+        start: time | None,
+        reason: str | None,
+        ends_on: dict[str, str] | None = None,
+    ) -> list[str]:
         ids: list[str] = []
         for person in people:
             same = next(
@@ -283,9 +295,11 @@ class Scheduler:
             )
             if same is not None:
                 same.start, same.reason = start, (reason or same.reason or "").strip()[:MAX_REASON]
+                same.ends_on = dict(ends_on) if ends_on else None
                 ids.append(same.id)
                 continue
             off = Off(secrets.token_hex(6), person, day, start, (reason or "").strip()[:MAX_REASON])
+            off.ends_on = dict(ends_on) if ends_on else None
             self.offs[off.id] = off
             ids.append(off.id)
         self._save()
@@ -307,6 +321,25 @@ class Scheduler:
             changed.append(off.id)
         self._save()
         return changed
+
+    def ending_on_place(self, person: str, today: date) -> list[Off]:
+        """The person's School time off today that a place can end: not put back yet, with an ends_on."""
+        return [
+            o
+            for o in self.offs.values()
+            if o.person == person
+            and o.ends_on
+            and o.day == today
+            and (o.restore_from is None or o.restore_from > today)
+        ]
+
+    def end_one(self, off: Off) -> None:
+        """As school_time_off_cancel for this one: not taken off yet, dropped; taken off, put back from today."""
+        if off.applied:
+            off.restore_from = dt_util.now().date()
+        else:
+            self.offs.pop(off.id, None)
+        self._save()
 
     # The minute's work
 

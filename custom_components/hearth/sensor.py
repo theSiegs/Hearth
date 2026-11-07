@@ -26,6 +26,7 @@ from .const import KIND_MOBILE, KIND_TV, SIGNAL_WATCH, TV_STATES
 from .counting import ALL
 from .schooldays import DAY_TYPES
 from .entity import HearthEntity, HearthPersonEntity, async_add_device_entities
+from .places import SIGNAL_PLACES, UNKNOWN
 
 BOTH = frozenset({KIND_TV, KIND_MOBILE})
 TV = frozenset({KIND_TV})
@@ -120,6 +121,9 @@ async def async_setup_entry(
             people.append(PersonMinutesLeft(hub, person, "minutes_left", group))
     for person in household.youtube_people():
         people.append(PersonLastVideoStarted(hub, person, "last_video_started"))
+    # Where each kid is, as a place name (places.py)
+    for person in household.places.people():
+        people.append(PersonPlace(hub, person, "place"))
     async_add_entities(people)
     async_add_entities([AppsToSort(hub), DayType(hub)])
 
@@ -316,6 +320,31 @@ class PersonLastVideoStarted(HearthPersonEntity, SensorEntity):
             "recent": watch.recent(self.person),
             "blocked": watch.blocked(self.person),
         }
+
+
+class PersonPlace(HearthPersonEntity, SensorEntity):
+    """Where the person is: a place key (home, school, a favorite place's), away, or unknown. Hearth keeps no
+    coordinates: its attributes are the place's name, since when, where it came from (family_link or person), the
+    reading's accuracy, whether it's fresh and as of when."""
+
+    _attr_translation_key = "person_place"
+    # The state (a place key) is history enough: when it changed and how good each reading was isn't kept
+    _unrecorded_attributes = frozenset({"since", "source", "accuracy", "fresh", "as_of"})
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self.async_on_remove(async_dispatcher_connect(self.hass, SIGNAL_PLACES, self.async_write_ha_state))
+
+    @property
+    def native_value(self) -> str | None:
+        place = self.hub.household.places.view(self.person)["state"]
+        # Unknown is the state machine's own unknown
+        return None if place == UNKNOWN else place
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        view = self.hub.household.places.view(self.person)
+        return {k: view[k] for k in ("name", "since", "source", "accuracy", "fresh", "as_of")}
 
 
 class AppsToSort(SensorEntity):
