@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
+from homeassistant.const import EVENT_STATE_CHANGED, Platform
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
@@ -662,6 +662,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
                 return
 
     entry.async_on_unload(hass.bus.async_listen(EVENT_FS_REQUEST, family_safety_request))
+
+    @callback
+    def parent_change_filter(event_data) -> bool:
+        return event_data.get("entity_id") in hub.household.sync.watched
+
+    @callback
+    def parent_change(event) -> None:
+        """An entity of a held app, device, Switch or platform changed: maybe a parent's change in their own app."""
+        hub.household.recompute()
+
+    entry.async_on_unload(
+        hass.bus.async_listen(EVENT_STATE_CHANGED, parent_change, event_filter=parent_change_filter)
+    )
     # And whenever a screen time source changes
     if entities := hub.household.source_entities():
         entry.async_on_unload(async_track_state_change_event(hass, entities, recompute))

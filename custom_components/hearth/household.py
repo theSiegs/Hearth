@@ -556,6 +556,8 @@ class Household:
 
         self.allows.prune()
         self.grants.prune()
+        # A parent's changes in their own apps first: they lift what they came from
+        self.sync.detect()
         self.enforcement.update(
             enforcers_from_options(options),
             days,

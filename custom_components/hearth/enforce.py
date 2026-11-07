@@ -58,8 +58,9 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
+from . import family_link as fl
 from .counting import ALL
-from .exceptions import Lifted
+from .exceptions import Lifted, end_of_day
 
 if TYPE_CHECKING:
     from .household import PersonDay
@@ -91,6 +92,14 @@ NINTENDO_EACH_DAY = "each_day_of_the_week"
 SETTLE = timedelta(minutes=5)
 # A failed call is tried again after this long
 RETRY = timedelta(minutes=5)
+# Family Link's lock_override_code of a device a parent unlocked
+FL_UNLOCK_CODE = 4
+# Family Safety's hold attribute (Allowed Now sensors, platform lock switches): who decides the lock now
+FS_HOLD_OURS = "ours"
+FS_HOLD_PARENT = "parent"
+FS_HOLD_BONUS_OURS = "bonus_ours"
+FS_ALLOW_UNTIL = "allowUntil"
+FS_BLOCK_UNTIL = "blockUntil"
 # What letting go did: put back what was there before, or kept what a parent set meanwhile
 RESTORED = "restored"
 KEPT_CURRENT = "kept_current"
@@ -298,6 +307,8 @@ class Enforcement:
         self.last: dict[str, dict[str, Any]] = {}
         # Enforcers whose calls are under way, and when changes they cause have surely shown (not a parent's)
         self._busy: set[str] = set()
+        # Called after each run (native_sync.py watches what's held then)
+        self.on_applied = None
         self._quiet_until: dict[str, datetime] = {}
 
     async def async_load(self) -> None:
@@ -489,6 +500,8 @@ class Enforcement:
             self._save()
         if self._again:
             self._run()
+        elif self.on_applied is not None:
+            self.on_applied()
 
     async def _call(self, kind: str, entity_id: str, items: set[str], hold: bool, held: Held) -> dict[str, Any]:
         """Holds or lets go of [items]; says what letting go did, by item (restored, kept_current, ...), where the
@@ -669,6 +682,16 @@ class Enforcement:
                 "lock_child": child,
                 "lock_weekday": now.isoweekday(),
                 "lock_day": now.date().isoformat(),
+                # What the devices showed when the hold started: a bonus or an unlock beyond it is a parent's
+                "lock_bonus": {
+                    str(d.attributes.get("device_id")): _number(d.attributes.get("bonus_minutes")) or 0
+                    for d in fl.devices(self.hass, child)
+                },
+                "lock_unlocked": sorted(
+                    str(d.attributes.get("device_id"))
+                    for d in fl.devices(self.hass, child)
+                    if d.attributes.get("lock_override_code") == FL_UNLOCK_CODE
+                ),
             }
             self._save()
         await self.hass.services.async_call(
@@ -807,6 +830,211 @@ class Enforcement:
             await self.hass.services.async_call("switch", "turn_off", {"entity_id": suspend}, blocking=True)
         held.restore = {}
         return RESTORED
+
+    # A parent's changes in their own app (native_sync.py makes them grants)
+
+    def _quiet(self, key: str) -> bool:
+        """Hearth's own calls are under way or just made: what changes now is Hearth's, not a parent's."""
+        until = self._quiet_until.get(key)
+        return key in self._busy or (until is not None and dt_util.utcnow() < until)
+
+    @callback
+    def parent_changes(self, own_bonus=None, watch: set[str] | None = None) -> list[dict[str, Any]]:
+        """What parents changed in the Family Link, Nintendo or Family Safety app that lifts something Hearth holds:
+        grant specs {person, via, kind, value, until, reason, end_with, ends_with}. A changed limit is adopted (what
+        letting go would put back is the parent's, so nothing is written over it). [own_bonus]: the Family Link bonus
+        minutes Hearth itself added, by device id; [watch] gets the entities read."""
+        from . import grants as g
+
+        found: list[dict[str, Any]] = []
+        midnight = end_of_day(dt_util.now())
+        watch = watch if watch is not None else set()
+        for e in self.enforcers:
+            held = self.held.get(e.key)
+            if held is None or not held.items:
+                continue
+            # Hearth's own calls just made: watched, but what changes now is taken as Hearth's
+            quiet = self._quiet(e.key)
+
+            def grant(kind, value, reason, until=midnight, end_with=None, ends_with=None, _e=e, _quiet=quiet) -> None:
+                if _quiet:
+                    return
+                found.append(
+                    {
+                        "person": _e.person,
+                        "via": _e.kind,
+                        "kind": kind,
+                        "value": value,
+                        "until": until,
+                        "reason": reason,
+                        "end_with": end_with,
+                        "ends_with": ends_with,
+                    }
+                )
+
+            if e.kind == FAMILY_LINK:
+                self._family_link_changes(e, held, grant, own_bonus, watch, quiet)
+            elif e.kind == NINTENDO and SWITCH in held.items:
+                self._switch_changes(e, held, grant, watch, quiet)
+            elif e.kind == FAMILY_SAFETY:
+                for platform in sorted(held.items & set(PLATFORMS)):
+                    state = fs_hold_state(self.hass, e.entity_id, platform, watch)
+                    spec = family_safety_grant(state) if state is not None else None
+                    if spec is not None:
+                        grant(g.PLATFORM, platform, spec["reason"], spec["until"] or midnight, spec["end_with"])
+        return found
+
+    def _switch_changes(self, e: Enforcer, held: Held, grant, watch: set[str], quiet: bool = False) -> None:
+        from . import grants as g
+
+        state = self.hass.states.get(e.entity_id)
+        watch.add(e.entity_id)
+        current = _number(state.state if state else None)
+        if current == 0:
+            if not held.restore.get("seen_zero"):
+                held.restore["seen_zero"] = True
+                self._save()
+        elif quiet:
+            return
+        elif current is not None and "max" in held.restore and (
+            current != held.restore["max"] or held.restore.get("seen_zero")
+        ):
+            held.restore["adopted"] = True
+            self._save()
+            grant(g.SWITCH, SWITCH, "the limit was changed in the Nintendo app", end_with=g.END_RELOCK)
+            return
+        extended = self._switch_entity(e.entity_id, "sensor", "time_extended") or self._switch_entity(
+            e.entity_id, "binary_sensor", "time_extended"
+        )
+        if extended:
+            watch.add(extended)
+            ext = self.hass.states.get(extended)
+            if not quiet and ext is not None and ext.state not in ("0", "0.0", "off", "unknown", "unavailable", ""):
+                held.restore["adopted"] = True
+                self._save()
+                grant(g.SWITCH, SWITCH, "bonus time given in the Nintendo app")
+
+    def _family_link_changes(
+        self, e: Enforcer, held: Held, grant, own_bonus, watch: set[str], quiet: bool = False
+    ) -> None:
+        from . import grants as g
+
+        restore = held.restore
+        child = restore.get("lock_child") or fl.child_of(self.hass, e.entity_id)
+        if DEVICES in held.items and "lock_minutes" in restore and not restore.get("lock_adopted"):
+            current = self._held_weekday_limit(restore)
+            watch.update(
+                s.entity_id
+                for s in self.hass.states.async_all("number")
+                if s.entity_id.endswith("_limit") and str(s.attributes.get("child_id")) == str(child)
+            )
+            if current == 0:
+                if not restore.get("lock_seen_zero"):
+                    restore["lock_seen_zero"] = True
+                    self._save()
+            elif quiet:
+                pass
+            elif current is not None and (current != restore["lock_minutes"] or restore.get("lock_seen_zero")):
+                # Adopted: letting go doesn't write over it
+                restore["lock_adopted"] = True
+                restore["lock_minutes"] = int(current)
+                self._save()
+                grant(g.DEVICE, DEVICES, "the daily limit was changed in the Family Link app")
+                return
+        if DEVICES in held.items and child:
+            base = restore.get("lock_bonus") or {}
+            unlocked = set(restore.get("lock_unlocked") or [])
+            for device in fl.devices(self.hass, str(child)):
+                watch.add(device.entity_id)
+                device_id = str(device.attributes.get("device_id"))
+                bonus = _number(device.attributes.get("bonus_minutes")) or 0
+                own = (own_bonus or {}).get(device_id, 0)
+                if bonus > (base.get(device_id) or 0) + own:
+                    grant(
+                        g.DEVICE,
+                        DEVICES,
+                        "bonus time given in the Family Link app",
+                        end_with=g.END_RESET_BONUS,
+                        ends_with=g.WHILE_BONUS,
+                    )
+                    return
+                if device.attributes.get("lock_override_code") == FL_UNLOCK_CODE and device_id not in unlocked:
+                    grant(g.DEVICE, DEVICES, "unlocked in the Family Link app")
+                    return
+        packages = held.items - {DEVICES}
+        if packages and child:
+            # A newer Family Link says which apps pause_app paused a parent changed since (pause_intact false)
+            for state in self.hass.states.async_all("sensor"):
+                paused = state.attributes.get("paused_apps")
+                if str(state.attributes.get("child_id")) != str(child) or not isinstance(paused, list):
+                    continue
+                watch.add(state.entity_id)
+                for app in paused:
+                    if isinstance(app, dict) and app.get("package") in packages and app.get("pause_intact") is False:
+                        grant(g.APP, app["package"], "the app's limit was changed in the Family Link app")
+
+    def fs_parent_locks(self, person: str) -> list[dict[str, Any]]:
+        """Family Safety platforms a parent locked themselves (hold parent, a blockUntil that isn't Hearth's)."""
+        found = []
+        for e in self.enforcers:
+            if e.person != person or e.kind != FAMILY_SAFETY:
+                continue
+            for platform in e.platforms:
+                state = fs_hold_state(self.hass, e.entity_id, platform)
+                if state and state.get("hold") == FS_HOLD_PARENT and state.get("override") == FS_BLOCK_UNTIL:
+                    found.append(
+                        {"platform": platform, "until": state.get("override_until"), "by": state.get("entity_id")}
+                    )
+        return found
+
+
+def fs_hold_state(
+    hass: HomeAssistant, entity_id: str, platform: str, watch: set[str] | None = None
+) -> dict[str, Any] | None:
+    """Who decides a Family Safety platform's lock now, from a newer Family Safety's Allowed Now sensor or platform
+    lock switch of the child's account: {hold, override, override_until, allow_until, entity_id}; None from an older
+    one (no hold attribute)."""
+    account = fs_account_of(hass, entity_id)
+    if account is None:
+        return None
+    for domain in ("binary_sensor", "switch"):
+        for state in hass.states.async_all(domain):
+            attrs = state.attributes
+            if "hold" not in attrs or str(attrs.get("user_id")) != account:
+                continue
+            named = attrs.get("platform") or ("Xbox" if "xbox" in state.entity_id else "Windows")
+            if str(named).lower() != platform.lower():
+                continue
+            if watch is not None:
+                watch.add(state.entity_id)
+            return {
+                "hold": attrs.get("hold"),
+                "override": attrs.get("override"),
+                "override_until": attrs.get("override_until"),
+                "allow_until": attrs.get("allow_until"),
+                "entity_id": state.entity_id,
+            }
+    return None
+
+
+def family_safety_grant(state: dict[str, Any]) -> dict[str, Any] | None:
+    """The Family Safety hook: what a platform's hold state ({hold: ours|parent|bonus_ours|none, override,
+    allow_until}) means while Hearth holds it. A parent's extra time (allowUntil) is a grant until it ends (ended early
+    by cancelling it); a parent's cancelled lock (no override left) is a grant for the day (ended early by locking
+    again); a parent's own lock (blockUntil) is no grant but a parent lock. None when nothing is a parent's."""
+    from . import grants as g
+
+    if state.get("hold") != FS_HOLD_PARENT:
+        return None
+    override = state.get("override")
+    if override == FS_ALLOW_UNTIL:
+        until = dt_util.parse_datetime(str(state.get("allow_until") or ""))
+        if until is not None and until.tzinfo is None:
+            until = until.replace(tzinfo=dt_util.get_default_time_zone())
+        return {"reason": "extra time given in the Family Safety app", "until": until, "end_with": g.END_CANCEL_BONUS}
+    if override == "none":  # null is unreadable: nothing said
+        return {"reason": "unlocked in the Family Safety app", "until": None, "end_with": g.END_RELOCK}
+    return None
 
 
 def _clock(value: Any) -> str | None:

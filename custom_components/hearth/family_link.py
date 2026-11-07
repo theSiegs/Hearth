@@ -156,6 +156,22 @@ def reset_bonus_button(hass: HomeAssistant, child: str, device_id: str, near: st
     return _device_entity(hass, "button", child, device_id, "reset_bonus", near)
 
 
+def bonus_left(hass: HomeAssistant, child: str, device: Any, watch: set[str] | None = None) -> float:
+    """The bonus minutes a device has left: its Active bonus sensor's remaining_minutes when a newer Family Link
+    gives it (0 once used up, or when the sensor clears), else the device's bonus_minutes."""
+    device_id = str(device.attributes.get("device_id"))
+    sensor = _device_entity(hass, "sensor", child, device_id, "active_bonus", device.entity_id)
+    state = hass.states.get(sensor) if sensor else None
+    if state is not None:
+        if watch is not None:
+            watch.add(state.entity_id)
+        if "remaining_minutes" in state.attributes:
+            return _int(state.attributes.get("remaining_minutes")) or 0
+        if state.state not in ("unknown", "unavailable"):
+            return _int(state.state) or 0
+    return _int(device.attributes.get("bonus_minutes")) or 0
+
+
 def device_limit(hass: HomeAssistant, child: str, device: Any) -> dict[str, Any]:
     """Google's own daily limit of one device today: limit minutes (None: no limit), minutes left, bonus, reached."""
     device_id = str(device.attributes.get("device_id"))
