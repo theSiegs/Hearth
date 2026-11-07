@@ -48,6 +48,8 @@ from .counting import ALL, DeviceUsage, Reading, group_seconds, merge
 from .limits import CONF_APP_GROUPS, OTHER, OTHER_DAY, SCHOOL_DAY, Group, GroupState, Limits, groups_from_options, groups_of
 from .enforce import FAMILY_LINK, FAMILY_SAFETY, Enforcement, enforcers_from_options, fs_account_of, fs_app, fs_app_platform
 from .exceptions import Allows, Lifted, end_of_day
+from .grants import Grants
+from .native_sync import NativeSync
 from . import family_link as fl
 from .chores import ChoreWatcher
 from .schedule import Scheduler
@@ -112,6 +114,8 @@ class Household:
         self.enforcement = Enforcement(hass, hub.entry.entry_id)
         self.watch = WatchLog(hass, hub.entry.entry_id)
         self.allows = Allows(hass, hub.entry.entry_id)
+        self.grants = Grants(hass, hub.entry.entry_id)
+        self.sync = NativeSync(hass, self)
         self.scheduler = Scheduler(hass, self, hub.entry.entry_id)
         self.chores = ChoreWatcher(hass, self)
         self.days: dict[str, PersonDay] = {}
@@ -133,6 +137,7 @@ class Household:
         await self.enforcement.async_load()
         await self.watch.async_load()
         await self.allows.async_load()
+        await self.grants.async_load()
         await self.scheduler.async_load()
 
     async def async_flush(self) -> None:
@@ -141,6 +146,7 @@ class Household:
         await self.enforcement.async_flush()
         await self.watch.async_flush()
         await self.allows.async_flush()
+        await self.grants.async_flush()
         await self.scheduler.async_flush()
 
     # The mapping
@@ -549,6 +555,7 @@ class Household:
             return self._group_apps(groups_by_id[group_id], membership, with_fs=True)
 
         self.allows.prune()
+        self.grants.prune()
         self.enforcement.update(
             enforcers_from_options(options),
             days,
@@ -556,6 +563,7 @@ class Household:
             lifted_of=self.allows.lifted,
             school_time_of=self.in_school_time,
             groups_of_app=membership,
+            granted_of=self.grants.lifted,
         )
         for together, what in [(t, "started") for t in started] + [(t, "ended") for t in ended]:
             self.hass.bus.async_fire(EVENT_PLAYING_TOGETHER, self._together_event(together, what))
@@ -853,6 +861,8 @@ class Household:
         """The person's allows and School time taken off, for their sensor and Hearth's page."""
         return {
             "allows": [a.view(person) for a in self.allows.of(person)],
+            # A parent's change in the Family Link, Nintendo or Family Safety app that lifts one of Hearth's holds
+            "grants": [g.view() for g in self.grants.of(person)],
             "school_time_off": self.scheduler.offs_of(person),
         }
 
@@ -926,6 +936,12 @@ class Household:
             or (app is not None and (a.app == app or (a.group is not None and a.group in groups)))
             or (group is not None and a.group == group)
         ]
+        # A parent's grants: a whole device, Switch or platform; an app only when it's the one asked about
+        granted = [
+            g.view()
+            for g in self.grants.of(person)
+            if g.kind != "app" or (app is not None and g.value == app)
+        ]
         if blocked:
             ends = [b.get("until") for b in blocked]
             until = None if None in ends else max(ends)
@@ -941,9 +957,19 @@ class Household:
             "until": until,
             "blocked_by": blocked,
             "lifted": lifted_holds,
-            "exceptions": [a.view(person) for a in applying],
+            "exceptions": [a.view(person) for a in applying] + granted,
             "school_time_off": self.scheduler.offs_of(person),
         }
+
+    @callback
+    def end_grant(self, grant_id: str):
+        """An adult ends a parent's grant early (hearth.allow_end with its id): Hearth's hold comes back with the next
+        recompute; where the grant maps to a first-party write (a Family Link bonus reset, Family Safety extra time
+        cancelled) that's done too. None when no grant has that id."""
+        grant = self.grants.end(grant_id)
+        if grant is not None:
+            self.sync.end_grant(grant)
+        return grant
 
     # Changes from services and entities
 

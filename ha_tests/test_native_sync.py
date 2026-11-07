@@ -1,6 +1,8 @@
 """Keeping Hearth and the first-party apps (Family Link, Nintendo, Family Safety) in step: a parent's change in their
 own app is an adult's decision, which Hearth adopts and never overwrites."""
 
+from datetime import timedelta
+
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_capture_events, async_mock_service
@@ -115,3 +117,53 @@ async def test_family_link_s_resume_answer_is_shown(
     await _budget(hass, "video", 10)
     await _bonus(hass, "video", 15)
     assert set(events[-1].data["outcomes"].values()) == {"kept_current"}
+
+
+# B. Parent grants
+
+
+async def test_a_parent_grant_lifts_only_its_own_hold_until_ended(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0))
+    limits = await _sam_with_family_link(hass, hass_client_no_auth)
+    await _budget(hass, "all", 30)
+    assert limits[-1].data["daily_minutes"] == 0
+    hass.states.async_set(_weekday_limit(), "0", {"child_id": CHILD})
+    household = _household(hass)
+
+    grant, new = household.grants.add(
+        "person.sam", "family_link", "device", "Devices", dt_util.now() + timedelta(hours=1), "bonus time"
+    )
+    assert new
+    await _bonus(hass, "all", 0)  # a recompute
+    assert limits[-1].data["daily_minutes"] == 120  # let go: the lock is lifted
+    # Budgets keep counting: All screen time is still out
+    assert household.days["person.sam"].limits["all"].minutes_left == 0
+
+    explained = await hass.services.async_call(
+        DOMAIN, "explain", {"person": "person.sam", "group": "all"}, blocking=True, return_response=True
+    )
+    granted = [e for e in explained["exceptions"] if e.get("type") == "grant"]
+    assert granted[0]["source"] == "from the Family Link app"
+    assert granted[0]["target"] == {"kind": "device", "value": "Devices"}
+    assert household.exceptions_of("person.sam")["grants"][0]["id"] == grant.id
+
+    hass.states.async_set(_weekday_limit(), "120", {"child_id": CHILD})
+    ended = await hass.services.async_call(
+        DOMAIN, "allow_end", {"id": grant.id}, blocking=True, return_response=True
+    )
+    await hass.async_block_till_done()
+    assert ended["ended"] == [grant.id]
+    assert limits[-1].data["daily_minutes"] == 0  # held again
+
+
+async def test_a_grant_ends_by_itself(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer) -> None:
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0))
+    await _sam_with_family_link(hass, hass_client_no_auth)
+    household = _household(hass)
+    household.grants.add("person.sam", "nintendo", "switch", "Switch", dt_util.utcnow() + timedelta(minutes=5), "x")
+    assert household.grants.lifted("person.sam") == {"nintendo": {"Switch"}}
+    freezer.tick(timedelta(minutes=6))
+    assert household.grants.lifted("person.sam") == {}
+    assert household.grants.prune()

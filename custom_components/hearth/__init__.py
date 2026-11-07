@@ -330,7 +330,10 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         app = group = None
         if call.data.get("app") is not None or call.data.get("group") is not None:
             app, group = what(household, call.data)
-        ended = household.allows.end(call.data.get("id"), call.data.get("people"), app, group)
+        # A parent's grant (grants.py) ends by its id too
+        grant = household.end_grant(call.data["id"]) if call.data.get("id") else None
+        ended = [grant.id] if grant is not None else []
+        ended += household.allows.end(call.data.get("id"), call.data.get("people"), app, group)
         household.recompute()
         return {"ended": ended}
 

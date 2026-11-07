@@ -30,7 +30,9 @@ add, per person, the parental controls of other integrations (Configure > Enforc
   only one pausing and resuming, and an app is resumed only when no reason to hold it is left (its group out of time,
   School time). Chosen apps may include ones a budget never holds (Messages), never Hearth's own or Family Link's.
 
-An adult's allow (hearth.allow, exceptions.py) takes its app or group out of every hold above while it lasts.
+An adult's allow (hearth.allow, exceptions.py) takes its app or group out of every hold above while it lasts. A
+parent's grant (a change in the Family Link, Nintendo or Family Safety app, grants.py) takes out only the hold it came
+from.
 
 What's held is kept with Home Assistant's storage helper, so only what Hearth held is let go, after a restart too. A
 group gets time again (a bonus, a new day, a higher budget) and its apps are let go. Right after Home Assistant starts,
@@ -365,10 +367,12 @@ class Enforcement:
         lifted_of=None,
         school_time_of=None,
         groups_of_app=None,
+        granted_of=None,
     ) -> None:
         """[apps_of]: a group id's packages for a person (for All screen time, every app of theirs). [lifted_of]: what
         a person's allows lift (Lifted); [school_time_of]: whether an enforcer's child is in School time now;
-        [groups_of_app]: an app's groups."""
+        [groups_of_app]: an app's groups; [granted_of]: what a person's parent grants lift, by enforcer kind (the
+        held items: grants.py)."""
         self.enforcers = enforcers
         now = dt_util.now()
         wanted_now: dict[str, set[str]] = {}
@@ -383,7 +387,9 @@ class Enforcement:
             if e.kind == FAMILY_SAFETY and not self.hass.services.has_service(FS_DOMAIN, "pause_app"):
                 budget = {item for item in budget if not fs_app(item)}
             school = school_wanted(e, bool(school_time_of and school_time_of(e)), lifted, groups_of_app)
-            wanted_now[e.key] = budget | school
+            # A parent's grant lifts only the hold it came from (that enforcer's item)
+            granted = (granted_of(e.person) or {}).get(e.kind, set()) if granted_of else set()
+            wanted_now[e.key] = (budget | school) - granted
         # What an enforcer no longer configured held is let go
         for key in self.held:
             wanted_now.setdefault(key, set())
