@@ -166,7 +166,7 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
             "name": g.name,
             "builtin": g.builtin,
             "in_all": g.in_all,
-            "apps": [] if g.id == ALL else household._group_apps(g, membership),
+            "apps": [] if g.id == ALL else household._group_apps(g, membership, with_fs=True),
             "added_apps": list(options.get(CONF_GROUP_APPS, {}).get(g.id, [])),
         }
         for g in household.groups

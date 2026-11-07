@@ -190,6 +190,95 @@ async def test_an_unlock_with_nothing_left_to_undo_is_fine(
     assert "family_safety" not in held.attributes or held.attributes["family_safety"]["error"] is None
 
 
+def _family_safety_apps(hass: HomeAssistant):
+    async_mock_service(hass, "microsoft_family_safety", "lock_platform")
+    async_mock_service(hass, "microsoft_family_safety", "unlock_platform")
+    return (
+        async_mock_service(hass, "microsoft_family_safety", "pause_app"),
+        async_mock_service(hass, "microsoft_family_safety", "resume_app"),
+    )
+
+
+async def test_a_group_s_xbox_apps_are_paused_through_family_safety(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    paused, resumed = _family_safety_apps(hass)
+    fl_paused, _ = _family_link(hass)
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    await _household_with_sam(hass, hass_client_no_auth)
+    # Video lists an Xbox app and a Windows one; Sam's Family Safety holds Xbox only
+    await _option(hass, "group_apps", {"video": ["x:videoapp", "win32:player"], "games": []})
+    await _option(
+        hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY, "family_link": FAMILY_LINK}
+    )
+
+    await _budget(hass, "video", 10)  # out of time; Games (the platform lock's) isn't
+    assert [c.data for c in paused] == [{"entity_id": FAMILY_SAFETY, "apps": ["x:videoapp"]}]
+    # Family Link never gets an Xbox or Windows app
+    assert fl_paused and not any(":" in p for p in fl_paused[0].data["packages"])
+    held = hass.states.get("sensor.hearth_sam_held_by_parental_controls")
+    assert held.attributes["family_safety"]["held"] == ["x:videoapp"]
+
+    await _bonus(hass, "video", 30)
+    assert [c.data for c in resumed] == [{"entity_id": FAMILY_SAFETY, "apps": ["x:videoapp"]}]
+
+
+async def test_an_app_on_a_locked_platform_isn_t_paused_too(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    paused, _ = _family_safety_apps(hass)
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(hass, "group_apps", {"video": [], "games": ["x:gameapp"]})
+    await _option(hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY})
+    await _budget(hass, "games", 5)
+    held = hass.states.get("sensor.hearth_sam_held_by_parental_controls")
+    assert held.attributes["family_safety"]["held"] == ["Xbox"]
+    assert paused == []
+
+
+async def test_an_older_family_safety_holds_platforms_only(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    locked = async_mock_service(hass, "microsoft_family_safety", "lock_platform")
+    async_mock_service(hass, "microsoft_family_safety", "unlock_platform")
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(hass, "group_apps", {"video": ["x:videoapp"], "games": []})
+    await _option(hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY})
+    await _budget(hass, "video", 10)
+    held = hass.states.get("sensor.hearth_sam_held_by_parental_controls")
+    assert held.state == "0" and "family_safety" not in held.attributes
+    assert locked == []
+
+
+async def test_family_safety_apps_are_offered_in_the_app_pickers(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    hass.states.async_set(
+        "sensor.sam_screen_time",
+        "30",
+        {
+            "user_id": "123456",
+            "apps": [
+                {"package": "x:gameapp", "name": "A Game", "minutes": 20, "platform": "xbox"},
+                {"package": "appx:Example.Paint", "name": "Paint", "minutes": 10, "platform": "windows"},
+                {"package": "a:com.example.phone", "name": "Phone app", "minutes": 0, "platform": "mobile"},
+            ],
+        },
+    )
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    await _household_with_sam(hass, hass_client_no_auth)
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    assert "x:gameapp" not in household.known_apps()  # nobody's Family Safety yet
+    await _option(hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY})
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    known = household.known_apps()
+    assert known["x:gameapp"] == "A Game (Xbox)"
+    assert known["appx:Example.Paint"] == "Paint (Windows)"
+    assert "a:com.example.phone" not in known
+
+
 async def test_nothing_is_let_go_right_after_a_start(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, monkeypatch
 ) -> None:

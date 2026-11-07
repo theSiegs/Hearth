@@ -16,6 +16,7 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
@@ -45,7 +46,7 @@ from .apps import (
 )
 from .counting import ALL, DeviceUsage, Reading, group_seconds, merge
 from .limits import CONF_APP_GROUPS, OTHER, OTHER_DAY, SCHOOL_DAY, Group, GroupState, Limits, groups_from_options, groups_of
-from .enforce import FAMILY_LINK, Enforcement, enforcers_from_options
+from .enforce import FAMILY_LINK, FAMILY_SAFETY, Enforcement, enforcers_from_options, fs_account_of, fs_app, fs_app_platform
 from .exceptions import Allows, Lifted, end_of_day
 from . import family_link as fl
 from .chores import ChoreWatcher
@@ -348,6 +349,9 @@ class Household:
             for item in by_item:
                 if not item.startswith("title:"):
                     apps.setdefault(item, item)
+        # The Xbox and Windows apps of the kids with Family Safety (its Screen Time and Applications sensors)
+        for package, name in self._family_safety_apps().items():
+            apps.setdefault(package, name)
         # Every app the catalog has seen (a watched list, a device), with its name when one was given
         for entry in self.apps.apps.values():
             if apps.get(entry.package, entry.package) == entry.package:
@@ -355,6 +359,34 @@ class Household:
         for title in self.titles:
             apps[f"title:{title.id}"] = f"{title.name} (title)"
         return apps
+
+    def _family_safety_apps(self) -> dict[str, str]:
+        """App id -> "name (platform)" from the `apps` attribute of the Family Safety sensors of the people with a
+        Family Safety enforcer (their account's sensors), for the app pickers; only ids pause_app takes."""
+        enforcers = [e for e in enforcers_from_options(self.options) if e.kind == FAMILY_SAFETY]
+        found: dict[str, str] = {}
+        if not enforcers:
+            return found
+        accounts = {account for e in enforcers if (account := fs_account_of(self.hass, e.entity_id))}
+        registry = er.async_get(self.hass)
+        devices = {
+            entry.device_id for e in enforcers if (entry := registry.async_get(e.entity_id)) and entry.device_id
+        }
+        for state in self.hass.states.async_all("sensor"):
+            apps = state.attributes.get("apps")
+            if not isinstance(apps, list):
+                continue
+            # Theirs: by the account (Screen Time has user_id) or the account's device (Applications doesn't)
+            if str(state.attributes.get("user_id")) not in accounts:
+                entry = registry.async_get(state.entity_id)
+                if entry is None or entry.device_id not in devices:
+                    continue
+            for app in apps[:500]:
+                package = app.get("package") if isinstance(app, dict) else None
+                if isinstance(package, str) and fs_app(package):
+                    name = str(app.get("name") or package)[:128]
+                    found.setdefault(package[:128], f"{name} ({fs_app_platform(package)})")
+        return found
 
     # Counting
 
@@ -511,7 +543,10 @@ class Household:
         def apps_of(group_id: str, person: str) -> list[str]:
             if group_id == ALL:
                 return self._person_apps(days.get(person), membership)
-            return self._group_apps(groups_by_id[group_id], membership) if group_id in groups_by_id else []
+            if group_id not in groups_by_id:
+                return []
+            # With the Xbox and Windows apps a group lists, for Family Safety
+            return self._group_apps(groups_by_id[group_id], membership, with_fs=True)
 
         self.allows.prune()
         self.enforcement.update(
@@ -635,8 +670,9 @@ class Household:
 
     # What a device is told
 
-    def _group_apps(self, group: Group, membership) -> list[str]:
-        """The packages a device should hold to a group: its own list and the apps seen in it (a title's packages)."""
+    def _group_apps(self, group: Group, membership, with_fs: bool = False) -> list[str]:
+        """The packages a device should hold to a group: its own list and the apps seen in it (a title's packages).
+        [with_fs]: with the group's Xbox and Windows apps (Family Safety's ids), which no Hearth device holds."""
         if group.id == ALL:
             return []
         titles = {f"title:{t.id}": t for t in self.titles}
@@ -644,7 +680,10 @@ class Household:
         for item in set(group.apps) | {k for k in self.known_apps() if group.id in membership(k)}:
             title = titles.get(item)
             for candidate in (title.raw if title else (item,)):
-                if "." in candidate and " " not in candidate:
+                if fs_app(candidate):
+                    if with_fs:
+                        found.add(candidate)
+                elif "." in candidate and " " not in candidate:
                     found.add(candidate)
         return sorted(found)
 

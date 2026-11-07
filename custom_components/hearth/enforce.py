@@ -13,6 +13,10 @@ add, per person, the parental controls of other integrations (Configure > Enforc
   screen time) is out of time, and unlocked when it isn't (lock_platform with until, naming the child by the chosen
   entity; an older Family Safety gets the account sensor's user_id and whole hours). An unlock that finds the hold ran
   out, a parent's own lock in force, or nothing locked is fine: Family Safety leaves a parent's lock alone.
+  A group may list Xbox and Windows apps too (Family Safety's app ids: x:... Xbox, appx:... or win32:... Windows).
+  While any group with such apps is out of time, those of the chosen platforms are paused (microsoft_family_safety.
+  pause_app: a block that keeps whether the app was blocked before; a parent's own block is left alone) and resumed
+  when it has time again, unless their platform is locked anyway. An older Family Safety without pause_app is skipped.
 - Nintendo Switch Parental Controls (built in): while one of the chosen groups (Games, All screen time) is out of time,
   the Switch's Max screentime today is set to 0 with Suspend software on, which suspends the game. Letting go puts back
   the limit and the Suspend software setting it had (kept with what's held). The limit is a setting of the Switch's (of
@@ -126,6 +130,18 @@ NEVER_PAUSED = frozenset(
 )
 DEFAULT_SCHOOL_TIME_APPS = ("com.google.android.apps.messaging",)
 
+# Family Safety's app ids that pause_app takes, by platform (a: is a phone app: not paused, Family Link has the phone)
+FS_APP_PREFIXES = {"x:": "Xbox", "appx:": "Windows", "win32:": "Windows"}
+
+
+def fs_app_platform(item: str) -> str | None:
+    """The platform of a Family Safety app id (x:... Xbox, appx:... or win32:... Windows), None for anything else."""
+    return next((platform for prefix, platform in FS_APP_PREFIXES.items() if item.startswith(prefix)), None)
+
+
+def fs_app(item: str) -> bool:
+    return fs_app_platform(item) is not None
+
 
 def school_pausable(package: str) -> bool:
     return package not in NEVER_PAUSED and package != "android" and "." in package and " " not in package
@@ -202,7 +218,19 @@ def wanted(
     What an allow lifts ([lifted]; an app's groups from [groups_of_app]) isn't held."""
     closed = out_of_time(day, enforcer.groups, lifted)
     if enforcer.kind == FAMILY_SAFETY:
-        return set(enforcer.platforms) if closed else set()
+        platforms = set(enforcer.platforms) if closed else set()
+        # The Xbox and Windows apps of any group out of time, on the chosen platforms that aren't locked whole
+        apps: set[str] = set()
+        for group_id in out_of_time(day, (), lifted):
+            if group_id != ALL:
+                apps |= {
+                    p
+                    for p in apps_of(group_id, enforcer.person)
+                    if fs_app_platform(p) in enforcer.platforms and fs_app_platform(p) not in platforms
+                }
+        if lifted:
+            apps = {p for p in apps if not lifted.app(p, groups_of_app(p) if groups_of_app else None)}
+        return platforms | set(sorted(apps)[:MAX_PACKAGES])
     if enforcer.kind == NINTENDO:
         now = now or dt_util.now()
         late = dt_util.start_of_local_day(now + timedelta(days=1)) - now <= NINTENDO_LET_GO_BEFORE_MIDNIGHT
@@ -218,7 +246,7 @@ def wanted(
     else:
         held = set()
     for group_id in closed:
-        packages |= {p for p in apps_of(group_id, enforcer.person) if not essential(p)}
+        packages |= {p for p in apps_of(group_id, enforcer.person) if not essential(p) and not fs_app(p)}
     if lifted:
         packages = {p for p in packages if not lifted.app(p, groups_of_app(p) if groups_of_app else None)}
     return held | set(sorted(packages)[:MAX_PACKAGES])
@@ -314,6 +342,9 @@ class Enforcement:
             # a locked device. The School-time apps are the parent's own choice, so they are paused all the same.
             if e.kind == FAMILY_LINK:
                 budget -= self._always_allowed(e.entity_id)
+            # An older Family Safety can't pause an app: only its platforms
+            if e.kind == FAMILY_SAFETY and not self.hass.services.has_service(FS_DOMAIN, "pause_app"):
+                budget = {item for item in budget if not fs_app(item)}
             school = school_wanted(e, bool(school_time_of and school_time_of(e)), lifted, groups_of_app)
             wanted_now[e.key] = budget | school
         # What an enforcer no longer configured held is let go
@@ -427,8 +458,24 @@ class Enforcement:
                     blocking=True,
                 )
             return
-        for platform in sorted(items):
+        apps = {item for item in items if fs_app(item)}
+        for platform in sorted(items - apps):
             await self._platform(entity_id, platform, hold)
+        if apps:
+            await self._fs_apps(entity_id, apps, hold)
+
+    async def _fs_apps(self, entity_id: str, apps: set[str], hold: bool) -> None:
+        """Xbox and Windows apps paused (a block that keeps whether each was blocked before) or resumed. Family
+        Safety leaves an app a parent blocked alone."""
+        if not self.hass.services.has_service(FS_DOMAIN, "pause_app"):
+            if hold:
+                raise ValueError("Family Safety can't pause apps (update it)")
+            # Nothing to resume with: what it held can't have been paused by it
+            return
+        target = {"entity_id": entity_id} if "." in entity_id else {"account_id": entity_id}
+        await self.hass.services.async_call(
+            FS_DOMAIN, "pause_app" if hold else "resume_app", {**target, "apps": sorted(apps)}, blocking=True
+        )
 
     async def _platform(self, entity_id: str, platform: str, hold: bool) -> None:
         """Locks a Family Safety platform until the next local midnight, or unlocks it. The child is named by the
