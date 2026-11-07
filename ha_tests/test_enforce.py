@@ -4,8 +4,9 @@ again."""
 from datetime import datetime, timedelta
 
 import pytest
+import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_capture_events, async_mock_service
@@ -38,6 +39,15 @@ async def _bonus(hass: HomeAssistant, group: str, minutes: int) -> None:
     await hass.services.async_call(
         DOMAIN, "add_bonus", {"person": "person.sam", "group": group, "minutes": minutes}, blocking=True
     )
+    await hass.async_block_till_done()
+
+
+async def _add_enforcer(hass: HomeAssistant, raw: dict) -> None:
+    """An enforcer straight into the options (a typed-in Family Safety account id, which the form's entity picker
+    doesn't take)."""
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    enforce_list = [e for e in entry.options.get("enforce", []) if e.get("person") != raw["person"]] + [raw]
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "enforce": enforce_list})
     await hass.async_block_till_done()
 
 
@@ -81,12 +91,103 @@ async def test_family_safety_locks_xbox_while_games_are_out_of_time(
     assert locked == []
     await _budget(hass, "games", 5)
     assert len(locked) == 1
-    assert locked[0].data["account_id"] == "123456"
+    # By the chosen entity, until the next local midnight
+    assert locked[0].data["entity_id"] == FAMILY_SAFETY
+    assert "account_id" not in locked[0].data
     assert locked[0].data["platform"] == "Xbox"
-    assert 1 <= locked[0].data["duration_hours"] <= 24
+    until = dt_util.parse_datetime(locked[0].data["until"])
+    assert until == enforce.next_midnight() and until.tzinfo is not None
 
     await _bonus(hass, "games", 30)
     assert [c.data["platform"] for c in unlocked] == ["Xbox"]
+    assert unlocked[0].data["entity_id"] == FAMILY_SAFETY
+
+
+def _older_family_safety(hass: HomeAssistant) -> tuple[list[ServiceCall], list[ServiceCall]]:
+    """Family Safety before entity_id and until: account_id and duration_hours only."""
+    locked: list[ServiceCall] = []
+    unlocked: list[ServiceCall] = []
+
+    async def lock(call: ServiceCall) -> None:
+        locked.append(call)
+
+    async def unlock(call: ServiceCall) -> None:
+        unlocked.append(call)
+
+    platform = vol.In(["Windows", "Xbox", "Mobile"])
+    hass.services.async_register(
+        "microsoft_family_safety",
+        "lock_platform",
+        lock,
+        schema=vol.Schema(
+            {vol.Required("account_id"): str, vol.Required("platform"): platform, vol.Optional("duration_hours"): int}
+        ),
+    )
+    hass.services.async_register(
+        "microsoft_family_safety",
+        "unlock_platform",
+        unlock,
+        schema=vol.Schema({vol.Required("account_id"): str, vol.Required("platform"): platform}),
+    )
+    return locked, unlocked
+
+
+async def test_an_older_family_safety_is_called_as_before(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    locked, unlocked = _older_family_safety(hass)
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY})
+
+    await _budget(hass, "games", 5)
+    assert len(locked) == 1
+    assert locked[0].data["account_id"] == "123456"
+    assert 1 <= locked[0].data["duration_hours"] <= 24
+    assert "until" not in locked[0].data
+    await _bonus(hass, "games", 30)
+    assert [(c.data["account_id"], c.data["platform"]) for c in unlocked] == [("123456", "Xbox")]
+    held = hass.states.get("sensor.hearth_sam_held_by_parental_controls")
+    assert held.state == "0"
+
+
+async def test_a_typed_in_account_id_stays_an_account_id(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    locked = async_mock_service(hass, "microsoft_family_safety", "lock_platform")
+    async_mock_service(hass, "microsoft_family_safety", "unlock_platform")
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _add_enforcer(hass, {"kind": "family_safety", "person": "person.sam", "entity_id": "987654"})
+    await _budget(hass, "games", 5)
+    assert locked[0].data["account_id"] == "987654"
+    assert "entity_id" not in locked[0].data
+    assert "until" in locked[0].data
+
+
+@pytest.mark.parametrize("applied", ["hold_expired", "left_parent_override", "not_locked"])
+async def test_an_unlock_with_nothing_left_to_undo_is_fine(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, applied: str
+) -> None:
+    async def lock(call: ServiceCall):
+        return {"prior": None, "applied": {"until": call.data["until"]}}
+
+    async def unlock(call: ServiceCall):
+        return {"prior": None, "applied": applied}
+
+    for name, handler in (("lock_platform", lock), ("unlock_platform", unlock)):
+        hass.services.async_register(
+            "microsoft_family_safety", name, handler, supports_response=SupportsResponse.OPTIONAL
+        )
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY})
+    await _budget(hass, "games", 5)
+    held = hass.states.get("sensor.hearth_sam_held_by_parental_controls")
+    assert held.attributes["family_safety"]["held"] == ["Xbox"]
+    await _bonus(hass, "games", 30)
+    held = hass.states.get("sensor.hearth_sam_held_by_parental_controls")
+    assert held.state == "0"
+    assert "family_safety" not in held.attributes or held.attributes["family_safety"]["error"] is None
 
 
 async def test_nothing_is_let_go_right_after_a_start(

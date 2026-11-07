@@ -10,7 +10,9 @@ add, per person, the parental controls of other integrations (Configure > Enforc
   (YouTube Music, say) still work, as when Family Link's own limit is reached. The limit they had is kept and put back
   when there's time again, and before midnight: it's the weekday's setting, not today's only.
 - Microsoft Family Safety: a platform (Xbox, Windows) is locked until midnight while one of the chosen groups (Games, All
-  screen time) is out of time, and unlocked when it isn't.
+  screen time) is out of time, and unlocked when it isn't (lock_platform with until, naming the child by the chosen
+  entity; an older Family Safety gets the account sensor's user_id and whole hours). An unlock that finds the hold ran
+  out, a parent's own lock in force, or nothing locked is fine: Family Safety leaves a parent's lock alone.
 - Nintendo Switch Parental Controls (built in): while one of the chosen groups (Games, All screen time) is out of time,
   the Switch's Max screentime today is set to 0 with Suspend software on, which suspends the game. Letting go puts back
   the limit and the Suspend software setting it had (kept with what's held). The limit is a setting of the Switch's (of
@@ -40,7 +42,10 @@ import logging
 import math
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.core import HomeAssistant, callback
+import voluptuous as vol
+
+from homeassistant.core import HomeAssistant, SupportsResponse, callback
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
@@ -62,6 +67,9 @@ PLATFORMS = ("Xbox", "Windows", "Mobile")
 DEFAULT_FS_GROUPS = ("games", ALL)
 DEFAULT_NINTENDO_GROUPS = ("games", ALL)
 NINTENDO_DOMAIN = "nintendo_parental_controls"
+FS_DOMAIN = "microsoft_family_safety"
+# What unlock_platform answers when Hearth's lock is gone without undoing anything: all fine
+UNLOCK_DONE = ("hold_expired", "left_parent_override", "not_locked")
 # What a Nintendo enforcer holds: the person's Switch (its entity is the Switch's Max screentime today)
 SWITCH = "Switch"
 # What a Family Link enforcer holds for All screen time: the child's devices, locked by a daily limit of 0 (never a
@@ -419,32 +427,50 @@ class Enforcement:
                     blocking=True,
                 )
             return
-        account = self._account_id(entity_id)
         for platform in sorted(items):
+            await self._platform(entity_id, platform, hold)
+
+    async def _platform(self, entity_id: str, platform: str, hold: bool) -> None:
+        """Locks a Family Safety platform until the next local midnight, or unlocks it. The child is named by the
+        configured entity (any of the child's Family Safety entities) or by a typed-in account id. An older Family
+        Safety (no entity_id or until fields) is called as before: the account sensor's user_id and whole hours."""
+        target = {"entity_id": entity_id} if "." in entity_id else {"account_id": entity_id}
+        data: dict[str, Any] = {**target, "platform": platform}
+        if hold:
+            data["until"] = next_midnight().isoformat()
+        service = "lock_platform" if hold else "unlock_platform"
+        try:
+            response = await self._fs_call(service, data)
+        except (vol.Invalid, ServiceValidationError) as err:
+            try:
+                account = self._account_id(entity_id)
+            except ValueError:
+                raise err from None
+            legacy: dict[str, Any] = {"account_id": account, "platform": platform}
             if hold:
-                await self.hass.services.async_call(
-                    "microsoft_family_safety",
-                    "lock_platform",
-                    {"account_id": account, "platform": platform, "duration_hours": hours_to_midnight()},
-                    blocking=True,
-                )
-            else:
-                await self.hass.services.async_call(
-                    "microsoft_family_safety",
-                    "unlock_platform",
-                    {"account_id": account, "platform": platform},
-                    blocking=True,
-                )
+                legacy["duration_hours"] = hours_to_midnight()
+            _LOGGER.debug("Family Safety refused the newer %s call (%s): calling it as before", service, err)
+            response = await self._fs_call(service, legacy)
+        applied = response.get("applied") if isinstance(response, dict) else None
+        if not hold and applied in UNLOCK_DONE:
+            # Nothing of Hearth's left to undo: the hold ran out, a parent's own lock stays, or it wasn't locked
+            _LOGGER.info("Family Safety %s for %s: %s", platform, entity_id, applied)
+        elif applied is not None:
+            _LOGGER.debug("Family Safety %s %s for %s: %s", service, platform, entity_id, applied)
+
+    async def _fs_call(self, service: str, data: dict[str, Any]) -> Any:
+        """A Family Safety call, with its answer when the service gives one (an older one doesn't)."""
+        responds = self.hass.services.supports_response(FS_DOMAIN, service) != SupportsResponse.NONE
+        return await self.hass.services.async_call(
+            FS_DOMAIN, service, data, blocking=True, return_response=responds
+        )
 
     def _account_id(self, entity_id: str) -> str:
         """The Family Safety account: the user_id of the person's account sensor (or the id itself, typed in)."""
-        if "." not in entity_id:
-            return entity_id
-        state = self.hass.states.get(entity_id)
-        account = state.attributes.get("user_id") if state else None
-        if account in (None, ""):
+        account = fs_account_of(self.hass, entity_id)
+        if account is None:
             raise ValueError(f"{entity_id} has no user_id")
-        return str(account)
+        return account
 
     def _switch_entity(self, entity_id: str, domain: str, key: str) -> str | None:
         """Another entity of the Switch whose Max screentime today is [entity_id] (by its key: suspend_software)."""
@@ -655,6 +681,30 @@ def _number(value: Any) -> float | None:
     except (TypeError, ValueError):
         return None
     return number if number == number else None
+
+
+def next_midnight(now: datetime | None = None) -> datetime:
+    """The next local midnight (with its offset): when a Family Safety lock of Hearth's ends."""
+    now = now or dt_util.now()
+    return dt_util.start_of_local_day(now + timedelta(days=1))
+
+
+def fs_account_of(hass: HomeAssistant, entity_id: str) -> str | None:
+    """The Family Safety account (Microsoft user id) of an entity: the id itself when typed in, the entity's user_id,
+    else the user_id of another entity of its device (the child's account device)."""
+    if "." not in entity_id:
+        return entity_id or None
+    candidates = [entity_id]
+    registry = er.async_get(hass)
+    entry = registry.async_get(entity_id)
+    if entry is not None and entry.device_id:
+        candidates += [o.entity_id for o in er.async_entries_for_device(registry, entry.device_id)]
+    for candidate in candidates:
+        state = hass.states.get(candidate)
+        account = state.attributes.get("user_id") if state else None
+        if account not in (None, ""):
+            return str(account)
+    return None
 
 
 def hours_to_midnight(now: datetime | None = None) -> int:
