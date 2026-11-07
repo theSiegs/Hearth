@@ -37,6 +37,8 @@ final class HaAllowance {
     private static final String DAY_KEY = "day";
     private static final String PROFILES_KEY = "profiles";
     private static final String CHECKED_KEY = "checked_at";
+    /** This TV's profile keys and the Home Assistant person each is mapped to, from the integration's last answer. */
+    private static final String PEOPLE_KEY = "people";
     /** How often it's read. */
     static final long READ_EVERY_MS = 60_000;
     /** After a failed read (no entity yet, Home Assistant away), the next one waits this long. */
@@ -172,8 +174,62 @@ final class HaAllowance {
         return true;
     }
 
+    /**
+     * Who each of this TV's profiles is in Home Assistant, from its state document: its "people" map (every mapped
+     * profile, {"user:10": "person.alex"}), and each of "profiles" with its "person". Null when it has neither.
+     */
+    static JSONObject peopleFromDocument(JSONObject state) {
+        if (state == null) return null;
+        JSONObject documents = state.optJSONObject("profiles");
+        JSONObject people = state.optJSONObject("people");
+        if (documents == null && people == null) return null;
+        JSONObject out = new JSONObject();
+        try {
+            if (documents != null) {
+                for (Iterator<String> keys = documents.keys(); keys.hasNext(); ) {
+                    String key = keys.next();
+                    JSONObject document = documents.optJSONObject(key);
+                    String id = document != null ? document.optString("person", "") : "";
+                    if (id.startsWith("person.")) out.put(key, id);
+                }
+            }
+            if (people != null) {
+                for (Iterator<String> keys = people.keys(); keys.hasNext(); ) {
+                    String key = keys.next();
+                    String id = people.optString(key, "");
+                    if (id.startsWith("person.")) out.put(key, id);
+                }
+            }
+        } catch (JSONException e) {
+            return null;
+        }
+        return out;
+    }
+
+    /** This TV's profile keys and the Home Assistant person each is mapped to, as the integration last said. */
+    static Map<String, String> people(Context context) {
+        Map<String, String> out = new HashMap<>();
+        String saved = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(PEOPLE_KEY, null);
+        if (saved == null) return out;
+        try {
+            JSONObject people = new JSONObject(saved);
+            for (Iterator<String> keys = people.keys(); keys.hasNext(); ) {
+                String key = keys.next();
+                out.put(key, people.optString(key));
+            }
+        } catch (JSONException e) {
+            Log.w(TAG, "The saved Home Assistant people aren't readable");
+        }
+        return out;
+    }
+
     /** Keeps the profiles from the integration's answer (its state document) as today's allowance. */
     static void fromDocument(Context context, JSONObject state) {
+        JSONObject people = peopleFromDocument(state);
+        if (people != null) {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                    .putString(PEOPLE_KEY, people.toString()).apply();
+        }
         JSONObject profiles = profilesFromDocument(state);
         if (profiles == null) return;
         long now = System.currentTimeMillis();

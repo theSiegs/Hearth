@@ -24,8 +24,9 @@ import java.util.Map;
  * Hearth also takes two fields of its own, which Home Assistant can send with a rest_command:
  * "camera" (a camera entity shown live in the card, picture-in-picture style) and "actions" (a JSON list of
  * up to three buttons, each {"title", "service": "domain.service", "data": {...}}, run with the panel's token).
- * Two more say who it's for and name it in the Bell (Household.onHaNotification): "for" (a profile's name, Google
- * account address or key, such as "user:10"; none: every adult) and "tag" (a later one with the same tag replaces it,
+ * Two more say who it's for and name it in the Bell (Household.onHaNotification): "for" (a profile's household ref,
+ * "name:alex", or a Home Assistant person, "person.alex", the same on every TV; or its name or Google account address;
+ * a bare key such as "user:10" is this TV's own profile 10, another TV's is someone else; none: every adult) and "tag" (a later one with the same tag replaces it,
  * and the message "clear_notification" with a tag clears it). The Bells get the title, message and buttons (a press
  * on any TV runs it once and clears it from all of them), never the camera. Only accepts connections from the local network.
  */

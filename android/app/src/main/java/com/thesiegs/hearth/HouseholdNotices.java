@@ -158,16 +158,27 @@ final class HouseholdNotices {
 
     /** A profile on this TV, for finding who a notification is for. */
     static final class Person {
+        /** This TV's own key for the profile ("user:10"): its serial is this TV's, another TV's user 10 is someone else. */
         final String key;
         final String id;
         final String name;
         final String email;
+        /** The profile's household ref ("name:alex-rivera", the same on every TV), or null while unknown. */
+        final String ref;
+        /** The Home Assistant person the integration maps the profile to ("person.alex"), or null. */
+        final String haPerson;
 
         Person(String key, String id, String name, String email) {
+            this(key, id, name, email, null, null);
+        }
+
+        Person(String key, String id, String name, String email, String ref, String haPerson) {
             this.key = key;
             this.id = id;
             this.name = name;
             this.email = email;
+            this.ref = ref;
+            this.haPerson = haPerson;
         }
     }
 
@@ -328,15 +339,38 @@ final class HouseholdNotices {
     }
 
     /**
-     * Who a notification sent with {@code wanted} is for, among this TV's profiles: the person id of the one whose key
-     * (as Hearth's Home Assistant integration names profiles, "user:10"), Google account address or name it is. Null
-     * when none is, or two profiles have that name.
+     * Who a notification sent with {@code wanted} is for, among this TV's profiles: the person id of the one it names.
+     * The same on every TV: a household ref ("name:alex-rivera", as Home Assistant maps profiles), a Home Assistant
+     * person ("person.alex", through the integration's mapping of this TV's profiles), a Google account address or a
+     * profile's name. A bare key ("user:10") is this TV's own: its serial is this TV's alone, so another TV's user 10 is
+     * someone else. Null when none is, or (by name, ref or person) two profiles of different people are.
      */
     static String target(String wanted, List<Person> people) {
+        return target(wanted, people, null);
+    }
+
+    /**
+     * The same, also taking this TV's key qualified by its Home Assistant device id ("<device id>/user:10", how the
+     * integration maps a TV's profile without a ref); another device's is no one here.
+     */
+    static String target(String wanted, List<Person> people, String ownDeviceId) {
         if (isBlank(wanted)) return null;
         String w = wanted.trim();
+        int slash = w.indexOf('/');
+        if (slash > 0) {
+            if (ownDeviceId == null || !w.substring(0, slash).equals(ownDeviceId)) return null;
+            w = w.substring(slash + 1);
+        }
         for (Person p : people) {
             if (p.id != null && w.equals(p.key)) return p.id;
+        }
+        if (w.startsWith(ProfileUsers.REF_PREFIX)) {
+            String ref = w.toLowerCase(java.util.Locale.ROOT);
+            return only(people, p -> p.ref != null && ref.equals(p.ref.toLowerCase(java.util.Locale.ROOT)));
+        }
+        if (w.startsWith("person.")) {
+            String person = w.toLowerCase(java.util.Locale.ROOT);
+            return only(people, p -> person.equals(p.haPerson));
         }
         for (Person p : people) {
             if (p.id != null && p.email != null && w.equalsIgnoreCase(p.email.trim())) return p.id;
@@ -345,6 +379,17 @@ final class HouseholdNotices {
         String name = HouseholdEntry.normalize(w);
         for (Person p : people) {
             if (p.id == null || !name.equals(HouseholdEntry.normalize(p.name))) continue;
+            if (found != null && !found.equals(p.id)) return null;
+            found = p.id;
+        }
+        return found;
+    }
+
+    /** The one person id among the profiles that match (several profiles of one person count once); null: none, or two. */
+    private static String only(List<Person> people, java.util.function.Predicate<Person> matches) {
+        String found = null;
+        for (Person p : people) {
+            if (p.id == null || !matches.test(p)) continue;
             if (found != null && !found.equals(p.id)) return null;
             found = p.id;
         }

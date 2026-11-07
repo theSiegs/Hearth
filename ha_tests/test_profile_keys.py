@@ -75,6 +75,9 @@ async def test_the_same_number_on_two_tvs_is_two_kids(
     # Sam's YouTube blocks reach the Playroom TV under its own key for Sam, before Sam has used it today
     assert set(playroom_doc["state"]["youtube_blocks"]) == {"user:10", "user:12"}
     assert set(kitchen_doc["state"]["youtube_blocks"]) == {"user:10"}
+    # Each TV learns who its mapped profiles are by its own keys, so a notification "for" person.sam finds Sam there
+    assert kitchen_doc["state"]["people"] == {"user:10": "person.sam"}
+    assert playroom_doc["state"]["people"] == {"user:10": "person.robin", "user:12": "person.sam"}
 
     # One choice per profile, listing the TVs that have it
     seen = entry.runtime_data.household.seen_profiles()

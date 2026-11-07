@@ -1278,10 +1278,10 @@ final class Household {
     /** This TV's profiles, each with who it is: its person id in a household, else its key (this TV's alone). */
     private static List<HouseholdNotices.Person> people(Context context) {
         List<HouseholdNotices.Person> out = new ArrayList<>();
+        Map<String, String> haPeople = HaAllowance.people(context);
         if (member(context)) {
             for (Map.Entry<String, String> p : local(context).profiles().entrySet()) {
-                out.add(new HouseholdNotices.Person(p.getValue(), p.getKey(),
-                        ProfileUsers.displayName(context, p.getValue()), ProfileUsers.emailOf(context, p.getValue())));
+                out.add(person(context, p.getValue(), p.getKey(), haPeople));
             }
             return out;
         }
@@ -1289,10 +1289,15 @@ final class Household {
         String active = LauncherAccessibilityService.getActiveProfileKey(context);
         if (active != null) keys.add(active);
         for (String key : keys) {
-            out.add(new HouseholdNotices.Person(key, "k:" + key, ProfileUsers.displayName(context, key),
-                    ProfileUsers.emailOf(context, key)));
+            out.add(person(context, key, "k:" + key, haPeople));
         }
         return out;
+    }
+
+    /** A profile of this TV with who it is everywhere: its household ref, and the Home Assistant person it's mapped to. */
+    private static HouseholdNotices.Person person(Context context, String key, String id, Map<String, String> haPeople) {
+        return new HouseholdNotices.Person(key, id, ProfileUsers.displayName(context, key),
+                ProfileUsers.emailOf(context, key), ProfileUsers.householdRef(context, key), haPeople.get(key));
     }
 
     /** Who the profile on screen is, as {@link #people} names it; null when that isn't known. */
@@ -1320,7 +1325,8 @@ final class Household {
         java.util.concurrent.Future<Integer> filed = EXEC.submit(() -> {
             String person = HouseholdNotices.ALL_ADULTS;
             if (n.target != null) {
-                person = HouseholdNotices.target(n.target, people(app));
+                person = HouseholdNotices.target(n.target, people(app),
+                        HaIntegration.isPaired(app) ? HaIntegration.deviceId(app) : null);
                 if (person == null) return HaNotificationServer.UNKNOWN_PERSON;
                 onScreen[0] = person.equals(personOnScreen(app));
             }

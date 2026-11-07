@@ -395,7 +395,10 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
   profile, whatever Hearth allows: a Hearth bonus or `hearth.allow` doesn't get past it. The TV reports it
   (`google_time_up` in its status), `hearth.explain` lists it as `google_tv_limit`, and the person's headline says
   `google tv's own limit`. **Hearth can't lift it**: an adult has to raise or turn off that profile's daily limit in
-  Google TV. To let Hearth own the limits, turn Google TV's daily limit off (keep bedtime there if you like).
+  Google TV. To let Hearth own the limits, turn Google TV's daily limit and bedtime off for kids' TV profiles (in
+  Google TV or Family Link), and set them in Hearth. A paired TV's setup says so (its "Leave Google's time limits off"
+  step), and once the TV saw Google's time up screen in the last week, its Set up Hearth page says "Google TV's own
+  limit is on".
 - The person's **Screen time today** sensor has an `exceptions` attribute: `allows` (id, app or group, until, reason)
   and `school_time_off` (what's taken off and when it's put back).
 
@@ -472,6 +475,7 @@ The answer to each status post carries the person's (or, on a TV, each profile's
     }
   },
   "youtube_blocks": {"user:10": {"videos": [], "channels": [], "words": [], "labels": {}}},
+  "people": {"user:10": "person.sam", "user:0:alex": "person.alex"},
   "parent_pins_version": "…",
   "version": "3f9c1a0b2d4e5f60",
   "contract": 1
@@ -480,8 +484,9 @@ The answer to each status post carries the person's (or, on a TV, each profile's
 
 `groups` lists only groups with a budget; `minutes_left` null is no limit; All screen time may carry `except`, the apps
 it never holds (a Not screen time group's). Each person's part is described under [Ask for more](#ask-for-more) and
-[Pause and locks](#pause-and-locks); a TV's also has every mapped profile's `youtube_blocks` and the
-[parent PINs](#the-devices-side-of-the-api). Own-limit titles (`open_titles`) aren't built. A TV gets it in the answer to each post (at least every 2 minutes while it's
+[Pause and locks](#pause-and-locks); a TV's also has every mapped profile's `youtube_blocks`, `people` (each mapped
+profile of that TV by its own key, with its person: a notification's `for` may name a person, and the TV finds their
+profile here) and the [parent PINs](#the-devices-side-of-the-api). Own-limit titles (`open_titles`) aren't built. A TV gets it in the answer to each post (at least every 2 minutes while it's
 on); `version`, a hash of the content, lets it skip an unchanged one. This replaces `sensor.hearth_allowance`:
 same meaning, from the integration instead of a template.
 

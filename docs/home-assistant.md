@@ -92,11 +92,21 @@ household, or with sync off, also when Hearth restarts).
 A notification is for every adult unless it says who it's for. Two more fields of Hearth's own, sent with a
 `rest_command` as above:
 
-- `for`: who it's for: the profile's name as the TV shows it (`Alex`), its Google account address, or its profile id
-  as the [Hearth integration](#hearth-integration) lists it (`user:10`). It shows only in that person's Bell, on every
-  TV, and pops up only when their profile is on screen. A name two profiles share is no one's; a `for` that is no
-  profile on the TV gets a 404 and is shown to no one. A kids profile can be named too; otherwise kids' profiles see
-  none of these.
+- `for`: who it's for. Use one that means the same person on every TV:
+  - the profile's **ref**, `name:` and its Google TV name in lower case with dashes (`name:alex`, `name:sam-rivera`),
+    as the [Hearth integration](#hearth-integration) maps profiles;
+  - a **person** in Home Assistant (`person.alex`): the TV finds the profile the Hearth integration maps to that person
+    (on a paired TV; it learns the mapping with each status answer);
+  - the profile's name as the TV shows it (`Alex`), or its Google account address.
+
+  It shows only in that person's Bell, on every TV, and pops up only when their profile is on screen. A name, ref or
+  person that two profiles of different people share is no one's; a `for` that is no profile on the TV gets a 404 and
+  is shown to no one. A kids profile can be named too; otherwise kids' profiles see none of these.
+
+  A profile id such as `user:10` still works, but only as **that TV's own** profile 10. Each TV numbers its profiles
+  itself: user 10 on one TV can be Alex and on the next TV Sam. So never send the same `user:10` to several TVs; use
+  the ref or the person. (`<device id>/user:10`, as the integration's options write it, is that TV's alone; another
+  TV takes it as no one.)
 - `tag`: names the notification. A later one with the same tag (and the same `for`) replaces it, and the message
   `clear_notification` with its tag clears it from every Bell. Without a tag, the same notification sent to several
   TVs at once is still one notification.
@@ -107,12 +117,17 @@ rest_command:
     url: "http://192.0.2.10:7676/"
     method: post
     content_type: "application/x-www-form-urlencoded"
-    payload: "title=Parcel&msg=Your%20parcel%20came&for=Alex&tag=parcel"
+    payload: "title=Parcel&msg=Your%20parcel%20came&for=person.alex&tag=parcel"
+  tv_homework_for_sam:
+    url: "http://192.0.2.10:7676/"
+    method: post
+    content_type: "application/x-www-form-urlencoded"
+    payload: "title=Homework&msg=Time%20to%20start%20your%20homework&for=name:sam&tag=homework"
   tv_parcel_clear:
     url: "http://192.0.2.10:7676/"
     method: post
     content_type: "application/x-www-form-urlencoded"
-    payload: "msg=clear_notification&for=Alex&tag=parcel"
+    payload: "msg=clear_notification&for=person.alex&tag=parcel"
 ```
 
 Without `for` and `tag` a notification works as it always did: it pops up whichever profile is on.

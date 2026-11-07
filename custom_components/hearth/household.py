@@ -758,6 +758,9 @@ class Household:
                 # One-shot commands waiting for this TV (hearth.play_on_tv): it runs each id once and says so in its
                 # next status (commands_done)
                 "commands": self.hub.commands.document_for(device_id),
+                # Who each of this TV's mapped profiles is, by its own keys: a notification's "for" may name a person
+                # ("person.sam"), and the TV finds that person's profile here
+                "people": {profile_id: person for profile_id, person in sorted(profiles.items()) if person},
             }
             # The adults' parent PINs (hashes, never a PIN): a paired TV asks verify_pin, and keeps these (sealed) to
             # check PINs with Home Assistant down. Sent only when they changed since the TV's copy (its

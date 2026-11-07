@@ -271,6 +271,44 @@ public class HouseholdNoticesTest {
     }
 
     @Test
+    public void whoANotificationIsFor_byRefOrPerson_theSameOnEveryTv() {
+        // The same kid is user 10 on this TV and user 12 on the next; Sam is user 10 there
+        List<HouseholdNotices.Person> thisTv = Arrays.asList(
+                new HouseholdNotices.Person("user:0:alex", ALEX, "Alex", "alex@example.com", "name:alex", "person.alex"),
+                new HouseholdNotices.Person("user:10", KID, "Robin", null, "name:robin", "person.robin"));
+        List<HouseholdNotices.Person> nextTv = Arrays.asList(
+                new HouseholdNotices.Person("user:10", SAM, "Sam", null, "name:sam", "person.sam"),
+                new HouseholdNotices.Person("user:12", KID, "Robin", null, "name:robin", "person.robin"));
+        for (List<HouseholdNotices.Person> tv : Arrays.asList(thisTv, nextTv)) {
+            assertEquals(KID, HouseholdNotices.target("name:robin", tv));
+            assertEquals(KID, HouseholdNotices.target(" name:Robin ", tv));
+            assertEquals(KID, HouseholdNotices.target("person.robin", tv));
+        }
+        // A bare key is each TV's own: user 10 is Robin here and Sam there
+        assertEquals(KID, HouseholdNotices.target("user:10", thisTv));
+        assertEquals(SAM, HouseholdNotices.target("user:10", nextTv));
+        // A ref or person this TV doesn't have is no one, never another profile
+        assertNull(HouseholdNotices.target("name:sam", thisTv));
+        assertNull(HouseholdNotices.target("person.sam", thisTv));
+        // A key qualified by a device: this TV's only
+        assertEquals(KID, HouseholdNotices.target("tvdevice01/user:10", thisTv, "tvdevice01"));
+        assertNull(HouseholdNotices.target("otherdevice/user:10", thisTv, "tvdevice01"));
+        assertNull(HouseholdNotices.target("tvdevice01/user:10", thisTv, null));
+        // Names and addresses still work
+        assertEquals(ALEX, HouseholdNotices.target("Alex", thisTv));
+
+        // One person with two profiles on a TV is still them; two people mapped from one ref are no one
+        List<HouseholdNotices.Person> twoOfAlex = Arrays.asList(
+                new HouseholdNotices.Person("user:0:alex", ALEX, "Alex", null, "name:alex", "person.alex"),
+                new HouseholdNotices.Person("user:0:alex2", ALEX, "Alex R", null, "name:alex-r", "person.alex"));
+        assertEquals(ALEX, HouseholdNotices.target("person.alex", twoOfAlex));
+        List<HouseholdNotices.Person> clash = Arrays.asList(
+                new HouseholdNotices.Person("user:10", KID, "Robin", null, "name:robin", "person.robin"),
+                new HouseholdNotices.Person("user:11", SAM, "Robin", null, "name:robin", "person.sam"));
+        assertNull(HouseholdNotices.target("name:robin", clash));
+    }
+
+    @Test
     public void homeAssistantSaysWhoItsFor_andCanClearByTag_withTheButtonsAllowlistAsBefore() {
         String body = "title=Parcel&msg=Your%20parcel%20came&for=Alex&tag=parcel&actions="
                 + "%5B%7B%22title%22%3A%22Unlock%22%2C%22service%22%3A%22lock.unlock%22%7D%2C"

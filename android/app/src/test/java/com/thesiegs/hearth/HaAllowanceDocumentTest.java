@@ -15,6 +15,22 @@ public class HaAllowanceDocumentTest {
     }
 
     @Test
+    public void whoEachProfileIsInHomeAssistant_everyMappedOneNotJustTodays() throws Exception {
+        JSONObject people = HaAllowance.peopleFromDocument(new JSONObject("{\"profiles\": {\"user:10\": "
+                + "{\"person\": \"person.robin\", \"groups\": []}}, \"people\": {\"user:0:alex\": \"person.alex\", "
+                + "\"user:11\": \"\", \"user:12\": \"sensor.not_a_person\"}}"));
+        assertEquals("person.robin", people.optString("user:10"));
+        assertEquals("person.alex", people.optString("user:0:alex"));
+        assertFalse(people.has("user:11"));
+        assertFalse(people.has("user:12"));
+        // An older integration's answer: only today's profiles say who they are
+        JSONObject older = HaAllowance.peopleFromDocument(document("{\"user:10\": {\"person\": \"person.robin\"}}"));
+        assertEquals("person.robin", older.optString("user:10"));
+        assertNull(HaAllowance.peopleFromDocument(new JSONObject("{\"version\": \"abc\"}")));
+        assertNull(HaAllowance.peopleFromDocument(null));
+    }
+
+    @Test
     public void theFewestMinutesLeftInAGroupHoldingHearthTube() throws Exception {
         JSONObject profiles = HaAllowance.profilesFromDocument(document("{\"user:10\": {\"groups\": ["
                 + "{\"id\": \"video\", \"minutes_left\": 40, \"apps\": [\"com.thesiegs.hearthtube\", \"com.example.tv\"]},"

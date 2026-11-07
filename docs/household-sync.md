@@ -308,10 +308,13 @@ own Android notifications stay on their TV (they belong to that TV's apps, and t
 
 **Who a notification is for.**
 
-- **A person.** Home Assistant names them with the notification's `for` field: a profile's name ("Alex"), its Google
-  account address, or its key as Hearth's Home Assistant integration lists profiles ("user:10"). The TV that receives
-  it turns that into the person id (see Who a profile is), so every TV shows it to the same person, whatever their
-  profile is called or numbered there. A name two profiles share names neither. A `for` that no profile on the
+- **A person.** Home Assistant names them with the notification's `for` field: a profile's household ref
+  ("name:alex", the same on every TV), a Home Assistant person ("person.alex", through the integration's mapping of
+  that TV's profiles), a profile's name ("Alex") or its Google account address. The TV that receives it turns that into
+  the person id (see Who a profile is), so every TV shows it to the same person, whatever their profile is called or
+  numbered there. A name, ref or person two people's profiles share names neither. A profile key ("user:10") is only
+  the receiving TV's own profile: the number is that TV's Android user serial, and the same number on another TV is
+  someone else, so the same `for=user:10` sent to two TVs can reach two people. A `for` that no profile on the
   receiving TV is gets a 404 from that TV and is shown to no one: a notification meant for one person is never shown
   to someone else.
 - **No one named: every adult.** A notification without `for` is the household's ("The wash is done", "Someone is at
