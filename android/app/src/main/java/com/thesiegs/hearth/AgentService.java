@@ -204,6 +204,18 @@ public class AgentService extends Service {
     }
 
     /**
+     * An app here asked for Hearth's time's up card ({@link TimeUpRequest#ACTION}): Hearth in the owner's user brings
+     * its home up, with the card when this profile is out of time. False when Hearth isn't connected.
+     */
+    static boolean relayTimeUp(String packageName, String group) {
+        AgentService service = sInstance;
+        if (service == null || !sConnected) return false;
+        service.send(json("type", "time_up", "package", packageName != null ? packageName : "",
+                "group", group != null ? group : ""));
+        return true;
+    }
+
+    /**
      * What a kids profile hid or blocked itself in HearthTube (the whole list): Hearth keeps it for the parent. False
      * when Hearth isn't connected; HearthTube sends it again later.
      */

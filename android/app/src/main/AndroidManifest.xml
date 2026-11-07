@@ -139,6 +139,20 @@
         <receiver
             android:name=".SessionInstaller$ResultReceiver"
             android:exported="false" />
+        <!-- Another app (HearthTube's "Ask for more time") asks for Hearth's time's up card; in a kids profile's user
+             the agent passes it on to Hearth in the owner's user (TimeUpRequest, docs/time-up-intent.md). No
+             permission: it only brings up the home and its card -->
+        <activity
+            android:name=".TimeUpActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="com.thesiegs.hearth.action.TIME_UP" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <!-- Hearth as an agent in another Google TV profile's user: only enabled there (AgentService.hideFromHome);
              Hearth in the owner's user starts it to open things in that user -->
         <activity

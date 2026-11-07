@@ -253,6 +253,15 @@ final class AgentHub {
                                 message.optString("ch", ""), message.optString("cid", "")));
                         break;
                     }
+                    case "time_up": {
+                        // An app in this profile's user asked for the time's up card (TimeUpActivity there); only
+                        // for the profile in front, checked again here
+                        if (serial != ProfileUsers.activeSerial(sContext)) break;
+                        String asked = TimeUpRequest.cleanPackage(message.optString("package", ""));
+                        String group = TimeUpRequest.cleanGroup(message.optString("group", ""));
+                        new Handler(Looper.getMainLooper()).post(() -> TimeUpRequest.show(sContext, asked, group));
+                        break;
+                    }
                     case "kid_blocks": {
                         // What HearthTube in this profile's user hid or blocked itself (a kid's only)
                         if (serial == ProfileUsers.ownerSerial(sContext)) break;

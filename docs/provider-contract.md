@@ -114,6 +114,39 @@ at most 256 KB. Hearth keeps the latest per profile for a parent to see in its s
 (`kid_unblocks`). Same callers as above; returns a Bundle with `ok` true, null when it isn't JSON or is too big. In a
 profile's agent it's passed on to Hearth and returns null when it couldn't be (Hearth not connected): send it again later.
 
+## Asking for Hearth's time's up card (an intent)
+
+Not a provider column or call, so the version stays 10. An app whose time is up (HearthTube's "Ask for more time")
+starts Hearth's time's up card, the one a kid sees after picking a held app on Hearth's home, with "ask for more" and
+its usual cooldown and already-open handling:
+
+```java
+Intent intent = new Intent("com.thesiegs.hearth.action.TIME_UP")
+        .setPackage("com.thesiegs.hearth")
+        .putExtra("package", "com.thesiegs.hearthtube")   // the app that was held (required)
+        .putExtra("group", "youtube")                     // a Hearth group id (optional)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+if (context.getPackageManager().resolveActivity(intent, 0) != null) context.startActivity(intent);
+```
+
+- **Action** `com.thesiegs.hearth.action.TIME_UP`, category default, aimed at `com.thesiegs.hearth`; Hearth releases after
+  2026.11.07 answer it (`resolveActivity` says whether this Hearth does). Exported without a permission: it can only
+  bring up Hearth's home and that card.
+- **Extras** (strings): `package`, the held app's package name; `group`, optional, a Hearth group id (`youtube`,
+  `all`, as the Hearth integration names groups). A `package` that isn't a package name or isn't installed is ignored,
+  and so is a `group` that isn't an id or isn't out of time today for the active profile.
+- **What happens:** Hearth's home comes to the front. If the active kids profile is out of time for that group (or, with
+  no usable `group`, for the app: its group's time, a family pause or a lock, or for HearthTube its YouTube minutes,
+  Hearth's own limit included), the card shows for it. If nothing holds it, only the home opens, with no card. Never in
+  an adult's profile.
+- **From a kids profile's own user** (where HearthTube runs): start it there as above. Hearth in that user is the
+  profile's agent; it passes the request to Hearth in the TV owner's user over the agent's connection, and that Hearth
+  brings up the home and the card (only for the profile in front). An app in the kids user can't start the owner's home
+  itself, which is why it goes through the agent. If the agent isn't connected, nothing shows (logged as HearthTimeUp)
+  and the agent is started for the next try.
+- HearthTube needs Hearth visible to it (`<queries>` with `<package android:name="com.thesiegs.hearth" />`), which it
+  already has for this provider.
+
 ## Proposed: playing a video from Home Assistant
 
 Not built; no column or call changes, so the version stays 10. Home Assistant's `hearth.play_on_tv` hands a paired TV a
