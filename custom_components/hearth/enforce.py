@@ -8,7 +8,8 @@ add, per person, the parental controls of other integrations (Configure > Enforc
   limits, which is why a TV is held by Hearth. All screen time out of time locks the person's devices instead: today's
   daily limit goes to 0 (familylink.set_daily_limit, every device of the child), so apps a parent gave unlimited time
   (YouTube Music, say) still work, as when Family Link's own limit is reached. The limit they had is kept and put back
-  when there's time again, and before midnight: it's the weekday's setting, not today's only.
+  when there's time again, and before midnight: it's the weekday's setting, not today's only. It's put back only while
+  the limit still reads 0: a limit a parent changed meanwhile in the Family Link app is theirs and stays (kept_current).
 - Microsoft Family Safety: a platform (Xbox, Windows) is locked until midnight while one of the chosen groups (Games, All
   screen time) is out of time, and unlocked when it isn't (lock_platform with until, naming the child by the chosen
   entity; an older Family Safety gets the account sensor's user_id and whole hours). An unlock that finds the hold ran
@@ -20,7 +21,8 @@ add, per person, the parental controls of other integrations (Configure > Enforc
 - Nintendo Switch Parental Controls (built in): while one of the chosen groups (Games, All screen time) is out of time,
   the Switch's Max screentime today is set to 0 with Suspend software on, which suspends the game. Letting go puts back
   the limit and the Suspend software setting it had (kept with what's held). The limit is a setting of the Switch's (of
-  every day, or of this weekday), not of today only, so it's put back before midnight.
+  every day, or of this weekday), not of today only, so it's put back before midnight. As with Family Link, only while
+  it still reads 0: a limit a parent set meanwhile in the Nintendo app stays, with the Switch's other settings.
 
 - School time (Family Link): the apps chosen per person ("During School time, pause these apps", Google Messages by
   default in the form) are paused while the child's School time is on (any of their devices says so), through the same
@@ -87,6 +89,11 @@ NINTENDO_EACH_DAY = "each_day_of_the_week"
 SETTLE = timedelta(minutes=5)
 # A failed call is tried again after this long
 RETRY = timedelta(minutes=5)
+# What letting go did: put back what was there before, or kept what a parent set meanwhile
+RESTORED = "restored"
+KEPT_CURRENT = "kept_current"
+# A change seen this soon after Hearth's own call is taken as Hearth's (the integration catching up), not a parent's
+QUIET_AFTER_CALL = timedelta(minutes=1)
 MAX_PACKAGES = 150
 
 # Never paused, whatever group they're in: calls, texts, the system, and the apps that hold the rest
@@ -285,6 +292,11 @@ class Enforcement:
         self._wanted: dict[str, set[str]] = {}
         self._task: asyncio.Task | None = None
         self._again = False
+        # What Hearth last did through each parental control, by enforcer key: {at, held, let_go, outcomes, error}
+        self.last: dict[str, dict[str, Any]] = {}
+        # Enforcers whose calls are under way, and when changes they cause have surely shown (not a parent's)
+        self._busy: set[str] = set()
+        self._quiet_until: dict[str, datetime] = {}
 
     async def async_load(self) -> None:
         stored = await self._store.async_load() or {}
@@ -317,6 +329,31 @@ class Enforcement:
             kind, who = key.split("|", 1)
             if who == person and (held.items or held.error):
                 found[kind] = {"held": sorted(held.items), "error": held.error}
+        return found
+
+    @callback
+    def note(self, key: str, **what: Any) -> None:
+        """What Hearth just did through a parental control (and whether it took), for Hearth's page: the last of
+        each enforcer, kept until a restart."""
+        record = {"at": dt_util.utcnow().isoformat(), "ok": not what.get("error")}
+        record.update({k: v for k, v in what.items() if v not in (None, [], {})})
+        self.last[key] = record
+
+    def status_of(self, person: str) -> dict[str, Any]:
+        """Per parental control of the person's: what's held now, the last error and what Hearth last did."""
+        found: dict[str, Any] = {}
+        keys = {e.key for e in self.enforcers if e.person == person}
+        keys |= {k for k in self.held if k.split("|", 1)[1] == person}
+        keys |= {k for k in self.last if k.split("|", 1)[1] == person}
+        for key in sorted(keys):
+            kind = key.split("|", 1)[0]
+            held = self.held.get(key) or Held()
+            found[kind] = {
+                "held": sorted(held.items),
+                "error": held.error,
+                "failed_at": held.failed_at.isoformat() if held.failed_at else None,
+                "last": self.last.get(key),
+            }
         return found
 
     @callback
@@ -411,10 +448,12 @@ class Enforcement:
             # Kept before the calls: a half-done hold is let go through it if the enforcer is removed meanwhile
             if not _holding(held) or held.entity_id is None:
                 held.entity_id = entity_id
+            outcomes: dict[str, Any] = {}
+            self._busy.add(key)
             try:
                 if let_go:
                     # Through what held it: a Switch changed meanwhile gets the hold, the old one its limit back
-                    await self._call(kind, held.entity_id or entity_id, let_go, False, held)
+                    outcomes = await self._call(kind, held.entity_id or entity_id, let_go, False, held)
                     held.items -= let_go
                 if hold:
                     held.entity_id = entity_id
@@ -423,18 +462,32 @@ class Enforcement:
                 held.error, held.failed_at = None, None
                 self.hass.bus.async_fire(
                     "hearth_enforced",
-                    {"person": person, "by": kind, "held": sorted(hold), "let_go": sorted(let_go)},
+                    {
+                        "person": person,
+                        "by": kind,
+                        "held": sorted(hold),
+                        "let_go": sorted(let_go),
+                        **({"outcomes": outcomes} if outcomes else {}),
+                    },
                 )
+                self.note(key, held=sorted(hold), let_go=sorted(let_go), outcomes=outcomes)
             except Exception as err:  # noqa: BLE001 - one parental control failing mustn't stop the others
                 _LOGGER.warning("Hearth couldn't %s for %s through %s: %s", "hold" if hold else "let go", person, kind, err)
                 held.error, held.failed_at = str(err)[:200], now
+                self.note(key, held=sorted(hold), let_go=sorted(let_go), error=held.error)
+            finally:
+                self._busy.discard(key)
+                self._quiet_until[key] = dt_util.utcnow() + QUIET_AFTER_CALL
             if not _holding(held) and not held.error and enforcer is None:
                 self.held.pop(key, None)
             self._save()
         if self._again:
             self._run()
 
-    async def _call(self, kind: str, entity_id: str, items: set[str], hold: bool, held: Held) -> None:
+    async def _call(self, kind: str, entity_id: str, items: set[str], hold: bool, held: Held) -> dict[str, Any]:
+        """Holds or lets go of [items]; says what letting go did, by item (restored, kept_current, ...), where the
+        parental control says so."""
+        outcomes: dict[str, Any] = {}
         if kind == NINTENDO:
             # One Switch, two kids: the first hold keeps its limit; letting go while the other is still held hands
             # what to put back over instead of putting it back
@@ -443,26 +496,46 @@ class Enforcement:
                 if not hold and held.restore:
                     sharing[0].restore = sharing[0].restore or held.restore
                 held.restore = {} if not hold else held.restore
-                return
-            await (self._hold_switch(entity_id, held) if hold else self._let_go_switch(entity_id, held))
-            return
+                return {SWITCH: "shared"} if not hold else {}
+            if hold:
+                await self._hold_switch(entity_id, held)
+            elif (outcome := await self._let_go_switch(entity_id, held)) is not None:
+                outcomes[SWITCH] = outcome
+            return outcomes
         if kind == FAMILY_LINK:
             if DEVICES in items:
-                await (self._lock_devices(entity_id, held) if hold else self._unlock_devices(held))
+                if hold:
+                    await self._lock_devices(entity_id, held)
+                elif (outcome := await self._unlock_devices(held)) is not None:
+                    outcomes[DEVICES] = outcome
             packages = items - {DEVICES}
             if packages:
-                await self.hass.services.async_call(
+                service = "pause_app" if hold else "resume_app"
+                response = await self.hass.services.async_call(
                     "familylink",
-                    "pause_app" if hold else "resume_app",
+                    service,
                     {"entity_id": entity_id, "packages": sorted(packages)},
                     blocking=True,
+                    return_response=self._responds("familylink", service),
                 )
-            return
+                if not hold:
+                    outcomes.update(_resume_outcomes(response))
+            return outcomes
         apps = {item for item in items if fs_app(item)}
         for platform in sorted(items - apps):
-            await self._platform(entity_id, platform, hold)
+            applied = await self._platform(entity_id, platform, hold)
+            if not hold and applied is not None:
+                outcomes[platform] = applied
         if apps:
             await self._fs_apps(entity_id, apps, hold)
+        return outcomes
+
+    def _responds(self, domain: str, service: str) -> bool:
+        """The service gives an answer (a newer integration): asked for it then. A missing service raises at the call."""
+        try:
+            return self.hass.services.supports_response(domain, service) != SupportsResponse.NONE
+        except Exception:  # noqa: BLE001 - not registered: the call itself says so
+            return False
 
     async def _fs_apps(self, entity_id: str, apps: set[str], hold: bool) -> None:
         """Xbox and Windows apps paused (a block that keeps whether each was blocked before) or resumed. Family
@@ -477,7 +550,7 @@ class Enforcement:
             FS_DOMAIN, "pause_app" if hold else "resume_app", {**target, "apps": sorted(apps)}, blocking=True
         )
 
-    async def _platform(self, entity_id: str, platform: str, hold: bool) -> None:
+    async def _platform(self, entity_id: str, platform: str, hold: bool) -> str | None:
         """Locks a Family Safety platform until the next local midnight, or unlocks it. The child is named by the
         configured entity (any of the child's Family Safety entities) or by a typed-in account id. An older Family
         Safety (no entity_id or until fields) is called as before: the account sensor's user_id and whole hours."""
@@ -504,6 +577,7 @@ class Enforcement:
             _LOGGER.info("Family Safety %s for %s: %s", platform, entity_id, applied)
         elif applied is not None:
             _LOGGER.debug("Family Safety %s %s for %s: %s", service, platform, entity_id, applied)
+        return applied if isinstance(applied, str) else None
 
     async def _fs_call(self, service: str, data: dict[str, Any]) -> Any:
         """A Family Safety call, with its answer when the service gives one (an older one doesn't)."""
@@ -598,21 +672,50 @@ class Enforcement:
             blocking=True,
         )
 
-    async def _unlock_devices(self, held: Held) -> None:
-        """The weekday's daily limit back as it was (that weekday's, even after midnight)."""
+    def _held_weekday_limit(self, restore: dict[str, Any]) -> float | None:
+        """What the held weekday's daily limit entity reads now (None when it can't be told)."""
+        child, weekday = restore.get("lock_child"), restore.get("lock_weekday")
+        if not child or not isinstance(weekday, int) or not 1 <= weekday <= 7:
+            return None
+        suffix = f"_{WEEKDAYS[weekday - 1]}_limit"
+        state = next(
+            (
+                s
+                for s in self.hass.states.async_all("number")
+                if s.entity_id.endswith(suffix) and str(s.attributes.get("child_id")) == str(child)
+            ),
+            None,
+        )
+        return _number(state.state if state else None)
+
+    async def _unlock_devices(self, held: Held) -> str | None:
+        """The weekday's daily limit back as it was (that weekday's, even after midnight), only while it still reads
+        what Hearth set (0): a limit a parent changed meanwhile in the Family Link app is theirs, and stays. Says what
+        it did (restored, kept_current), None with nothing kept."""
         restore = held.restore
+        outcome = None
         if "lock_minutes" in restore:
-            await self.hass.services.async_call(
-                "familylink",
-                "set_daily_limit",
-                {
-                    "child_id": restore["lock_child"],
-                    "daily_minutes": restore["lock_minutes"],
-                    "day": restore["lock_weekday"],
-                },
-                blocking=True,
-            )
+            current = self._held_weekday_limit(restore)
+            if restore.get("lock_adopted") or (current is not None and current not in (0, restore["lock_minutes"])):
+                _LOGGER.info(
+                    "Family Link's daily limit for child %s changed to %s while Hearth held it: kept, %s not put back",
+                    restore.get("lock_child"), current, restore["lock_minutes"],
+                )
+                outcome = KEPT_CURRENT
+            else:
+                await self.hass.services.async_call(
+                    "familylink",
+                    "set_daily_limit",
+                    {
+                        "child_id": restore["lock_child"],
+                        "daily_minutes": restore["lock_minutes"],
+                        "day": restore["lock_weekday"],
+                    },
+                    blocking=True,
+                )
+                outcome = RESTORED
         held.restore = {k: v for k, v in restore.items() if not k.startswith("lock_")}
+        return outcome
 
     async def _hold_switch(self, entity_id: str, held: Held) -> None:
         """Max screentime today to 0 with Suspend software on: the game is suspended. What they were is kept first
@@ -665,16 +768,25 @@ class Enforcement:
             return
         await self.hass.services.async_call(NINTENDO_DOMAIN, "update_daily_restrictions", data, blocking=True)
 
-    async def _let_go_switch(self, entity_id: str, held: Held) -> None:
-        """The limit and Suspend software back as they were. On a later day (Home Assistant was off over midnight),
-        a Switch with a limit per weekday shows another day's now: that one is left alone, and said so."""
+    async def _let_go_switch(self, entity_id: str, held: Held) -> str | None:
+        """The limit and Suspend software back as they were, only while the limit still reads what Hearth set (0): a
+        limit a parent changed meanwhile in the Nintendo app is theirs, and stays with the Switch's other settings.
+        On a later day (Home Assistant was off over midnight), a Switch with a limit per weekday shows another day's
+        now: that one is left alone, and said so. Says what it did (restored, kept_current)."""
         restore = held.restore
         limit = restore.get("max")
         mode = self._switch_entity(entity_id, "select", "timer_mode")
         mode_state = self.hass.states.get(mode) if mode else None
-        if restore.get("day") not in (None, dt_util.now().date().isoformat()) and (
-            mode_state is not None and mode_state.state == NINTENDO_EACH_DAY
+        state = self.hass.states.get(entity_id)
+        current = _number(state.state if state else None)
+        later_day = restore.get("day") not in (None, dt_util.now().date().isoformat())
+        if not later_day and (
+            restore.get("adopted") or (current is not None and limit is not None and current not in (0, limit))
         ):
+            _LOGGER.info("%s changed to %s while Hearth held it: kept, %s not put back", entity_id, current, limit)
+            held.restore = {}
+            return KEPT_CURRENT
+        if later_day and mode_state is not None and mode_state.state == NINTENDO_EACH_DAY:
             # Held past midnight (Home Assistant was off): today's limit is another weekday's now, so the held
             # weekday's own is put back, with its bedtime
             await self._put_back_weekday(entity_id, restore, limit)
@@ -688,6 +800,7 @@ class Enforcement:
         if suspend and restore.get("suspend_was") == "off":
             await self.hass.services.async_call("switch", "turn_off", {"entity_id": suspend}, blocking=True)
         held.restore = {}
+        return RESTORED
 
 
 def _clock(value: Any) -> str | None:
@@ -710,6 +823,20 @@ def _held_weekday_call(restore: dict[str, Any], limit: int | None) -> dict[str, 
     if start and end:
         data["bedtime_start"], data["bedtime_end"] = start, end
     return data
+
+
+def _resume_outcomes(response: Any) -> dict[str, Any]:
+    """What a resume_app answer says of each app (restored, kept_current, ...); nothing from an older Family Link."""
+    if not isinstance(response, dict):
+        return {}
+    results = response.get("results")
+    if isinstance(results, dict):
+        return {str(k): v for k, v in results.items()}
+    found: dict[str, Any] = {}
+    for outcome in (RESTORED, KEPT_CURRENT):
+        for package in response.get("resumed" if outcome == RESTORED else outcome) or {}:
+            found[str(package)] = outcome
+    return found
 
 
 def _holding(held: Held) -> set[str]:
