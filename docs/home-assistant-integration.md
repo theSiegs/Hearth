@@ -409,8 +409,65 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
   Google TV or Family Link), and set them in Hearth. A paired TV's setup says so (its "Leave Google's time limits off"
   step), and once the TV saw Google's time up screen in the last week, its Set up Hearth page says "Google TV's own
   limit is on".
-- The person's **Screen time today** sensor has an `exceptions` attribute: `allows` (id, app or group, until, reason)
-  and `school_time_off` (what's taken off and when it's put back).
+- The person's **Screen time today** sensor has an `exceptions` attribute: `allows` (id, app or group, until, reason),
+  `grants` (below) and `school_time_off` (what's taken off and when it's put back).
+
+### Keeping the parents' apps in step
+
+A parent's change in a first-party app (Family Link, the Nintendo app, Microsoft Family Safety) is an adult's decision:
+Hearth adopts it and never writes over it or fights it. And Hearth's own "all screen time" opens Google's and
+Microsoft's own limits too. Everything below is gated on what the installed integrations offer (a service there, an
+attribute present), so an older Family Link or Family Safety keeps working as before.
+
+- **Compare and restore.** Letting go of a Family Link device lock puts the weekday's daily limit back only while that
+  limit still reads 0 (what Hearth set); a Switch's Max screentime and Suspend software, only while the limit still
+  reads 0. A limit a parent changed meanwhile stays (`kept_current`). Family Link's `resume_app` compares in Family
+  Link itself; its answer (`results`: `restored`, `kept_current`, ...) is read and shown.
+- **Parent grants.** A parent's change that lets a kid use what Hearth holds becomes a grant `{id, person, via
+  (family_link, nintendo, family_safety), source ("from the Family Link app"), target {kind: device, app, switch or
+  platform; value}, until, since, reason, endable, end_with}`. It lifts only the hold it came from (the child's Family
+  Link device lock, the paused app, the Switch, a Family Safety platform), not a whole group everywhere as an allow
+  does, and budgets keep counting. Grants are kept across restarts and end on their own; when one ends, enforcing goes
+  on as usual. They show in `hearth.explain`'s `exceptions` (`type: "grant"`), the person's `exceptions` attribute,
+  the household summary and Hearth's page. Seen while Hearth holds something:
+  - Family Link: today's weekday limit raised (adopted: nothing is put back over it), until midnight; bonus time on a
+    device (its `bonus_minutes` beyond what Hearth itself added), until the bonus is used up (the Active bonus sensor's
+    `remaining_minutes` reaches 0 or it clears) or midnight; a device unlocked (`lock_override_code` 4), until midnight;
+    an app a parent changed after Hearth paused it (the Apps with time limits sensor's `paused_apps`, `pause_intact`
+    false), until midnight.
+  - Nintendo: the Switch's Max screentime today raised, or bonus time (`time_extended`), until midnight (adopted).
+  - Family Safety (its Allowed Now sensors' and lock switches' `hold`, `override`, `allow_until`): `hold: parent` with
+    extra time (`allowUntil`) is a grant until `allow_until`; with no override left (a parent cancelled Hearth's lock),
+    until midnight. A parent's own lock (`blockUntil`) is no grant but a **parent lock** (below).
+  - A change right after Hearth's own call (a minute), or a limit that still shows what it was before Hearth's 0
+    arrived, is Hearth's own and not a grant. Hearth's own bonuses are remembered, so they never count as a parent's.
+  - Event `hearth_parent_grant` (the grant) when one starts.
+- **Ending a grant early.** `hearth.allow_end` with the grant's `id`. Hearth's page and the summary offer it only when
+  it maps to a write in the parent's app (`endable`): a Family Link bonus (`familylink.reset_bonus`, else the device's
+  Reset bonus button: `end_with: family_link_reset_bonus`), Family Safety extra time (`cancel_time_bonus`, then the
+  platform is locked again: `family_safety_cancel_bonus`), or a Switch or platform a parent unlocked or raised (locked
+  again by Hearth's hold: `relock`). A raised Family Link limit, an unlock or an app change is shown read-only there;
+  the service still ends it, and Hearth holds again with the parent's value as the one to put back.
+- **Hearth's "all screen time" in the parents' apps.** `hearth.allow` for group `all`, and extra time that gives All
+  screen time back (it had none left), also give:
+  - Family Link: a today-only bonus (`familylink.add_time_bonus`) on each of the child's devices whose own daily limit
+    would block within that time (Screen time remaining lower than the minutes needed; a device with no limit gets
+    none), as much as is missing; once per allow.
+  - Family Safety: extra time (its experimental `add_time_bonus`, `until` the allow's end or midnight) on the
+    enforcer's platforms whose allowance would block (allowance minus used lower than the minutes needed). It replaces
+    Hearth's own lock there (`released_hold`). When Microsoft doesn't apply it, the person's status says Family Safety
+    extra time is unavailable; nothing fails.
+  - Ending the allow early (`hearth.allow_end`) resets the Family Link bonus Hearth added (only where no parent's bonus
+    came on top: `reset_bonus` ends every bonus of the day; without `reset_bonus` or the button it lapses at
+    midnight) and cancels the Family Safety extra time (`cancel_time_bonus`).
+- **First-party limits in explain.** `hearth.explain` also lists `device_limit` (a Family Link device's own daily limit
+  reached with no bonus left, by its switch, with its `device` name, until midnight; or a Family Safety platform that
+  Microsoft's allowance or allowed hours stop, with its `platform`) when Hearth isn't the one holding it, and
+  `parent_lock` (a parent's own Family Safety lock, with its `platform`, until it ends), so explain says what the
+  device does.
+- **Requests answered in the Family Safety app.** `microsoft_family_safety_request_resolved` with `via: app` closes the
+  matching ask as answered there (`answered_in: family_safety`; shown as "answered in the Family Safety app"); `via:
+  service` (Hearth's own answer) is left alone. Family Link has no kid requests, so there's nothing to close there.
 
 ### School days and day types
 
@@ -617,6 +674,13 @@ then sends the same object as an event whenever it changes, at most every 2 seco
 - each person also has `pause`, `lock` and `next_lock` as in their state document, and `held` / `held_by` (the
   other parental controls holding something of theirs now: `family_link`, `family_safety`, `nintendo`); each group
   also has `budget` (today's, null for none) and `bonus` (extra time given today).
+- each person also has (new fields, nothing renamed): `allows` (their allows now), `grants` (parent grants, above),
+  `first_party` (`family_link`: per device `device`, `daily_limit`, `minutes_left`, `bonus_left`, `reached`,
+  `blocking`; `family_safety`: per platform `minutes_left`, `allowance_minutes`, `used_minutes`, `allowed_now`, `hold`,
+  `parent_lock`, `blocking`; only what the integrations' entities give), `sync` (per parental control: `held`,
+  `error`, `failed_at`, and `last`, what Hearth last did and whether it took: `{at, ok, held, let_go, outcomes
+  {item: restored | kept_current | ...}, bonus_added, extra_time, parent_grant, reason, error}`) and
+  `answered_elsewhere` (requests answered in the Family Safety app lately).
 - `not_screen_time`, `contract`, and `version` (changes with any of it).
 - `media_rooms`: the house's media players by room, below.
 - Contract 2: each person's `headline`, `lines` and `actions`, and the household's `household` {`headline`,
@@ -647,6 +711,11 @@ The **headline** is the first of these that holds (glance.py), in this order:
 | notice | a group out, or under 10 minutes (fewest first) | `youtube · out`, `youtube · 7 left` | `out:<group>`, `low:<group>` |
 | notice | an allow (`hearth.allow`) | `youtube allowed till 8:00` | `allow:<id>` |
 | notice | School time taken off today | `no school time today` | `school_off:<id>` |
+| notice | a parent's grant | `switch open · the nintendo app till 9:00` | `grant:<id>` |
+| notice | Google's or Microsoft's own limit stops a device of theirs (Hearth isn't holding it) | `sam's phone · google's own limit`, `xbox · microsoft's own limit` | `device_limit:<entity or platform>` |
+| notice | a parent's own Family Safety lock | `xbox locked in family safety till 7:00` | `parent_lock:<platform>` |
+| notice | a parental control Hearth couldn't hold or let go through | `family link · didn't take` | `sync_error:<kind>` |
+| calm | a request answered in the Family Safety app | `answered in the Family Safety app` | `answered:<id>` |
 | calm | the most-used group with a limit (All screen time only when it's the only one) | `youtube · 25 left` | `left:<group>` |
 | calm | nothing else | `all clear` | `clear` |
 
@@ -665,6 +734,7 @@ calls `service` with exactly `data`, with the adult's own Home Assistant sign-in
 | `pause` (confirm) | not paused | `hearth.pause` `{people: [person], minutes: 30}` |
 | `pause_end` | paused | `hearth.pause_end` `{people: [person]}` |
 | `allow_end:<id>` (confirm) | an allow | `hearth.allow_end` `{people: [person], group}` or `{people: [person], app}` |
+| `grant_end:<id>` (confirm) | a parent's grant that maps to a write in their app (`endable`) | `hearth.allow_end` `{id}` |
 
 `household` is the same for the whole house: a `headline` (urgent: requests waiting, `alex asks for 30 more` or `2
 asks waiting`; notice: a pause, `everyone paused till 6:30` or `sam paused till 6:30`; notice, administrators only: a
@@ -674,7 +744,8 @@ device waiting to pair; notice: kids out of time; calm: `all clear`) and `action
 it's an administrator's step on Hearth's page, with no service.
 
 A trimmed example: a kid Alex who asked for more, is paused and is low on video, and Sam with nothing to report. The
-whole summary, from a test, is [examples/household-contract2.json](examples/household-contract2.json).
+whole summary, from a test (with a grant of Sam's from the Nintendo app added by hand), is
+[examples/household-contract2.json](examples/household-contract2.json).
 
 ```json
 {
