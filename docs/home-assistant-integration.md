@@ -348,6 +348,16 @@ until the group has time again (a bonus, a higher budget, a new day):
     Hearth's own or Family Link's.
   - **Microsoft Family Safety** locks the chosen platforms (Xbox by default) until midnight while one of the chosen
     groups (Games and All screen time by default) is out of time (`lock_platform`), and unlocks them when none is.
+    The child is named by the chosen entity (`entity_id`: any of the child's Family Safety entities, or a typed-in
+    account id as `account_id`), and the lock runs `until` the next local midnight. An older Family Safety that takes
+    neither gets the account sensor's `user_id` and `duration_hours`, as before. An unlock answered with
+    `hold_expired`, `left_parent_override` (a parent's own lock stays) or `not_locked` is fine: nothing of Hearth's is
+    left. **Xbox and Windows apps in a group:** a group may list Family Safety's app ids (`x:...` Xbox, `appx:...` or
+    `win32:...` Windows; the app pickers offer those of the kids with Family Safety, from its sensors' `apps`). While
+    any group with such apps is out of time, those on the chosen platforms are paused (`pause_app`, a block that keeps
+    whether the app was blocked before; an app a parent blocked is left alone) and resumed (`resume_app`) when it has
+    time again; an app whose whole platform is locked isn't paused as well. Family Link never gets them. An older
+    Family Safety without `pause_app` holds platforms only.
   - **Nintendo** (the built-in [Nintendo Switch parental controls](https://www.home-assistant.io/integrations/nintendo_parental_controls)
     integration; the person's Switch is chosen by its **Max screentime today** number): while one of the chosen groups
     (Games and All screen time by default) is out of time, Max screentime today is set to 0 with **Suspend software**
@@ -445,14 +455,30 @@ Link is read once a minute).
 didn't apply (the extra time, too). At the watchdog time (10:00 by default) on a school day, they're told about anyone
 whose School time is still off, unless it was taken off for today. "Told" is a notification in Home Assistant and the
 schedule's phone (else the one that answers requests for more time). Each step fires `hearth_schedule` (action:
-`school_time_off`, `school_time_back`, `half_day`, `bonus`, `site_list`, `site_list_failed`; person; details). Each
-action runs once a day; what's pending is kept across restarts.
+`school_time_off`, `school_time_back`, `half_day`, `bonus`, `site_list`, `site_list_failed`; person; details; for
+the website list `via`: `family_link` or `family_safety`). Each action runs once a day; what's pending is kept across
+restarts.
 
 **Website block list** (Configure > Website block list): an https address, a time (07:30 by default) and the people
-(everyone with Family Link by default). Every day at that time, Hearth calls `familylink.sync_site_list` (entity: the
-person's Family Link entity, url) for each, one after another; a failure for one is logged, fires `site_list_failed`
-and is tried again 5 minutes later, and the others go on. That service adds the list's new domains and removes only
-what the list itself added before. For example `https://example.com/blocklist.txt`.
+(everyone with Family Link or Family Safety by default). Every day at that time, Hearth calls `familylink.sync_site_list`
+(entity: the person's Family Link entity, url) and `microsoft_family_safety.sync_site_list` (the person's Family Safety
+entity or account id, url; skipped quietly while Family Safety has no such service) for each, one after another; each
+side is on its own: a failure for one is logged, fires `site_list_failed` (with `via`) and is tried again 5 minutes
+later, and the other side and the other people go on. Those services add the list's new domains and remove only what
+the list itself added before. For example `https://example.com/blocklist.txt`.
+
+**Copy websites** (`hearth.copy_sites`): copies a kid's websites between Family Link and Family Safety. `people`
+(everyone with both in Configure > Enforce by default), `from` (`family_link`, `family_safety` or `both`, the
+default), `lists` (`blocked`, the default, `allowed` or `both`), `dry_run` (false). Both sides are read with their
+`get_sites`; a site is compared by its host (lowercase, no scheme, leading `www.` or `*.`, or trailing slash). It only
+ever adds: a pattern with a path or another wildcard isn't copied (`not_copyable`: making it a whole site would widen
+it), a site either side's list sync added is left to it (`skipped_from_list`), and a site blocked on one side and
+allowed on the other stays as it is on both (`conflicts`). A blocked site goes to Family Link as its list sync writes a
+domain (`*.example.org` and `example.org`, `block_site`), an allowed one as the site only (`allow_site`); Family Safety
+gets the host (`block_website` / `allow_website`). Returns, per person, `{added_to_fl, added_to_fs}` (by list),
+`skipped_from_list`, `conflicts` (`{site, family_link, family_safety}`), `not_copyable` (`{site, from, list}`), and
+`error` when a side refused; a person without both sides (or with a Family Safety too old for `get_sites`) gets
+`{"missing": [...]}`. With `dry_run` it says the same and writes nothing.
 
 ## Data out
 
@@ -552,6 +578,14 @@ validation error) (administrators, and adults on Hearth's page). More time is ex
 person's state document: `request` {id, status: pending | approved | denied | expired, minutes (granted when
 approved), asked_minutes, group, expires, answered (when it was answered or expired, null while pending)}, for two hours after.
 
+**From Family Safety:** a request made on an Xbox or a Windows PC (`microsoft_family_safety_request`) becomes a request
+of the person whose Family Safety account it is (Configure > Enforce), once per request id, with `source:
+"family_safety"`, `platform`, `app_name` and `requested_time` (as Microsoft gave it; its unit isn't documented, so
+Hearth doesn't show it and the adult picks the minutes, 30 offered). It's answered as any other; Hearth then calls
+`microsoft_family_safety.approve_request` (`extension_minutes`: the minutes, 15 to 480) or `deny_request`, and tells
+the adults in a notification if that fails. It adds no Hearth bonus, starts no cooldown, isn't told to a Hearth device
+and doesn't count as the person's open request.
+
 ### Pause and locks
 
 `hearth.pause` (`minutes`, or `until` a time or date-time; `reason`; `people`, everyone by default) holds the people
@@ -560,7 +594,8 @@ their apps as for bedtime, and their state document says `pause` {until, reason}
 while they're locked, `lock` {by: the lock entities and/or "pause", kind: bedtime | school_time | pause | other
 (the first that applies), kinds: all of them, until: when it ends, if known}, and `next_lock`
 {at, by, kind: bedtime | school_time} for the next bedtime or school time today, from the lock entities' own
-`bedtime_start`/`bedtime_end`/`schooltime_start`/`schooltime_end` (Family Link's), so a device can wind down. Without
+`bedtime_start`/`bedtime_end`/`schooltime_start`/`schooltime_end` (Family Link's; Family Safety's Downtime Active
+sensors carry `bedtime_start`/`bedtime_end` too and are a bedtime), so a device can wind down. Without
 a push, a device learns of a pause with its next status answer: a TV within 2 minutes (it posts at least that often
 while on), a phone at its next post.
 
@@ -1198,8 +1233,8 @@ at pairing; the integration is to raise a repair issue when the two are too far 
 - **Family Link's per-device numbers:** a test phone (an emulator) once showed 1.2 minutes in Home Assistant against 2
   hours on the device. Check on a real phone before trusting them in budgets; the per-child total may be the safer
   source until then.
-- **Enforcing per title on another service:** Family Safety locks a whole platform, as Nintendo would the whole
-  Switch. Holding single Xbox titles (Family Safety's `block_app`) needs each title's Family Safety id in the group.
+- **Enforcing per title on another service:** Family Safety pauses single Xbox and Windows apps listed in a group
+  (their Family Safety ids); Nintendo still holds the whole Switch.
 - **Together on a Switch:** friend presence (unofficial API; login goes through a third-party token server; breaks
   a few times a year) or the parental controls fallback (no third party, delay unmeasured). To test first: can the
   kids' supervised Switch users accept the watcher, how fast presence changes, whether two kids in Minecraft show the
