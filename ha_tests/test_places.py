@@ -49,7 +49,8 @@ async def _reading(hass: HomeAssistant, freezer, where, accuracy: float = 10, ag
             "latitude": where[0],
             "longitude": where[1],
             "gps_accuracy": accuracy,
-            "location_timestamp": (dt_util.utcnow() - age).isoformat(),
+            # As Family Link writes it: local time with no offset
+            "location_timestamp": dt_util.as_local(dt_util.utcnow() - age).replace(tzinfo=None).isoformat(),
         },
     )
     await hass.async_block_till_done()
@@ -453,3 +454,19 @@ async def test_the_summary_and_the_page_show_the_place_by_name(
     assert (await ws.receive_json())["success"]
     await hass.async_block_till_done()
     assert hass.config_entries.async_entries(DOMAIN)[0].options["places"]["favorites"][0]["key"] == "beach_house"
+
+
+async def test_the_family_link_tracker_is_found_by_its_child_without_a_child_id(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Family Link's tracker carries no child_id attribute; its unique id names the child."""
+    from homeassistant.helpers import entity_registry as er
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    await _sam_with_family_link(hass, hass_client_no_auth)
+    entry = MockConfigEntry(domain="familylink")
+    entry.add_to_hass(hass)
+    tracker = er.async_get(hass).async_get_or_create(
+        "device_tracker", "familylink", f"familylink_{CHILD}_location", suggested_object_id="sam_fl", config_entry=entry
+    )
+    assert _household(hass).places.tracker_of("person.sam") == tracker.entity_id

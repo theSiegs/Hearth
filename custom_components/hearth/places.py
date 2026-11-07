@@ -158,9 +158,10 @@ def _number(value: Any) -> float | None:
 
 
 def _timestamp(value: Any) -> datetime | None:
-    """A tracker's location time: a datetime, an ISO string, or seconds (or milliseconds) since 1970."""
+    """A tracker's location time: a datetime, an ISO string, or seconds (or milliseconds) since 1970. A time with no
+    offset is Home Assistant's local time (Family Link writes datetime.fromtimestamp(...).isoformat())."""
     if isinstance(value, datetime):
-        return value if value.tzinfo else value.replace(tzinfo=dt_util.UTC)
+        return value if value.tzinfo else value.replace(tzinfo=dt_util.get_default_time_zone())
     if isinstance(value, (int, float)) or (isinstance(value, str) and re.fullmatch(r"\d+(\.\d+)?", value.strip())):
         seconds = float(value)
         if seconds > 1e11:
@@ -172,7 +173,7 @@ def _timestamp(value: Any) -> datetime | None:
     if isinstance(value, str):
         parsed = dt_util.parse_datetime(value)
         if parsed is not None and parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=dt_util.UTC)
+            parsed = parsed.replace(tzinfo=dt_util.get_default_time_zone())
         return parsed
     return None
 
