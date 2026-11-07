@@ -68,6 +68,12 @@ class SetupSnapshot {
   final bool haPanel;
   final bool haStatus;
 
+  /// This TV is paired with the Hearth integration: Home Assistant runs the kids' screen time.
+  final bool haPaired;
+
+  /// When Hearth last saw Google TV's own Kids daily limit (its time's up screen); null: never.
+  final DateTime? googleLimitSeenAt;
+
   const SetupSnapshot({
     required this.steps,
     required this.packageName,
@@ -84,7 +90,27 @@ class SetupSnapshot {
     this.haAlerts = false,
     this.haPanel = false,
     this.haStatus = false,
+    this.haPaired = false,
+    this.googleLimitSeenAt,
   });
+
+  /// How long a sighting of Google TV's own limit counts as "lately".
+  static const Duration googleLimitRecent = Duration(days: 7);
+
+  /// Whether Google TV's own Kids daily limit was seen lately ([googleLimitRecent]) at [now].
+  static bool googleLimitSeenLately(DateTime? seenAt, DateTime now) =>
+      seenAt != null && now.difference(seenAt) < googleLimitRecent;
+
+  /// Whether the flow says to leave Google's own time limits off: Home Assistant runs screen time here (paired), on
+  /// Google TV, whose kids' profiles have limits of their own.
+  bool get googleLimitsStep => googleTv && haPaired;
+
+  /// Whether Hearth's own and Google's limits are both in play, read straight from the TV: paired, and Google TV's own
+  /// limit seen lately.
+  static Future<({bool paired, DateTime? seenAt})> loadGoogleLimits(FLauncherChannel channel) async => (
+        paired: (await _safe(channel.getHaIntegration, <dynamic, dynamic>{}))["paired"] == true,
+        seenAt: await _safe<DateTime?>(channel.getGoogleTvLimitSeenAt, null),
+      );
 
   SetupStep step(SetupStepId id) => steps.firstWhere((step) => step.id == id);
 
@@ -226,6 +252,7 @@ class SetupSnapshot {
     final family = await _safe(channel.getSetupFamilyState, <dynamic, dynamic>{});
     final ha = await _loadHomeAssistant(channel);
     final sandbox = await _safe(channel.getAdSandbox, <dynamic, dynamic>{});
+    final limits = await loadGoogleLimits(channel);
     return SetupSnapshot(
       steps: steps,
       packageName: packageName,
@@ -242,6 +269,8 @@ class SetupSnapshot {
       haAlerts: ha.alerts,
       haPanel: ha.panel,
       haStatus: ha.status,
+      haPaired: limits.paired,
+      googleLimitSeenAt: limits.seenAt,
     );
   }
 }

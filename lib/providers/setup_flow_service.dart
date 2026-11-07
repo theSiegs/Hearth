@@ -121,6 +121,12 @@ class SetupFlowService extends ChangeNotifier {
   static const String homeButtonDecision = "homeButton";
   static const String homeAppDecision = "homeApp";
 
+  /// The owner read "Add everyone in Google TV" (profiles and kids' apps are Google TV's): not shown again by itself.
+  static const String profilesDecision = "googleTvProfiles";
+
+  /// The owner read "Leave Google's time limits off": shown again only when Hearth saw Google's own limit since.
+  static const String googleLimitsDecision = "googleLimits";
+
   /// The owner chose Not now on the "The update turned the Home button off" screen: it doesn't take over again until
   /// Home Button Fix has been on and is lost once more.
   static const String lostFixDecision = "homeButtonLost";

@@ -60,6 +60,7 @@ enum SetupScreen {
   householdJoin,
   adTracking,
   family,
+  familyProfiles,
   familyPin,
   familyPairing,
   familyPairingBlocked,
@@ -75,6 +76,7 @@ enum SetupScreen {
   haDashboard,
   haStatus,
   haNowPlaying,
+  googleLimits,
   tv,
   updates,
   updatesInstall,
@@ -145,6 +147,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     SetupScreen.householdJoin,
     SetupScreen.adTracking,
     SetupScreen.family,
+    SetupScreen.familyProfiles,
     SetupScreen.familyPin,
     SetupScreen.familyPairing,
     SetupScreen.familyVoice,
@@ -159,6 +162,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
     SetupScreen.haDashboard,
     SetupScreen.haStatus,
     SetupScreen.haNowPlaying,
+    SetupScreen.googleLimits,
     SetupScreen.tv,
     SetupScreen.updates,
     SetupScreen.updatesInstall,
@@ -171,6 +175,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   static const Map<SetupCard, List<SetupScreen>> _cardScreens = {
     SetupCard.family: [
       SetupScreen.family,
+      SetupScreen.familyProfiles,
       SetupScreen.familyPin,
       SetupScreen.familyPairing,
       SetupScreen.familyVoice,
@@ -423,6 +428,13 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
       SetupScreen.haStatus => snap.haStatus,
       SetupScreen.haNowPlaying => _haShareNowPlaying != null,
       SetupScreen.lookWeather => _weatherSet,
+      // Read once (Set up Hearth in Settings keeps it)
+      SetupScreen.familyProfiles => _flow.choiceFor(SetupFlowService.profilesDecision) != null,
+      // Only where Home Assistant runs screen time (paired) on Google TV: its own limits would override Hearth's. Read
+      // once, unless Hearth saw Google's own limit lately
+      SetupScreen.googleLimits => !snap.googleLimitsStep ||
+          _flow.choiceFor(SetupFlowService.googleLimitsDecision) != null &&
+              !SetupSnapshot.googleLimitSeenLately(snap.googleLimitSeenAt, DateTime.now()),
       _ => false,
     };
   }
@@ -754,6 +766,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
         SetupScreen.householdJoin => _householdJoin(l),
         SetupScreen.adTracking => _adSandbox(l),
         SetupScreen.family => _cardScreen(l, SetupCard.family),
+        SetupScreen.familyProfiles => _profiles(l),
         SetupScreen.familyPin => _parentPin(l),
         SetupScreen.familyPairing => _pairing(l),
         SetupScreen.familyPairingBlocked => _blocked(l, SetupStepId.profilePairing),
@@ -769,6 +782,7 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
         SetupScreen.haDashboard => _haDashboard(l),
         SetupScreen.haStatus => _haStatusScreen(l),
         SetupScreen.haNowPlaying => _haNowPlayingScreen(l),
+        SetupScreen.googleLimits => _googleLimits(l),
         SetupScreen.tv => _tvAndPower(l),
         SetupScreen.updates => _cardScreen(l, SetupCard.updates),
         SetupScreen.updatesInstall => _installs(l),

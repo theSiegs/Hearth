@@ -47,6 +47,7 @@ extension _CardScreens on _SetupFlowPageState {
               if ((_snap?.kidsProfiles ?? 0) > 0) l.setupFlowFamilyIncluded3,
             ],
             [l.setupFlowNeedsPin, l.setupFlowNeedsOneSwitch, l.setupFlowNeedsTwoMinutes],
+            note: l.setupFlowFamilyProfilesNote,
           ),
         SetupCard.watching => _CardInfo(
             Icons.play_circle_outline,
@@ -213,6 +214,28 @@ extension _CardScreens on _SetupFlowPageState {
   }
 
   // --- Your family ---
+
+  /// Profiles are Google TV's: everyone is added there, and a kid's apps are chosen there. Hearth follows them.
+  Widget _profiles(AppLocalizations l) => SetupScreenBody(
+        icon: Icons.people_outline,
+        title: l.setupFlowProfilesTitle,
+        body: l.setupFlowProfilesBody,
+        content: [
+          SetupBullets(items: [l.setupFlowProfilesStep1, l.setupFlowProfilesStep2, l.setupFlowProfilesStep3]),
+          Text(l.setupFlowProfilesLater, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+        ],
+        buttons: [
+          SetupButton(
+            label: l.setupFlowNext,
+            focusNode: _primary,
+            autofocus: true,
+            onPressed: () async {
+              await _flow.decide(SetupFlowService.profilesDecision, SetupChoice.on);
+              _next();
+            },
+          ),
+        ],
+      );
 
   Widget _parentPin(AppLocalizations l) {
     if (_state == SetupStepState.done) return _doneBody(l, l.setupFlowPinDone);
@@ -1272,6 +1295,36 @@ extension _CardScreens on _SetupFlowPageState {
       });
       _focusPrimary();
     }
+  }
+
+  // --- Google's own limits ---
+
+  /// With Home Assistant running screen time (paired): Google TV's or Family Link's own daily limit or bedtime on a
+  /// kid's TV profile overrides Hearth, so it's left off. Says so more firmly when Hearth saw Google's time's up
+  /// screen lately.
+  Widget _googleLimits(AppLocalizations l) {
+    final seen = SetupSnapshot.googleLimitSeenLately(_snap?.googleLimitSeenAt, DateTime.now());
+    return SetupScreenBody(
+      icon: seen ? Icons.warning_amber_rounded : Icons.timer_off_outlined,
+      iconColor: seen ? Colors.orange : null,
+      title: l.setupFlowGoogleLimitsTitle,
+      body: l.setupFlowGoogleLimitsBody,
+      content: [
+        if (seen) Text(l.setupFlowGoogleLimitsSeen, style: const TextStyle(color: Colors.orange, fontSize: 15)),
+        SetupBullets(items: [l.setupFlowGoogleLimitsWhy, l.setupFlowGoogleLimitsFix]),
+      ],
+      buttons: [
+        SetupButton(
+          label: l.setupFlowNext,
+          focusNode: _primary,
+          autofocus: true,
+          onPressed: () async {
+            await _flow.decide(SetupFlowService.googleLimitsDecision, SetupChoice.on);
+            _next();
+          },
+        ),
+      ],
+    );
   }
 
   // --- Shared ---

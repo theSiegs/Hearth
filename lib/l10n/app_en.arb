@@ -4621,5 +4621,65 @@
     "askFailed": "Couldn't ask just now. Try again in a moment.",
     "@askFailed": {
         "description": "Time's up card: Home Assistant refused the request for another reason"
+    },
+    "setupFlowFamilyProfilesNote": "Hearth follows Google TV's profiles. Add everyone in Google TV first: Settings → Accounts & profiles.",
+    "@setupFlowFamilyProfilesNote": {
+        "description": "Setup flow: Your family card's note, under what it includes"
+    },
+    "setupFlowProfilesTitle": "Add everyone in Google TV",
+    "@setupFlowProfilesTitle": {
+        "description": "Setup flow: the step that says profiles are made in Google TV, not in Hearth"
+    },
+    "setupFlowProfilesBody": "Hearth doesn't make profiles. It follows the ones on Google TV, and shows each person their own home.",
+    "@setupFlowProfilesBody": {
+        "description": "Setup flow: profiles step, under its title"
+    },
+    "setupFlowProfilesStep1": "Add every adult and every child as a profile in Google TV: Settings → Accounts & profiles.",
+    "@setupFlowProfilesStep1": {
+        "description": "Setup flow: profiles step, first point; Accounts & profiles is Google TV's own wording"
+    },
+    "setupFlowProfilesStep2": "Kids' profiles get their apps from Google TV. For each kid, pick their apps in Google TV: Settings → Accounts & profiles → the kid's profile → Apps.",
+    "@setupFlowProfilesStep2": {
+        "description": "Setup flow: profiles step, second point (Google TV's app choice for a kids profile)"
+    },
+    "setupFlowProfilesStep3": "Hearth can't show an app that a kid's profile doesn't have.",
+    "@setupFlowProfilesStep3": {
+        "description": "Setup flow: profiles step, third point"
+    },
+    "setupFlowProfilesLater": "Someone new later? Add them in Google TV the same way.",
+    "@setupFlowProfilesLater": {
+        "description": "Setup flow: profiles step, small print"
+    },
+    "setupFlowGoogleLimitsTitle": "Leave Google's time limits off",
+    "@setupFlowGoogleLimitsTitle": {
+        "description": "Setup flow: the step for a TV paired with Hearth on Home Assistant: don't use Google TV's or Family Link's own limits on kids' TV profiles"
+    },
+    "setupFlowGoogleLimitsBody": "Hearth on Home Assistant runs your kids' screen time. Don't turn on a daily time limit or bedtime for a kid's TV profile in Google TV or in Family Link.",
+    "@setupFlowGoogleLimitsBody": {
+        "description": "Setup flow: Google's time limits step, under its title"
+    },
+    "setupFlowGoogleLimitsWhy": "Google's own limit wins over Hearth. Extra time and approvals can't get past it, and Hearth shows \"Google TV's own limit\".",
+    "@setupFlowGoogleLimitsWhy": {
+        "description": "Setup flow: Google's time limits step, why"
+    },
+    "setupFlowGoogleLimitsFix": "If one is on, turn it off in Family Link, or in Google TV for that kid's profile. Set limits and bedtime in Home Assistant instead.",
+    "@setupFlowGoogleLimitsFix": {
+        "description": "Setup flow: Google's time limits step, what to do when one is on"
+    },
+    "setupFlowGoogleLimitsSeen": "Hearth saw Google TV's own time's up screen on this TV lately, so one of these limits is on.",
+    "@setupFlowGoogleLimitsSeen": {
+        "description": "Setup flow and Set up Hearth: shown when Hearth saw Google TV's own time's up screen (a kid's daily limit) in the last week"
+    },
+    "setupChecklistGoogleTv": "Google TV's own settings",
+    "@setupChecklistGoogleTv": {
+        "description": "Set up Hearth (Settings): heading over the things set in Google TV itself"
+    },
+    "setupChecklistProfilesTitle": "Profiles and kids' apps",
+    "@setupChecklistProfilesTitle": {
+        "description": "Set up Hearth: the tile that explains profiles and kids' apps are set in Google TV"
+    },
+    "setupChecklistGoogleLimitsOn": "Google TV's own limit is on",
+    "@setupChecklistGoogleLimitsOn": {
+        "description": "Set up Hearth: the Google's time limits tile when Hearth saw Google TV's own time's up screen lately"
     }
 }

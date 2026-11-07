@@ -6206,6 +6206,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t ask just now. Try again in a moment.'**
   String get askFailed;
+
+  /// Setup flow: Your family card's note, under what it includes
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth follows Google TV\'s profiles. Add everyone in Google TV first: Settings → Accounts & profiles.'**
+  String get setupFlowFamilyProfilesNote;
+
+  /// Setup flow: the step that says profiles are made in Google TV, not in Hearth
+  ///
+  /// In en, this message translates to:
+  /// **'Add everyone in Google TV'**
+  String get setupFlowProfilesTitle;
+
+  /// Setup flow: profiles step, under its title
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth doesn\'t make profiles. It follows the ones on Google TV, and shows each person their own home.'**
+  String get setupFlowProfilesBody;
+
+  /// Setup flow: profiles step, first point; Accounts & profiles is Google TV's own wording
+  ///
+  /// In en, this message translates to:
+  /// **'Add every adult and every child as a profile in Google TV: Settings → Accounts & profiles.'**
+  String get setupFlowProfilesStep1;
+
+  /// Setup flow: profiles step, second point (Google TV's app choice for a kids profile)
+  ///
+  /// In en, this message translates to:
+  /// **'Kids\' profiles get their apps from Google TV. For each kid, pick their apps in Google TV: Settings → Accounts & profiles → the kid\'s profile → Apps.'**
+  String get setupFlowProfilesStep2;
+
+  /// Setup flow: profiles step, third point
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth can\'t show an app that a kid\'s profile doesn\'t have.'**
+  String get setupFlowProfilesStep3;
+
+  /// Setup flow: profiles step, small print
+  ///
+  /// In en, this message translates to:
+  /// **'Someone new later? Add them in Google TV the same way.'**
+  String get setupFlowProfilesLater;
+
+  /// Setup flow: the step for a TV paired with Hearth on Home Assistant: don't use Google TV's or Family Link's own limits on kids' TV profiles
+  ///
+  /// In en, this message translates to:
+  /// **'Leave Google\'s time limits off'**
+  String get setupFlowGoogleLimitsTitle;
+
+  /// Setup flow: Google's time limits step, under its title
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth on Home Assistant runs your kids\' screen time. Don\'t turn on a daily time limit or bedtime for a kid\'s TV profile in Google TV or in Family Link.'**
+  String get setupFlowGoogleLimitsBody;
+
+  /// Setup flow: Google's time limits step, why
+  ///
+  /// In en, this message translates to:
+  /// **'Google\'s own limit wins over Hearth. Extra time and approvals can\'t get past it, and Hearth shows \"Google TV\'s own limit\".'**
+  String get setupFlowGoogleLimitsWhy;
+
+  /// Setup flow: Google's time limits step, what to do when one is on
+  ///
+  /// In en, this message translates to:
+  /// **'If one is on, turn it off in Family Link, or in Google TV for that kid\'s profile. Set limits and bedtime in Home Assistant instead.'**
+  String get setupFlowGoogleLimitsFix;
+
+  /// Setup flow and Set up Hearth: shown when Hearth saw Google TV's own time's up screen (a kid's daily limit) in the last week
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth saw Google TV\'s own time\'s up screen on this TV lately, so one of these limits is on.'**
+  String get setupFlowGoogleLimitsSeen;
+
+  /// Set up Hearth (Settings): heading over the things set in Google TV itself
+  ///
+  /// In en, this message translates to:
+  /// **'Google TV\'s own settings'**
+  String get setupChecklistGoogleTv;
+
+  /// Set up Hearth: the tile that explains profiles and kids' apps are set in Google TV
+  ///
+  /// In en, this message translates to:
+  /// **'Profiles and kids\' apps'**
+  String get setupChecklistProfilesTitle;
+
+  /// Set up Hearth: the Google's time limits tile when Hearth saw Google TV's own time's up screen lately
+  ///
+  /// In en, this message translates to:
+  /// **'Google TV\'s own limit is on'**
+  String get setupChecklistGoogleLimitsOn;
 }
 
 class _AppLocalizationsDelegate

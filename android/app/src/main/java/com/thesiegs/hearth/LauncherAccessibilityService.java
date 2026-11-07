@@ -1670,10 +1670,11 @@ public class LauncherAccessibilityService extends AccessibilityService {
      * running out (those aren't in the wellbeing classes). Other Google TV text is ignored.
      */
     private void reportScreenTimeText(String className, AccessibilityEvent event, boolean wellbeing) {
-        if (!HaBridgeService.isRunning()) return;
-        ScreenTimeScreen screen = ScreenTimeScreen.parse(className, event.getText());
-        if (wellbeing || screen.isScreenTimeText() && screen.minutesLeft != null) {
-            HaBridgeService.setScreenTime(screen);
+        if (HaBridgeService.isRunning()) {
+            ScreenTimeScreen screen = ScreenTimeScreen.parse(className, event.getText());
+            if (wellbeing || screen.isScreenTimeText() && screen.minutesLeft != null) {
+                HaBridgeService.setScreenTime(screen);
+            }
         }
         if (wellbeing) {
             // The window event carries no text ("Time for bed" etc. are in its views), and the views are only
@@ -1703,14 +1704,17 @@ public class LauncherAccessibilityService extends AccessibilityService {
     }
 
     private void readScreenTime() {
-        if (!HaBridgeService.isRunning()) return;
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null || !TextUtils.equals(GOOGLE_TV_PACKAGE, root.getPackageName())) {
             return;
         }
         List<CharSequence> texts = new ArrayList<>();
         collectTexts(root, texts, 0);
-        if (!texts.isEmpty()) HaBridgeService.setScreenTime(ScreenTimeScreen.parse(mScreenTimeClass, texts));
+        if (texts.isEmpty()) return;
+        ScreenTimeScreen screen = ScreenTimeScreen.parse(mScreenTimeClass, texts);
+        // Google TV's own daily limit, whatever Home Assistant allows: Set up Hearth points to turning it off
+        ScreenTimeScreen.noteGoogleLimit(this, screen, System.currentTimeMillis());
+        if (HaBridgeService.isRunning()) HaBridgeService.setScreenTime(screen);
     }
 
     /** The visible text views of a window, in screen order (button labels are content descriptions, so left out). */

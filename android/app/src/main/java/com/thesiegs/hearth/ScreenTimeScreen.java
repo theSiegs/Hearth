@@ -61,6 +61,25 @@ final class ScreenTimeScreen {
         return locked && screen != null && screen.timeUpDialog && screen.reason != Reason.BEDTIME;
     }
 
+    private static final String PREFS = "screen_time_screen";
+    private static final String GOOGLE_LIMIT_SEEN_KEY = "google_limit_seen_at";
+
+    /**
+     * Notes that Google TV's own Kids daily limit was just seen (its time up screen, not bedtime's), so Set up Hearth
+     * can point to turning it off when Home Assistant runs screen time.
+     */
+    static void noteGoogleLimit(android.content.Context context, ScreenTimeScreen screen, long now) {
+        if (!isGoogleLimit(true, screen)) return;
+        context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).edit()
+                .putLong(GOOGLE_LIMIT_SEEN_KEY, now).apply();
+    }
+
+    /** When Google TV's own Kids daily limit was last seen (epoch ms), or 0: never. */
+    static long googleLimitSeenAt(android.content.Context context) {
+        return context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
+                .getLong(GOOGLE_LIMIT_SEEN_KEY, 0);
+    }
+
     /**
      * @param className the Google TV window class; kept because it can name the reason when the text doesn't
      * @param texts the screen's text (the accessibility event's, or the window's own text views)

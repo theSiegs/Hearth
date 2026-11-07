@@ -807,6 +807,12 @@ class FLauncherChannel {
   Future<Map<dynamic, dynamic>> getHaIntegration() async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getHaIntegration") ?? {};
 
+  /// When Hearth last saw Google TV's own Kids daily limit (its time's up screen, not bedtime's); null: never.
+  Future<DateTime?> getGoogleTvLimitSeenAt() async {
+    final at = await _methodChannel.invokeMethod<int>("getGoogleTvLimitSeenAt");
+    return at == null ? null : DateTime.fromMillisecondsSinceEpoch(at);
+  }
+
   /// Asks Home Assistant (at [url]; kept as its address only once paired) to pair this TV: {pairing_id, code, expires_in, nonce} to
   /// show and poll with, or {error: no_address | not_set_up | no_integration | try_later | not_local | unreachable |
   /// failed, nonce}.

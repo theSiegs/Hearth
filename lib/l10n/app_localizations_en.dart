@@ -3724,4 +3724,59 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get askFailed => 'Couldn\'t ask just now. Try again in a moment.';
+
+  @override
+  String get setupFlowFamilyProfilesNote =>
+      'Hearth follows Google TV\'s profiles. Add everyone in Google TV first: Settings → Accounts & profiles.';
+
+  @override
+  String get setupFlowProfilesTitle => 'Add everyone in Google TV';
+
+  @override
+  String get setupFlowProfilesBody =>
+      'Hearth doesn\'t make profiles. It follows the ones on Google TV, and shows each person their own home.';
+
+  @override
+  String get setupFlowProfilesStep1 =>
+      'Add every adult and every child as a profile in Google TV: Settings → Accounts & profiles.';
+
+  @override
+  String get setupFlowProfilesStep2 =>
+      'Kids\' profiles get their apps from Google TV. For each kid, pick their apps in Google TV: Settings → Accounts & profiles → the kid\'s profile → Apps.';
+
+  @override
+  String get setupFlowProfilesStep3 =>
+      'Hearth can\'t show an app that a kid\'s profile doesn\'t have.';
+
+  @override
+  String get setupFlowProfilesLater =>
+      'Someone new later? Add them in Google TV the same way.';
+
+  @override
+  String get setupFlowGoogleLimitsTitle => 'Leave Google\'s time limits off';
+
+  @override
+  String get setupFlowGoogleLimitsBody =>
+      'Hearth on Home Assistant runs your kids\' screen time. Don\'t turn on a daily time limit or bedtime for a kid\'s TV profile in Google TV or in Family Link.';
+
+  @override
+  String get setupFlowGoogleLimitsWhy =>
+      'Google\'s own limit wins over Hearth. Extra time and approvals can\'t get past it, and Hearth shows \"Google TV\'s own limit\".';
+
+  @override
+  String get setupFlowGoogleLimitsFix =>
+      'If one is on, turn it off in Family Link, or in Google TV for that kid\'s profile. Set limits and bedtime in Home Assistant instead.';
+
+  @override
+  String get setupFlowGoogleLimitsSeen =>
+      'Hearth saw Google TV\'s own time\'s up screen on this TV lately, so one of these limits is on.';
+
+  @override
+  String get setupChecklistGoogleTv => 'Google TV\'s own settings';
+
+  @override
+  String get setupChecklistProfilesTitle => 'Profiles and kids\' apps';
+
+  @override
+  String get setupChecklistGoogleLimitsOn => 'Google TV\'s own limit is on';
 }

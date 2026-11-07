@@ -24,6 +24,17 @@
 | Profile Pairing | A second accessibility service that picks your profile in streaming apps (optional). |
 | Hearth voice | A text-to-speech engine that lets Profile Pairing hear apps that announce their profile screens (optional). |
 
+**Profiles are Google TV's.** Hearth doesn't make profiles: it follows Google TV's, and shows each person their own
+home. Add every adult and every child as a profile in Google TV (**Settings → Accounts & profiles**). A kid's
+profile gets its apps from Google TV too: for each kid, pick their apps in Google TV (**Settings → Accounts & profiles
+→ the kid's profile → Apps**). Hearth can't show an app that a kid's profile doesn't have. The setup's **Your family**
+card says this first, and **Set up Hearth** keeps it under **Google TV's own settings**.
+
+**With Home Assistant running screen time**, leave Google's own time limits off: no daily time limit or bedtime for a
+kid's TV profile, in Google TV or in Family Link. Google's own limit wins over Hearth: extra time and approvals can't
+get past it, and Hearth shows "Google TV's own limit". A paired TV's setup has a step for it, and when Hearth saw
+Google TV's own time's up screen in the last week, **Set up Hearth** says **Google TV's own limit is on**.
+
 **"Restricted setting".** Android blocks accessibility services for apps installed outside the Play Store until you
 allow it. The setup says so when it happens. With the TV's debugging on (Developer options), Hearth can lift the
 block itself after showing you what it will run; otherwise run this once from a computer, then try again:
@@ -133,7 +144,9 @@ profile's PIN to come back. Turn the PIN on for your account in Google TV first.
 - set **Log out when the TV sleeps** (every time, or after some minutes asleep): Hearth opens Google TV's profile
   chooser as the TV goes to sleep (or once it has slept that long), so whoever turns it on next picks who's watching,
   and a profile with a PIN asks for it before it opens. It works from kids profiles too; leaving one is still up to
-  Google TV's kids lock. It is on (every time) until you choose otherwise.
+  Google TV's kids lock. It is on (every time) until you choose otherwise. When the power button wakes the TV, Google
+  TV starts its own home over the chooser; a couple of seconds later Hearth opens the chooser again, once, unless
+  someone already pressed a key or picked a profile (or **Use Google TV's home** is on).
 
 **Approve switches from my phone** (**Settings → Profiles → Unlock from my phone**, in your own profile; needs Home Assistant and its phone
 app). When Google TV asks for your PIN to open your profile, your phone gets a notification with Allow and Deny.

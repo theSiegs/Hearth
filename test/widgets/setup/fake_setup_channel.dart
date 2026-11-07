@@ -27,6 +27,11 @@ class FakeSetupChannel extends FLauncherChannel {
   bool haPanelToken = false;
   String? haWebhook;
 
+  /// Paired with the Hearth integration (Home Assistant runs screen time), and when Google TV's own limit was seen.
+  bool haPaired = false;
+  DateTime? googleLimitSeenAt;
+  int settingsOpened = 0;
+
   /// What the phone page has received (the dialog polls it), and whether a test pop-up can show.
   bool haSetupReceived = false;
   bool haTestShows = false;
@@ -157,6 +162,15 @@ class FakeSetupChannel extends FLauncherChannel {
   @override
   Future<Map<dynamic, dynamic>> getSetupFamilyState() async =>
       {"googleTv": googleTv, "kidsProfiles": kidsProfiles, "kidsReady": kidsReady, "netflix": netflix};
+
+  @override
+  Future<Map<dynamic, dynamic>> getHaIntegration() async => {"paired": haPaired, "url": null};
+
+  @override
+  Future<DateTime?> getGoogleTvLimitSeenAt() async => googleLimitSeenAt;
+
+  @override
+  Future<void> openSettings() async => settingsOpened++;
 
   @override
   Future<bool> getHaNotificationsEnabled() async => haAlerts;

@@ -256,6 +256,13 @@ void main() {
       await press(tester, "Get started");
     }
 
+    /// Turn on (or Set up what's missing), then past "Add everyone in Google TV", which shows the first time.
+    Future<void> turnOnFamily(WidgetTester tester, [String label = "Turn on"]) async {
+      await press(tester, label);
+      expect(find.text("Add everyone in Google TV"), findsOneWidget);
+      await press(tester, "Next");
+    }
+
     Future<void> typePin(WidgetTester tester) async {
       for (final key in [
         LogicalKeyboardKey.digit2,
@@ -276,9 +283,24 @@ void main() {
       expect(find.text("Pick up where you left off, and see what's playing."), findsOneWidget);
     });
 
+    testWidgets("Turn on first says everyone is added in Google TV, and kids' apps are chosen there; once",
+        (tester) async {
+      await openAtFamily(tester);
+      // The card says it too, before anything is turned on
+      expect(find.textContaining("Hearth follows Google TV's profiles"), findsOneWidget);
+      await press(tester, "Turn on");
+      expect(find.text("Add everyone in Google TV"), findsOneWidget);
+      expect(find.textContaining("Settings → Accounts & profiles."), findsOneWidget);
+      expect(find.textContaining("For each kid, pick their apps in Google TV"), findsOneWidget);
+      expect(find.text("Hearth can't show an app that a kid's profile doesn't have."), findsOneWidget);
+      await press(tester, "Next");
+      expect(find.text("Choose a parent PIN"), findsOneWidget);
+      expect(flow.choiceFor(SetupFlowService.profilesDecision), SetupChoice.on);
+    });
+
     testWidgets("a parent PIN, chosen twice on the row pad", (tester) async {
       await openAtFamily(tester);
-      await press(tester, "Turn on");
+      await turnOnFamily(tester);
       expect(find.text("Choose a parent PIN"), findsOneWidget);
       await press(tester, "Choose PIN");
       await typePin(tester);
@@ -296,7 +318,7 @@ void main() {
       await SettingsService(prefs).setParentPin("1357");
       channel.onAccessibilityOpened = () => channel.pairing = true;
       await openAtFamily(tester);
-      await press(tester, "Turn on");
+      await turnOnFamily(tester);
       // The PIN is set already: straight to pairing
       expect(find.text("Pick the right profile in streaming apps"), findsOneWidget);
       await press(tester, "Open Accessibility");
@@ -322,7 +344,7 @@ void main() {
       channel.restricted = true;
       channel.adb = true;
       await openAtFamily(tester);
-      await press(tester, "Turn on");
+      await turnOnFamily(tester);
       await press(tester, "Open Accessibility");
       await comeBack(tester);
       expect(find.text("Android blocked this switch"), findsOneWidget);
@@ -341,7 +363,7 @@ void main() {
       channel.kidsProfiles = 2;
       channel.developerOptions = true;
       await openAtFamily(tester);
-      await press(tester, "Turn on");
+      await turnOnFamily(tester);
       expect(find.text("Turn on debugging first"), findsOneWidget);
       expect(find.textContaining("Wireless debugging alone isn't enough"), findsOneWidget);
       await press(tester, "Open Developer options");
@@ -356,7 +378,7 @@ void main() {
       channel.kidsProfiles = 2;
       await openAtFamily(tester);
       expect(find.text("Hearth kept on your kids profiles"), findsOneWidget);
-      await press(tester, "Turn on");
+      await turnOnFamily(tester);
       expect(find.text("Turn on debugging first"), findsOneWidget);
       await press(tester, "Open About");
       expect(channel.aboutOpened, 1);
@@ -380,7 +402,7 @@ void main() {
       channel.adb = true;
       channel.profilesKept = false;
       await openAtFamily(tester);
-      await press(tester, "Turn on");
+      await turnOnFamily(tester);
       await press(tester, "Add to their profiles");
       expect(find.text("Hearth isn't on every kids profile yet"), findsOneWidget);
       expect(find.text("Needs a fix"), findsOneWidget);
@@ -398,7 +420,7 @@ void main() {
       channel.adb = true;
       channel.profilesWork = false;
       await openAtFamily(tester);
-      await press(tester, "Turn on");
+      await turnOnFamily(tester);
       await press(tester, "Add to their profiles");
       expect(find.text("Hearth is on your kids profiles"), findsNothing);
       expect(find.text("Couldn't change the kids profiles"), findsOneWidget);
@@ -415,7 +437,7 @@ void main() {
       // The PIN and pairing are checked, the kids' item isn't
       expect(itemMarks(Icons.check_circle), findsNWidgets(2));
       expect(itemMarks(Icons.radio_button_unchecked), findsOneWidget);
-      await press(tester, "Set up what's missing");
+      await turnOnFamily(tester, "Set up what's missing");
       expect(find.text("Keep Hearth on your kids profiles"), findsOneWidget);
     });
 
@@ -481,7 +503,7 @@ void main() {
       expect(find.text("Start a household"), findsNothing);
       await press(tester, "Not now");
       expect(find.text("Your family"), findsWidgets);
-      await press(tester, "Turn on");
+      await turnOnFamily(tester);
       await press(tester, "Skip"); // the parent PIN
       // Declined: the family card's household step doesn't ask again
       expect(find.text("Join your other TVs"), findsNothing);
@@ -546,7 +568,7 @@ void main() {
       await tester.pumpAndSettle();
       await press(tester, "Next");
       expect(find.text("Your family"), findsWidgets);
-      await press(tester, "Turn on");
+      await turnOnFamily(tester);
       expect(find.text("Choose a parent PIN"), findsNothing);
       expect(find.text("Pick the right profile in streaming apps"), findsNothing);
       expect(find.text("Watching"), findsWidgets);
@@ -596,7 +618,7 @@ void main() {
       channel.pairing = true;
       channel.household = true;
       await openAtFamily(tester);
-      await press(tester, "Turn on");
+      await turnOnFamily(tester);
       await press(tester, "Skip"); // the parent PIN
       expect(find.text("Sync with your other TVs"), findsNothing);
       expect(channel.householdsStarted, 0);
@@ -870,6 +892,51 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
       expect(find.text("The TV tells Home Assistant what's on"), findsOneWidget);
+    });
+  });
+
+  group("Google's own time limits", () {
+    testWidgets("paired with Home Assistant on Google TV: says to leave Google's limits off, before TV & power",
+        (tester) async {
+      channel.googleTv = true;
+      channel.haPaired = true;
+      await open(tester, startAt: "smartHome");
+      await press(tester, "Not now");
+      expect(find.text("Leave Google's time limits off"), findsOneWidget);
+      expect(find.textContaining("Don't turn on a daily time limit or bedtime for a kid's TV profile"), findsOneWidget);
+      expect(find.textContaining("Google's own limit wins over Hearth"), findsOneWidget);
+      expect(find.textContaining("Hearth saw Google TV's own time's up screen"), findsNothing);
+      await press(tester, "Next");
+      expect(find.text("Turn the TV off when nobody's watching?"), findsOneWidget);
+      expect(flow.choiceFor(SetupFlowService.googleLimitsDecision), SetupChoice.on);
+    });
+
+    testWidgets("not paired: no such step", (tester) async {
+      channel.googleTv = true;
+      await open(tester, startAt: "smartHome");
+      await press(tester, "Not now");
+      expect(find.text("Leave Google's time limits off"), findsNothing);
+      expect(find.text("Turn the TV off when nobody's watching?"), findsOneWidget);
+    });
+
+    testWidgets("read before, and no limit of Google's seen since: not asked again", (tester) async {
+      channel.googleTv = true;
+      channel.haPaired = true;
+      await flow.decide(SetupFlowService.googleLimitsDecision, SetupChoice.on);
+      await open(tester, startAt: "smartHome");
+      await press(tester, "Not now");
+      expect(find.text("Leave Google's time limits off"), findsNothing);
+    });
+
+    testWidgets("Google's own limit seen lately: the step says one is on", (tester) async {
+      channel.googleTv = true;
+      channel.haPaired = true;
+      channel.googleLimitSeenAt = DateTime.now().subtract(const Duration(hours: 2));
+      await flow.decide(SetupFlowService.googleLimitsDecision, SetupChoice.on);
+      await open(tester, startAt: "smartHome");
+      await press(tester, "Not now");
+      expect(find.text("Leave Google's time limits off"), findsOneWidget);
+      expect(find.textContaining("Hearth saw Google TV's own time's up screen on this TV lately"), findsOneWidget);
     });
   });
 

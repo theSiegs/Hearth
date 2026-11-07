@@ -154,6 +154,11 @@ public class MainActivity extends FlutterActivity {
             case "launchApp" -> result.success(launchApp(call.arguments()));
             case "openUrl" -> result.success(openUrl(call.arguments()));
             case "openSettings" -> result.success(openSettings());
+            // When Google TV's own Kids daily limit was last seen (epoch ms), or null: never
+            case "getGoogleTvLimitSeenAt" -> {
+                long at = ScreenTimeScreen.googleLimitSeenAt(this);
+                result.success(at > 0 ? at : null);
+            }
             case "openScreensaverSettings" -> result.success(openScreensaverSettings());
             // Google TV's Network & Internet (Wi-Fi, Ethernet, proxy); it has no VPN screen of its own, a VPN is an app
             case "openNetworkSettings" -> result.success(startFirst(

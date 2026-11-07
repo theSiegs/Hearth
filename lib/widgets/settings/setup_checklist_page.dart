@@ -4,6 +4,7 @@ import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/setup_flow_service.dart';
 import 'package:flauncher/widgets/setup/setup_flow_launcher.dart';
+import 'package:flauncher/widgets/setup/setup_snapshot.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
@@ -185,6 +186,12 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
   late final FLauncherChannel _channel;
   List<SetupStep>? _steps;
 
+  /// Google TV, with its profiles: the Google TV group shows only there.
+  bool _googleTv = false;
+
+  /// Home Assistant runs screen time here (paired), and when Google TV's own limit was last seen.
+  ({bool paired, DateTime? seenAt}) _limits = (paired: false, seenAt: null);
+
   @override
   void initState() {
     super.initState();
@@ -211,7 +218,93 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
     } catch (err) { noteFailure('setup_checklist_page', err); }
     if (!mounted) return;
     final steps = await loadSetupSteps(_channel, packageName, AppLocalizations.of(context)!);
-    if (mounted) setState(() => _steps = steps);
+    bool googleTv = false;
+    try {
+      googleTv = (await _channel.getSetupFamilyState())["googleTv"] == true;
+    } catch (err) {
+      noteFailure('setup_checklist_page', err);
+    }
+    final limits = await SetupSnapshot.loadGoogleLimits(_channel);
+    if (mounted) {
+      setState(() {
+        _steps = steps;
+        _googleTv = googleTv;
+        _limits = limits;
+      });
+    }
+  }
+
+  /// One of Google TV's own settings explained: no switch Hearth can read, so no check mark; Open Settings opens
+  /// Google TV's Settings (it has no direct screen for Accounts & profiles).
+  Future<void> _showGoogleTvCard(String title, String why, List<String> points, {String? warning}) async {
+    final l = AppLocalizations.of(context)!;
+    final textTheme = Theme.of(context).textTheme;
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: SizedBox(
+          width: 460,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (warning != null) ...[
+                Text(warning, style: textTheme.bodySmall?.copyWith(color: Colors.orange)),
+                const SizedBox(height: 12),
+              ],
+              Text(why, style: textTheme.bodySmall?.copyWith(color: Colors.white70)),
+              for (final point in points) ...[
+                const SizedBox(height: 10),
+                Text(point, style: textTheme.bodyMedium),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text(l.notNow)),
+          TextButton(
+            autofocus: true,
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l.setupOpenSettings),
+          ),
+        ],
+      ),
+    );
+    if (go == true) {
+      try {
+        await _channel.openSettings();
+      } catch (err) {
+        noteFailure('setup_checklist_page', err);
+      }
+    }
+  }
+
+  /// Google TV's own settings Hearth depends on: everyone's profile and a kid's apps are made there, and with Home
+  /// Assistant running screen time, Google's own limits stay off (flagged once Hearth saw one lately).
+  List<Widget> _googleTvTiles(AppLocalizations l, TextTheme textTheme) {
+    final seen = SetupSnapshot.googleLimitSeenLately(_limits.seenAt, DateTime.now());
+    return [
+      _heading(l.setupChecklistGoogleTv),
+      FocusableSettingsTile(
+        leading: const Icon(Icons.people_outline),
+        title: Text(l.setupChecklistProfilesTitle, style: textTheme.bodyMedium),
+        trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+        onPressed: () => _showGoogleTvCard(l.setupFlowProfilesTitle, l.setupFlowProfilesBody,
+            [l.setupFlowProfilesStep1, l.setupFlowProfilesStep2, l.setupFlowProfilesStep3]),
+      ),
+      if (_limits.paired || seen)
+        FocusableSettingsTile(
+          leading: Icon(seen ? Icons.warning_amber_rounded : Icons.timer_off_outlined,
+              color: seen ? Colors.orange : null),
+          title: Text(seen ? l.setupChecklistGoogleLimitsOn : l.setupFlowGoogleLimitsTitle,
+              style: textTheme.bodyMedium),
+          trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+          onPressed: () => _showGoogleTvCard(l.setupFlowGoogleLimitsTitle, l.setupFlowGoogleLimitsBody,
+              [l.setupFlowGoogleLimitsWhy, l.setupFlowGoogleLimitsFix],
+              warning: seen ? l.setupFlowGoogleLimitsSeen : null),
+        ),
+    ];
   }
 
   Future<void> _showCard(SetupStep step) async {
@@ -318,6 +411,7 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
                         onPressed: () => _showCard(step),
                       ),
                   ],
+                  if (_googleTv) ..._googleTvTiles(l, textTheme),
                   _heading(l.tvPowerTitle),
                   _startOnBootTile(context),
                 ],
