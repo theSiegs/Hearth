@@ -163,3 +163,22 @@ async def test_allow_checks_what_it_is_given(
     answer = await _call(hass, "allow", {"people": ["person.sam"], "group": "all"}, True)
     why = await _call(hass, "explain", {"person": "person.sam", "app": "com.example.game"}, True)
     assert why["allowed"] is True and why["exceptions"][0]["id"] == answer["id"]
+
+
+async def test_google_tv_s_own_limit_is_explained(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
+    """Google TV's own Kids daily limit holds the profile whatever Hearth allows: explain says so, by the TV."""
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    assert (await _post(client, secret, body={**_tv_status(), "screen_time_up": True, "google_time_up": True})).status == 200
+    await hass.async_block_till_done()
+
+    why = await _call(hass, "explain", {"person": "person.sam", "app": "com.example.game"}, True)
+    assert why["allowed"] is False
+    assert {"kind": "google_tv_limit", "by": "tv-0123456789abcdef", "device": "Kitchen", "until": None} in why["blocked_by"]
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    assert household.google_tv_limits("person.sam") == ["tv-0123456789abcdef"]
+
+    # Gone from the TV: nothing holds
+    await _post(client, secret, body=_tv_status())
+    await hass.async_block_till_done()
+    why = await _call(hass, "explain", {"person": "person.sam", "app": "com.example.game"}, True)
+    assert why["allowed"] is True

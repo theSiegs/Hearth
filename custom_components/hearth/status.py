@@ -39,7 +39,8 @@ _TEXT_FIELDS = (
     # The parent PINs a TV keeps (their version): their hashes are sent again only when they changed
     "parent_pins_version",
 )
-_BOOL_FIELDS = ("now_playing_available", "kids_profile", "screen_time_up")
+# google_time_up: Google TV's own Kids daily limit holds the profile in front (its time up screen), which Hearth can't lift
+_BOOL_FIELDS = ("now_playing_available", "kids_profile", "screen_time_up", "google_time_up")
 _INT_FIELDS = {
     "media_duration_s": (0, 7 * MAX_SECONDS_PER_DAY),
     "screen_time_minutes_left": (0, 24 * 60),

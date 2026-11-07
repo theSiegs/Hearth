@@ -146,6 +146,9 @@ def person_glance(
     if lock and lock.get("kind") in ("bedtime", "school_time", "other") and not pause:
         word = {"bedtime": "bedtime", "school_time": "school time"}.get(lock["kind"], "locked")
         news.append(_item(f"{word}{_till(lock.get('until'))}", NOTICE, "lock", f"{lock['kind']}:{lock.get('until')}"))
+    # Google TV's own Kids daily limit holds them on a TV: like a lock, and only Google TV's settings lift it
+    if (on := person.get("google_tv_limit")) and not pause:
+        news.append(_item("google tv's own limit", NOTICE, "google_limit", on[0]))
     if upcoming and (at := dt_util.parse_datetime(upcoming.get("at") or "")) is not None and now < at <= now + SOON:
         word = "bedtime" if upcoming.get("kind") == "bedtime" else "school time"
         minutes = max(1, int((at - now).total_seconds() // 60))

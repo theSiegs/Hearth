@@ -79,6 +79,10 @@ def summary(hub) -> dict[str, Any]:
                 "groups": groups,
                 "locked": bool(day and day.locked),
                 "locked_by": list(day.locked_by) if day else [],
+                # TVs where Google TV's own Kids daily limit holds them (Hearth can't lift it)
+                "google_tv_limit": [
+                    hub.devices[d].get("name") or d for d in household.google_tv_limits(person)
+                ],
                 # What other parental controls hold of theirs now (family_link, family_safety, nintendo)
                 "held": bool(held := household.enforcement.held_for(person)),
                 "held_by": sorted(k for k, v in held.items() if v.get("held")),

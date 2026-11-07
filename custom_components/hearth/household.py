@@ -192,6 +192,21 @@ class Household:
         found.discard(None)
         return found.pop() if len(found) == 1 else None
 
+    def google_tv_limits(self, person: str) -> list[str]:
+        """The connected TVs where Google TV's own Kids daily limit holds this person's profile now (its time up screen,
+        google_time_up). Hearth can't lift it: only raising or turning off the limit in Google TV does."""
+        found = []
+        for device_id, device in sorted(self.hub.devices.items()):
+            status = self.hub.state(device_id).status or {}
+            if (
+                device.get(CONF_KIND) == KIND_TV
+                and status.get("google_time_up")
+                and self.hub.connected(device_id)
+                and self.profile_person(device_id, status.get("profile_id")) == person
+            ):
+                found.append(device_id)
+        return found
+
     def device_profile_people(self, device_id: str) -> dict[str, str]:
         """This TV's profiles, by its own keys, and whose each is (the mapped ones only)."""
         keys = set(self.tv_profiles(device_id))
@@ -839,6 +854,16 @@ class Household:
                     "kind": lock_kinds(self.hass, [entity_id])[0],
                     "by": entity_id,
                     "until": dt_util.as_local(until).isoformat() if until else None,
+                }
+            )
+        # Google TV's own Kids daily limit: it holds the whole profile, whatever Hearth allows
+        for device_id in self.google_tv_limits(person):
+            blocked.append(
+                {
+                    "kind": "google_tv_limit",
+                    "by": device_id,
+                    "device": self.hub.devices.get(device_id, {}).get("name") or device_id,
+                    "until": None,
                 }
             )
         if app is not None:

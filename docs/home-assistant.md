@@ -221,6 +221,7 @@ Hearth posts JSON to `<address>/api/webhook/<webhook ID>`:
 | `profiles` | every profile this TV knows, by its `profile_id`: `{"user:10": {"name": "…", "ref": "name:…", "kids": true}}` |
 | `kids_profile` | `true` in a kids profile |
 | `screen_time_up` | `true` while Google TV's bedtime or time's-up screen is showing |
+| `google_time_up` | `true` while Google TV's own Kids daily limit holds the profile (its time up screen, not bedtime): Hearth can't lift it, only raising or turning off that limit in Google TV does |
 | `screen_time_reason`, `screen_time_text`, `screen_time_minutes_left`, `screen_time_unlocks_at`, `screen_time_seen_at` | what that screen said |
 | `screen_time_unlocks_at_iso` | the unlock time as the next such moment, in ISO 8601 with the TV's offset |
 | `screen_time_event`, `screen_time_event_at` | `appeared` or `cleared`, and when (epoch ms): the last change, sent with every status until the next, so trigger on `screen_time_event_at` changing |

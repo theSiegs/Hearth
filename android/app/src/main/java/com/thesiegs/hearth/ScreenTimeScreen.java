@@ -42,12 +42,23 @@ final class ScreenTimeScreen {
     final String unlocksAt;
     /** The screen's own text, for seeing what Google TV actually says. */
     final String text;
+    /** Google TV's own time up screen (kids.wellbeing.timeupdialog, KidsTimeUpActivity), not a warning or bedtime's. */
+    final boolean timeUpDialog;
 
-    private ScreenTimeScreen(Reason reason, Integer minutesLeft, String unlocksAt, String text) {
+    private ScreenTimeScreen(Reason reason, Integer minutesLeft, String unlocksAt, String text, boolean timeUpDialog) {
         this.reason = reason;
         this.minutesLeft = minutesLeft;
         this.unlocksAt = unlocksAt;
         this.text = text;
+        this.timeUpDialog = timeUpDialog;
+    }
+
+    /**
+     * Google TV's own Kids daily limit holds the profile now: its time up screen is (or was last) up while the lock
+     * is on, and it isn't bedtime. Hearth can't lift it; only raising or turning off the limit in Google TV can.
+     */
+    static boolean isGoogleLimit(boolean locked, ScreenTimeScreen screen) {
+        return locked && screen != null && screen.timeUpDialog && screen.reason != Reason.BEDTIME;
     }
 
     /**
@@ -90,7 +101,9 @@ final class ScreenTimeScreen {
         }
         Matcher unlocks = UNLOCKS_AT.matcher(text);
         String unlocksAt = unlocks.find() ? unlocks.group(1).trim() : null;
-        return new ScreenTimeScreen(reason, minutes, unlocksAt, text);
+        String cls = className == null ? "" : className.toLowerCase(Locale.ROOT);
+        boolean timeUpDialog = cls.contains(".timeupdialog.") || cls.endsWith("kidstimeupactivity");
+        return new ScreenTimeScreen(reason, minutes, unlocksAt, text, timeUpDialog);
     }
 
     /**

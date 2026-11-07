@@ -16,6 +16,21 @@ public class ScreenTimeStateTest {
     private static final String GOOGLE_TV_HOME = "com.google.android.apps.tv.launcherx.home.HomeActivity";
 
     @Test
+    public void googleTvsOwnDailyLimitIsToldApartFromBedtime() {
+        ScreenTimeScreen limit = ScreenTimeScreen.parse(WELLBEING, Arrays.asList("Time's up", "You've reached your daily limit"));
+        assertTrue(ScreenTimeScreen.isGoogleLimit(true, limit));
+        // Only while the lock is on
+        assertFalse(ScreenTimeScreen.isGoogleLimit(false, limit));
+        // Bedtime comes up in the same window
+        ScreenTimeScreen bedtime = ScreenTimeScreen.parse(WELLBEING, Arrays.asList("Time for bed", "This device unlocks at 7:00 AM"));
+        assertFalse(ScreenTimeScreen.isGoogleLimit(true, bedtime));
+        // A warning outside the time up window isn't the limit holding
+        ScreenTimeScreen warning = ScreenTimeScreen.parse(GOOGLE_TV_HOME, Arrays.asList("5 minutes of screen time left"));
+        assertFalse(ScreenTimeScreen.isGoogleLimit(true, warning));
+        assertFalse(ScreenTimeScreen.isGoogleLimit(true, null));
+    }
+
+    @Test
     public void appsDecideScreenTimeOnlyWhenTheyAgree() {
         assertEquals(Boolean.TRUE, ProfileUsers.screenTimeFromBlocked(4, 4));
         assertEquals(Boolean.FALSE, ProfileUsers.screenTimeFromBlocked(4, 0));

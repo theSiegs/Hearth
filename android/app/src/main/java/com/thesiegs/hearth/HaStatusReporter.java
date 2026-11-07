@@ -309,6 +309,8 @@ final class HaStatusReporter {
         boolean kids = ProfileUsers.isKids(mContext);
         status.put("kids_profile", kids);
         status.put("screen_time_up", s.screenTimeLock);
+        // Google TV's own Kids daily limit (not Hearth's): Home Assistant can't lift it, so it says so (explain)
+        status.put("google_time_up", ScreenTimeScreen.isGoogleLimit(s.screenTimeLock, s.screenTime));
         // Minutes are as Google TV stated them at screen_time_seen_at (epoch ms); Home Assistant can count down.
         // screen_time_text is Google TV's own wording, so what it says can be checked against the parsing.
         ScreenTimeScreen screenTime = s.screenTime;

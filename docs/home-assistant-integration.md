@@ -387,8 +387,15 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
 - `hearth.explain` (`person`; `app` or `group`), response only: `{allowed, until, blocked_by: [{kind, by, until}],
   lifted, exceptions, school_time_off}`. `kind` is `budget` (by the group, until midnight), `bedtime`, `school_time`
   or `other` (by the lock entity, until it says), `pause` (until, reason) or `school_time_apps` (by the Family Link
-  entity, until School time ends). `until` is when it's allowed again (the latest of the blocks, null when one doesn't
+  entity, until School time ends) or `google_tv_limit` (by the TV's device id, with its `device` name, until null; see
+  below). `until` is when it's allowed again (the latest of the blocks, null when one doesn't
   say), or, when allowed thanks to an exception, when that ends. `lifted` lists the holds an allow lifts now.
+- **Google TV's own Kids daily limit.** A kids profile can also have a daily limit set in Google TV itself (Family Link's
+  or the TV's own Kids profile settings). When it runs out, Google TV shows its time up screen and blocks the whole
+  profile, whatever Hearth allows: a Hearth bonus or `hearth.allow` doesn't get past it. The TV reports it
+  (`google_time_up` in its status), `hearth.explain` lists it as `google_tv_limit`, and the person's headline says
+  `google tv's own limit`. **Hearth can't lift it**: an adult has to raise or turn off that profile's daily limit in
+  Google TV. To let Hearth own the limits, turn Google TV's daily limit off (keep bedtime there if you like).
 - The person's **Screen time today** sensor has an `exceptions` attribute: `allows` (id, app or group, until, reason)
   and `school_time_off` (what's taken off and when it's put back).
 
@@ -595,6 +602,7 @@ The **headline** is the first of these that holds (glance.py), in this order:
 | urgent | a family pause | `paused · dinner till 6:30` | `pause:<until>` |
 | urgent | out of All screen time (and no allow for all) | `out of time` | `out:all` |
 | notice | locked now by bedtime, School time or another lock | `bedtime till 7:00` | `lock:<kind>:<until>` |
+| notice | Google TV's own Kids daily limit holds them on a TV (Hearth can't lift it) | `google tv's own limit` | `google_limit:<tv name>` |
 | notice | bedtime or School time starts within 15 minutes | `bedtime in 12 min` | `soon:<kind>:<at>` |
 | notice | a group out, or under 10 minutes (fewest first) | `youtube · out`, `youtube · 7 left` | `out:<group>`, `low:<group>` |
 | notice | an allow (`hearth.allow`) | `youtube allowed till 8:00` | `allow:<id>` |

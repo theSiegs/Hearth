@@ -288,3 +288,8 @@ async def test_an_adult_who_isn_t_an_administrator_gets_contract_2_without_pairi
     assert "pair" not in body["household"]["headline"]["text"]
     sam = next(p for p in body["people"] if p["id"] == "person.sam")
     assert sam["headline"] and isinstance(sam["lines"], list) and sam["actions"]
+
+
+def test_google_tv_s_own_limit_is_a_notice_like_a_lock() -> None:
+    person = {**_person(all=90), "google_tv_limit": ["Kitchen"]}
+    assert _glance(person)["headline"] == {"text": "google tv's own limit", "level": "notice", "key": "google_limit:Kitchen"}
