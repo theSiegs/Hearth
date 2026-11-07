@@ -40,6 +40,7 @@ from .const import EVENT_BUDGET_REACHED
 from .counting import ALL
 from .exceptions import END_OF_DAY, SCHOOL_TIME_END, at_time, end_of_day
 from . import family_link as fl
+from .sites import BLOCKED, BOTH, FROM_CHOICES, LIST_CHOICES, CopySites
 from .watch import CHANNELS, MAX_BLOCKS, MAX_LOG, VIDEOS, WORDS, channel_id_of, clean_word, video_id_of
 
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.NUMBER, Platform.SENSOR]
@@ -177,6 +178,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     _register_exception_services(hass, loaded_household, group_id)
     _register_watch_services(hass)
     _register_play_on_tv(hass)
+    _register_copy_sites(hass, loaded_household)
     return True
 
 
@@ -383,6 +385,40 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         school_time_off_cancel,
         schema=SCHOOL_TIME_OFF_CANCEL_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
+    )
+
+
+COPY_SITES_SCHEMA = vol.Schema(
+    {
+        vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id]),
+        vol.Optional("from", default=BOTH): vol.In(FROM_CHOICES),
+        vol.Optional("lists", default=BLOCKED): vol.In(LIST_CHOICES),
+        vol.Optional("dry_run", default=False): cv.boolean,
+    }
+)
+
+
+def _register_copy_sites(hass: HomeAssistant, loaded_household) -> None:
+    """hearth.copy_sites: websites copied between Family Link and Family Safety, only ever added (sites.py)."""
+
+    async def copy_sites(call: ServiceCall) -> ServiceResponse:
+        household = loaded_household()
+        copier = CopySites(hass, household.options)
+        given = call.data.get("people")
+        if given:
+            unknown = [p for p in given if p not in household.people() and p not in copier.targets]
+            if unknown:
+                raise ServiceValidationError(f"Not the household's: {', '.join(unknown)}")
+            people = list(dict.fromkeys(given))
+        else:
+            people = copier.people_with_both()
+        return {
+            person: await copier.person(person, call.data["from"], call.data["lists"], call.data["dry_run"])
+            for person in people
+        }
+
+    register_service(
+        hass, DOMAIN, "copy_sites", copy_sites, schema=COPY_SITES_SCHEMA, supports_response=SupportsResponse.OPTIONAL
     )
 
 

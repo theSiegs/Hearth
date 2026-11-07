@@ -253,6 +253,7 @@ async def test_only_adults_and_automations_call_hearth_s_services(
         ("answer_request", {"request_id": "x", "deny": True}, False),
         ("get_watch_log", {"person": "person.sam"}, True),
         ("explain", {"person": "person.sam", "group": "all"}, True),
+        ("copy_sites", {"dry_run": True}, True),
     ):
         with pytest.raises(Unauthorized):
             await hass.services.async_call(

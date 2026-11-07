@@ -328,3 +328,30 @@ answer_request:
     deny:
       selector:
         boolean:
+copy_sites:
+  fields:
+    people:
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    from:
+      default: both
+      selector:
+        select:
+          options:
+            - family_link
+            - family_safety
+            - both
+    lists:
+      default: blocked
+      selector:
+        select:
+          options:
+            - blocked
+            - allowed
+            - both
+    dry_run:
+      default: false
+      selector:
+        boolean:

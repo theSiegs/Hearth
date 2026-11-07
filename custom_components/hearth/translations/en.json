@@ -709,6 +709,28 @@
           "description": "Not now (starts a short wait before the kid may ask again)."
         }
       }
+    },
+    "copy_sites": {
+      "name": "Copy websites between Family Link and Family Safety",
+      "description": "Copies a kid's blocked (or allowed) websites from Family Link to Family Safety, the other way round, or both. Only adds: a site with a path isn't copied, a site a website list sync added is left to it, and a site blocked on one side and allowed on the other is left on both. Returns, per person, what was added and what was left.",
+      "fields": {
+        "people": {
+          "name": "People",
+          "description": "Whose websites (everyone with both Family Link and Family Safety in Configure > Enforce when none)."
+        },
+        "from": {
+          "name": "From",
+          "description": "Which side's sites are copied to the other: family_link, family_safety or both."
+        },
+        "lists": {
+          "name": "Lists",
+          "description": "Which lists: blocked (the default), allowed or both."
+        },
+        "dry_run": {
+          "name": "Dry run",
+          "description": "Only say what would be added, without adding anything."
+        }
+      }
     }
   },
   "issues": {
