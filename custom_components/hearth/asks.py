@@ -55,6 +55,8 @@ CONF_OFFER_MORE = "offer_more"
 
 # Where a request came from: a Hearth device (or an offer), or Microsoft Family Safety
 HEARTH = "hearth"
+# A Hearth request made from the kid's own Home Assistant user (hearth/ask), not from a paired device
+VIA_HOME_ASSISTANT = "home_assistant"
 FAMILY_SAFETY = "family_safety"
 FS_DOMAIN = "microsoft_family_safety"
 # What a Family Safety request is offered as (its own requested time has no documented unit), and what
@@ -91,6 +93,11 @@ class Ask:
     requested_time: Any = None
     # Answered in the first-party app instead (family_safety), not by an adult in Hearth
     answered_in: str | None = None
+    # Asked from the kid's own Home Assistant user (hearth/ask: VIA_HOME_ASSISTANT, with that user), not a device;
+    # and the app it's for, when the kid named one
+    via: str | None = None
+    user_id: str | None = None
+    app: str | None = None
 
     @property
     def external(self) -> bool:
@@ -130,6 +137,8 @@ class Ask:
             "source": self.source,
             "status": self.status,
             "answered_in": self.answered_in,
+            **({"via": self.via, "user_id": self.user_id} if self.via else {}),
+            **({"app": self.app} if self.app else {}),
             **(
                 {"platform": self.platform, "app_name": self.app_name, "requested_time": self.requested_time}
                 if self.external
@@ -193,7 +202,18 @@ class Asks:
         return self._s.asks.get(ask_id)
 
     @callback
-    def ask(self, person: str, minutes: int, group: str, note: str | None, device_id: str) -> Ask:
+    def ask(
+        self,
+        person: str,
+        minutes: int,
+        group: str,
+        note: str | None,
+        device_id: str,
+        *,
+        via: str | None = None,
+        user_id: str | None = None,
+        app: str | None = None,
+    ) -> Ask:
         """A new request; one open per person, none during a cooldown after "not now"."""
         if minutes not in AMOUNTS or self.hub.household.group(group) is None:
             raise AskError("bad_request")
@@ -215,6 +235,9 @@ class Asks:
             note=(note or "").strip()[:MAX_NOTE],
             device_id=device_id,
             asked=now,
+            via=via,
+            user_id=user_id,
+            app=app,
         )
         self._s.asks[ask.id] = ask
         names = self.hub.household.person_name
@@ -401,7 +424,14 @@ class Asks:
             message = f"{who} asks for more time{where}{app} (Family Safety)."
         else:
             title = "More time?"
-            message = f"{who} asks for {ask.minutes} more minutes{what}." + (f" “{ask.note}”" if ask.note else "")
+            app = self.hub.household.known_apps().get(ask.app, ask.app) if ask.app else None
+            message = (
+                f"{who} asks for {ask.minutes} more minutes{what}"
+                + (f" for {app}" if app else "")
+                + (" in the Home Assistant app" if ask.via else "")
+                + "."
+                + (f" “{ask.note}”" if ask.note else "")
+            )
         persistent_notification.async_create(
             self.hass,
             message + " Answer on Hearth's page or your phone.",

@@ -117,6 +117,8 @@ class HearthHub:
         self.entry = entry
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, f"{STORAGE_KEY}.{entry.entry_id}")
         self._states: dict[str, DeviceState] = {}
+        # A Home Assistant user's own asks (hearth/ask), counted as a device's events posts are
+        self._user_posts: dict[str, list] = {}
         # Kept outside the entry, so a pairing waiting to be collected survives the entry reloading
         shared = _shared(hass)
         self._pairings: dict[str, Pairing] = shared["pairings"]
@@ -181,6 +183,16 @@ class HearthHub:
         if len(state.event_posts) >= MAX_EVENT_POSTS:
             return True
         state.event_posts.append(now)
+        return False
+
+    def too_many_user_asks(self, user_id: str) -> bool:
+        """too_many_events for a Home Assistant user's own asks (hearth/ask)."""
+        now = dt_util.utcnow()
+        posts = [t for t in self._user_posts.get(user_id, []) if now - t < STATUS_WINDOW]
+        self._user_posts[user_id] = posts
+        if len(posts) >= MAX_EVENT_POSTS:
+            return True
+        posts.append(now)
         return False
 
     @callback

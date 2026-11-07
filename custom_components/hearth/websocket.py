@@ -4,6 +4,10 @@ to pair. `hearth/household` answers once; `hearth/household/subscribe` answers t
 changes (at most every SEND_EVERY). Administrators and adults on Hearth's page (auth.py). Contract 2 adds each person's
 headline, lines and actions and the household's (glance.py). Nothing here is needed for the entities and services, which
 stay as they are.
+
+A person's own Home Assistant user (a kid's, say) gets only their own: `hearth/me` (and `hearth/me/subscribe`) answers
+the document a paired phone of theirs gets, and `hearth/ask` asks for more time for them, as their device would. Nothing
+else here is open to them.
 """
 
 from __future__ import annotations
@@ -21,10 +25,11 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_call_later
 from homeassistant.util import dt as dt_util
 
-from .const import CONF_KIND, CONF_MEDIA_PLAYERS, CONF_PERSON, CONF_ROLES, CONTRACT, DOMAIN, SIGNAL_DEVICE_ADDED, KIND_TV, SIGNAL_PAIRINGS, SIGNAL_PEOPLE, SIGNAL_STATUS
+from .const import CONF_KIND, CONF_MEDIA_PLAYERS, CONF_PERSON, CONF_ROLES, CONTRACT, DOMAIN, SIGNAL_DEVICE_ADDED, KIND_TV, SIGNAL_PAIRINGS, SIGNAL_PEOPLE, SIGNAL_STATUS, SIGNAL_WATCH
 from .counting import ALL
 from . import parent_pin
-from .asks import AskError
+from .asks import AMOUNTS, VIA_HOME_ASSISTANT, AskError
+from .limits import OTHER
 from .media import media_rooms
 from .auth import is_adult_user
 from .glance import household_glance, person_glance
@@ -288,8 +293,137 @@ def ws_answer(hass: HomeAssistant, connection: websocket_api.ActiveConnection, m
     connection.send_result(msg["id"], ask.device_view())
 
 
+def own_person(hass: HomeAssistant, user) -> str | None:
+    """The person whose Home Assistant user is [user]: hearth/me and hearth/ask are theirs only."""
+    if user is None:
+        return None
+    return next((s.entity_id for s in hass.states.async_all("person") if s.attributes.get("user_id") == user.id), None)
+
+
+def _me(hass: HomeAssistant, connection, msg) -> tuple[Any, str | None]:
+    """The hub and the caller's person, or (None, None) after an error was sent."""
+    hub = _hub(hass)
+    if hub is None:
+        connection.send_error(msg["id"], "not_set_up", "Hearth isn't set up")
+        return None, None
+    person = own_person(hass, connection.user)
+    if person is None:
+        connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "This user has no person in Home Assistant")
+        return None, None
+    return hub, person
+
+
+@websocket_api.websocket_command({vol.Required("type"): "hearth/me"})
+@callback
+def ws_me(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """The caller's own person's document (household.own_document), whoever they are: a kid, an adult, anyone with a
+    person. Nothing about anyone else."""
+    hub, person = _me(hass, connection, msg)
+    if hub is not None:
+        connection.send_result(msg["id"], hub.household.own_document(person))
+
+
+@websocket_api.websocket_command({vol.Required("type"): "hearth/me/subscribe"})
+@callback
+def ws_me_subscribe(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """hearth/me, and again whenever it changes (at most every SEND_EVERY)."""
+    hub, person = _me(hass, connection, msg)
+    if hub is None:
+        return
+    sent = {"version": None}
+    waiting: dict[str, Any] = {"cancel": None}
+
+    @callback
+    def send(_now=None) -> None:
+        waiting["cancel"] = None
+        current = _hub(hass)
+        # Their person is looked up again: a user moved to another person stops hearing the old one's
+        if current is None or own_person(hass, connection.user) != person:
+            return
+        body = current.household.own_document(person)
+        if body["version"] != sent["version"]:
+            sent["version"] = body["version"]
+            connection.send_message(websocket_api.event_message(msg["id"], body))
+
+    @callback
+    def changed(*_args) -> None:
+        if waiting["cancel"] is None:
+            waiting["cancel"] = async_call_later(hass, SEND_EVERY, send)
+
+    unsubs = [
+        async_dispatcher_connect(hass, signal, changed)
+        for signal in (SIGNAL_PEOPLE, SIGNAL_PAIRINGS, SIGNAL_PLACES, SIGNAL_WATCH)
+    ]
+
+    @callback
+    def unsubscribe() -> None:
+        for unsub in unsubs:
+            unsub()
+        if waiting["cancel"] is not None:
+            waiting["cancel"]()
+
+    connection.subscriptions[msg["id"]] = unsubscribe
+    connection.send_result(msg["id"])
+    send()
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hearth/ask",
+        vol.Optional("minutes", default=15): int,
+        vol.Optional("group"): vol.Any(None, str),
+        vol.Optional("app"): vol.Any(None, str),
+        vol.Optional("note"): vol.Any(None, str),
+    }
+)
+@callback
+def ws_ask(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """More time for the caller's own person, as their device asks (api.py AskView): the same checks, one open
+    request, the cooldown after "not now", and the same rate limit, counted per user. The result is AskView's body:
+    {"ok": true, "request"}, or {"ok": false, "error": "already_open", "request": the open one} or {"ok": false,
+    "error": "cooldown", "retry_in": seconds}. Errors: not_found (no person), too_often, bad_request, not_set_up.
+    """
+    hub, person = _me(hass, connection, msg)
+    if hub is None:
+        return
+    if hub.too_many_user_asks(connection.user.id):
+        connection.send_error(msg["id"], "too_often", "Too many requests: try again in a minute")
+        return
+    app = (msg.get("app") or "").strip()[:200] or None
+    group = (msg.get("group") or "").strip()[:64] or None
+    if group is None and app is not None:
+        # An app's own group, else All screen time
+        found = hub.household.app_group(app)
+        group = found if found != OTHER else None
+    note = (msg.get("note") or "").strip()[:200] or None
+    try:
+        ask = hub.asks.ask(
+            person,
+            msg["minutes"],
+            group or "all",
+            note,
+            "",
+            via=VIA_HOME_ASSISTANT,
+            user_id=connection.user.id,
+            app=app,
+        )
+    except AskError as err:
+        # As AskView answers them (409 and 429 there): the open request, or how long until they may ask again
+        if err.code == "already_open":
+            connection.send_result(msg["id"], {"ok": False, "error": "already_open", "request": err.detail.device_view()})
+        elif err.code == "cooldown":
+            connection.send_result(msg["id"], {"ok": False, "error": "cooldown", "retry_in": err.detail})
+        else:
+            connection.send_error(msg["id"], err.code, f"minutes is one of {list(AMOUNTS)}, group a known group")
+        return
+    connection.send_result(msg["id"], {"ok": True, "request": ask.device_view()})
+
+
 @callback
 def async_register_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_household)
     websocket_api.async_register_command(hass, ws_household_subscribe)
     websocket_api.async_register_command(hass, ws_answer)
+    websocket_api.async_register_command(hass, ws_me)
+    websocket_api.async_register_command(hass, ws_me_subscribe)
+    websocket_api.async_register_command(hass, ws_ask)

@@ -850,15 +850,27 @@ class Household:
                 if status.get("parent_pins_version") != pins_version:
                     body["parent_pins"] = listed
         else:
-            person = device.get(CONF_PERSON)
-            body = {"person": self._person_document(person) if person else None}
-            if body["person"] is not None:
-                role = self.options.get(CONF_ROLES, {}).get(person)
-                # kid / adult as set on Hearth's page (kind_set); else a kid when they have limits
-                body["person"]["kind"] = role or ("kid" if any(g["minutes_left"] is not None for g in body["person"]["groups"]) else "person")
-                body["person"]["kind_set"] = role is not None
-            # What's playing where in the house is anyone's to see: every room's players, for a phone's Music
-            body["media_rooms"] = media_rooms(self.hass)
+            body = self._phone_body(device.get(CONF_PERSON))
+        body["version"] = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()[:16]
+        body["contract"] = CONTRACT
+        return body
+
+    def _phone_body(self, person: str | None) -> dict[str, Any]:
+        """What a phone of [person]'s is told (without version and contract)."""
+        body: dict[str, Any] = {"person": self._person_document(person) if person else None}
+        if body["person"] is not None:
+            role = self.options.get(CONF_ROLES, {}).get(person)
+            # kid / adult as set on Hearth's page (kind_set); else a kid when they have limits
+            body["person"]["kind"] = role or ("kid" if any(g["minutes_left"] is not None for g in body["person"]["groups"]) else "person")
+            body["person"]["kind_set"] = role is not None
+        # What's playing where in the house is anyone's to see: every room's players, for a phone's Music
+        body["media_rooms"] = media_rooms(self.hass)
+        return body
+
+    def own_document(self, person: str) -> dict[str, Any]:
+        """A person's own document, for their own Home Assistant user (hearth/me): what a paired phone of theirs gets,
+        version and contract included. Nothing about anyone else."""
+        body = self._phone_body(person)
         body["version"] = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()[:16]
         body["contract"] = CONTRACT
         return body

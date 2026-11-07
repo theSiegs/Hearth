@@ -804,7 +804,8 @@ class HearthPanel extends HTMLElement {
           <div class="strong">${a.source === "family_safety"
             ? `${esc(a.person_name)} asks for more time${a.platform ? ` on ${esc(a.platform)}` : ""}${a.app_name ? ` for ${esc(a.app_name)}` : ""} (Family Safety)`
             : `${esc(a.person_name)} asks for ${a.minutes} more minutes${a.group && a.group !== "all" ? ` of ${esc(this._groupName(a.group))}` : ""}`}</div>
-          ${a.note ? `<div class="muted">“${esc(a.note)}”</div>` : ""}</div></div>
+          ${a.note ? `<div class="muted">“${esc(a.note)}”</div>` : ""}
+          ${a.via === "home_assistant" ? `<div class="muted small">From their Home Assistant app${a.app ? ` · ${esc(a.app)}` : ""}</div>` : ""}</div></div>
         <div class="actions wrap">
           <button class="btn" data-action="answer" data-request="${esc(a.id)}" data-deny="1">Not now</button>
           ${[15, 30, 45, 60]

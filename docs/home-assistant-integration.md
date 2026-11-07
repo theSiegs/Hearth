@@ -708,6 +708,58 @@ handles it (Hearth's own phone app, Glint) answers through the WebSocket (`heart
 answered anywhere (a button, Hearth's page, the service, the WebSocket, Family Safety's own app) or expires, every phone
 that would get it is sent `{"message": "clear_notification", "data": {"tag": "hearth_more_<id>"}}`.
 
+#### A kid's own Home Assistant user
+
+A kid (or anyone) with a Home Assistant user of their own, linked to their person (the person's `user_id`), may use
+three WebSocket commands, and nothing else of Hearth's: every `hearth.*` service, `hearth/household`, its subscription,
+`hearth/approvals/answer` and Hearth's page stay for administrators and adults (see [Security](#security)). None of the
+three takes a person: it's always the caller's own, the person whose `user_id` is the connection's user.
+
+**`{"type": "hearth/me"}`** answers that person's document, exactly what a paired phone of theirs gets in `state`
+(see [What a device gets](#what-a-device-gets)), with `contract`. Kids, adults and anyone else with a person get their
+own; nothing about other people, approvals or pairing is in it (`media_rooms` is the house's players, as every phone
+gets). A user with no person (an administrator who isn't anyone, say) gets the error `not_found`. Trimmed:
+
+```json
+{
+  "person": {
+    "person": "person.sam", "kind": "kid", "kind_set": true,
+    "groups": [{"id": "all", "name": "All screen time", "minutes_left": 35, "apps": [], "except": ["com.example.music"]},
+               {"id": "games", "name": "Games", "minutes_left": 10, "apps": ["com.example.game"]}],
+    "locked": false,
+    "next_lock": {"at": "2026-11-07T20:00:00-05:00", "by": "binary_sensor.sam_bedtime", "kind": "bedtime"},
+    "tile_exchange_share": false,
+    "request": {"id": "q2X0aZ1b", "status": "pending", "minutes": 30, "asked_minutes": 30, "group": "all",
+                "expires": "2026-11-07T18:30:00+00:00", "answered": null},
+    "youtube_blocks": {"videos": [], "channels": [], "words": [], "labels": {}}
+  },
+  "media_rooms": [],
+  "version": "3f1c2a9b0d4e5f67",
+  "contract": 2
+}
+```
+
+`pause`, `lock` and `allow_ends` come as in the state document when they apply.
+
+**`{"type": "hearth/me/subscribe"}`** answers success, then sends the same document as an event at once and again
+whenever it changes (its `version`), at most every 2 seconds. Errors as `hearth/me`.
+
+**`{"type": "hearth/ask", "minutes": 15 | 30 | 45 | 60, "group": "all" or a group id, "app": a package, "note": text}`**
+(all optional; `minutes` 15, `group` the app's group when an `app` is given, else `all`; `note` up to 120 characters)
+asks for more time for the caller's own person, through the same pipeline as a device's `POST .../ask`: one open
+request per person, the cooldown after "not now", the same amounts and groups, the same rate limit (10 a minute,
+counted per user). The result has the body `POST .../ask` answers:
+
+- `{"ok": true, "request": {id, status: "pending", minutes, asked_minutes, group, expires, answered}}`
+- `{"ok": false, "error": "already_open", "request": {...the open one}}` (a 409 there)
+- `{"ok": false, "error": "cooldown", "retry_in": seconds}` (a 429 there)
+
+and these as WebSocket errors: `bad_request` (minutes not one of the four, or an unknown group), `too_often`,
+`not_found` (no person), `not_set_up`. The adults see it as any request, with `"via": "home_assistant"`, `user_id`
+(the asking user) and `app` (when given) in its approval and `hearth_more_time_requested`, and `device_id` empty; the
+notification says "in the Home Assistant app". The answer reaches the kid in `hearth/me` (`request`), and in their
+paired devices' state as always.
+
 **From Family Safety:** a request made on an Xbox or a Windows PC (`microsoft_family_safety_request`) becomes a request
 of the person whose Family Safety account it is (Configure > Enforce), once per request id, with `source:
 "family_safety"`, `platform`, `app_name` and `requested_time` (as Microsoft gave it; its unit isn't documented, so
@@ -1262,6 +1314,8 @@ device removes it from the household.
   their own) gets Home Assistant's Unauthorized error, for the read-only ones too (`explain`, `get_watch_log`,
   `watch_digest`): a kid doesn't read the watch log. A script a kid starts from a dashboard runs as the kid, so it's
   refused as well.
+- **A kid's own user** may use `hearth/me`, `hearth/me/subscribe` and `hearth/ask`, which take no person: each is
+  the caller's own person (whose `user_id` is theirs), so a kid reads and asks for themselves only.
 
 ## Migration
 
