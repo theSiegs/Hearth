@@ -222,7 +222,7 @@ public class HaBridgeService extends Service {
             builder = new Notification.Builder(this);
         }
         Notification notification = builder.setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle("Hearth")
+                .setContentTitle("Hearth TV")
                 .setContentText(getString(R.string.ha_bridge_notification_text))
                 .build();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {

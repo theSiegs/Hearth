@@ -38,7 +38,7 @@ replaces both Copy profiles between TVs and Household sync.
 | Streaming app PINs | profile and streaming app | secret |
 | Look | profile | wallpaper kind and pictures, day/night picture, gradient, theme, clock/format choices |
 | Home layout | profile | the dock, rows, app order, hidden apps, per-profile panel choices |
-| Continue Watching | profile | Hearth's own watch history (see below) |
+| Continue Watching | profile | Hearth TV's own watch history (see below) |
 | Parent PIN | household | including every change to it; see Parent PIN |
 | Notifications | person, or every adult | Home Assistant's, and a TV asking to join; see [Notifications](#notifications) |
 
@@ -103,7 +103,7 @@ are just settings.
 **How look and layout are built (step 3).** A profile's look is one entry (`look`: its chosen settings, the same ones a
 copy carries) and its layout another (`layout`: apps and whether each is hidden, rows, placements, spacers, without app
 names, which are each TV's own). Both are written in a fixed order, so the same layout is always the same text. The
-app's side does the work, every 20 seconds while Hearth runs (HouseholdLooksService):
+app's side does the work, every 20 seconds while Hearth TV runs (HouseholdLooksService):
 
 - **Taking.** For each profile, kids' included, whose look or layout entry changed, it merges the household's with this
   TV's item by item (the newest change wins, see What syncs), fits the result to the apps installed here (as a copy
@@ -123,23 +123,23 @@ app's side does the work, every 20 seconds while Hearth runs (HouseholdLooksServ
   fetching them. A picked picture goes out as the screen shows it (a JPEG of at most 1920x1080, as a copy sends it), is
   kept once per TV by its SHA-256 (HouseholdPictures), and moves at the end of an exchange to a TV whose entries name it
   and lacks it. A TV checks that a picture it takes is a JPEG of a wallpaper's size and has the hash it asked for.
-- **Kids profiles** sync like any other: Hearth in the owner's user is every profile's home and keeps each one's layout
-  (a kids profile's own Android user only runs Hearth as its agent), and a kid is the same person on every TV by their
+- **Kids profiles** sync like any other: Hearth TV in the owner's user is every profile's home and keeps each one's layout
+  (a kids profile's own Android user only runs Hearth TV as its agent), and a kid is the same person on every TV by their
   Google account, as for PINs and pairings. A kid's layout is fitted to the apps installed here, and the apps a kids
   profile hides by default are hidden again when it is switched to.
 
-**Continue Watching** syncs Hearth's own per-profile watch history (the app, title, episode, how far, when, and the
+**Continue Watching** syncs Hearth TV's own per-profile watch history (the app, title, episode, how far, when, and the
 deep link that opens it), not Google's Watch Next, which ends in 2027. Opening an entry on another TV launches the same
-title in the streaming app, which resumes from its own account's saved position, so Hearth carries a card, not a
+title in the streaming app, which resumes from its own account's saved position, so Hearth TV carries a card, not a
 playback position it can't act on. A title finished (95% or more) anywhere is finished everywhere. An entry only moves
 when the streaming app profile it was played under is known on the receiving TV.
 
 **How Continue Watching is built (step 6).** One `watch` entry per person, app and title: the item is
 `played|<package>|<title|episode>` for what an app said was playing (WatchHistory's played entries) or
-`kept|<package>|<app's id or title>` for a Watch Next entry Hearth kept for the person, the value its title, episode,
+`kept|<package>|<app's id or title>` for a Watch Next entry Hearth TV kept for the person, the value its title, episode,
 length, position and time, plus for a kept one the Watch Next row itself (deep link included, and only for the app it's
-filed under). The Java side does all of it (HouseholdWatch, Household), so it runs whenever Hearth's accessibility
-service does, Hearth's screen open or not:
+filed under). The Java side does all of it (HouseholdWatch, Household), so it runs whenever Hearth TV's accessibility
+service does, Hearth TV's screen open or not:
 
 - **Giving.** A play saved here (PlaybackRecorder, every few seconds while something plays) or Continue Watching read
   here asks for a sweep a minute later; the five-minute periodic round and the service starting sweep too. A sweep
@@ -149,7 +149,7 @@ service does, Hearth's screen open or not:
 - **Taking.** After every exchange, the entries it brought go into the watch history as the household's (a `shared`
   column, so they never go back out as this TV's), when they're newer than what this TV has for that title and less
   than 90 days old. Every round and every service start applies them all again, for a profile whose Google account
-  Hearth has only seen since. A kept one shows as an entry the app here doesn't list, until its person opens that app
+  Hearth TV has only seen since. A kept one shows as an entry the app here doesn't list, until its person opens that app
   here (then the app's own list is the truth).
 - **Removing.** Taking a card out of Continue Watching, or the app letting one go for its own profile, deletes the
   entry; the other TVs drop it unless it was played there since.
@@ -267,7 +267,7 @@ things on joining, so it shows them first and keeps a copy:
 - **The copy.** The app keeps each listed profile's look and layout (the live one as its backup, the others' saved
   layouts) and its wallpaper pictures in a folder of its own, and the Java side keeps every profile's Profile Pairing
   choices and saved PINs (the TV's own too), sealed under a Keystore key as other secrets are. Kept 14 days, then
-  deleted, whether or not anyone opens the Household page: both sides check when Hearth starts and once a day. The
+  deleted, whether or not anyone opens the Household page: both sides check when Hearth TV starts and once a day. The
   usual Backup & Restore backup is still made too.
 - **Put back.** The Household page shows **Put back this TV's settings from before it joined** while the copy is kept
   (asking for the Parent PIN where there is one). It restores the looks, layouts and pictures, and the pairings and
@@ -282,10 +282,10 @@ for the rare home that wants two.
 
 ## Who a profile is
 
-Google TV makes the profiles, not Hearth, so Hearth can't stop two profiles getting the same name when they are created.
+Google TV makes the profiles, not Hearth TV, so Hearth TV can't stop two profiles getting the same name when they are created.
 It doesn't need to: sync identifies a person by their **Google account**, not by their name.
 
-- Hearth already reads each profile's Google account address from Google TV's profile chooser (the calendars use it).
+- Hearth TV already reads each profile's Google account address from Google TV's profile chooser (the calendars use it).
   Sync turns it into a **person id**: a keyed hash of the address under the household's **person salt**, 32 random bytes
   the first TV makes and a joining TV receives. The address itself never leaves a TV.
 - The salt isn't a membership secret and isn't changed when a TV is removed: entries only travel between members, who
@@ -294,7 +294,7 @@ It doesn't need to: sync identifies a person by their **Google account**, not by
 - Entries name the person by that id. Two people called the same are two ids and never mix; one person who is renamed in
   Google TV keeps their entries; the same person on two TVs is the same id.
 - The name stays for display only (Your TVs says "Alex's" settings, not an id).
-- A profile whose address Hearth hasn't seen yet (it hasn't been shown in the chooser) has no person id yet; it neither
+- A profile whose address Hearth TV hasn't seen yet (it hasn't been shown in the chooser) has no person id yet; it neither
   sends nor takes entries until the chooser has shown it, which happens the first time anyone picks a profile. Nothing is
   renamed and no one is asked anything.
 - An address can be in two profiles on one TV (an adult added twice); the first one seen counts, the second is left out,
@@ -343,7 +343,7 @@ and loses to the same notification sent again later. Home Assistant can clear on
 
 **Buttons.** A Home Assistant notification's buttons (up to three, each a title and a service call, as
 HaNotificationServer allowed them) travel in its entry, so every TV's Bell shows them, and a notification from another
-TV pops up with them when Hearth's accessibility service can draw the card (else as the small card, without them).
+TV pops up with them when Hearth TV's accessibility service can draw the card (else as the small card, without them).
 
 - **What travels.** Only buttons the receiving TV's server allowed: a title, a service `domain.service`, data that is
   an object of at most 1,000 characters. All of them or none (none when one doesn't fit), so a button's number is the
@@ -451,7 +451,7 @@ A TV that has its own, different Parent PIN is asked for the household's before 
 replace a PIN.
 
 **How it's built.** One `parent_pin` entry for the whole household (profile "", item ""), its value the stored hash.
-The app's side decides (HouseholdParentPin, every 20 seconds while Hearth runs, with the looks), remembering the hash it
+The app's side decides (HouseholdParentPin, every 20 seconds while Hearth TV runs, with the looks), remembering the hash it
 last took or gave:
 
 - No Parent PIN here: the household's is taken, so a TV set up by joining needs no Parent PIN step.
@@ -491,8 +491,8 @@ that would ask for them:
 
 - **A household is on the network**: the screen names its TVs, with **Join the household** and Not now. Joining there
   runs Joining above; once joined, the look, Parent PIN and Profile Pairing screens aren't shown (they come from the
-  household). Profile Pairing's switch is still each TV's own: Hearth turns it on over its own adb, at once when the TV
-  trusts Hearth's key already, else with the ad tracking step's one approval; failing both it stays in Settings'
+  household). Profile Pairing's switch is still each TV's own: Hearth TV turns it on over its own adb, at once when the TV
+  trusts Hearth TV's key already, else with the ad tracking step's one approval; failing both it stays in Settings'
   checklist. Not now is final for this run: the flow doesn't ask again, nor offer to start a separate household.
 - **Not heard yet**: when the flow gets there within 5 seconds of opening (a rerun with the essentials on), the screen
   says it's looking, with Skip, and moves on by itself if no household answers.
@@ -568,14 +568,14 @@ What a TV checks before it takes part or takes something, and what that guards a
   outlives that meeting. (It also mends a TV whose log was lost and that started counting again.) Content written in
   another TV's name isn't otherwise stopped for the unsigned kinds: any member can write those in its own name anyway.
 - **Continue Watching cards from another TV** carry a deep link that TV wrote. Opening any card, the link is held as
-  the kids profiles' agent holds what it opens: no flags that would hand out access to Hearth's files, never one of
-  Hearth's own screens, and only another app's exported screen. A card from the household must also open in its own
+  the kids profiles' agent holds what it opens: no flags that would hand out access to Hearth TV's files, never one of
+  Hearth TV's own screens, and only another app's exported screen. A card from the household must also open in its own
   app (the one it is filed under): its link is resolved only in that app, and refused when it names another.
 - **Older builds.** A TV on a build from before signing doesn't sign. Each TV says in its own member entry, and in
   its exchanges and invitations, that it signs; a TV listed as signing has unsigned entries in its name refused, and no
   entry can take back that a TV signs. A TV not listed as signing (an older build) is taken as before, unsigned, and
   what it writes can't claim another TV signs. So while an older TV is in the household, a member could write unsigned
-  entries in that older TV's name; this ends when it updates (Hearth updates itself), its next own entry then saying it
+  entries in that older TV's name; this ends when it updates (Hearth TV updates itself), its next own entry then saying it
   signs. An older TV also drops signatures when it passes entries on, so a TV that hears another only through an older
   one may miss that TV's renames and the TVs it added until it meets it or the older one updates.
 
@@ -615,7 +615,7 @@ first exchange between two such TVs runs under the version 1 key one last time t
 `member` entries; the person salt is taken from the version 1 key (HKDF, the label of the old person key), so person ids
 don't change and no entry is rewritten. A converted TV keeps the version 1 key for 90 days from its first exchange, only
 to admit the household's other TVs as they convert, then drops it. A TV still on version 1 can't sync with a converted
-one; it converts when it updates (Hearth updates itself in the background), and a TV that never updates is removed like
+one; it converts when it updates (Hearth TV updates itself in the background), and a TV that never updates is removed like
 any other.
 
 **The invitation.** An allowed join hands the new TV an invitation instead of a household key: the household's id

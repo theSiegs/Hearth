@@ -22,7 +22,7 @@ void main() {
     final steps = await loadSetupSteps(channel, "com.example.hearth", l);
     final done = {for (final step in steps) step.title: step.done};
     expect(done, {
-      "Hearth as the home app": true,
+      "Hearth TV as the home app": true,
       "Home Button Fix": false,
       "Notification access": true,
       "Installing updates": false,

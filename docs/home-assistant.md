@@ -1,9 +1,9 @@
 # Home Assistant
 
-> **Draft.** Hearth is in early development and this document is a draft: features, settings and
+> **Draft.** Hearth TV is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
-Hearth talks to Home Assistant these ways, each optional:
+Hearth TV talks to Home Assistant these ways, each optional:
 
 | | Direction | Needs |
 |---|---|---|
@@ -13,7 +13,7 @@ Hearth talks to Home Assistant these ways, each optional:
 | [TV status](#tv-status) | TV → Home Assistant | Address and a webhook ID (or the Hearth integration) |
 | [Approve switches from a phone](#approve-switches-from-a-phone) | TV → a phone → TV | Address, token, and the companion app on the phone |
 
-Everything stays on your home network: Hearth talks only to the address you give it, and accepts notifications
+Everything stays on your home network: Hearth TV talks only to the address you give it, and accepts notifications
 only from local addresses.
 
 **Set up from your phone.** Typing a long access token with a remote is no fun. **Set up from your phone** shows a
@@ -22,7 +22,7 @@ the QR code is on screen. The page seals what it sends with a key that's only in
 which a browser never sends over the network), so the token can't be read on your network; it needs a recent phone
 browser, opened from the QR code.
 
-The page also offers **Set up TV status in Home Assistant for me** (ticked): with a token from an administrator, Hearth
+The page also offers **Set up TV status in Home Assistant for me** (ticked): with a token from an administrator, Hearth TV
 makes the helpers and the automation for the TV, as the button under TV status does, so you never need a webhook ID.
 The page says when it is done; you can delete that token in Home Assistant afterward. A token that isn't an
 administrator's is still saved (for the dashboard panel), and the page says TV status wasn't set up. Someone who
@@ -30,11 +30,11 @@ already has a webhook ID opens **I already have a webhook ID** on the page and u
 
 ## Notifications
 
-Pop-ups over any app: the doorbell, a finished wash, a reminder. Hearth speaks the protocol of the
+Pop-ups over any app: the doorbell, a finished wash, a reminder. Hearth TV speaks the protocol of the
 "Notifications for Android TV / Fire TV" integration (PiPup style) on port **7676**.
 
-Hearth's link to Home Assistant (this and the TV status below) keeps running even if Android switches Home Button Fix off,
-for instance after an update. The pop-up itself is drawn by Home Button Fix, so while it is off Hearth answers
+Hearth TV's link to Home Assistant (this and the TV status below) keeps running even if Android switches Home Button Fix off,
+for instance after an update. The pop-up itself is drawn by Home Button Fix, so while it is off Hearth TV answers
 Home Assistant that it can't show one.
 
 1. On the TV, turn on **Settings → Home Assistant → Notifications → Show Home Assistant notifications** (off until
@@ -57,7 +57,7 @@ and `interrupt` are accepted and ignored.
 
 ### Cameras and buttons
 
-Hearth also takes two fields of its own, sent with a `rest_command`:
+Hearth TV also takes two fields of its own, sent with a `rest_command`:
 
 - `camera`: a camera entity shown live in the pop-up;
 - `actions`: up to three buttons, each `{"title", "service", "data"}`, run with the dashboard panel's token.
@@ -74,7 +74,7 @@ rest_command:
       | to_json | urlencode }}
 ```
 
-Buttons need the [dashboard panel](#dashboard-panel)'s token, since Hearth calls the service as that user. A button
+Buttons need the [dashboard panel](#dashboard-panel)'s token, since Hearth TV calls the service as that user. A button
 whose `data` isn't an object is left out. The buttons are in the Bell too, on every TV of the household (below).
 
 ### In the Bell, and for one person
@@ -87,9 +87,9 @@ Assistant connection calls the service itself, any other asks the TV the notific
 its token. That TV runs only a button of its own copy, by its number, and only if it hears of the press within two
 minutes (an "Unlock" must not happen long after); later, the notification is only cleared. Buttons whose data is over
 1,000 characters stay in that TV's pop-up only. A notification leaves the Bell after three days (on a TV not in a
-household, or with sync off, also when Hearth restarts).
+household, or with sync off, also when Hearth TV restarts).
 
-A notification is for every adult unless it says who it's for. Two more fields of Hearth's own, sent with a
+A notification is for every adult unless it says who it's for. Two more fields of Hearth TV's own, sent with a
 `rest_command` as above:
 
 - `for`: who it's for. Use one that means the same person on every TV:
@@ -138,10 +138,10 @@ A Home Assistant dashboard one press away: **Right** at the right edge of the ho
 
 1. In Home Assistant, make a **non-admin user** for the TV, and log in as that user.
 2. On its profile page, **Security** tab, create a **long-lived access token**.
-3. In Hearth, enter the Home Assistant address and the token (or use **Set up from your phone**), and choose the
+3. In Hearth TV, enter the Home Assistant address and the token (or use **Set up from your phone**), and choose the
    dashboard (and which of its views) from the list Home Assistant gives.
 
-Hearth draws the dashboard's cards itself, so every control is reachable with the remote: lights, switches, scenes,
+Hearth TV draws the dashboard's cards itself, so every control is reachable with the remote: lights, switches, scenes,
 covers, climate, media, cameras, and a person's whereabouts on a small map (drawn from map pieces fetched once and
 kept on the TV, so the map service never learns where anyone is). It loads in the background once the home is up, so
 the panel opens at once, and keeps app and entity pictures on the TV for 30 days. **Show the full dashboard instead**
@@ -157,7 +157,7 @@ PIN-locked Google TV profile (**Settings → Profiles → Unlock from my phone**
 is greyed out until Home Assistant is set up). They choose their phone, one of Home Assistant's `notify.mobile_app_…`
 services, and save their Google TV PIN.
 
-When Google TV's PIN screen comes up for that profile, Hearth:
+When Google TV's PIN screen comes up for that profile, Hearth TV:
 
 1. listens on Home Assistant's WebSocket API for `mobile_app_notification_action` events, only while it waits (two
    minutes at most; one connection for every request that waits, made again if Home Assistant restarts meanwhile);
@@ -174,9 +174,9 @@ refuses isn't entered again until it's saved anew. **Send a test notification** 
 
 ### The Parent PIN, from a phone
 
-The same switch and phone also let a parent allow the **Parent PIN** prompt (a kids profile opening Hearth's settings or an
+The same switch and phone also let a parent allow the **Parent PIN** prompt (a kids profile opening Hearth TV's settings or an
 app's menu, or an adult's profile changing something only a parent may) without typing the PIN. When that prompt opens,
-Hearth sends an Allow/Deny notification (`tag` `hearth-parent-…`, action ids `HEARTH_PARENT_ALLOW_…` and
+Hearth TV sends an Allow/Deny notification (`tag` `hearth-parent-…`, action ids `HEARTH_PARENT_ALLOW_…` and
 `HEARTH_PARENT_DENY_…`, a one-time id, two minutes) to the phone of **every adult profile that has approval on**; the
 first answer decides. The notification names the profile and the TV. Allow closes the prompt as if the PIN had been entered
 (an adult's profile also counts as "a parent is at the remote" for five minutes, like a typed PIN); Deny says so on the
@@ -185,7 +185,7 @@ Changing the Parent PIN itself, and the pads for new PINs, never use the phone. 
 
 ## Hearth integration
 
-Hearth has an integration of its own for Home Assistant (`custom_components/hearth` in this repository; see
+Hearth TV pairs with Hearth's own integration for Home Assistant (`custom_components/hearth` in this repository; see
 [home-assistant-integration.md](home-assistant-integration.md)). With it, the TV needs no token and no webhook:
 
 1. Install it (HACS custom repository, or copy the folder) and add it: Settings > Devices & services > Add
@@ -205,23 +205,23 @@ restarting Home Assistant refuses them briefly).
 
 ## TV status
 
-Hearth posts what the TV is doing to a Home Assistant webhook, when it changes (within a second or two) and every
+Hearth TV posts what the TV is doing to a Home Assistant webhook, when it changes (within a second or two) and every
 10 minutes as a heartbeat. Home Assistant needs no credentials for the TV.
 
-**The easy way:** once Hearth has the Home Assistant address and an administrator's token, **Settings → Home Assistant
+**The easy way:** once Hearth TV has the Home Assistant address and an administrator's token, **Settings → Home Assistant
 → TV status → Create it in Home Assistant for me** (also a button in the setup flow) makes everything for this TV: seven
 helpers (`input_select.<tv>_tv_state` and the app, media title, media artist, profile, kids-profile and screen-time-up
 helpers), an automation "<TV> TV - Status from Hearth" with a **Webhook** trigger (a random id, `hearth-<tv>-…`,
-local network only) that writes the status into them, and the address and webhook ID in Hearth. The names come from the
+local network only) that writes the status into them, and the address and webhook ID in Hearth TV. The names come from the
 TV's name, so each TV gets its own; running it again reuses what exists. With a token that isn't an administrator's,
-Home Assistant refuses and Hearth says so: use the manual way. (It doesn't make the shared YouTube-time helpers.)
+Home Assistant refuses and Hearth TV says so: use the manual way. (It doesn't make the shared YouTube-time helpers.)
 
 **By hand:**
 
 1. In Home Assistant, create an automation with a **Webhook** trigger and note its webhook ID.
-2. In Hearth, enter the Home Assistant address and the webhook ID.
+2. In Hearth TV, enter the Home Assistant address and the webhook ID.
 
-Hearth posts JSON to `<address>/api/webhook/<webhook ID>`:
+Hearth TV posts JSON to `<address>/api/webhook/<webhook ID>`:
 
 | Field | Value |
 |---|---|
@@ -229,41 +229,41 @@ Hearth posts JSON to `<address>/api/webhook/<webhook ID>`:
 | `state` | `playing`, `paused`, `idle` or `off` |
 | `app`, `app_package` | the app in front |
 | `media_app`, `media_title`, `media_artist`, `media_album`, `media_duration_s` | now playing, from any app's media session (needs notification access) |
-| `now_playing_available` | whether Hearth can see what's playing |
+| `now_playing_available` | whether Hearth TV can see what's playing |
 | `profile` | the Google TV profile's name |
 | `profile_id` | a stable key for the profile on this TV (`user:<serial>`, or `user:<serial>:<account>` for another adult's account in the same user), unchanged by renames; the serial is this TV's own, so another TV has another key for the same profile |
 | `profile_ref` | who the profile is across the household's TVs: `name:<slug>` of its Google TV name (`name:sam-lee`), the same on every TV; null until the TV has learned the name |
 | `profiles` | every profile this TV knows, by its `profile_id`: `{"user:10": {"name": "…", "ref": "name:…", "kids": true}}` |
 | `kids_profile` | `true` in a kids profile |
 | `screen_time_up` | `true` while Google TV's bedtime or time's-up screen is showing |
-| `google_time_up` | `true` while Google TV's own Kids daily limit holds the profile (its time up screen, not bedtime): Hearth can't lift it, only raising or turning off that limit in Google TV does |
+| `google_time_up` | `true` while Google TV's own Kids daily limit holds the profile (its time up screen, not bedtime): Hearth TV can't lift it, only raising or turning off that limit in Google TV does |
 | `screen_time_reason`, `screen_time_text`, `screen_time_minutes_left`, `screen_time_unlocks_at`, `screen_time_seen_at` | what that screen said |
 | `screen_time_unlocks_at_iso` | the unlock time as the next such moment, in ISO 8601 with the TV's offset |
 | `screen_time_event`, `screen_time_event_at` | `appeared` or `cleared`, and when (epoch ms): the last change, sent with every status until the next, so trigger on `screen_time_event_at` changing |
 | `allowed_apps` | in a kids profile, the apps Family Link currently allows |
 | `day` | the TV's local date (`YYYY-MM-DD`) the usage counts are for |
-| `seconds_today`, `app_seconds_today`, `playing_seconds_today` | the active profile's usage today: seconds any app was in front with the screen on, seconds per app (package) in front, and seconds per app playing (media session). Hearth, Google TV's own screens and the screensaver don't count |
+| `seconds_today`, `app_seconds_today`, `playing_seconds_today` | the active profile's usage today: seconds any app was in front with the screen on, seconds per app (package) in front, and seconds per app playing (media session). Hearth TV, Google TV's own screens and the screensaver don't count |
 | `usage_today` | every profile's usage today: `{"<profile_id>": {"profile_name": "…", "profile_ref": "name:…", "seconds": n, "apps": {"<package>": n}, "playing": {"<package>": n}}}` |
 
-The usage counts are cumulative for the day (a lost post loses nothing), kept across Hearth restarts, and start again
+The usage counts are cumulative for the day (a lost post loses nothing), kept across Hearth TV restarts, and start again
 at local midnight.
 
-**How often Hearth posts.** Within about 2 seconds of a change that matters (another app in front, play or pause, a
+**How often Hearth TV posts.** Within about 2 seconds of a change that matters (another app in front, play or pause, a
 profile switch, the screen going on or off, screen time coming up or clearing); every 2 minutes while an app is in
 front or playing, so the usage counts are never more than 2 minutes behind; otherwise every 10 minutes, so Home
 Assistant can tell the TV is there. A status the same as the last one isn't sent again (the 10-minute one aside).
 Each post runs your webhook automation once.
 
 **HearthTube's titles.** HearthTube can put the playing video's title, channel and ID in its media session, so they
-reach `media_title` and `media_artist` here. Hearth's Home Assistant setup asks whether to share them, and
+reach `media_title` and `media_artist` here. Hearth TV's Home Assistant setup asks whether to share them, and
 **Settings → Home Assistant → Share what's playing in HearthTube** changes the answer later; HearthTube follows it.
 Never asked, HearthTube shares (its own **Tell Home Assistant what's playing** switch, on by default).
 
 **Where the playing time comes from.** HearthTube reports its own playing time, in every profile. Other apps' comes
 from their media sessions, which Android only shows to a notification listener in the same Android user. In the TV's
-main user that's Hearth itself (its notification access). A kids profile's apps play in that profile's own Android
-user, so there it's Hearth's agent, which needs notification access granted in that user. A parent's **Fix**
-(Settings → Family → Kids profiles) grants it over Hearth's own adb; by hand it's
+main user that's Hearth TV itself (its notification access). A kids profile's apps play in that profile's own Android
+user, so there it's Hearth TV's agent, which needs notification access granted in that user. A parent's **Fix**
+(Settings → Family → Kids profiles) grants it over Hearth TV's own adb; by hand it's
 `adb shell cmd notification allow_listener com.thesiegs.hearth/com.thesiegs.hearth.LauncherNotificationListenerService
 <user id>`. Without it, that profile's `playing` lists HearthTube only (its `apps` time in front is counted either
 way). In a kids profile the agent's notification access does nothing else: no pop-ups, nothing read but what's
@@ -271,14 +271,14 @@ playing. What plays (title, episode, how far it got) is kept on the TV for that 
 Continue Watching, and with household sync on it goes to the household's other TVs for that kid's row only; it isn't
 sent to Home Assistant.
 
-**Allowance for HearthTube (optional).** Hearth enforces a daily YouTube limit on its own (Settings → Family →
+**Allowance for HearthTube (optional).** Hearth TV enforces a daily YouTube limit on its own (Settings → Family →
 Kids profiles → the kid → YouTube time per day). Home Assistant can add its say, e.g. a pool shared with the family's phones and tablets:
-with the Home Assistant panel's address and token set, Hearth reads `sensor.hearth_allowance` about once a minute.
+with the Home Assistant panel's address and token set, Hearth TV reads `sensor.hearth_allowance` about once a minute.
 Its attribute `profiles`, or else its state as JSON (a template helper made in the UI can't have attributes), maps a
 `profile_id` to `{"youtube_minutes_left": int or null, "schedule_locked": bool, "message": optional text}`; a
 profile it doesn't list has no limit from it, and `{}` means none. A state that isn't such a map (unknown,
-unavailable) is treated as unreadable: what Hearth read earlier that day still counts. The stricter of the two counts, and
-HearthTube gets the result through Hearth (see [provider-contract.md](provider-contract.md)).
+unavailable) is treated as unreadable: what Hearth TV read earlier that day still counts. The stricter of the two counts, and
+HearthTube gets the result through Hearth TV (see [provider-contract.md](provider-contract.md)).
 
 A minimal automation that keeps the current app in a helper:
 

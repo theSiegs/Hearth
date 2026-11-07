@@ -157,6 +157,14 @@ def wordmark(h):
     return img
 
 
+def integration_brand():
+    """Home Assistant (2026.3 and later) shows these for the integration: custom_components/hearth/brand/."""
+    brand = ROOT / "custom_components" / "hearth" / "brand"
+    brand.mkdir(exist_ok=True)
+    legacy_icon(256).save(brand / "icon.png")
+    legacy_icon(512).save(brand / "icon@2x.png")
+
+
 def main():
     densities = {"mdpi": 1, "hdpi": 1.5, "xhdpi": 2, "xxhdpi": 3, "xxxhdpi": 4}
     for name, scale in densities.items():

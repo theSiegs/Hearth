@@ -3,7 +3,7 @@
 > **Design draft, partly built.** In `custom_components/hearth`: household setup, pairing, a device per Hearth TV or
 > phone with its status entities, people, screen time sources (totals and live), titles, counting once, playing
 > together, groups, budgets, bonuses, minutes left and the state document (see [Build order](#build-order) and
-> [The device's side of the API](#the-devices-side-of-the-api)). Hearth on a TV pairs and reports to it; Hearth
+> [The device's side of the API](#the-devices-side-of-the-api)). Hearth TV pairs and reports to it; Hearth
 > Mobile doesn't yet. The rest is
 > written so another person or agent can pick it up: what Hearth does with Home Assistant today, what the integration
 > should be, and what is still undecided. Read [home-assistant.md](home-assistant.md) first (what exists) and
@@ -14,7 +14,7 @@
 One place in Home Assistant where the household's Hearth devices plug in, and where data moves in and out of them
 without hand-made helpers, tokens or YAML:
 
-- **Hearth devices.** Hearth on a TV (Google TV, one device, several profiles) and Hearth Mobile on a phone or tablet
+- **Hearth devices.** Hearth TV on a Google TV (one device, several profiles) and Hearth Mobile on a phone or tablet
   (one person's device; the kids' companion app, and later the adult launcher). Each pairs once and gets its own
   secret.
 - **Data in.** What each device says it's doing (status, usage, requests such as "ask for 15 more" or an approval),
@@ -168,7 +168,7 @@ The number is the profile's Android user serial **on that TV**: the same Google 
 1. a **household ref**, `name:<slug>` (`name:sam-lee`): the profile's name as Google TV's chooser shows it, the same on
    every TV, in lower case with words joined by `-`. Each TV reports it beside every key (`profile_ref`, the
    `profile_ref` of each `usage_today` entry, and the `profiles` table). One choice covers the profile on every TV.
-2. or **one TV's key**, `<device_id>/user:10`: for a TV whose Hearth is older than 2026.11.07 (it reports no refs),
+2. or **one TV's key**, `<device_id>/user:10`: for a TV whose Hearth TV is older than 2026.11.07 (it reports no refs),
    or a profile whose name that TV hasn't learned yet.
 
 A TV profile resolves by its ref first, then by its TV key; a TV's `user:0` also matches the one mapped account of the
@@ -264,7 +264,7 @@ screen time. A device's time is up when **any** group it's playing from is used 
 **Not screen time** (Configure > Not screen time): a group whose minutes don't count toward All screen time, music
 say. Its minutes still count in the group itself (and its own budget, if it has one, still applies), but not in All
 screen time, and its apps stay usable when All screen time runs out: Family Link's lock spares them only if a parent
-gave them unlimited time there, and a TV's Hearth is told them (the All group's `except` list). The person's Screen
+gave them unlimited time there, and Hearth TV is told them (the All group's `except` list). The person's Screen
 time today sensor lists each group's packages (`groups_apps`) and these groups (`not_screen_time`).
 
 ### Budgets
@@ -323,7 +323,7 @@ until the group has time again (a bonus, a higher budget, a new day):
 - **Hearth devices** get the person's minutes left per group, with the group's apps, in their state document (below),
   and stop those apps themselves (HearthTube holds YouTube on its own). On a TV, in a kids profile, a held app doesn't
   open from Hearth's tiles, Continue Watching or remote buttons ("Time's up for Games today. An adult can add more
-  time."); opened another way (Google TV's kids home, a voice search, a link), Hearth's home comes back over it.
+  time."); opened another way (Google TV's kids home, a voice search, a link), Hearth TV's home comes back over it.
   YouTube's own app is the exception: kids watch YouTube in HearthTube, so it's swapped for HearthTube, which holds
   the YouTube time itself. All
   screen time out of time holds every app. Never held: Hearth, HearthTube, Settings, the Play Store, the assistant and
@@ -420,7 +420,7 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
   `google tv's own limit`. **Hearth can't lift it**: an adult has to raise or turn off that profile's daily limit in
   Google TV. To let Hearth own the limits, turn Google TV's daily limit and bedtime off for kids' TV profiles (in
   Google TV or Family Link), and set them in Hearth. A paired TV's setup says so (its "Leave Google's time limits off"
-  step), and once the TV saw Google's time up screen in the last week, its Set up Hearth page says "Google TV's own
+  step), and once the TV saw Google's time up screen in the last week, its Set up Hearth TV page says "Google TV's own
   limit is on".
 - The person's **Screen time today** sensor has an `exceptions` attribute: `allows` (id, app or group, until, reason),
   `grants` (below) and `school_time_off` (what's taken off and when it's put back).
@@ -625,7 +625,7 @@ A **phone** gets its person's part of the same document, in the answer to each p
 phone share with its launcher's tile exchange (Configure > Tile exchange sharing; false unless chosen).
 
 **Pop-ups** (not built yet): `hearth.notify` (target: devices, a person's devices, or the household; `title`, `message`, `duration`,
-`position`, `image`, `camera`, up to three `actions`). On a TV it's Hearth's pop-up; on a phone, a notification.
+`position`, `image`, `camera`, up to three `actions`). On a TV it's Hearth TV's pop-up; on a phone, a notification.
 Actions call a Home Assistant service as a user the household chose, not with any device's secret.
 
 **Family pause**: `hearth.pause` (minutes, reason, people or everyone) and `hearth.pause_end`: the devices show the pause
@@ -1319,8 +1319,13 @@ Assistant reads the 21 digits as a number and loses some. Hearth passes it as te
 
 ## Releasing
 
-`manifest.json` `version` follows Hearth's version once the TV side ships (now `0.1.0`). A device reports its version
+`manifest.json` `version` is the release version, pubspec's name without the build number (`2026.11.08`): set it with
+`python3 .github/scripts/integration_version.py --write` after bumping `pubspec.yaml`, and CI and the release workflow
+refuse a mismatch. A device reports its version
 at pairing; the integration is to raise a repair issue when the two are too far apart (not built yet). HACS reads the release tag.
+
+The integration's icon (`brand/icon.png`, 256x256, and `brand/icon@2x.png`, 512x512) is Hearth's launcher icon,
+made by `tool/generate_icons.py`; Home Assistant 2026.3 and later shows a custom integration's own `brand/` images.
 
 ## Build order
 

@@ -68,7 +68,7 @@ void main() {
   group("welcome", () {
     testWidgets("Get started goes to the Home button, and OK presses the focused button", (tester) async {
       await open(tester);
-      expect(find.text("Welcome to Hearth"), findsOneWidget);
+      expect(find.text("Welcome to Hearth TV"), findsOneWidget);
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.pumpAndSettle();
       expect(find.text("Make the Home button open Hearth"), findsOneWidget);
@@ -87,7 +87,7 @@ void main() {
     testWidgets("Set up later closes the flow and leaves it to the chip", (tester) async {
       await open(tester);
       await press(tester, "Set up later");
-      expect(find.text("Welcome to Hearth"), findsNothing);
+      expect(find.text("Welcome to Hearth TV"), findsNothing);
       expect(flow.flowVersion, SetupFlowService.currentVersion);
       expect(flow.resume?.closed, isTrue);
     });
@@ -112,7 +112,7 @@ void main() {
 
       await tester.pump(const Duration(seconds: 3));
       await tester.pumpAndSettle();
-      expect(find.text("Make Hearth your home app"), findsOneWidget);
+      expect(find.text("Make Hearth TV your home app"), findsOneWidget);
     });
 
     testWidgets("not turned on: offers to try again", (tester) async {
@@ -208,7 +208,7 @@ void main() {
       await press(tester, "Skip");
       expect(find.text("Skip the Home button?"), findsOneWidget);
       await press(tester, "Skip anyway");
-      expect(find.text("Make Hearth your home app"), findsOneWidget);
+      expect(find.text("Make Hearth TV your home app"), findsOneWidget);
       expect(flow.choiceFor(SetupFlowService.homeButtonDecision), SetupChoice.notNow);
     });
 
@@ -216,7 +216,7 @@ void main() {
       channel.homeButtonOn = true;
       await open(tester);
       await press(tester, "Get started");
-      expect(find.text("Make Hearth your home app"), findsOneWidget);
+      expect(find.text("Make Hearth TV your home app"), findsOneWidget);
     });
   });
 
@@ -239,10 +239,10 @@ void main() {
       await open(tester);
       await press(tester, "Get started");
       channel.homeApp = true;
-      await press(tester, "Choose Hearth");
+      await press(tester, "Choose Hearth TV");
       expect(channel.homeSettingsOpened, 1);
       await comeBack(tester);
-      expect(find.text("Hearth is your home app"), findsOneWidget);
+      expect(find.text("Hearth TV is your home app"), findsOneWidget);
     });
   });
 
@@ -724,7 +724,7 @@ void main() {
       channel.homeButtonOn = true;
       await open(tester, startAt: "updates");
       await press(tester, "Turn on");
-      expect(find.text("Allow Hearth to install updates"), findsOneWidget);
+      expect(find.text("Allow Hearth TV to install updates"), findsOneWidget);
       channel.install = true;
       await press(tester, "Open Settings");
       expect(channel.installSettingsOpened, 1);
@@ -736,7 +736,7 @@ void main() {
       // Before Finish: a household for the TVs to come
       expect(find.text("Sync with your other TVs"), findsOneWidget);
       await press(tester, "Skip");
-      expect(find.text("Hearth is ready"), findsOneWidget);
+      expect(find.text("Hearth TV is ready"), findsOneWidget);
     });
 
     testWidgets("Leave it as it is on a card skipped before goes past it", (tester) async {
@@ -985,11 +985,11 @@ void main() {
       await press(tester, "Not now");
       await press(tester, "Next");
       await press(tester, "Next");
-      expect(find.text("Hearth is ready"), findsOneWidget);
+      expect(find.text("Hearth TV is ready"), findsOneWidget);
       expect(flow.resume, isNull);
       expect(flow.flowVersion, SetupFlowService.currentVersion);
       await press(tester, "Go to my home");
-      expect(find.text("Hearth is ready"), findsNothing);
+      expect(find.text("Hearth TV is ready"), findsNothing);
     });
 
     testWidgets("Finish later keeps the place for the chip", (tester) async {

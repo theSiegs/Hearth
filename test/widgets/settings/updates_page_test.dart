@@ -77,7 +77,7 @@ void main() {
     await _pumpPage(tester, updater);
 
     expect(find.text("Updates"), findsOneWidget);
-    expect(Focus.of(tester.element(find.text("Hearth"))).hasFocus, isTrue);
+    expect(Focus.of(tester.element(find.text("Hearth TV"))).hasFocus, isTrue);
     expect(tester.widget<Switch>(_switchOf("Update automatically")).onChanged, isNull);
     await tester.tap(find.text("Update automatically"));
     expect(updater.saved, isEmpty);

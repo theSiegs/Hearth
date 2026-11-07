@@ -186,7 +186,7 @@ class _UpdatesPageState extends State<UpdatesPage> with WidgetsBindingObserver {
         FocusableSettingsTile(
           autofocus: true,
           leading: const Icon(Icons.local_fire_department_outlined),
-          title: Text("Hearth", style: textTheme.bodyMedium),
+          title: Text("Hearth TV", style: textTheme.bodyMedium),
           trailing:
               Text(localizations.updatesCheckForUpdates, style: textTheme.bodySmall?.copyWith(color: Colors.white54)),
           onPressed: () => showDialog(context: context, builder: (_) => const UpdateDialog()),

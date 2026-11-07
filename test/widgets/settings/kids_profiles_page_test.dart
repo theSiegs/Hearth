@@ -259,7 +259,7 @@ void main() {
     await pump(tester, const KidsProfilesPage());
     expect(find.text("Ready"), findsOneWidget);
     expect(find.text("Fix"), findsNothing);
-    expect(find.text("Remove Hearth from kids profiles"), findsOneWidget);
+    expect(find.text("Remove Hearth TV from kids profiles"), findsOneWidget);
   });
 
   testWidgets("with a trusted key, whether the copies are kept is read too, and an unkept one needs a fix",
@@ -335,7 +335,7 @@ void main() {
       {"userId": 10, "name": "Sam", "hearth": true},
     ];
     await pump(tester, const KidsProfilesPage());
-    await press(tester, "Remove Hearth from kids profiles");
+    await press(tester, "Remove Hearth TV from kids profiles");
     expect(channel.removes, 0);
     await press(tester, "Remove");
     expect(channel.removes, 1);
@@ -348,14 +348,14 @@ void main() {
     ];
     channel.works = false;
     await pump(tester, const UninstallHearthTile());
-    await press(tester, "Uninstall Hearth");
+    await press(tester, "Uninstall Hearth TV");
     await press(tester, "Uninstall");
     expect(find.text("Finish the one-time approval first"), findsOneWidget);
     expect(channel.uninstalls, 0);
     await press(tester, "OK");
 
     channel.works = true;
-    await press(tester, "Uninstall Hearth");
+    await press(tester, "Uninstall Hearth TV");
     await press(tester, "Uninstall");
     expect(channel.removes, 1);
     expect(channel.uninstalls, 1);
@@ -452,7 +452,7 @@ void main() {
     await pump(tester, const KidsProfilesPage());
     expect(find.text("There are no kids profiles on this TV."), findsOneWidget);
     expect(find.text("Fix"), findsNothing);
-    expect(find.text("Remove Hearth from kids profiles"), findsOneWidget);
+    expect(find.text("Remove Hearth TV from kids profiles"), findsOneWidget);
     expect(find.textContaining("Uninstall"), findsNothing);
   });
 

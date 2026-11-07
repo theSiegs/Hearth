@@ -1,5 +1,5 @@
 {
-    "aboutFlauncher": "About Hearth",
+    "aboutFlauncher": "About Hearth TV",
     "addSection": "Add section",
     "alphabetical": "Alphabetical",
     "appCardHighlightAnimation": "App card highlight animation",
@@ -549,7 +549,7 @@
     "@kidsProfilesApproval": {
         "description": "Kids profiles page: note before the first Fix; quotes Android's debugging prompt and its Always allow button"
     },
-    "kidsProfilesRemoveTitle": "Remove Hearth from kids profiles",
+    "kidsProfilesRemoveTitle": "Remove Hearth TV from kids profiles",
     "@kidsProfilesRemoveTitle": {
         "description": "Kids profiles page: button and dialog title"
     },
@@ -557,7 +557,7 @@
     "@kidsProfilesRemoveBody": {
         "description": "Kids profiles page: Remove dialog text"
     },
-    "uninstallHearthTitle": "Uninstall Hearth",
+    "uninstallHearthTitle": "Uninstall Hearth TV",
     "@uninstallHearthTitle": {
         "description": "Settings > System: the last row, and its dialog's title; Hearth off the whole TV"
     },
@@ -1620,7 +1620,7 @@
             }
         }
     },
-    "setupDefaultLauncherTitle": "Hearth as the home app",
+    "setupDefaultLauncherTitle": "Hearth TV as the home app",
     "@setupDefaultLauncherTitle": {
         "description": "Setup & permissions step title: make Hearth the default launcher"
     },
@@ -1628,7 +1628,7 @@
     "@setupDefaultLauncherWhy": {
         "description": "Setup & permissions step: why it matters"
     },
-    "setupDefaultLauncherInstructions": "On the next screen, choose Hearth.",
+    "setupDefaultLauncherInstructions": "On the next screen, choose Hearth TV.",
     "@setupDefaultLauncherInstructions": {
         "description": "Setup & permissions step: what to do in Android's settings"
     },
@@ -1665,7 +1665,7 @@
     "@setupInstallWhy": {
         "description": "Setup & permissions step: why it matters"
     },
-    "setupInstallInstructions": "On the next screen, turn on Hearth.",
+    "setupInstallInstructions": "On the next screen, turn on Hearth TV.",
     "@setupInstallInstructions": {
         "description": "Setup & permissions step: what to do in Android's settings"
     },
@@ -3117,7 +3117,7 @@
     "@setupFlowStripEssentials": {
         "description": "Setup flow: progress strip label for the first, essential steps (the Home button and the home app)"
     },
-    "setupFlowWelcomeTitle": "Welcome to Hearth",
+    "setupFlowWelcomeTitle": "Welcome to Hearth TV",
     "@setupFlowWelcomeTitle": {
         "description": "Setup flow: first screen's title"
     },
@@ -3290,19 +3290,19 @@
     "@setupFlowFixFailedBody": {
         "description": "Setup flow: why Hearth's own fix didn't run; \"Allow debugging?\", Always allow and Developer options are Android's own labels"
     },
-    "setupFlowHomeAppTitle": "Make Hearth your home app",
+    "setupFlowHomeAppTitle": "Make Hearth TV your home app",
     "@setupFlowHomeAppTitle": {
         "description": "Setup flow: the default home app step's title"
     },
-    "setupFlowHomeAppBody": "Android will show a list of home apps. Choose Hearth. It keeps kids profiles from blocking Hearth.",
+    "setupFlowHomeAppBody": "Android will show a list of home apps. Choose Hearth TV. It keeps kids profiles from blocking Hearth TV.",
     "@setupFlowHomeAppBody": {
         "description": "Setup flow: the default home app step"
     },
-    "setupFlowChooseHearth": "Choose Hearth",
+    "setupFlowChooseHearth": "Choose Hearth TV",
     "@setupFlowChooseHearth": {
         "description": "Setup flow: button that opens Android's home app choice"
     },
-    "setupFlowHomeAppDone": "Hearth is your home app",
+    "setupFlowHomeAppDone": "Hearth TV is your home app",
     "@setupFlowHomeAppDone": {
         "description": "Setup flow: Hearth is the default home app; also a line in the final summary"
     },
@@ -3310,7 +3310,7 @@
     "@setupFlowNotChosenTitle": {
         "description": "Setup flow: back from Android's home app choice, Hearth isn't the home app"
     },
-    "setupFlowFinishTitle": "Hearth is ready",
+    "setupFlowFinishTitle": "Hearth TV is ready",
     "@setupFlowFinishTitle": {
         "description": "Setup flow: last screen's title"
     },
@@ -3339,7 +3339,7 @@
     "@setupFlowGoHome": {
         "description": "Setup flow: last screen's main button"
     },
-    "setupHearthTitle": "Set up Hearth",
+    "setupHearthTitle": "Set up Hearth TV",
     "@setupHearthTitle": {
         "description": "Settings > System: the page that runs the setup flow again and lists what Hearth needs from Android"
     },
@@ -3495,11 +3495,11 @@
     "@setupFlowUpdatesIncluded2": {
         "description": "Setup flow: Updates card, second thing it includes"
     },
-    "setupFlowInstallTitle": "Allow Hearth to install updates",
+    "setupFlowInstallTitle": "Allow Hearth TV to install updates",
     "@setupFlowInstallTitle": {
         "description": "Setup flow: Updates card, the step that opens Android's Install unknown apps screen"
     },
-    "setupFlowInstallBody": "On the next screen, find Hearth and turn it on, then press Back.",
+    "setupFlowInstallBody": "On the next screen, find Hearth TV and turn it on, then press Back.",
     "@setupFlowInstallBody": {
         "description": "Setup flow: Updates card, what to do on Android's Install unknown apps screen"
     },
@@ -3544,7 +3544,7 @@
     "@setupFlowLookOtherBody": {
         "description": "Look screen on an adult's first visit to their own profile"
     },
-    "setupLookHearth": "Hearth",
+    "setupLookHearth": "Hearth TV",
     "@setupLookHearth": {
         "description": "Look screen: Hearth's own look (purple, a purple-teal gradient); \"Hearth\" is the app's name"
     },

@@ -1,6 +1,6 @@
-# Hearth's profile provider: the contract
+# Hearth TV's profile provider: the contract
 
-Hearth shares its state with other apps (today: HearthTube) through one content provider. This page is the
+Hearth TV shares its state with other apps (today: HearthTube) through one content provider. This page is the
 contract: what each column means, when it changes, and what callers may rely on. The provider's `contract_version`
 column says which version of this page it implements.
 
@@ -12,34 +12,34 @@ are never reused for a different meaning.
 
 ## Where
 
-- Authority: `com.thesiegs.hearth.profile` (debug builds: `com.thesiegs.hearth.debug.profile`). Hearth up to
+- Authority: `com.thesiegs.hearth.profile` (debug builds: `com.thesiegs.hearth.debug.profile`). Hearth TV up to
   2026.10.x answered the same contract at `com.leanbitlab.ltvL.profile`; a client that still accepts it is harmless
 .
 - `content://com.thesiegs.hearth.profile/active`: one row, the columns below. Since version 9 only for
-  `com.thesiegs.hearthtube` signed with Hearth's release certificate (below; the row says who is on and whether it's a
+  `com.thesiegs.hearthtube` signed with Hearth TV's release certificate (below; the row says who is on and whether it's a
   kid); anyone else gets the columns with no row.
-- `content://com.thesiegs.hearth.profile/wallpaper`: Hearth's current wallpaper picture, read-only
-  (`FileNotFoundException` when Hearth shows a gradient instead). Since version 5 only for `com.thesiegs.hearthtube`
-  signed with Hearth's release certificate (a picked wallpaper may be a family photo); anyone else gets
-  `FileNotFoundException`. How HearthTube shows Hearth's wallpaper: docs/wallpaper-sync.md.
+- `content://com.thesiegs.hearth.profile/wallpaper`: Hearth TV's current wallpaper picture, read-only
+  (`FileNotFoundException` when Hearth TV shows a gradient instead). Since version 5 only for `com.thesiegs.hearthtube`
+  signed with Hearth TV's release certificate (a picked wallpaper may be a family photo); anyone else gets
+  `FileNotFoundException`. How HearthTube shows Hearth TV's wallpaper: docs/wallpaper-sync.md.
 - Observers registered on `/active` are notified whenever a column changes.
 
-**In the owner's user, and in profiles through Hearth's agent.** Android refuses provider access across users,
-so an app running in a Google TV profile user (a kid's own copy of an app) can't reach Hearth, which runs in the
-owner's user (0). Where a parent has approved Hearth for that profile, Hearth runs there as the profile's agent and
-its provider answers with Hearth's own row as Hearth last sent it, except: `service_running` is 1 only while the
-agent is connected to Hearth, and the `wallpaper_*` columns and `/wallpaper` are that profile's own wallpaper, the
-one Hearth shows for it (its picture, Bing's photo or its gradient), with the same meanings and the same
-`wallpaper_version` as in the owner's user. Hearth sends each profile's agent only that profile's wallpaper, a
+**In the owner's user, and in profiles through Hearth TV's agent.** Android refuses provider access across users,
+so an app running in a Google TV profile user (a kid's own copy of an app) can't reach Hearth TV, which runs in the
+owner's user (0). Where a parent has approved Hearth TV for that profile, Hearth TV runs there as the profile's agent and
+its provider answers with Hearth TV's own row as Hearth TV last sent it, except: `service_running` is 1 only while the
+agent is connected to Hearth TV, and the `wallpaper_*` columns and `/wallpaper` are that profile's own wallpaper, the
+one Hearth TV shows for it (its picture, Bing's photo or its gradient), with the same meanings and the same
+`wallpaper_version` as in the owner's user. Hearth TV sends each profile's agent only that profile's wallpaper, a
 picture as a JPEG of at most 1920x1080 (center-cropped like the screen shows it), and only while that profile's
 settings are the ones in place; `/active` observers there are notified when it arrives. Until the agent has a
 picture's current version (just after a switch, or a picture too big to send) it reports `wallpaper_kind`
-"gradient" with that profile's `wallpaper_gradient`, and before Hearth has sent it anything, Hearth's gradient with
+"gradient" with that profile's `wallpaper_gradient`, and before Hearth TV has sent it anything, Hearth TV's gradient with
 null `wallpaper_brightness`, `wallpaper_title` and `wallpaper_credit`. `wallpaper_stamp` there is the cached
-picture's file time, 0 for a gradient. `verify_parent_pin` is relayed to Hearth (the PIN never leaves it) and returns null when Hearth doesn't
-answer within a few seconds. Without an agent, a Hearth installed there answers with defaults only.
+picture's file time, 0 for a gradient. `verify_parent_pin` is relayed to Hearth TV (the PIN never leaves it) and returns null when Hearth TV doesn't
+answer within a few seconds. Without an agent, a Hearth TV installed there answers with defaults only.
 
-**Checking it's really Hearth.** The provider belongs to `com.thesiegs.hearth` (`.debug` for debug builds; up to
+**Checking it's really Hearth TV.** The provider belongs to `com.thesiegs.hearth` (`.debug` for debug builds; up to
 2026.10.x `com.leanbitlab.ltvL`) signed with one of:
 - release: `243bf074648ab3bfebb260d129e7c8203b407ca7677507ce93dbe72b02396d4c` (CN=Hearth, O=theSiegs; from
   2026.10.10. Earlier builds used `0438047b1a5eefe8693cad8f2b57189a418337bbcbd3c7dbdb79d20884beaf6e`, which a
@@ -52,72 +52,72 @@ answer within a few seconds. Without an agent, a Hearth installed there answers 
 
 | Column | Type | Meaning |
 |---|---|---|
-| `name` | text or null | The active Google TV profile's name as Google TV's profile chooser shows it ("Alex"). Null while Hearth hasn't learned it yet (each profile is named the first time the chooser shows it) or can't tell. For display only: key things by `profile_id`. |
-| `profile_id` | text or null | The active profile's lasting key: `user:<serial>` of its Google TV profile user (`user:0` is the TV owner), and for another adult's Google account in that same user `user:<serial>:<account>` (`user:0:sam`): adults' profiles share the owner's user, one per account. Set before `name` is known and unchanged when the profile is renamed. What to save per-profile things under; treat it as opaque. Null until Hearth has read it. |
+| `name` | text or null | The active Google TV profile's name as Google TV's profile chooser shows it ("Alex"). Null while Hearth TV hasn't learned it yet (each profile is named the first time the chooser shows it) or can't tell. For display only: key things by `profile_id`. |
+| `profile_id` | text or null | The active profile's lasting key: `user:<serial>` of its Google TV profile user (`user:0` is the TV owner), and for another adult's Google account in that same user `user:<serial>:<account>` (`user:0:sam`): adults' profiles share the owner's user, one per account. Set before `name` is known and unchanged when the profile is renamed. What to save per-profile things under; treat it as opaque. Null until Hearth TV has read it. |
 | `kids_profile` | 0/1 | 1 in a Google TV kids profile: the active profile user carries Family Link's supervision restrictions. Independent of which apps a parent approved, and of screen time. |
-| `screen_time_up` | 0/1 | 1 while Google TV's kids screen time is up (bedtime, daily limit): seen from its time's-up / bedtime screens, or from the kid's approved apps being blocked in the kid's own profile user. Back to 0 when they're unblocked (bedtime over, bonus time) or the profile changes. Kept across Hearth restarts. Always 0 outside kids profiles. |
-| `service_running` | 0/1 | 1 while Hearth's accessibility service runs. Without it Hearth sees no profile switches and no screen time, so `profile_id`, `name`, `kids_profile` and `screen_time_up` can't be trusted: treat 0 as "Hearth isn't watching". |
-| `has_parent_pin` | 0/1 | Hearth has a parent PIN (Settings → Family → Parent PIN); `verify_parent_pin` can check one. |
-| `accent_color` | text or null | Hearth's accent color as `RRGGBB` hex ("7C4DFF"), or null for Hearth's default. |
-| `time_format` | text | Clock format as an ICU / intl pattern; Hearth's default "h:mm a" when never changed. |
-| `date_format` | text | Date format as an ICU / intl pattern; Hearth's default "EEE, MMM d" when never changed. |
-| `app_language` | text | Hearth's language ("de", "pt-BR"…), or "" to follow the system's. |
-| `gradient_uuid` | text or null | The gradient Hearth shows when it has no wallpaper picture. |
-| `wallpaper_stamp` | integer | Changes whenever the wallpaper picture does (its file time); 0 when Hearth shows a gradient. Re-read `/wallpaper` when it changes. |
-| `profile_ready` | 0/1 | 1 once Hearth's home is complete for the active profile after a switch or start: its layout restored, its Continue Watching read, and (for a profile other than the owner's) its Hearth agent heard from, or 4 seconds passed. Back to 0 at the next switch. Act on profile-specific state when this turns 1, not on the first change of `profile_id`. |
-| `switch_generation` | integer | Goes up by one at every profile switch (and when Hearth starts). Tells a new visit to a profile from the same one. |
-| `updates_hearthtube` | 0/1 | 1 while Hearth keeps HearthTube up to date: automatic companion updates are on (Settings → System → Updates, **Update automatically**; on by default when Hearth installed HearthTube) and Hearth is HearthTube's installer of record, so Android lets it update without asking. HearthTube's own updater steps aside meanwhile. Changes when the setting does or HearthTube is installed or updated. |
-| `wallpaper_kind` | text | What Hearth's home shows behind everything: "picture" (a picked picture, the day or night one resolved for the time now), "bing" (Bing's photo of the day) or "gradient". For "picture" and "bing", `/wallpaper` opens that file. |
+| `screen_time_up` | 0/1 | 1 while Google TV's kids screen time is up (bedtime, daily limit): seen from its time's-up / bedtime screens, or from the kid's approved apps being blocked in the kid's own profile user. Back to 0 when they're unblocked (bedtime over, bonus time) or the profile changes. Kept across Hearth TV restarts. Always 0 outside kids profiles. |
+| `service_running` | 0/1 | 1 while Hearth TV's accessibility service runs. Without it Hearth TV sees no profile switches and no screen time, so `profile_id`, `name`, `kids_profile` and `screen_time_up` can't be trusted: treat 0 as "Hearth TV isn't watching". |
+| `has_parent_pin` | 0/1 | Hearth TV has a parent PIN (Settings → Family → Parent PIN); `verify_parent_pin` can check one. |
+| `accent_color` | text or null | Hearth TV's accent color as `RRGGBB` hex ("7C4DFF"), or null for Hearth TV's default. |
+| `time_format` | text | Clock format as an ICU / intl pattern; Hearth TV's default "h:mm a" when never changed. |
+| `date_format` | text | Date format as an ICU / intl pattern; Hearth TV's default "EEE, MMM d" when never changed. |
+| `app_language` | text | Hearth TV's language ("de", "pt-BR"…), or "" to follow the system's. |
+| `gradient_uuid` | text or null | The gradient Hearth TV shows when it has no wallpaper picture. |
+| `wallpaper_stamp` | integer | Changes whenever the wallpaper picture does (its file time); 0 when Hearth TV shows a gradient. Re-read `/wallpaper` when it changes. |
+| `profile_ready` | 0/1 | 1 once Hearth TV's home is complete for the active profile after a switch or start: its layout restored, its Continue Watching read, and (for a profile other than the owner's) its Hearth TV agent heard from, or 4 seconds passed. Back to 0 at the next switch. Act on profile-specific state when this turns 1, not on the first change of `profile_id`. |
+| `switch_generation` | integer | Goes up by one at every profile switch (and when Hearth TV starts). Tells a new visit to a profile from the same one. |
+| `updates_hearthtube` | 0/1 | 1 while Hearth TV keeps HearthTube up to date: automatic companion updates are on (Settings → System → Updates, **Update automatically**; on by default when Hearth TV installed HearthTube) and Hearth TV is HearthTube's installer of record, so Android lets it update without asking. HearthTube's own updater steps aside meanwhile. Changes when the setting does or HearthTube is installed or updated. |
+| `wallpaper_kind` | text | What Hearth TV's home shows behind everything: "picture" (a picked picture, the day or night one resolved for the time now), "bing" (Bing's photo of the day) or "gradient". For "picture" and "bing", `/wallpaper` opens that file. |
 | `wallpaper_version` | integer | Changes whenever what `wallpaper_kind` names does: another picture, the same one replaced (a new pick, a new day's Bing photo), day turning to night, another gradient while one shows. Positive. Re-open `/wallpaper` (or redraw the gradient) when it changes. |
-| `wallpaper_brightness` | real or null | How light the wallpaper is, 0 (black) to 1 (white): the picture's average luminance as Hearth measured it, or the gradient's. Null until Hearth has measured what's shown now (for a moment after a change, or after day turns to night while Hearth wasn't running). Hearth darkens its row titles' pills the lighter it is. |
-| `wallpaper_gradient` | text (JSON) or null | Hearth's gradient: shown when `wallpaper_kind` is "gradient", and what Hearth falls back to otherwise. `{"type": "linear" or "radial", "colors": ["#AARRGGBB", ...], "stops": [0..1, ...] or null (evenly spaced), "rotation": radians clockwise about the screen's center, "brightness": 0..1}`, plus for linear `"begin"` and `"end"` and for radial `"center"` as `{"x", "y"}` alignments (-1..1 across the screen, x right, y down) and `"radius"` (a fraction of the screen's shorter side). Null before Hearth has described the chosen gradient (a moment after a change, or a Hearth not opened since it was updated). |
-| `wallpaper_title` | text or null | When `wallpaper_kind` is "bing": the photo's title as Bing gives it ("A quiet lake"). Otherwise null; also null for a photo fetched before Hearth kept titles. |
+| `wallpaper_brightness` | real or null | How light the wallpaper is, 0 (black) to 1 (white): the picture's average luminance as Hearth TV measured it, or the gradient's. Null until Hearth TV has measured what's shown now (for a moment after a change, or after day turns to night while Hearth TV wasn't running). Hearth TV darkens its row titles' pills the lighter it is. |
+| `wallpaper_gradient` | text (JSON) or null | Hearth TV's gradient: shown when `wallpaper_kind` is "gradient", and what Hearth TV falls back to otherwise. `{"type": "linear" or "radial", "colors": ["#AARRGGBB", ...], "stops": [0..1, ...] or null (evenly spaced), "rotation": radians clockwise about the screen's center, "brightness": 0..1}`, plus for linear `"begin"` and `"end"` and for radial `"center"` as `{"x", "y"}` alignments (-1..1 across the screen, x right, y down) and `"radius"` (a fraction of the screen's shorter side). Null before Hearth TV has described the chosen gradient (a moment after a change, or a Hearth TV not opened since it was updated). |
+| `wallpaper_title` | text or null | When `wallpaper_kind` is "bing": the photo's title as Bing gives it ("A quiet lake"). Otherwise null; also null for a photo fetched before Hearth TV kept titles. |
 | `wallpaper_credit` | text or null | When `wallpaper_kind` is "bing": Bing's caption and credit for the photo ("A quiet lake at dawn (© Photographer/Agency)"), to show where the photo is credited. Otherwise null. |
-| `youtube_minutes_left` | integer or null | The active profile's YouTube minutes left today. Hearth works it out itself: the daily limit set for a kids profile in Hearth (Settings → Family → Kids profiles → the kid → YouTube time per day; adults have none) less what HearthTube reported playing for it today (`report_playing`). With Home Assistant set up (optional), its say counts too (entity `sensor.hearth_allowance`, its attribute `profiles` or else its state as JSON → this profile's `profile_id` → `youtube_minutes_left`, e.g. a pool shared with the family's other devices; a TV paired with Hearth's integration takes instead the fewest minutes left in any of the profile's groups holding HearthTube, from its status answers) and the smaller wins. Null when there's no limit. At 0 HearthTube stops playing. |
+| `youtube_minutes_left` | integer or null | The active profile's YouTube minutes left today. Hearth TV works it out itself: the daily limit set for a kids profile in Hearth TV (Settings → Family → Kids profiles → the kid → YouTube time per day; adults have none) less what HearthTube reported playing for it today (`report_playing`). With Home Assistant set up (optional), its say counts too (entity `sensor.hearth_allowance`, its attribute `profiles` or else its state as JSON → this profile's `profile_id` → `youtube_minutes_left`, e.g. a pool shared with the family's other devices; a TV paired with Hearth's integration takes instead the fewest minutes left in any of the profile's groups holding HearthTube, from its status answers) and the smaller wins. Null when there's no limit. At 0 HearthTube stops playing. |
 | `schedule_locked` | 0/1 | 1 while Home Assistant says the active profile's schedule is locked (bedtime, school time: `schedule_locked` in the same entry). HearthTube doesn't play then. 0 when not, or not known. |
 | `allowance_message` | text or null | What to tell the viewer when it stops, if Home Assistant gives one (`message` in the same entry): set when Home Assistant's minutes are the ones that count, or it locks. |
-| `allowance_checked_at` | integer or null | When Hearth last read the allowance from Home Assistant (epoch ms), today; null when it hasn't today (not set up, unreachable, or a new day). Hearth reads it every minute or so and at each profile change; after a failed read it tries again within 10 minutes. How old a value may be before it no longer counts is the caller's choice. |
-| `allowance_source` | text or null | Whose minutes `youtube_minutes_left` are: "hearth" (the limit set in Hearth) or "home_assistant"; "home_assistant" too when there are no minutes but Home Assistant locks; null when there's neither. A lock is always Home Assistant's. |
-| `ha_share_now_playing` | 0/1 or null | Whether HearthTube may tell Home Assistant what's playing (the video's title and channel, through its media session): Hearth asks it in Home Assistant's setup and in Settings → Home Assistant. Null when it was never asked; HearthTube then keeps its own default (on). A change in HearthTube's own settings stands until this value changes. |
-| `parent_blocks` | text (JSON) or null | What a parent has blocked in HearthTube for the active profile: `{"videos": ["<video id>", ...], "channels": ["<channel id>", ...], "words": ["<lower case word>", ...]}`. The union of what is set in Hearth itself and what Home Assistant's integration says (when it's set up); null when nothing is blocked. HearthTube applies them in a kids profile and doesn't let the kid undo them. In a profile's agent, as Hearth last sent it. |
+| `allowance_checked_at` | integer or null | When Hearth TV last read the allowance from Home Assistant (epoch ms), today; null when it hasn't today (not set up, unreachable, or a new day). Hearth TV reads it every minute or so and at each profile change; after a failed read it tries again within 10 minutes. How old a value may be before it no longer counts is the caller's choice. |
+| `allowance_source` | text or null | Whose minutes `youtube_minutes_left` are: "hearth" (the limit set in Hearth TV) or "home_assistant"; "home_assistant" too when there are no minutes but Home Assistant locks; null when there's neither. A lock is always Home Assistant's. |
+| `ha_share_now_playing` | 0/1 or null | Whether HearthTube may tell Home Assistant what's playing (the video's title and channel, through its media session): Hearth TV asks it in Home Assistant's setup and in Settings → Home Assistant. Null when it was never asked; HearthTube then keeps its own default (on). A change in HearthTube's own settings stands until this value changes. |
+| `parent_blocks` | text (JSON) or null | What a parent has blocked in HearthTube for the active profile: `{"videos": ["<video id>", ...], "channels": ["<channel id>", ...], "words": ["<lower case word>", ...]}`. The union of what is set in Hearth TV itself and what Home Assistant's integration says (when it's set up); null when nothing is blocked. HearthTube applies them in a kids profile and doesn't let the kid undo them. In a profile's agent, as Hearth TV last sent it. |
 | `parent_blocks_version` | integer | Goes up whenever `parent_blocks` changes for any profile (0 before the first change). Observers on `/active` are notified. |
-| `kid_unblocks` | text (JSON) or null | What a parent took back in Hearth of what the active kids profile hid or blocked itself: `{"videos": [keys], "channels": [keys], "words": [...]}` (a channel's key is its id, or its name when it was blocked without one). HearthTube takes each back from its own lists (never the parent's); once its next `report_kid_blocks` no longer has one, Hearth drops it. Null when there is nothing to take back. Observers on `/active` are notified when a parent takes one back. |
-| `contract_version` | integer | This page's version (10). Missing on Hearth builds from before version 2. |
+| `kid_unblocks` | text (JSON) or null | What a parent took back in Hearth TV of what the active kids profile hid or blocked itself: `{"videos": [keys], "channels": [keys], "words": [...]}` (a channel's key is its id, or its name when it was blocked without one). HearthTube takes each back from its own lists (never the parent's); once its next `report_kid_blocks` no longer has one, Hearth TV drops it. Null when there is nothing to take back. Observers on `/active` are notified when a parent takes one back. |
+| `contract_version` | integer | This page's version (10). Missing on Hearth TV builds from before version 2. |
 
-None of these are secret: everything is on screen in Hearth.
+None of these are secret: everything is on screen in Hearth TV.
 
 ## Calls
 
-`call(uri /active, "verify_parent_pin", pin, null)`: checks a PIN against Hearth's parent PIN (with Home Assistant's
+`call(uri /active, "verify_parent_pin", pin, null)`: checks a PIN against Hearth TV's parent PIN (with Home Assistant's
 adults' PINs set, any of those, checked by Home Assistant when it's reachable) without handing out the PIN or its hash.
-Only for `com.thesiegs.hearthtube` signed with Hearth's release certificate above; anyone else gets null. Returns a Bundle: `ok` (boolean), and when locked, `wait_seconds` (int): five wrong tries lock checks for
+Only for `com.thesiegs.hearthtube` signed with Hearth TV's release certificate above; anyone else gets null. Returns a Bundle: `ok` (boolean), and when locked, `wait_seconds` (int): five wrong tries lock checks for
 a minute.
 
 `call(uri /active, "report_playing", null, extras {"ms": long})`: HearthTube played that long (milliseconds, at most
 10 minutes per call) for the active profile; its YouTube allowance counts down from it. Call it every 30 seconds or
 so while playing and when playback stops. Same callers as above; returns a Bundle with `ok` true. In a profile's
-agent it's passed on to Hearth, and returns null when it couldn't be (Hearth not connected): report that time again
+agent it's passed on to Hearth TV, and returns null when it couldn't be (Hearth TV not connected): report that time again
 later. Observers on `/active` are told when a report changes `youtube_minutes_left`, not at every report.
 
 `call(uri /active, "report_started", null, extras {"time_ms": long, "video_id": string, "title": string, "channel": string, "channel_id": string})`:
-HearthTube started a video in a kids profile (time in epoch milliseconds). Hearth keeps it in that profile's log of started
+HearthTube started a video in a kids profile (time in epoch milliseconds). Hearth TV keeps it in that profile's log of started
 videos (the newest 2,000; the same `time_ms` and `video_id` twice is one entry, so a resend is harmless) for a parent to
-read, and sends it to Home Assistant when that is set up. Hearth works without Home Assistant. `title`, `channel` and
+read, and sends it to Home Assistant when that is set up. Hearth TV works without Home Assistant. `title`, `channel` and
 `channel_id` may be empty. Same callers as above; returns a Bundle with `ok` true, or null for a start that isn't valid
-(no time, an id that isn't a video id). In a profile's agent it's passed on to Hearth and returns null when it couldn't be
-(Hearth not connected): HearthTube keeps the entry and sends it again later.
+(no time, an id that isn't a video id). In a profile's agent it's passed on to Hearth TV and returns null when it couldn't be
+(Hearth TV not connected): HearthTube keeps the entry and sends it again later.
 
 `call(uri /active, "report_kid_blocks", null, extras {"blocks": string})`: what a kids profile hid or blocked itself in
 HearthTube (Not interested, Don't show this creator, its own blocked words), the whole of it each time it changes:
 `{"videos": [{"key", "label"}], "channels": [{"key", "id", "label"}], "words": [...]}`, each list at most 500, the JSON
-at most 256 KB. Hearth keeps the latest per profile for a parent to see in its settings, and to take one back
+at most 256 KB. Hearth TV keeps the latest per profile for a parent to see in its settings, and to take one back
 (`kid_unblocks`). Same callers as above; returns a Bundle with `ok` true, null when it isn't JSON or is too big. In a
-profile's agent it's passed on to Hearth and returns null when it couldn't be (Hearth not connected): send it again later.
+profile's agent it's passed on to Hearth TV and returns null when it couldn't be (Hearth TV not connected): send it again later.
 
-## Asking for Hearth's time's up card (an intent)
+## Asking for Hearth TV's time's up card (an intent)
 
 Not a provider column or call, so the version stays 10. An app whose time is up (HearthTube's "Ask for more time")
-starts Hearth's time's up card, the one a kid sees after picking a held app on Hearth's home, with "ask for more" and
+starts Hearth TV's time's up card, the one a kid sees after picking a held app on Hearth TV's home, with "ask for more" and
 its usual cooldown and already-open handling:
 
 ```java
@@ -129,33 +129,33 @@ Intent intent = new Intent("com.thesiegs.hearth.action.TIME_UP")
 if (context.getPackageManager().resolveActivity(intent, 0) != null) context.startActivity(intent);
 ```
 
-- **Action** `com.thesiegs.hearth.action.TIME_UP`, category default, aimed at `com.thesiegs.hearth`; Hearth releases after
-  2026.11.07 answer it (`resolveActivity` says whether this Hearth does). Exported without a permission: it can only
-  bring up Hearth's home and that card.
-- **Extras** (strings): `package`, the held app's package name; `group`, optional, a Hearth group id (`youtube`,
+- **Action** `com.thesiegs.hearth.action.TIME_UP`, category default, aimed at `com.thesiegs.hearth`; Hearth TV releases after
+  2026.11.07 answer it (`resolveActivity` says whether this Hearth TV does). Exported without a permission: it can only
+  bring up Hearth TV's home and that card.
+- **Extras** (strings): `package`, the held app's package name; `group`, optional, a Hearth TV group id (`youtube`,
   `all`, as the Hearth integration names groups). A `package` that isn't a package name or isn't installed is ignored,
   and so is a `group` that isn't an id or isn't out of time today for the active profile.
-- **What happens:** Hearth's home comes to the front. If the active kids profile is out of time for that group (or, with
+- **What happens:** Hearth TV's home comes to the front. If the active kids profile is out of time for that group (or, with
   no usable `group`, for the app: its group's time, a family pause or a lock, or for HearthTube its YouTube minutes,
-  Hearth's own limit included), the card shows for it. If nothing holds it, only the home opens, with no card. Never in
+  Hearth TV's own limit included), the card shows for it. If nothing holds it, only the home opens, with no card. Never in
   an adult's profile.
-- **From a kids profile's own user** (where HearthTube runs): start it there as above. Hearth in that user is the
-  profile's agent; it passes the request to Hearth in the TV owner's user over the agent's connection, and that Hearth
+- **From a kids profile's own user** (where HearthTube runs): start it there as above. Hearth TV in that user is the
+  profile's agent; it passes the request to Hearth TV in the TV owner's user over the agent's connection, and that Hearth TV
   brings up the home and the card (only for the profile in front). An app in the kids user can't start the owner's home
   itself, which is why it goes through the agent. If the agent isn't connected, nothing shows (logged as HearthTimeUp)
   and the agent is started for the next try.
-- HearthTube needs Hearth visible to it (`<queries>` with `<package android:name="com.thesiegs.hearth" />`), which it
+- HearthTube needs Hearth TV visible to it (`<queries>` with `<package android:name="com.thesiegs.hearth" />`), which it
   already has for this provider.
 
 ## Proposed: playing a video from Home Assistant
 
 Not built; no column or call changes, so the version stays 10. Home Assistant's `hearth.play_on_tv` hands a paired TV a
 one-shot command in its state document ([home-assistant-integration.md](home-assistant-integration.md#play-on-a-tv)).
-For a YouTube video (`video_id`) Hearth starts HearthTube itself, the way it opens a search result in its app: an
+For a YouTube video (`video_id`) Hearth TV starts HearthTube itself, the way it opens a search result in its app: an
 `ACTION_VIEW` of `https://www.youtube.com/watch?v=<video_id>` aimed at `com.thesiegs.hearthtube`, in the profile the
-command names, after Hearth has switched to it and `profile_ready` is 1. Nothing new is asked of HearthTube: it plays a
+command names, after Hearth TV has switched to it and `profile_ready` is 1. Nothing new is asked of HearthTube: it plays a
 link as it does today, and holds the video to the active profile's `parent_blocks`, `youtube_minutes_left` and
-`schedule_locked` as for any other video. Hearth refuses the command before starting HearthTube when the profile's
+`schedule_locked` as for any other video. Hearth TV refuses the command before starting HearthTube when the profile's
 YouTube time is used up or it is locked, so the kid isn't shown a video that stops at once. If HearthTube later wants
 to tell such a start apart (to say "Sent from Home Assistant", say), that is an added intent extra, still no new
 version here.
@@ -163,30 +163,30 @@ version here.
 ## History
 
 - **10** (2026-10-28): added `kid_unblocks` and the `report_kid_blocks` call (a kids profile's own hides up, a parent's
-  "show it again" down). Also in a profile's agent, as Hearth sends it.
+  "show it again" down). Also in a profile's agent, as Hearth TV sends it.
 
 - **9** (2026-10-28): no column changes. `/active` answers only HearthTube (signed as below), like `/wallpaper`
   and the calls; any other app gets no row.
 - **8** (2026-10-27): added `parent_blocks`, `parent_blocks_version` and the `report_started` call (a kids profile's
-  started videos up, the parent's blocked videos, channels and words down). Also in a profile's agent, as Hearth sends it.
+  started videos up, the parent's blocked videos, channels and words down). Also in a profile's agent, as Hearth TV sends it.
 - **7** (2026-10-14): added `ha_share_now_playing` (Home Assistant's setup question for HearthTube's now playing).
-  Also in a profile's agent, as Hearth sends it.
+  Also in a profile's agent, as Hearth TV sends it.
 - **6** (2026-10-10): added `youtube_minutes_left`, `schedule_locked`, `allowance_message`, `allowance_checked_at`,
-  `allowance_source` (the active profile's YouTube allowance: Hearth's own limit, and Home Assistant's if set up), and
-  the `report_playing` call. Also in a profile's agent, as Hearth sends it.
-- **5, new app id** (2026-10): no column changes. Hearth's app id is `com.thesiegs.hearth`, so the authority is
-  `com.thesiegs.hearth.profile` (Hearth up to 2026.10.x: `com.leanbitlab.ltvL.profile`).
+  `allowance_source` (the active profile's YouTube allowance: Hearth TV's own limit, and Home Assistant's if set up), and
+  the `report_playing` call. Also in a profile's agent, as Hearth TV sends it.
+- **5, new app id** (2026-10): no column changes. Hearth TV's app id is `com.thesiegs.hearth`, so the authority is
+  `com.thesiegs.hearth.profile` (Hearth TV up to 2026.10.x: `com.leanbitlab.ltvL.profile`).
 - **5** (2026-10-09): added `wallpaper_kind`, `wallpaper_version`, `wallpaper_brightness`, `wallpaper_gradient`,
   `wallpaper_title`, `wallpaper_credit`; observers on `/active` are told when the wallpaper changes. `/wallpaper`
   only opens for HearthTube with a trusted signature. In a profile's agent, the wallpaper columns and `/wallpaper`
   are that profile's own wallpaper (same columns and meanings, so no new version for it).
 - **4** (2026-10-07): added `updates_hearthtube`. `profile_ready` also turns 1 at most 4 s after a change with
-  Hearth off screen.
+  Hearth TV off screen.
 - **3** (2026-10-07): added `profile_ready` and `switch_generation`.
 - **2** (2026-10-07): added `service_running`, `profile_id`, `contract_version`. `kids_profile` now means Family Link
   supervision (was: some app is blocked). `screen_time_up` also comes from the kid's approved apps and clears when
   they're unblocked (was: only Google TV's screens, cleared only by a profile switch). `name` may be null after a
-  switch until Hearth learns it. `verify_parent_pin` checks the caller's signing certificate too.
+  switch until Hearth TV learns it. `verify_parent_pin` checks the caller's signing certificate too.
 - **1** (before 2026-10-07, no `contract_version` column): `name`, `accent_color`, `time_format`, `date_format`,
   `app_language`, `has_parent_pin`, `gradient_uuid`, `wallpaper_stamp`, `kids_profile`, `screen_time_up`;
   `verify_parent_pin` by package name.

@@ -159,9 +159,9 @@ void main() {
     addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, null));
     await _pumpWidgetWithProviders(tester, settingsService, _apps(), home: const SystemSettingsPage());
 
-    await tester.ensureVisible(find.text("About Hearth"));
+    await tester.ensureVisible(find.text("About Hearth TV"));
     await tester.pumpAndSettle();
-    await tester.tap(find.text("About Hearth"));
+    await tester.tap(find.text("About Hearth TV"));
     await tester.pumpAndSettle();
     expect(find.byType(HearthAboutDialog), findsOneWidget);
     expect(find.text("This TV: Kitchen TV"), findsOneWidget);

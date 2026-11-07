@@ -29,6 +29,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      # HACS installs the integration from this tag: refuse a release whose manifest version isn't pubspec's.
+      - name: Check integration version
+        run: python3 .github/scripts/integration_version.py
+
       - name: Set up Java
         uses: actions/setup-java@v6
         with:

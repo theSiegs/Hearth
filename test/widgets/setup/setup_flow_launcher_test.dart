@@ -73,26 +73,26 @@ void main() {
 
   testWidgets("a TV Hearth was never set up on: the flow opens by itself", (tester) async {
     await pumpHome(tester);
-    expect(find.text("Welcome to Hearth"), findsOneWidget);
+    expect(find.text("Welcome to Hearth TV"), findsOneWidget);
   });
 
   testWidgets("waits for the first profile check, even when the profile can't be told yet", (tester) async {
     when(profiles.settledOnce).thenReturn(false);
     when(profiles.activeProfileKey).thenReturn(null);
     await pumpHome(tester);
-    expect(find.text("Welcome to Hearth"), findsNothing);
+    expect(find.text("Welcome to Hearth TV"), findsNothing);
 
     when(profiles.settledOnce).thenReturn(true);
     profiles.changed();
     await tester.pumpAndSettle();
-    expect(find.text("Welcome to Hearth"), findsOneWidget);
+    expect(find.text("Welcome to Hearth TV"), findsOneWidget);
   });
 
   testWidgets("an existing install: nothing opens, and it counts as set up", (tester) async {
     channel.homeButtonOn = true;
     channel.homeButtonSeen = true;
     final flow = await pumpHome(tester);
-    expect(find.text("Welcome to Hearth"), findsNothing);
+    expect(find.text("Welcome to Hearth TV"), findsNothing);
     expect(flow.flowVersion, SetupFlowService.currentVersion);
   });
 
@@ -108,7 +108,7 @@ void main() {
     channel.homeButtonSeen = true;
     await prefs.setInt("device_setup_flow_version", 1);
     await pumpHome(tester);
-    expect(find.text("Welcome to Hearth"), findsNothing);
+    expect(find.text("Welcome to Hearth TV"), findsNothing);
     expect(find.text("The update turned the Home button off"), findsNothing);
     expect(find.byKey(const Key("setup_chip")), findsNothing);
   });
@@ -170,7 +170,7 @@ void main() {
       expect(find.text("Finish setting up · 5 left"), findsOneWidget);
       await tester.tap(find.text("Finish setting up · 5 left"));
       await tester.pumpAndSettle();
-      expect(find.text("Make Hearth your home app"), findsOneWidget);
+      expect(find.text("Make Hearth TV your home app"), findsOneWidget);
     });
 
     testWidgets("after an update that added a card: New in Hearth, opening on that card", (tester) async {

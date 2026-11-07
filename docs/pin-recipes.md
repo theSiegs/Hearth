@@ -1,31 +1,31 @@
 # PIN recipes
 
-Hearth types a saved profile PIN into a streaming app by following that app's **recipe**: how to recognise the app's
+Hearth TV types a saved profile PIN into a streaming app by following that app's **recipe**: how to recognise the app's
 PIN screen, how to find and press its keys, how to tell that each digit went in, and how to read the app's answer.
-Recipes are data, run by one engine in Hearth (`DataPinRecipe`), so a recipe broken by an app update can be fixed
-without a Hearth release.
+Recipes are data, run by one engine in Hearth TV (`DataPinRecipe`), so a recipe broken by an app update can be fixed
+without a Hearth TV release.
 
-- Hearth's own recipes ship inside Hearth: `android/app/src/main/assets/pin-recipes.json`.
+- Hearth TV's own recipes ship inside Hearth TV: `android/app/src/main/assets/pin-recipes.json`.
 - A newer copy lives in this repository: [`pin-entry/recipes.json`](../pin-entry/recipes.json) on `master`. Installed
   copies read it at most every 12 hours while a streaming PIN is saved (the same rhythm as
   [`pin-entry/disabled.json`](../pin-entry/README.md)), and keep the last copy that passed every check.
 
 ## When a fetched recipe is used
 
-A recipe from `pin-entry/recipes.json` replaces Hearth's own only when **all** of these hold:
+A recipe from `pin-entry/recipes.json` replaces Hearth TV's own only when **all** of these hold:
 
-1. The whole file passed every check below. One error anywhere and the file is dropped: Hearth's own recipes are used.
-2. It is for an app Hearth already has a recipe for (same `slot` and `package`). A file can't add an app.
-3. Its `version` is higher than Hearth's own recipe for that app.
-4. Its `engine` is no higher than the engine of the Hearth that reads it (newer recipes are skipped, not half-read).
+1. The whole file passed every check below. One error anywhere and the file is dropped: Hearth TV's own recipes are used.
+2. It is for an app Hearth TV already has a recipe for (same `slot` and `package`). A file can't add an app.
+3. Its `version` is higher than Hearth TV's own recipe for that app.
+4. Its `engine` is no higher than the engine of the Hearth TV that reads it (newer recipes are skipped, not half-read).
 5. When it has `appVersions`, the installed app's version code is in that range.
 
 `pin-entry/disabled.json` and the switch in Settings still turn typing off on top of any recipe.
 
 To fix a recipe: copy it in `pin-entry/recipes.json`, change what the app changed, raise its `version` by one, and
-(when the fix is only for new versions of the app) add `appVersions` with `from`. Update Hearth's own copy in the
+(when the fix is only for new versions of the app) add `appVersions` with `from`. Update Hearth TV's own copy in the
 next release with the same version, so the two don't drift. `PinRecipeFileTest` checks that the repository copy
-parses and is never older than Hearth's own.
+parses and is never older than Hearth TV's own.
 
 To try a file on a TV before it's on `master`, push it to a branch of this repository and point the TV at it:
 `adb shell settings put global hearth_pin_recipes_url https://raw.githubusercontent.com/theSiegs/Hearth/<branch>/pin-entry/recipes.json`
@@ -34,14 +34,14 @@ To try a file on a TV before it's on `master`, push it to a branch of this repos
 
 ## What a recipe can and can't do
 
-A recipe only *describes*. Everything Hearth can do with one is built in:
+A recipe only *describes*. Everything Hearth TV can do with one is built in:
 
 - click a key node whose label is a single digit (or, if a recipe says so, set a named PIN field's text to the
   digits typed so far, when a key won't take the click);
 - move the D-pad focus one key at a time and press OK, only once the focused key is confirmed to be the digit;
 - read the app's own window (node text, description, view id, clickable, visible) and what the app says.
 
-It can't name another app (view ids are given without a package; Hearth adds the recipe's own), start anything,
+It can't name another app (view ids are given without a package; Hearth TV adds the recipe's own), start anything,
 open a link, ask for a permission, or use a regular expression. Keys are only pressed in a window of the recipe's
 own app. The same rules as always still hold: never type on a screen the recipe doesn't recognise, confirm every
 digit before the next, one attempt per launch.
@@ -49,8 +49,8 @@ digit before the next, one attempt per launch.
 Checks on a file: at most 64 KiB; `schema` must be `1`; strict types (a number is a whole number, not text; a
 string is a string); every name a recipe uses must be defined; ids are letters, digits and `_`; every value has
 bounds; phrases are lower case; a D-pad layout has each digit once and every route between two digits stays on
-digit keys. Fields Hearth doesn't know are ignored, so a recipe can carry notes. A field that would make an older
-Hearth match *more* screens must come with a higher `engine`, so older copies skip that recipe.
+digit keys. Fields Hearth TV doesn't know are ignored, so a recipe can carry notes. A field that would make an older
+Hearth TV match *more* screens must come with a higher `engine`, so older copies skip that recipe.
 
 ## The format
 
@@ -81,8 +81,8 @@ Hearth match *more* screens must come with a higher `engine`, so older copies sk
 |---|---|
 | `slot` | `profile` (a profile PIN after Profile Pairing picks the profile), `content` (Paramount+'s content PIN) or `google-tv` (Google TV's own PIN screen, after a phone approval) |
 | `package` | The app. Allowed: Disney+, Apple TV, Netflix and HBO Max (`profile`), Paramount+ (`content`), Google TV (`google-tv`) |
-| `version` | Whole number ≥ 1; a fetched recipe needs a higher one than Hearth's own |
-| `engine` | The engine features it needs; this Hearth's is `1` |
+| `version` | Whole number ≥ 1; a fetched recipe needs a higher one than Hearth TV's own |
+| `engine` | The engine features it needs; this Hearth TV's is `1` |
 | `pinLength` | 4-8 |
 | `appVersions` | Optional `{"from": versionCode, "to": versionCode}`, both inclusive and optional |
 | `nodes` | Named nodes, each `{"id": "name"}`: the first node with view id `<package>:id/name` |
@@ -172,12 +172,12 @@ looked for.
 
 ## Not in the data
 
-Kept in Hearth's code, because they're about safety or the TV rather than one app's screen:
+Kept in Hearth TV's code, because they're about safety or the TV rather than one app's screen:
 
 - **When** a PIN may be typed at all (whose PIN, which profile, locks, rejections, pauses; `ProfilePairingService`,
   `ContentPin.whyNot`), the cover card and holding the remote, and the one-attempt state machine
   (`PinEntryMachine`).
 - Noticing Paramount+'s content PIN dialog from its window text (`ContentPin.isDialogText`): it decides when an entry
-  *starts* in an app Hearth didn't open, so a fetched file mustn't widen it.
+  *starts* in an app Hearth TV didn't open, so a fetched file mustn't widen it.
 - The D-pad route between keys (rows first, except into 0's row) and its limits (10 moves a digit, 1.5 s a move).
 - Which apps exist and how their profiles are picked (Profile Pairing).

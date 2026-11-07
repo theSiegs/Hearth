@@ -71,7 +71,7 @@ class FLauncherApp extends StatelessWidget
             GlobalWidgetsLocalizations.delegate
           ],
           supportedLocales: AppLocalizations.supportedLocales,
-          title: 'Hearth',
+          title: 'Hearth TV',
           theme: ThemeData(
             useMaterial3: true,
             brightness: Brightness.dark,

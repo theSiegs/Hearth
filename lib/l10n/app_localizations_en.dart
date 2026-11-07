@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -9,7 +10,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get aboutFlauncher => 'About Hearth';
+  String get aboutFlauncher => 'About Hearth TV';
 
   @override
   String get addSection => 'Add section';
@@ -717,14 +718,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'The first time, the TV asks \"Allow debugging?\" — choose Always allow; that\'s what lets Hearth do the setup.';
 
   @override
-  String get kidsProfilesRemoveTitle => 'Remove Hearth from kids profiles';
+  String get kidsProfilesRemoveTitle => 'Remove Hearth TV from kids profiles';
 
   @override
   String get kidsProfilesRemoveBody =>
       'This takes Hearth and HearthTube off your kids profiles, and Hearth stops adding itself to new ones. Hearth stays on your profile.';
 
   @override
-  String get uninstallHearthTitle => 'Uninstall Hearth';
+  String get uninstallHearthTitle => 'Uninstall Hearth TV';
 
   @override
   String get uninstallHearthBody =>
@@ -1485,7 +1486,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get setupDefaultLauncherTitle => 'Hearth as the home app';
+  String get setupDefaultLauncherTitle => 'Hearth TV as the home app';
 
   @override
   String get setupDefaultLauncherWhy =>
@@ -1493,7 +1494,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get setupDefaultLauncherInstructions =>
-      'On the next screen, choose Hearth.';
+      'On the next screen, choose Hearth TV.';
 
   @override
   String get setupHomeFixTitle => 'Home Button Fix';
@@ -1522,7 +1523,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Lets Hearth update itself and install companion apps.';
 
   @override
-  String get setupInstallInstructions => 'On the next screen, turn on Hearth.';
+  String get setupInstallInstructions =>
+      'On the next screen, turn on Hearth TV.';
 
   @override
   String get setupPairingWhy =>
@@ -2581,7 +2583,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowStripEssentials => 'Essentials';
 
   @override
-  String get setupFlowWelcomeTitle => 'Welcome to Hearth';
+  String get setupFlowWelcomeTitle => 'Welcome to Hearth TV';
 
   @override
   String get setupFlowWelcomeBody =>
@@ -2726,23 +2728,23 @@ class AppLocalizationsEn extends AppLocalizations {
       'Hearth couldn\'t reach the TV\'s debugging. If the TV asked \"Allow debugging?\", choose Always allow and try again. Debugging must stay on in Developer options.';
 
   @override
-  String get setupFlowHomeAppTitle => 'Make Hearth your home app';
+  String get setupFlowHomeAppTitle => 'Make Hearth TV your home app';
 
   @override
   String get setupFlowHomeAppBody =>
-      'Android will show a list of home apps. Choose Hearth. It keeps kids profiles from blocking Hearth.';
+      'Android will show a list of home apps. Choose Hearth TV. It keeps kids profiles from blocking Hearth TV.';
 
   @override
-  String get setupFlowChooseHearth => 'Choose Hearth';
+  String get setupFlowChooseHearth => 'Choose Hearth TV';
 
   @override
-  String get setupFlowHomeAppDone => 'Hearth is your home app';
+  String get setupFlowHomeAppDone => 'Hearth TV is your home app';
 
   @override
   String get setupFlowNotChosenTitle => 'Not chosen yet';
 
   @override
-  String get setupFlowFinishTitle => 'Hearth is ready';
+  String get setupFlowFinishTitle => 'Hearth TV is ready';
 
   @override
   String setupFlowFinishBody(String where) {
@@ -2763,7 +2765,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get setupFlowGoHome => 'Go to my home';
 
   @override
-  String get setupHearthTitle => 'Set up Hearth';
+  String get setupHearthTitle => 'Set up Hearth TV';
 
   @override
   String get setupRunAgain => 'Run setup again';
@@ -2881,11 +2883,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'HearthTube, a YouTube app made for Hearth';
 
   @override
-  String get setupFlowInstallTitle => 'Allow Hearth to install updates';
+  String get setupFlowInstallTitle => 'Allow Hearth TV to install updates';
 
   @override
   String get setupFlowInstallBody =>
-      'On the next screen, find Hearth and turn it on, then press Back.';
+      'On the next screen, find Hearth TV and turn it on, then press Back.';
 
   @override
   String get setupFlowInstallDone => 'Hearth can install updates';
@@ -2919,7 +2921,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Each profile has its own home. Choose how yours looks.';
 
   @override
-  String get setupLookHearth => 'Hearth';
+  String get setupLookHearth => 'Hearth TV';
 
   @override
   String get setupLookPhoto => 'Photo of the day';

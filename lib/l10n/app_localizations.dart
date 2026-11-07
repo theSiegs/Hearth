@@ -97,7 +97,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutFlauncher.
   ///
   /// In en, this message translates to:
-  /// **'About Hearth'**
+  /// **'About Hearth TV'**
   String get aboutFlauncher;
 
   /// No description provided for @addSection.
@@ -1279,7 +1279,7 @@ abstract class AppLocalizations {
   /// Kids profiles page: button and dialog title
   ///
   /// In en, this message translates to:
-  /// **'Remove Hearth from kids profiles'**
+  /// **'Remove Hearth TV from kids profiles'**
   String get kidsProfilesRemoveTitle;
 
   /// Kids profiles page: Remove dialog text
@@ -1291,7 +1291,7 @@ abstract class AppLocalizations {
   /// Settings > System: the last row, and its dialog's title; Hearth off the whole TV
   ///
   /// In en, this message translates to:
-  /// **'Uninstall Hearth'**
+  /// **'Uninstall Hearth TV'**
   String get uninstallHearthTitle;
 
   /// Uninstall Hearth dialog, first paragraph
@@ -2488,7 +2488,7 @@ abstract class AppLocalizations {
   /// Setup & permissions step title: make Hearth the default launcher
   ///
   /// In en, this message translates to:
-  /// **'Hearth as the home app'**
+  /// **'Hearth TV as the home app'**
   String get setupDefaultLauncherTitle;
 
   /// Setup & permissions step: why it matters
@@ -2500,7 +2500,7 @@ abstract class AppLocalizations {
   /// Setup & permissions step: what to do in Android's settings
   ///
   /// In en, this message translates to:
-  /// **'On the next screen, choose Hearth.'**
+  /// **'On the next screen, choose Hearth TV.'**
   String get setupDefaultLauncherInstructions;
 
   /// Setup & permissions step title: Hearth's accessibility service that makes Home open Hearth
@@ -2548,7 +2548,7 @@ abstract class AppLocalizations {
   /// Setup & permissions step: what to do in Android's settings
   ///
   /// In en, this message translates to:
-  /// **'On the next screen, turn on Hearth.'**
+  /// **'On the next screen, turn on Hearth TV.'**
   String get setupInstallInstructions;
 
   /// Setup & permissions step: why Profile Pairing matters
@@ -4266,7 +4266,7 @@ abstract class AppLocalizations {
   /// Setup flow: first screen's title
   ///
   /// In en, this message translates to:
-  /// **'Welcome to Hearth'**
+  /// **'Welcome to Hearth TV'**
   String get setupFlowWelcomeTitle;
 
   /// Setup flow: first screen, what Hearth is in one line
@@ -4518,25 +4518,25 @@ abstract class AppLocalizations {
   /// Setup flow: the default home app step's title
   ///
   /// In en, this message translates to:
-  /// **'Make Hearth your home app'**
+  /// **'Make Hearth TV your home app'**
   String get setupFlowHomeAppTitle;
 
   /// Setup flow: the default home app step
   ///
   /// In en, this message translates to:
-  /// **'Android will show a list of home apps. Choose Hearth. It keeps kids profiles from blocking Hearth.'**
+  /// **'Android will show a list of home apps. Choose Hearth TV. It keeps kids profiles from blocking Hearth TV.'**
   String get setupFlowHomeAppBody;
 
   /// Setup flow: button that opens Android's home app choice
   ///
   /// In en, this message translates to:
-  /// **'Choose Hearth'**
+  /// **'Choose Hearth TV'**
   String get setupFlowChooseHearth;
 
   /// Setup flow: Hearth is the default home app; also a line in the final summary
   ///
   /// In en, this message translates to:
-  /// **'Hearth is your home app'**
+  /// **'Hearth TV is your home app'**
   String get setupFlowHomeAppDone;
 
   /// Setup flow: back from Android's home app choice, Hearth isn't the home app
@@ -4548,7 +4548,7 @@ abstract class AppLocalizations {
   /// Setup flow: last screen's title
   ///
   /// In en, this message translates to:
-  /// **'Hearth is ready'**
+  /// **'Hearth TV is ready'**
   String get setupFlowFinishTitle;
 
   /// Setup flow: last screen; {where} is where the setup page is in Settings ("Settings > System > Set up Hearth")
@@ -4584,7 +4584,7 @@ abstract class AppLocalizations {
   /// Settings > System: the page that runs the setup flow again and lists what Hearth needs from Android
   ///
   /// In en, this message translates to:
-  /// **'Set up Hearth'**
+  /// **'Set up Hearth TV'**
   String get setupHearthTitle;
 
   /// Set up Hearth page: first row, opens the setup flow
@@ -4788,13 +4788,13 @@ abstract class AppLocalizations {
   /// Setup flow: Updates card, the step that opens Android's Install unknown apps screen
   ///
   /// In en, this message translates to:
-  /// **'Allow Hearth to install updates'**
+  /// **'Allow Hearth TV to install updates'**
   String get setupFlowInstallTitle;
 
   /// Setup flow: Updates card, what to do on Android's Install unknown apps screen
   ///
   /// In en, this message translates to:
-  /// **'On the next screen, find Hearth and turn it on, then press Back.'**
+  /// **'On the next screen, find Hearth TV and turn it on, then press Back.'**
   String get setupFlowInstallBody;
 
   /// Setup flow: Updates card, once Hearth may install apps
@@ -4854,7 +4854,7 @@ abstract class AppLocalizations {
   /// Look screen: Hearth's own look (purple, a purple-teal gradient); "Hearth" is the app's name
   ///
   /// In en, this message translates to:
-  /// **'Hearth'**
+  /// **'Hearth TV'**
   String get setupLookHearth;
 
   /// Look screen: the look with Bing's photo of the day as the wallpaper

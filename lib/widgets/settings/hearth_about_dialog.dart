@@ -61,7 +61,7 @@ class HearthAboutDialog extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           const Text(
-            "Hearth",
+            "Hearth TV",
             style: TextStyle(
               color: Colors.white,
               fontSize: 20,

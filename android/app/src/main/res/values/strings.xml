@@ -3,7 +3,7 @@
 <resources>
     <!-- Home Assistant notifications over whatever is playing (HaNotificationOverlay) -->
     <string name="ha_notification_close">Close</string>
-    <string name="ha_notification_test_message">Test notification from Hearth</string>
+    <string name="ha_notification_test_message">Test notification from Hearth TV</string>
     <!-- The name Home Assistant's notifications show under in the notification Bell (HearthBellItems) -->
     <string name="ha_notification_bell_app">Home Assistant</string>
 
@@ -13,7 +13,7 @@
     <string name="ha_panel_not_set_up_detail">Add the Home Assistant address and an access token in Settings → Home Assistant.</string>
 
     <!-- The phone page that sends the Home Assistant address and token to the TV (HaSetupServer) -->
-    <string name="ha_setup_title">Connect Hearth to Home Assistant</string>
+    <string name="ha_setup_title">Connect Hearth TV to Home Assistant</string>
     <string name="ha_setup_address_label">Home Assistant address</string>
     <string name="ha_setup_token_label">Long-lived access token</string>
     <string name="ha_setup_token_hint">Paste the token here</string>
