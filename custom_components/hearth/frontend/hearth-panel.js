@@ -297,6 +297,10 @@ class HearthPanel extends HTMLElement {
         this._render();
         this._loadWatch(d.kid);
         return;
+      case "grant-end":
+        if (!window.confirm("End what the parent gave in their app? Hearth's hold comes back.")) return;
+        await this._service("allow_end", { id: d.grant }, "Ended");
+        return;
       case "bonus":
         await this._service(
           "add_bonus",
@@ -805,6 +809,7 @@ class HearthPanel extends HTMLElement {
           ${noBudget ? `<div class="muted small">No daily limit yet.</div>` : ""}
         </div>
       </div>
+      ${this._exceptionsAndApps(kid, s)}
       ${left === null && !groups.some((g) => g.minutes_left !== null) ? `<div class="actions"><button class="btn" data-action="kid" data-kid="${esc(kid.id)}" data-go="kids">Set limits</button></div>` : `<div class="actions wrap">
         <button class="btn" data-action="bonus" data-person="${esc(kid.id)}" data-minutes="-15">−15</button>
         <button class="btn primary" data-action="bonus" data-person="${esc(kid.id)}" data-minutes="15">+15 min</button>
@@ -812,6 +817,53 @@ class HearthPanel extends HTMLElement {
         <button class="btn primary" data-action="bonus" data-person="${esc(kid.id)}" data-minutes="60">+1 h</button>
       </div>`}
     </div>`;
+  }
+
+  // Hearth's allows next to what a parent opened in their own apps (grants), Google's and Microsoft's own limits,
+  // what Hearth last did through each parental control, and requests answered in a parent's app
+  _exceptionsAndApps(kid, s) {
+    if (!s) return "";
+    const time = (iso) => (iso ? new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "");
+    const chips = [];
+    for (const a of s.allows || [])
+      chips.push(`<span class="chip"><ha-icon icon="mdi:check-circle-outline"></ha-icon>${esc(a.group === "all" ? "All screen time" : a.group || a.app)} allowed${a.until ? ` until ${esc(time(a.until))}` : ""}</span>`);
+    for (const g of s.grants || []) {
+      const what = { device: "Devices", switch: "Switch", app: g.target?.value, platform: g.target?.value }[g.target?.kind] || g.target?.value;
+      chips.push(`<span class="chip warn" title="${esc(g.reason || "")}"><ha-icon icon="mdi:account-key"></ha-icon>${esc(what)} open ${esc(g.source)}${g.until ? ` until ${esc(time(g.until))}` : ""}${
+        g.endable ? `<button class="x" data-action="grant-end" data-grant="${esc(g.id)}" title="End it in the parent's app">×</button>` : ""
+      }</span>`);
+    }
+    for (const a of s.answered_elsewhere || [])
+      chips.push(`<span class="chip"><ha-icon icon="mdi:message-reply-text-outline"></ha-icon>Request ${esc(a.status)}: ${esc(a.text)}</span>`);
+    const rows = [];
+    for (const d of s.first_party?.family_link || []) {
+      const limit = d.daily_limit === null || d.daily_limit === undefined ? "no daily limit" : `limit ${fmtMinutes(d.daily_limit)}`;
+      const left = d.minutes_left === null || d.minutes_left === undefined ? "" : ` · ${fmtMinutes(d.minutes_left)} left`;
+      const bonus = d.bonus_left > 0 ? ` · bonus ${fmtMinutes(d.bonus_left)}` : "";
+      rows.push(`<div class="small ${d.blocking ? "warn-text" : "muted"}">Google · ${esc(d.device)}: ${esc(limit + left + bonus)}${d.blocking ? " · its own limit stops it" : ""}</div>`);
+    }
+    for (const p of s.first_party?.family_safety || []) {
+      const allowance = p.allowance_minutes === null || p.allowance_minutes === undefined ? "" : `allowance ${fmtMinutes(p.allowance_minutes)}`;
+      const left = p.minutes_left === null || p.minutes_left === undefined ? "" : ` · ${fmtMinutes(p.minutes_left)} left`;
+      const why = p.parent_lock ? ` · locked by a parent${p.override_until ? ` until ${time(p.override_until)}` : ""}` : p.blocking ? " · its own limit stops it" : "";
+      rows.push(`<div class="small ${p.parent_lock || p.blocking ? "warn-text" : "muted"}">Microsoft · ${esc(p.platform)}: ${esc(allowance + left + why)}</div>`);
+    }
+    const names = { family_link: "Family Link", family_safety: "Family Safety", nintendo: "Switch" };
+    for (const [kind, st] of Object.entries(s.sync || {})) {
+      const last = st.last || {};
+      const error = st.error || last.error;
+      const did = [];
+      if (st.held?.length) did.push(`holding ${st.held.join(", ")}`);
+      const outcomes = Object.entries(last.outcomes || {});
+      if (outcomes.length) did.push(outcomes.map(([item, o]) => `${item} ${o === "kept_current" ? "kept the parent's setting" : o}`).join(", "));
+      if (last.bonus_added && Object.keys(last.bonus_added).length) did.push(`bonus ${Object.entries(last.bonus_added).map(([d, m]) => `${d} +${m} min`).join(", ")}`);
+      if (last.extra_time && Object.keys(last.extra_time).length) did.push(`extra time on ${Object.keys(last.extra_time).join(", ")}`);
+      if (last.parent_grant) did.push(`let go: ${last.reason || "a parent's change"}`);
+      if (!did.length && !error) continue;
+      rows.push(`<div class="small ${error ? "error-text" : "muted"}">${esc(names[kind] || kind)}: ${esc(did.join(" · ") || "nothing held")}${error ? ` · didn't take: ${esc(error)}` : ""}</div>`);
+    }
+    if (!chips.length && !rows.length) return "";
+    return `<div class="native">${chips.length ? `<div class="chips">${chips.join("")}</div>` : ""}${rows.join("")}</div>`;
   }
 
   _deviceCard(dv) {
@@ -1321,6 +1373,9 @@ p.warn { color: var(--warning-color, #ffa600); }
 .chip.out { background: color-mix(in srgb, var(--error-color, #db4437) 20%, transparent); }
 .chip.play { background: color-mix(in srgb, var(--success-color, #43a047) 20%, transparent); }
 .chip.small { padding: 1px 6px; font-size: 11px; }
+.native { margin-top: 8px; display: flex; flex-direction: column; gap: 2px; }
+.warn-text { color: var(--warning-color, #b26a00); }
+.error-text { color: var(--error-color, #db4437); }
 .chip .x { border: 0; background: none; color: var(--secondary-text-color); cursor: pointer; font-size: 15px; padding: 0 0 0 4px; line-height: 1; }
 .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; align-items: center; }
 .actions.wrap { flex-wrap: wrap; }

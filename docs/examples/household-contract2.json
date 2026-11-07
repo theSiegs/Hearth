@@ -37,8 +37,14 @@
       "locked_by": [
         "pause"
       ],
+      "google_tv_limit": [],
       "held": false,
       "held_by": [],
+      "allows": [],
+      "grants": [],
+      "first_party": {},
+      "sync": {},
+      "answered_elsewhere": [],
       "pause": {
         "until": "2026-11-06T18:30:11-08:00",
         "reason": "Dinner"
@@ -57,7 +63,7 @@
       "headline": {
         "text": "asks for 30 more · video",
         "level": "urgent",
-        "key": "ask:h3RnR2dlNmQV"
+        "key": "ask:EpmYKHWWx_Ie"
       },
       "lines": [
         {
@@ -78,21 +84,21 @@
       ],
       "actions": [
         {
-          "id": "ask_yes:h3RnR2dlNmQV",
+          "id": "ask_yes:EpmYKHWWx_Ie",
           "label": "yes 30",
           "service": "hearth.answer_request",
           "data": {
-            "request_id": "h3RnR2dlNmQV",
+            "request_id": "EpmYKHWWx_Ie",
             "minutes": 30
           },
           "primary": true
         },
         {
-          "id": "ask_no:h3RnR2dlNmQV",
+          "id": "ask_no:EpmYKHWWx_Ie",
           "label": "no",
           "service": "hearth.answer_request",
           "data": {
-            "request_id": "h3RnR2dlNmQV",
+            "request_id": "EpmYKHWWx_Ie",
             "deny": true
           }
         },
@@ -134,7 +140,7 @@
       "kind": "kid",
       "kind_set": true,
       "tv_profiles": [
-        "user:10"
+        "name:sam"
       ],
       "all": {
         "id": "all",
@@ -172,8 +178,65 @@
       ],
       "locked": false,
       "locked_by": [],
+      "google_tv_limit": [],
       "held": false,
       "held_by": [],
+      "allows": [],
+      "grants": [
+        {
+          "id": "5f0c2a9e41b7",
+          "type": "grant",
+          "person": "person.sam",
+          "people": [
+            "person.sam"
+          ],
+          "via": "nintendo",
+          "source": "from the Nintendo app",
+          "target": {
+            "kind": "switch",
+            "value": "Switch"
+          },
+          "until": "2026-11-07T00:00:00-08:00",
+          "since": "2026-11-06T17:31:02-08:00",
+          "reason": "the limit was changed in the Nintendo app",
+          "endable": true,
+          "end_with": "relock"
+        }
+      ],
+      "first_party": {
+        "family_link": [
+          {
+            "entity_id": "switch.sam_s_phone",
+            "device_id": "a1b2c3",
+            "device": "Sam's phone",
+            "daily_limit": 120,
+            "minutes_left": 45,
+            "bonus_minutes": 0,
+            "reached": false,
+            "bonus_left": 0,
+            "held_by_hearth": false,
+            "blocking": false
+          }
+        ]
+      },
+      "sync": {
+        "nintendo": {
+          "held": [],
+          "error": null,
+          "failed_at": null,
+          "last": {
+            "at": "2026-11-07T01:31:05+00:00",
+            "ok": true,
+            "let_go": [
+              "Switch"
+            ],
+            "outcomes": {
+              "Switch": "kept_current"
+            }
+          }
+        }
+      },
+      "answered_elsewhere": [],
       "next_lock": {
         "at": "2026-11-06T21:00:00-08:00",
         "by": "binary_sensor.sam_tablet_bedtime_active",
@@ -181,11 +244,16 @@
       },
       "playing": [],
       "headline": {
-        "text": "video · 50 left",
-        "level": "calm",
-        "key": "left:video"
+        "text": "switch open · the nintendo app till 12:00",
+        "level": "notice",
+        "key": "grant:5f0c2a9e41b7"
       },
       "lines": [
+        {
+          "text": "video · 50 left",
+          "level": "calm",
+          "key": "left:video"
+        },
         {
           "text": "screen time · 105 left",
           "level": "calm",
@@ -229,6 +297,15 @@
             "minutes": 30
           },
           "confirm": "pause sam for 30 min?"
+        },
+        {
+          "id": "grant_end:5f0c2a9e41b7",
+          "label": "end switch (nintendo app)",
+          "service": "hearth.allow_end",
+          "data": {
+            "id": "5f0c2a9e41b7"
+          },
+          "confirm": "end what the nintendo app gave sam?"
         }
       ]
     }
@@ -266,7 +343,7 @@
   "approvals": [
     {
       "type": "more_time",
-      "id": "h3RnR2dlNmQV",
+      "id": "EpmYKHWWx_Ie",
       "person": "person.alex",
       "person_name": "Alex",
       "minutes": 30,
@@ -275,7 +352,10 @@
       "device_id": "phone-0123456789abcd",
       "asked": "2026-11-07T01:40:11+00:00",
       "expires": "2026-11-07T02:10:11+00:00",
-      "offered": false
+      "offered": false,
+      "source": "hearth",
+      "status": "pending",
+      "answered_in": null
     }
   ],
   "not_screen_time": [
@@ -286,25 +366,25 @@
     "headline": {
       "text": "alex asks for 30 more",
       "level": "urgent",
-      "key": "asks:h3RnR2dlNmQV"
+      "key": "asks:EpmYKHWWx_Ie"
     },
     "actions": [
       {
-        "id": "ask_yes:h3RnR2dlNmQV",
+        "id": "ask_yes:EpmYKHWWx_Ie",
         "label": "alex yes 30",
         "service": "hearth.answer_request",
         "data": {
-          "request_id": "h3RnR2dlNmQV",
+          "request_id": "EpmYKHWWx_Ie",
           "minutes": 30
         },
         "primary": true
       },
       {
-        "id": "ask_no:h3RnR2dlNmQV",
+        "id": "ask_no:EpmYKHWWx_Ie",
         "label": "alex no",
         "service": "hearth.answer_request",
         "data": {
-          "request_id": "h3RnR2dlNmQV",
+          "request_id": "EpmYKHWWx_Ie",
           "deny": true
         }
       },
@@ -325,5 +405,5 @@
       }
     ]
   },
-  "version": "1fb9f00f9b49f948"
+  "version": "41bae6d558a91680"
 }

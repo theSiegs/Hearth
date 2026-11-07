@@ -600,3 +600,82 @@ async def test_a_request_answered_in_the_family_safety_app_closes_its_ask(
     assert hub.asks.pending() == []
     answered = hub.asks.answered_elsewhere("person.sam")
     assert answered[0]["text"] == "answered in the Family Safety app" and answered[0]["status"] == "approved"
+
+
+# Views: the household summary (contract 2), Hearth's page
+
+
+def _kid(**extra) -> dict:
+    return {"id": "person.sam", "name": "Sam", "kind": "kid", "groups": [], "playing": [], **extra}
+
+
+def _grant(endable: bool, via: str = "nintendo", kind: str = "switch", value: str = "Switch") -> dict:
+    return {
+        "id": "g1",
+        "type": "grant",
+        "via": via,
+        "source": "from the Nintendo app",
+        "target": {"kind": kind, "value": value},
+        "until": dt_util.now().replace(hour=21, minute=0).isoformat(),
+        "endable": endable,
+    }
+
+
+def test_a_grant_is_news_and_endable_ones_are_actions() -> None:
+    from custom_components.hearth.glance import person_glance
+
+    now = dt_util.now().replace(hour=17, minute=0)
+    glance = person_glance(_kid(), [], [], [], now, [_grant(True)])
+    assert glance["headline"] == {"text": "switch open · the nintendo app till 9:00", "level": "notice", "key": "grant:g1"}
+    end = next(a for a in glance["actions"] if a["id"] == "grant_end:g1")
+    assert end["service"] == "hearth.allow_end" and end["data"] == {"id": "g1"} and end["confirm"]
+
+    glance = person_glance(_kid(), [], [], [], now, [_grant(False, "family_link", "device", "Devices")])
+    assert glance["headline"]["text"].startswith("devices open · the family link app")
+    assert not any(a["id"].startswith("grant_end") for a in glance["actions"])
+
+
+def test_first_party_limits_status_and_answers_are_lines() -> None:
+    from custom_components.hearth.glance import person_glance
+
+    now = dt_util.now().replace(hour=17, minute=0)
+    person = _kid(
+        first_party={
+            "family_link": [{"entity_id": PHONE, "device": "Sam's phone", "blocking": True}],
+            "family_safety": [{"platform": "Xbox", "parent_lock": True, "override_until": None}],
+        },
+        sync={"nintendo": {"held": [], "error": "bonus time is active", "last": None}},
+    )
+    answered = [{"id": "a1", "text": "answered in the Family Safety app"}]
+    glance = person_glance(person, [], [], [], now, [], answered)
+    keys = [glance["headline"]["key"]] + [line["key"] for line in glance["lines"]]
+    assert keys[:4] == [f"device_limit:{PHONE}", "parent_lock:xbox", "sync_error:nintendo", "answered:a1"]
+    # Older callers (no grants or answers) get what they always did
+    assert person_glance(_kid(), [], [], [], now)["headline"]["key"] == "clear"
+
+
+async def test_the_summary_shows_grants_first_party_limits_and_sync(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    from custom_components.hearth.websocket import summary
+
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0))
+    limits = await _sam_with_family_link(hass, hass_client_no_auth)
+    _phone(hass)
+    _remaining(hass, 30)
+    await _budget(hass, "all", 30)
+    assert limits[-1].data["daily_minutes"] == 0
+    hass.states.async_set(_weekday_limit(), "0", {"child_id": CHILD})
+    await _settle(hass, freezer)
+    _phone(hass, bonus=30)
+    await hass.async_block_till_done()
+
+    body = summary(hass.config_entries.async_entries(DOMAIN)[0].runtime_data)
+    sam = next(p for p in body["people"] if p["id"] == "person.sam")
+    assert sam["grants"][0]["source"] == "from the Family Link app" and sam["grants"][0]["endable"]
+    phone = sam["first_party"]["family_link"][0]
+    assert phone["device"] == "Sam's phone" and phone["minutes_left"] == 30 and phone["bonus_left"] == 30
+    assert sam["sync"]["family_link"]["last"]["outcomes"] == {"Devices": "restored"}
+    assert sam["allows"] == [] and sam["answered_elsewhere"] == []
+    assert any(a["id"].startswith("grant_end:") for a in sam["actions"])
+    assert any(line["key"].startswith("grant:") for line in [sam["headline"], *sam["lines"]])

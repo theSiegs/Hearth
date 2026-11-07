@@ -115,17 +115,80 @@ def _group_item(group: dict[str, Any], names: dict[str, str]) -> dict[str, str] 
     return _item(f"{word} · {left} left", CALM, "left", group["id"])
 
 
+SERVICE_WORDS = {"family_link": "family link", "family_safety": "family safety", "nintendo": "switch"}
+APP_WORDS = {"family_link": "the family link app", "family_safety": "the family safety app", "nintendo": "the nintendo app"}
+
+
+def grant_word(grant: dict[str, Any]) -> str:
+    """What a parent's grant lifts, in a few words: "phone", an app, "switch", "xbox"."""
+    target = grant.get("target") or {}
+    kind, value = target.get("kind"), str(target.get("value") or "")
+    if kind == "device":
+        return "devices"
+    if kind == "switch":
+        return "switch"
+    return value.lower()
+
+
+def _grant_items(grants: list[dict[str, Any]]) -> list[dict[str, str]]:
+    return [
+        _item(
+            f"{grant_word(grant)} open · {APP_WORDS.get(grant.get('via'), 'their app')}{_till(grant.get('until'))}",
+            NOTICE,
+            "grant",
+            grant["id"],
+        )
+        for grant in grants
+    ]
+
+
+def _first_party_items(first_party: dict[str, Any]) -> list[dict[str, str]]:
+    """Google's or Microsoft's own limit stopping a device of theirs now, and a parent's own Family Safety lock."""
+    found = []
+    for row in first_party.get("family_link", []):
+        if row.get("blocking"):
+            found.append(
+                _item(f"{str(row.get('device') or 'phone').lower()} · google's own limit", NOTICE, "device_limit",
+                      row.get("entity_id"))
+            )
+    for row in first_party.get("family_safety", []):
+        platform = str(row.get("platform") or "").lower()
+        if row.get("parent_lock"):
+            found.append(
+                _item(f"{platform} locked in family safety{_till(row.get('override_until'))}", NOTICE, "parent_lock",
+                      platform)
+            )
+        elif row.get("blocking"):
+            found.append(_item(f"{platform} · microsoft's own limit", NOTICE, "device_limit", platform))
+    return found
+
+
+def _sync_items(sync: dict[str, Any]) -> list[dict[str, str]]:
+    """A parental control Hearth couldn't hold or let go through (its last error)."""
+    found = []
+    for kind, status in sorted(sync.items()):
+        error = status.get("error") or (status.get("last") or {}).get("error")
+        if error:
+            found.append(_item(f"{SERVICE_WORDS.get(kind, kind)} · didn't take", NOTICE, "sync_error", kind))
+    return found
+
+
 def person_glance(
     person: dict[str, Any],
     asks: list[dict[str, Any]],
     allows: list[dict[str, Any]],
     school_time_off: list[dict[str, Any]],
     now: datetime,
+    grants: list[dict[str, Any]] | None = None,
+    answered: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """A person's headline, lines and actions, from their part of the summary.
 
     asks: their waiting requests for more time (as in approvals); allows: their allows now (Allow.view(person));
-    school_time_off: School time taken off for them today (Off.view()).
+    school_time_off: School time taken off for them today (Off.view()); grants: their parent grants (Grant.view());
+    answered: their requests answered in a first-party app lately (Asks.answered_elsewhere). The person's
+    first_party and sync fields (Google's and Microsoft's own limits, what Hearth did through each parental control)
+    are read from [person].
 
     The headline is the first of: urgent (a waiting ask, a pause, out of All screen time), notice (a bedtime or School
     time lock now, one starting within 15 minutes, a group out or under 10 minutes, an allow, School time off today),
@@ -169,6 +232,12 @@ def person_glance(
         news.append(_item(f"{what} allowed{_till(allow.get('until'))}", NOTICE, "allow", allow["id"]))
     for off in school_time_off:
         news.append(_item("no school time today", NOTICE, "school_off", off["id"]))
+    # The parents' own apps: what a parent opened there, their own limits and locks, and what didn't take
+    news += _grant_items(grants or [])
+    news += _first_party_items(person.get("first_party") or {})
+    news += _sync_items(person.get("sync") or {})
+    for ask in answered or []:
+        news.append(_item(ask.get("text") or "answered in the app", CALM, "answered", ask["id"]))
 
     if news:
         headline = news[0]
@@ -232,6 +301,21 @@ def person_glance(
                 "hearth.allow_end",
                 {"people": [entity], **what},
                 confirm=f"stop allowing {word} for {name.lower()}?",
+            )
+        )
+    # A parent's grant an adult may end from here: only where that's a write in the parent's app (a bonus reset,
+    # extra time cancelled, the Switch or platform locked again)
+    for grant in grants or []:
+        if not grant.get("endable"):
+            continue
+        word = grant_word(grant)
+        actions.append(
+            _action(
+                f"grant_end:{grant['id']}",
+                f"end {word} ({APP_WORDS.get(grant.get('via'), 'their app').removeprefix('the ')})",
+                "hearth.allow_end",
+                {"id": grant["id"]},
+                confirm=f"end what {APP_WORDS.get(grant.get('via'), 'their app')} gave {name.lower()}?",
             )
         )
     return {"headline": headline, "lines": lines, "actions": actions}

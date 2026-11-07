@@ -86,6 +86,16 @@ def summary(hub) -> dict[str, Any]:
                 # What other parental controls hold of theirs now (family_link, family_safety, nintendo)
                 "held": bool(held := household.enforcement.held_for(person)),
                 "held_by": sorted(k for k, v in held.items() if v.get("held")),
+                # An adult's allows (hearth.allow), and a parent's changes in their own apps that lift one of
+                # Hearth's holds (grants.py)
+                "allows": [a.view(person) for a in household.allows.of(person)],
+                "grants": [g.view() for g in household.grants.of(person)],
+                # Google's own daily limit per Family Link device, Microsoft's allowance per platform
+                "first_party": household.sync.first_party(person),
+                # Per parental control: what's held, the last error and what Hearth last did
+                "sync": household.enforcement.status_of(person),
+                # Requests answered in a first-party app lately
+                "answered_elsewhere": hub.asks.answered_elsewhere(person),
                 # pause, lock {by, until}, next_lock {at, by, kind}: as in the person's state document
                 **household._locks_document(person, day),
                 "playing": [
@@ -102,6 +112,8 @@ def summary(hub) -> dict[str, Any]:
                 [a.view(person) for a in household.allows.of(person)],
                 [o for o in household.scheduler.offs_of(person) if o["date"] == today],
                 now,
+                people[-1]["grants"],
+                people[-1]["answered_elsewhere"],
             )
         )
     devices = []

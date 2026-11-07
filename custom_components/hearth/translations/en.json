@@ -618,11 +618,11 @@
     },
     "allow_end": {
       "name": "End an allow",
-      "description": "Ends an allow early: by its id, or the people's (of an app or a group, when given). What should hold then holds again.",
+      "description": "Ends an allow early: by its id, or the people's (of an app or a group, when given). A parent's grant (from the Family Link, Nintendo or Family Safety app) ends by its id too. What should hold then holds again.",
       "fields": {
         "id": {
           "name": "Id",
-          "description": "The id hearth.allow returned."
+          "description": "The id hearth.allow returned, or a parent grant's id."
         },
         "people": {
           "name": "People",
