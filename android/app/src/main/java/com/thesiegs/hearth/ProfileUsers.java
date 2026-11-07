@@ -408,6 +408,17 @@ final class ProfileUsers {
         return name == null ? null : prefs(context).getString(EMAIL_PREFIX + name, null);
     }
 
+    /** The profile name the chooser showed with this Google account address; null when not seen. */
+    static String nameForEmail(Context context, String email) {
+        if (email == null) return null;
+        for (Map.Entry<String, ?> entry : prefs(context).getAll().entrySet()) {
+            if (entry.getKey().startsWith(EMAIL_PREFIX) && email.equalsIgnoreCase(String.valueOf(entry.getValue()))) {
+                return entry.getKey().substring(EMAIL_PREFIX.length());
+            }
+        }
+        return null;
+    }
+
     /** "locked|name": whether Google TV's chooser last showed that profile's tile PIN-locked. */
     private static final String LOCKED_PREFIX = "locked|";
 

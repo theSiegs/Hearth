@@ -178,15 +178,32 @@ final class AccountList {
     }
 
     /**
-     * A user with one account is one profile (a kid's): its address belongs to the name the chooser taught Hearth
-     * for that serial. An adults' user's other accounts are matched by the chooser only.
+     * A profile user (not the owner's) with one account is one profile, a kid's: its address belongs to the name the
+     * chooser taught Hearth for that serial. And when Hearth hasn't named the serial yet, but the chooser once showed
+     * a tile with that address, the tile's name names it: the same name the chooser would give it, so its household
+     * ref is unchanged. Not the profile on now (its own switch names it, as before). The owner's user holds several
+     * adults' accounts, which only Google TV's home or chooser tell apart.
      */
     static void learnEmails(Context context) {
+        long owner = ProfileUsers.ownerSerial(context);
+        long active = ProfileUsers.settledSerial(context);
         for (Map.Entry<Long, List<String>> user : bySerial(context).entrySet()) {
-            if (user.getValue().size() != 1) continue;
-            String name = ProfileUsers.getName(context, user.getKey());
-            if (name != null && ProfileUsers.emailOf(context, ProfileUsers.key(user.getKey())) == null) {
-                ProfileUsers.setEmail(context, name, user.getValue().get(0));
+            long serial = user.getKey();
+            if (user.getValue().size() != 1 || serial == owner) continue;
+            String email = user.getValue().get(0);
+            String name = ProfileUsers.getName(context, serial);
+            if (name == null && serial != active) {
+                String shown = ProfileUsers.nameForEmail(context, email);
+                long elsewhere = ProfileUsers.serialOf(context, shown);
+                if (shown != null && elsewhere == ProfileUsers.UNKNOWN) {
+                    Log.i(TAG, "Serial " + serial + " named from the account list and the chooser's address");
+                    ProfileUsers.setName(context, serial, shown);
+                    ProfilePairing.adoptNameChoices(context, ProfileUsers.key(serial), shown);
+                    name = shown;
+                }
+            }
+            if (name != null && ProfileUsers.emailOf(context, ProfileUsers.key(serial)) == null) {
+                ProfileUsers.setEmail(context, name, email);
             }
         }
     }

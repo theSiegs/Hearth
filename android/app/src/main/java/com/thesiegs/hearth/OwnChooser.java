@@ -142,7 +142,11 @@ final class OwnChooser {
             if (unsure.contains(user.getKey())) continue;
             for (String email : user.getValue()) {
                 if (named.contains(email.toLowerCase(Locale.ROOT))) continue;
-                (kid ? kids : adults).add(new Entry(null, null, email, kid, false));
+                // The chooser may have shown this address on a tile with a name: that name, else the address's stand-in
+                String shown = ProfileUsers.nameForEmail(context, email);
+                boolean locked = shown != null && Boolean.TRUE.equals(ProfileUsers.isLocked(context, shown));
+                (kid ? kids : adults).add(new Entry(kid ? ProfileUsers.key(user.getKey()) : null, shown, email, kid,
+                        locked));
             }
         }
         Collections.sort(adults, (a, b) -> a.label().compareToIgnoreCase(b.label()));
