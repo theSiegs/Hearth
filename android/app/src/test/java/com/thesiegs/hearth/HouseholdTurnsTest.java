@@ -131,6 +131,11 @@ public class HouseholdTurnsTest {
         final ExecutorService household = Executors.newSingleThreadExecutor();
         final ExecutorService net = Executors.newCachedThreadPool();
         final ServerSocket server;
+        /**
+         * Without turns: the other TV's exchanges wait on the household thread until this opens, so this TV's own
+         * exchange is over (timed out) before any of them is served, whichever timeout fires first.
+         */
+        final CountDownLatch serving = new CountDownLatch(1);
 
         MiniTv(HouseholdStore store, boolean turns, int timeoutMs) throws IOException {
             this.store = store;
@@ -176,7 +181,15 @@ public class HouseholdTurnsTest {
                     turn.arrived(waiting, store.tvId());
                     household.execute(turn::serveWaiting);
                 } else {
-                    household.execute(waiting::serve);
+                    household.execute(() -> {
+                        try {
+                            serving.await(10, TimeUnit.SECONDS);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            return;
+                        }
+                        waiting.serve();
+                    });
                 }
             } catch (Exception e) {
                 try {
@@ -215,6 +228,7 @@ public class HouseholdTurnsTest {
 
         @Override
         public void close() throws IOException {
+            serving.countDown();
             server.close();
             household.shutdownNow();
             net.shutdownNow();
@@ -240,13 +254,15 @@ public class HouseholdTurnsTest {
             CountDownLatch bothBusy = new CountDownLatch(2);
             Future<Object> aToB = a.syncWith(b, bothBusy);
             Future<Object> bToA = b.syncWith(a, bothBusy);
-            // Each thread waits for the other's answer, which waits behind that thread's own exchange. On a slow machine
-            // one exchange can be over before the other thread is busy; then the two never met and there's nothing to show
+            // Each thread waits for the other's answer, which waits behind that thread's own exchange. Both threads are
+            // busy before either connects (bothBusy), and neither serves the other's exchange until both of its own are
+            // over (serving), so the timeout that fires first can't free its thread in time to answer the other: the
+            // run is the same on any machine
             Object fromA = aToB.get(10, TimeUnit.SECONDS);
             Object fromB = bToA.get(10, TimeUnit.SECONDS);
-            boolean timedOut = fromA instanceof SocketTimeoutException;
-            org.junit.Assume.assumeTrue("the two exchanges didn't overlap", timedOut || fromB instanceof SocketTimeoutException);
-            assertTrue(String.valueOf(fromA), timedOut);
+            a.serving.countDown();
+            b.serving.countDown();
+            assertTrue(String.valueOf(fromA), fromA instanceof SocketTimeoutException);
             assertTrue(String.valueOf(fromB), fromB instanceof SocketTimeoutException);
         }
     }

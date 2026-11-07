@@ -25,7 +25,8 @@ void main() {
     final stored = ParentPinHash.hash("2468");
     expect(ParentPinHash.pattern.hasMatch(stored), isTrue);
     expect(stored.startsWith("v2\$${ParentPinHash.iterations}\$"), isTrue);
-    expect(stored.contains("2468"), isFalse);
+    // No field of it is the PIN (the hex of a random salt or hash may happen to hold the digits "2468")
+    expect(stored.split("\$"), isNot(contains("2468")));
   });
 
   test("PBKDF2-HMAC-SHA256 matches published test vectors", () {
