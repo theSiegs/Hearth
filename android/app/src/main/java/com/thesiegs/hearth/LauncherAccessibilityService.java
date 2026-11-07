@@ -188,7 +188,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private Boolean mKidsState;
     private String mLastWindowPackage;
     /** The class of the last window in front (not Hearth's overlays, the keyboard or a system pop-up). */
-    private String mFrontClass;
+    private volatile String mFrontClass;
+    /**
+     * The last of Google TV's own screens to come up (its activities, not the plain view classes it reports for
+     * overlays on them), or null once anything else is in front. Hearth's picker selects a tile only while this is
+     * the chooser.
+     */
+    private volatile String mGoogleTvActivity;
     /** Since this wake: a remote key was pressed (someone is choosing; ProfileLock.reopenOnWake leaves them be). */
     private boolean mKeySinceWake;
     /** The profile on at this wake, to tell whether someone picked one before the wake check. */
@@ -401,6 +407,9 @@ public class LauncherAccessibilityService extends AccessibilityService {
             checkProfileUser("periodic check");
             LogNames.refresh(LauncherAccessibilityService.this);
             updateScreenTimeLock("periodic check");
+            // Experiment (own chooser): who's on the TV, and faces from Home Assistant
+            AccountList.refreshIfDue(LauncherAccessibilityService.this);
+            HaFaces.refreshIfDue(LauncherAccessibilityService.this, false);
             mHandler.postDelayed(this, IDLE_CHECK_MS);
         }
     };
@@ -968,6 +977,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             if (ProfileAvatars.isDue(this, name)) due.add(name);
         }
         Log.i(TAG, "Chooser shows " + LogNames.of(names) + "; photos due: " + LogNames.of(due));
+        AccountList.learnEmails(this);
         photographChooserTile();
     }
 
@@ -1055,6 +1065,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private void photographChooserTile() {
         mHandler.removeCallbacks(mChooserPhoto);
         // Nor once a tile was picked in this visit: the picked tile shows the lock while the switch is under way
+        if (SwitchCover.isShowing() || OwnChooserActivity.isShowing()) return;
         if (!mChooserOnScreen || mChooserPhotoBusy || mChooserPhotoShots >= PHOTO_MAX_SHOTS_PER_VISIT
                 || mPendingProfileAt >= mChooserVisitAt || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             return;
@@ -1264,6 +1275,278 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
     }
 
+    // --- Hearth's own profile picker (experiment, feature/own-chooser; see OwnChooser) ---
+
+    /** After Google's chooser comes up: Hearth's picker goes over it. */
+    private static final long OWN_PICKER_DELAY_MS = 150;
+    /** How often, and how many times, Hearth looks for Google's chooser after a pick in its own picker. */
+    private static final long OWN_PICK_POLL_MS = 150;
+    private static final int OWN_PICK_MAX_TRIES = 20;
+    /** After Hearth's focus request: the tile has taken focus. */
+    private static final long OWN_FOCUS_SETTLE_MS = 250;
+    /** Hearth's card comes off Google's screens this long after the click, unless Google's home is what came up. */
+    private static final long OWN_COVER_MAX_MS = 1_500;
+    /** After Back from Hearth's picker: Google's chooser should be in front by then. */
+    private static final long OWN_CLOSED_CHECK_MS = 700;
+
+    /** Who was picked in Hearth's picker and is being selected in Google's chooser. */
+    private String mOwnName;
+    private String mOwnEmail;
+    private boolean mOwnPicking;
+    private int mOwnTries;
+    /** Each pick's number, so a late answer about an earlier pick is dropped. */
+    private int mOwnGeneration;
+    /** Hearth's card is over Google's chooser (not over any PIN screen) while Hearth selects the tile. */
+    private boolean mOwnCoverOverChooser;
+
+    private final Runnable mShowOwnPicker = this::showOwnPicker;
+    private final Runnable mOwnPickStep = this::ownPickStep;
+    private final Runnable mOwnCoverCheck = () -> {
+        // Google's home came up (a switch): its own card handling goes on. Anything else: the card comes off.
+        if (mOwnCoverOverChooser && !GOOGLE_TV_HOME_ACTIVITY.equals(mFrontClass)) SwitchCover.hideNow();
+        mOwnCoverOverChooser = false;
+    };
+    private final Runnable mOwnClosedCheck = this::checkAfterOwnPickerClosed;
+
+    /** Puts Hearth's picker over Google's chooser, only while the chooser itself (no PIN screen) is in front. */
+    private void showOwnPicker() {
+        if (!mChooserOnScreen || !isChooser(String.valueOf(mGoogleTvActivity))) {
+            Log.i(TAG, "Not showing Hearth's picker: the chooser isn't in front (" + mGoogleTvActivity + ")");
+            return;
+        }
+        if (OwnChooserActivity.isShowing()) return;
+        if (OwnChooser.entries(this).isEmpty()) {
+            Log.i(TAG, "Not showing Hearth's picker: no profiles known yet (Google's chooser names them)");
+            return;
+        }
+        try {
+            startActivity(new Intent(this, OwnChooserActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_NO_ANIMATION));
+        } catch (Exception e) {
+            Log.w(TAG, "Couldn't show Hearth's picker: " + e.getClass().getSimpleName());
+        }
+    }
+
+    /**
+     * Someone was picked in Hearth's picker: select their tile in Google's chooser, which comes back into view as the
+     * picker closes. Whether the service took it (false: it isn't running, and Google's chooser stays as it is).
+     */
+    static boolean selectInGoogleChooser(String name, String email) {
+        LauncherAccessibilityService service = sInstance;
+        if (service == null) return false;
+        service.mHandler.post(() -> service.startOwnPick(name, email));
+        return true;
+    }
+
+    private void startOwnPick(String name, String email) {
+        mOwnName = name;
+        mOwnEmail = email;
+        mOwnPicking = true;
+        mOwnTries = 0;
+        mOwnGeneration++;
+        mHandler.removeCallbacks(mOwnClosedCheck);
+        mHandler.removeCallbacks(mOwnCoverCheck);
+        // Hearth's card over the chooser while the tile is selected, so Google's chooser doesn't flash; it comes off
+        // the moment a PIN or any other screen comes up (onGoogleTvWindow, onOtherWindow)
+        if (mInteractive) {
+            SwitchCover.show(this, name);
+            mOwnCoverOverChooser = SwitchCover.isShowing();
+        }
+        mHandler.removeCallbacks(mOwnPickStep);
+        mHandler.postDelayed(mOwnPickStep, OWN_PICK_POLL_MS);
+    }
+
+    private void ownPickStep() {
+        if (!mOwnPicking) return;
+        if (++mOwnTries > OWN_PICK_MAX_TRIES) {
+            ownPickFailed("Google's chooser didn't come back");
+            return;
+        }
+        final AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null || !TextUtils.equals(GOOGLE_TV_PACKAGE, root.getPackageName())) {
+            mHandler.postDelayed(mOwnPickStep, OWN_PICK_POLL_MS);
+            return;
+        }
+        final String name = mOwnName;
+        final String email = mOwnEmail;
+        final int generation = mOwnGeneration;
+        try {
+            mAccountReader.execute(() -> {
+                PickScan scan = PickScan.of(root);
+                ChooserTiles.Decision decision = ChooserTiles.decide(mGoogleTvActivity, scan.texts, scan.textField,
+                        scan.tiles, name, email);
+                String failure = null;
+                if (decision.act == ChooserTiles.Act.SELECT) {
+                    failure = selectTile(scan.nodes.get(decision.index), scan.tiles.get(decision.index));
+                }
+                final String why = failure;
+                mHandler.post(() -> onOwnPickStep(generation, decision, why, scan));
+            });
+        } catch (RejectedExecutionException e) {
+            // The service is stopping
+            mOwnPicking = false;
+        }
+    }
+
+    /**
+     * Focuses the tile, checks the focus landed on it (by name and description) with the chooser still in front and
+     * no PIN in sight, and only then clicks it, once. Null when clicked, else why not. On the reader thread.
+     */
+    private String selectTile(AccessibilityNodeInfo node, ChooserTiles.Tile tile) {
+        if (!tile.focused) {
+            if (!node.performAction(AccessibilityNodeInfo.ACTION_FOCUS)) return "the tile wouldn't take focus";
+            SystemClock.sleep(OWN_FOCUS_SETTLE_MS);
+        }
+        AccessibilityNodeInfo now = getRootInActiveWindow();
+        if (now == null || !TextUtils.equals(GOOGLE_TV_PACKAGE, now.getPackageName())) return "the chooser went away";
+        String front = mGoogleTvActivity;
+        if (front == null || !isChooser(front)) return "the chooser isn't in front any more";
+        PickScan again = PickScan.of(now);
+        if (ChooserTiles.looksLikePinScreen(again.texts, again.textField)) return "a PIN screen came up";
+        AccessibilityNodeInfo focused = now.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+        if (focused == null || !TextUtils.equals(LINEAR_LAYOUT, focused.getClassName())) return "nothing has focus";
+        String focusedName = null;
+        for (int i = 0; i < focused.getChildCount(); i++) {
+            AccessibilityNodeInfo child = focused.getChild(i);
+            if (child != null && TextUtils.equals(TEXT_VIEW, child.getClassName()) && child.getText() != null) {
+                focusedName = child.getText().toString().trim();
+            }
+        }
+        CharSequence desc = focused.getContentDescription();
+        if (!ChooserTiles.focusLanded(tile, focusedName, desc == null ? null : desc.toString())) {
+            return "focus didn't land on the tile";
+        }
+        return focused.performAction(AccessibilityNodeInfo.ACTION_CLICK) ? null : "the tile didn't take the click";
+    }
+
+    private void onOwnPickStep(int generation, ChooserTiles.Decision decision, String failure, PickScan scan) {
+        if (generation != mOwnGeneration || !mOwnPicking) return;
+        // What the chooser showed: each profile's address and PIN lock, as a chooser read would learn them
+        for (ChooserTiles.Tile tile : scan.tiles) {
+            String email = tile.email();
+            if (email != null) ProfileUsers.setEmail(this, tile.name, email);
+            boolean current = tile.description != null
+                    && tile.description.toLowerCase(Locale.ROOT).contains("current account");
+            Boolean locked = ContentPin.lockedFromTile(tile.description, current);
+            if (locked != null) ProfileUsers.setLocked(this, tile.name, locked);
+        }
+        if (decision.act == ChooserTiles.Act.WAIT) {
+            mHandler.postDelayed(mOwnPickStep, OWN_PICK_POLL_MS);
+            return;
+        }
+        if (decision.act == ChooserTiles.Act.REFUSE) {
+            ownPickFailed(decision.why);
+            return;
+        }
+        if (failure != null) {
+            ownPickFailed(failure);
+            return;
+        }
+        mOwnPicking = false;
+        Log.i(TAG, "Hearth's picker: selected the tile in Google's chooser; Google makes the switch");
+        // The card comes off a moment later unless Google's home came up (a PIN screen takes it off at once)
+        mHandler.removeCallbacks(mOwnCoverCheck);
+        mHandler.postDelayed(mOwnCoverCheck, OWN_COVER_MAX_MS);
+    }
+
+    /** Hearth won't select a tile: Google's chooser stays (or comes back) on screen for the person to pick there. */
+    private void ownPickFailed(String why) {
+        mOwnPicking = false;
+        mOwnCoverOverChooser = false;
+        SwitchCover.hideNow();
+        Log.i(TAG, "Hearth's picker: not selecting a tile (" + why + "): Google's chooser stays");
+        String front = String.valueOf(mGoogleTvActivity);
+        if (!ProfileLock.isChooserLike(front)) {
+            // Not Google's chooser or one of its PIN screens: bring the chooser back, never a profile
+            Log.i(TAG, "Hearth's picker: Google's chooser isn't in front (" + front + "): opening it");
+            try {
+                startActivity(profileChooserIntent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (Exception e) {
+                Log.w(TAG, "Couldn't open Google's chooser: " + e.getClass().getSimpleName());
+            }
+        }
+        try {
+            Toast.makeText(this, R.string.own_chooser_failed, Toast.LENGTH_LONG).show();
+        } catch (Exception ignored) {
+            // No toast: the chooser is there all the same
+        }
+    }
+
+    /** Hearth's picker closed without a pick: by Back or Home (true), or because something came over it. */
+    static void onOwnPickerClosed(boolean byBack) {
+        LauncherAccessibilityService service = sInstance;
+        if (service == null || !byBack) return;
+        service.mHandler.removeCallbacks(service.mOwnClosedCheck);
+        service.mHandler.postDelayed(service.mOwnClosedCheck, OWN_CLOSED_CHECK_MS);
+        // Google's chooser is back in front: read it as on any visit (names, addresses, PIN locks, photos)
+        service.mHandler.removeCallbacks(service.mReadChooser);
+        service.mHandler.postDelayed(service.mReadChooser, OWN_CLOSED_CHECK_MS);
+    }
+
+    /** Back from Hearth's picker leads to Google's chooser: if Hearth's or Google's home came up instead, open it. */
+    private void checkAfterOwnPickerClosed() {
+        if (!mInteractive || mOwnPicking || OwnChooserActivity.isShowing()) return;
+        boolean hearth = getPackageName().equals(mLastWindowPackage);
+        boolean googleHome = GOOGLE_TV_HOME_ACTIVITY.equals(mFrontClass);
+        if (!hearth && !googleHome) return;
+        Log.i(TAG, "Back from Hearth's picker landed on " + (hearth ? "Hearth" : "Google's home")
+                + ": opening Google's chooser");
+        try {
+            startActivity(profileChooserIntent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (Exception e) {
+            Log.w(TAG, "Couldn't open Google's chooser: " + e.getClass().getSimpleName());
+        }
+    }
+
+    /** One look at Google's chooser for a pick: its profile tiles (with their nodes), its texts, any text field. */
+    private static final class PickScan {
+        final List<ChooserTiles.Tile> tiles = new ArrayList<>();
+        final List<AccessibilityNodeInfo> nodes = new ArrayList<>();
+        final List<String> texts = new ArrayList<>();
+        boolean textField;
+
+        static PickScan of(AccessibilityNodeInfo root) {
+            PickScan scan = new PickScan();
+            try {
+                scan.walk(root, 0);
+            } catch (RuntimeException e) {
+                // The window went away mid-walk: the decision waits or refuses on what was read
+            }
+            return scan;
+        }
+
+        private void walk(AccessibilityNodeInfo node, int depth) {
+            if (node == null || depth > 20) return;
+            CharSequence cls = node.getClassName();
+            if (cls != null && cls.toString().contains("EditText")) textField = true;
+            if (node.isPassword()) textField = true;
+            if (node.isVisibleToUser() && node.getText() != null && node.getText().length() > 0) {
+                texts.add(node.getText().toString());
+            }
+            if (TextUtils.equals(LINEAR_LAYOUT, cls) && node.isFocusable()) {
+                String name = null;
+                boolean photo = false;
+                for (int i = 0; i < node.getChildCount(); i++) {
+                    AccessibilityNodeInfo child = node.getChild(i);
+                    if (child == null || child.getClassName() == null) continue;
+                    if (TextUtils.equals(TEXT_VIEW, child.getClassName()) && child.getText() != null) {
+                        name = child.getText().toString().trim();
+                    } else if (!photo) {
+                        photo = findImage(child, 0) != null;
+                    }
+                }
+                if (name != null && !name.isEmpty() && photo && !name.toLowerCase(Locale.ROOT).contains("account")) {
+                    CharSequence desc = node.getContentDescription();
+                    tiles.add(new ChooserTiles.Tile(name, desc == null ? null : desc.toString(), node.isFocused()));
+                    nodes.add(node);
+                    texts.add(name);
+                    return;
+                }
+            }
+            for (int i = 0; i < node.getChildCount(); i++) walk(node.getChild(i), depth + 1);
+        }
+    }
+
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         // Remote navigation moves focus or scrolls: activity for idle standby even where key events
@@ -1302,6 +1585,11 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (!isOverlayPackage(packageName)) {
             mLastWindowPackage = packageName;
             mFrontClass = className;
+            if (!isGoogleTv) {
+                mGoogleTvActivity = null;
+            } else if (!className.startsWith("android.")) {
+                mGoogleTvActivity = className;
+            }
             ProfilePairingService.onWindowOf(packageName);
         }
         // Not the keyboard, a system pop-up or the assistant's bar: those come up over the app that's still in use
@@ -1374,7 +1662,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
     /** Hearth's windows that aren't its screens: overlays, and the agent's invisible screen (AgentActivity). */
     static boolean isHearthOverlay(String className) {
-        return !className.endsWith("Activity") || className.equals(AgentActivity.class.getName());
+        return !className.endsWith("Activity") || className.equals(AgentActivity.class.getName())
+                || className.equals(OwnChooserActivity.class.getName());
     }
 
     /** A window that comes up over whatever is in front without replacing it: a system pop-up or the keyboard. */
@@ -1544,6 +1833,11 @@ public class LauncherAccessibilityService extends AccessibilityService {
         // Google TV's PIN screen: its owner may allow the switch from their phone instead (PhoneApproval)
         if (GOOGLE_TV_REAUTH_ACTIVITY.equals(className)) mHandler.postDelayed(() -> PhoneApproval.onPinScreen(this), 500);
         if (isChooser(className)) {
+            // Hearth opened it wanting its own picker over it (OwnChooser): never over one another app opened
+            if (OwnChooser.takeWanted()) {
+                mHandler.removeCallbacks(mShowOwnPicker);
+                mHandler.postDelayed(mShowOwnPicker, OWN_PICKER_DELAY_MS);
+            }
             mHandler.removeCallbacks(mReadChooser);
             mHandler.postDelayed(mReadChooser, CHOOSER_READ_DELAY_MS);
             mHandler.removeCallbacks(mChooserPhoto);
@@ -1639,8 +1933,12 @@ public class LauncherAccessibilityService extends AccessibilityService {
         } else if (className.startsWith(GOOGLE_TV_PACKAGE + ".") || className.startsWith("com.google.android.libraries.tv.")) {
             // Its own screens (chooser, PIN, time up); plain view classes are overlays on its home.
             mGoogleTvScreenInFront = true;
-            // Never over one of them: the person has to see the chooser or the PIN pad
-            SwitchCover.hideNow();
+            // Never over one of them: the person has to see the chooser or the PIN pad. The one exception is the
+            // chooser itself (never a PIN) for a moment while Hearth selects the tile picked in its own picker.
+            if (!(mOwnCoverOverChooser && isChooser(className))) {
+                mOwnCoverOverChooser = false;
+                SwitchCover.hideNow();
+            }
             if (!mChooserOnScreen) startScreenGoneChecks(CHOOSER_GONE_CHECK_MS);
         }
     }
@@ -1648,6 +1946,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
     /** Any other window: Hearth, an app, or something that comes up over one (the keyboard, a system pop-up). */
     private void onOtherWindow(String packageName, boolean isHearth, boolean isApp) {
         if (isApp) SwitchCover.hideNow();
+        if (mOwnCoverOverChooser && !isHearth) {
+            mOwnCoverOverChooser = false;
+            SwitchCover.hideNow();
+        }
         if (isHearth) {
             // Back in the launcher without Google TV's home in between: the switch was cancelled (its early
             // welcome card goes now, not after its time limit)
@@ -2149,6 +2451,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
                 return true;
             }
         }
+        if (event.getKeyCode() == KeyEvent.KEYCODE_HOME && OwnChooserActivity.isShowing()) {
+            if (event.getAction() == KeyEvent.ACTION_DOWN) mHandler.post(OwnChooserActivity::closeIfOpen);
+            return true;
+        }
         if (handleRemap(event)) return true;
         // Google TV can open its screens (a kids profile's PIN screen, the chooser) behind Hearth; with Hearth in
         // front none of them is showing, so Home stays with Hearth instead of waking them.
@@ -2204,7 +2510,13 @@ public class LauncherAccessibilityService extends AccessibilityService {
         Log.i(TAG, "Wake check: front=" + mFrontClass + " key=" + mKeySinceWake + " profileChanged=" + profileChanged
                 + " googleTvHome=" + isGoogleTvHome(this) + " holdingBack=" + holdingBack
                 + (reopen ? ": opening the profile chooser again" : ": leaving it"));
-        if (reopen) ProfileLock.showChooser(this);
+        if (reopen) {
+            ProfileLock.showChooser(this);
+        } else if (isChooser(String.valueOf(mGoogleTvActivity)) && !mKeySinceWake && !profileChanged
+                && OwnChooser.isOn(this) && !OwnChooserActivity.isShowing() && mInteractive) {
+            Log.i(TAG, "Wake check: Google's chooser is up without Hearth's picker: showing it");
+            showOwnPicker();
+        }
     }
 
     // Kids profiles that haven't approved this app suspend it; screen time screens must stay in front.

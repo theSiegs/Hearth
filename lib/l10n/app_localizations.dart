@@ -4185,6 +4185,18 @@ abstract class AppLocalizations {
   /// **'Lock now'**
   String get profileLockNow;
 
+  /// Settings > Profiles (experiment): Hearth's own picker over Google TV's profile chooser
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth\'s profile picker'**
+  String get ownChooserTitle;
+
+  /// Settings > Profiles (experiment): what Hearth's own profile picker does
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth shows its own picker over Google TV\'s profile chooser and picks the person there for you. Google still makes the switch and asks for any PIN; Back shows Google\'s own chooser.'**
+  String get ownChooserNote;
+
   /// Settings > Profiles: locking an adult profile with Google TV's profile lock
   ///
   /// In en, this message translates to:

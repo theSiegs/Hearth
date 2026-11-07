@@ -51,6 +51,7 @@ class ProfilesSettingsPage extends StatelessWidget {
           trailing: Text(activeProfileLabel(context) ?? "", style: textTheme.bodySmall),
           onPressed: () => context.read<FLauncherChannel>().openProfileChooser(),
         ),
+        if (!locked) const _OwnChooserTile(),
         // Adult profiles: Google TV's own profile lock, now or whenever the TV wakes from a sleep, and unlocking it
         // from the owner's phone (Home Assistant), where Hearth enters the PIN
         if (!(context.select<ProfileService?, bool>((p) => p?.isKidsProfile ?? false))) ...[
@@ -77,6 +78,55 @@ class ProfilesSettingsPage extends StatelessWidget {
   /// The signed-in Google TV profile's name, when Hearth knows it (and there is a ProfileService).
   static String? activeProfileLabel(BuildContext context) =>
       context.select<ProfileService?, String?>((p) => p?.activeProfileName);
+}
+
+/// Hearth's own profile picker over Google TV's chooser (experiment, feature/own-chooser): on or off.
+class _OwnChooserTile extends StatefulWidget {
+  const _OwnChooserTile();
+
+  @override
+  State<_OwnChooserTile> createState() => _OwnChooserTileState();
+}
+
+class _OwnChooserTileState extends State<_OwnChooserTile> {
+  late final FLauncherChannel? _channel = context.read<FLauncherChannel?>();
+  bool? _on;
+
+  @override
+  void initState() {
+    super.initState();
+    _channel?.getOwnChooser().then((on) {
+      if (mounted) setState(() => _on = on);
+    }).catchError((_) {});
+  }
+
+  Future<void> _choose() async {
+    final l = AppLocalizations.of(context)!;
+    final bool? picked = await showChoiceDialog<bool>(
+      context,
+      title: l.ownChooserTitle,
+      options: const [true, false],
+      isCurrent: (option) => option == _on,
+      label: (option) => option ? l.parentPinOn : l.parentPinOff,
+      labelStyle: Theme.of(context).textTheme.bodyMedium,
+      note: l.ownChooserNote,
+    );
+    if (picked == null) return;
+    await _channel?.setOwnChooser(picked);
+    if (mounted) setState(() => _on = picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final on = _on;
+    return FocusableSettingsTile(
+      leading: const Icon(Icons.face_retouching_natural_outlined),
+      title: Text(l.ownChooserTitle, style: Theme.of(context).textTheme.bodyMedium),
+      trailing: Text(on == null ? "" : on ? l.parentPinOn : l.parentPinOff, style: Theme.of(context).textTheme.bodySmall),
+      onPressed: _choose,
+    );
+  }
 }
 
 /// "Lock when the TV sleeps": Google TV's profile lock comes up as the TV wakes after sleeping at least this long.

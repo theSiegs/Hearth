@@ -167,16 +167,9 @@ final class ProfileLock {
 
     /**
      * Google TV's profile chooser, from any profile: in a kids profile Google TV's kids lock still decides who may
-     * leave it.
+     * leave it. With Hearth's own picker on (experiment, OwnChooser), Hearth's picker comes up over it.
      */
     static boolean showChooser(Context context) {
-        try {
-            context.startActivity(LauncherAccessibilityService.profileChooserIntent()
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-            return true;
-        } catch (Exception e) {
-            Log.w(TAG, "Couldn't open the profile chooser: " + e.getClass().getSimpleName());
-            return false;
-        }
+        return OwnChooser.open(context);
     }
 }

@@ -73,4 +73,11 @@
     <!-- Over Google TV’s kids home while it checks bedtime (KidsHomeCover) -->
     <string name="switch_cover">Hi, %1$s</string>
     <string name="switch_cover_unnamed">Hi</string>
+    <!-- Hearth's own profile picker over Google TV's chooser (experiment, OwnChooserActivity) -->
+    <string name="own_chooser_title">Who’s watching?</string>
+    <string name="own_chooser_note">Profiles with a PIN still ask for it on Google’s screen. Back shows Google’s own chooser.</string>
+    <string name="own_chooser_kids">Kids</string>
+    <string name="own_chooser_pin">PIN</string>
+    <string name="own_chooser_adult">Adult</string>
+    <string name="own_chooser_failed">Pick on Google’s screen</string>
 </resources>

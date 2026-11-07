@@ -335,6 +335,11 @@ class FLauncherChannel {
   Future<void> setLockOnSleepMinutes(int minutes) async =>
       await _methodChannel.invokeMethod("setLockOnSleepMinutes", minutes);
 
+  /// Hearth's own profile picker over Google TV's chooser (experiment, feature/own-chooser).
+  Future<bool> getOwnChooser() async => await _methodChannel.invokeMethod<bool>("getOwnChooser") ?? false;
+
+  Future<void> setOwnChooser(bool on) async => await _methodChannel.invokeMethod("setOwnChooser", on);
+
   /// The videos a kid's HearthTube started, newest first (provider contract 8). [profileKey]: the kid's ("user:11").
   Future<List<StartedVideo>> getStartedLog(String profileKey) async {
     final rows = await _methodChannel.invokeMethod<List<dynamic>>("getStartedLog", profileKey) ?? [];

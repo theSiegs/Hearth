@@ -2535,6 +2535,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileLockNow => 'Lock now';
 
   @override
+  String get ownChooserTitle => 'Hearth\'s profile picker';
+
+  @override
+  String get ownChooserNote =>
+      'Hearth shows its own picker over Google TV\'s profile chooser and picks the person there for you. Google still makes the switch and asks for any PIN; Back shows Google\'s own chooser.';
+
+  @override
   String get profileLockOnSleep => 'Log out when the TV sleeps';
 
   @override

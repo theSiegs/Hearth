@@ -3055,6 +3055,14 @@
     "@profileLockNow": {
         "description": "Settings > Profiles: locking an adult profile with Google TV's profile lock"
     },
+    "ownChooserTitle": "Hearth's profile picker",
+    "@ownChooserTitle": {
+        "description": "Settings > Profiles (experiment): Hearth's own picker over Google TV's profile chooser"
+    },
+    "ownChooserNote": "Hearth shows its own picker over Google TV's profile chooser and picks the person there for you. Google still makes the switch and asks for any PIN; Back shows Google's own chooser.",
+    "@ownChooserNote": {
+        "description": "Settings > Profiles (experiment): what Hearth's own profile picker does"
+    },
     "profileLockOnSleep": "Log out when the TV sleeps",
     "@profileLockOnSleep": {
         "description": "Settings > Profiles: locking an adult profile with Google TV's profile lock"

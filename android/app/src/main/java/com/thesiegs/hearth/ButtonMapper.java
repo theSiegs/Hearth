@@ -166,8 +166,9 @@ final class ButtonMapper {
                 intent = new Intent(Intent.ACTION_VIEW, TvContract.buildChannelUriForPassthroughInput(target));
                 break;
             case "profiles":
-                intent = LauncherAccessibilityService.profileChooserIntent();
-                break;
+                // Google's chooser, with Hearth's picker over it when that's on (OwnChooser)
+                OwnChooser.open(service);
+                return;
             case "home":
                 intent = new Intent(service, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 break;
@@ -193,8 +194,8 @@ final class ButtonMapper {
             case "lock":
                 // Nothing to lock (a kids profile, or one without a Google TV PIN): the chooser, to leave it
                 if (ProfileLock.lockNow(service)) return;
-                intent = LauncherAccessibilityService.profileChooserIntent();
-                break;
+                OwnChooser.open(service);
+                return;
             case "assistant": {
                 // Google's assistant (Gemini on Google TV): what the mic button does when Hearth doesn't take it
                 PackageManager pm = service.getPackageManager();

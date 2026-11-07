@@ -118,7 +118,7 @@ final class SwitchCover {
         return sCover != null;
     }
 
-    private static int accentColor(Context context) {
+    static int accentColor(Context context) {
         String hex = FlutterPrefs.getString(context, "accent_color", null);
         try {
             if (hex != null) return Color.parseColor("#" + hex.replace("#", ""));

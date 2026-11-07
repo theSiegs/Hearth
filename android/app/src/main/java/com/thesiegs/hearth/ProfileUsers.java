@@ -428,6 +428,48 @@ final class ProfileUsers {
         return prefs.contains(key) ? prefs.getBoolean(key, false) : null;
     }
 
+    /** A profile Hearth has learned the name of: its key, name and user serial. */
+    static final class Known {
+        final String key;
+        final String name;
+        final long serial;
+
+        Known(String key, String name, long serial) {
+            this.key = key;
+            this.name = name;
+            this.serial = serial;
+        }
+    }
+
+    /**
+     * Every profile whose name Hearth has learned (from Google TV's chooser): each user's first account, then each
+     * adults' user's other accounts. Users that no longer exist are left out.
+     */
+    static List<Known> known(Context context) {
+        List<Known> out = new ArrayList<>();
+        UserManager users = (UserManager) context.getSystemService(Context.USER_SERVICE);
+        for (Map.Entry<String, ?> entry : new java.util.TreeMap<>(prefs(context).getAll()).entrySet()) {
+            String key = entry.getKey();
+            if (!(entry.getValue() instanceof String)) continue;
+            String name = (String) entry.getValue();
+            long serial = serialOfEntry(key);
+            if (serial == UNKNOWN || name.isEmpty()) continue;
+            if (users != null) {
+                try {
+                    if (users.getUserForSerialNumber(serial) == null) continue;
+                } catch (RuntimeException e) {
+                    continue;
+                }
+            }
+            if (key.startsWith(NAME_PREFIX)) {
+                out.add(new Known(key(serial), name, serial));
+            } else if (key.startsWith(ACCOUNT_PREFIX)) {
+                out.add(new Known(accountKey(serial, name), name, serial));
+            }
+        }
+        return out;
+    }
+
     /** The account Google TV has logged in in this user, when it isn't the user's first one; else null. */
     static String loggedIn(Context context, long serial) {
         return serial == UNKNOWN ? null : prefs(context).getString(LOGGED_IN_PREFIX + serial, null);

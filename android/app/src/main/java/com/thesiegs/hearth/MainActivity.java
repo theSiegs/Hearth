@@ -322,6 +322,11 @@ public class MainActivity extends FlutterActivity {
             }
             case "lockProfile" -> result.success(ProfileLock.lockNow(this));
             case "getLockOnSleepMinutes" -> result.success(ProfileLock.lockOnSleepMinutes(this));
+            case "getOwnChooser" -> result.success(OwnChooser.isOn(this));
+            case "setOwnChooser" -> {
+                OwnChooser.setOn(this, Boolean.TRUE.equals(call.arguments));
+                result.success(null);
+            }
             case "setLockOnSleepMinutes" -> {
                 Integer minutes = call.arguments();
                 ProfileLock.setLockOnSleepMinutes(this, minutes != null ? minutes : ProfileLock.OFF);
@@ -1351,6 +1356,8 @@ public class MainActivity extends FlutterActivity {
     // Google TV's own profile switcher: switching here is what applies kids profile restrictions system-wide.
     // Not a public API, so fall back to the accounts settings page if Google TV changes it.
     private boolean openProfileChooser() {
+        // With Hearth's own picker on (experiment, OwnChooser) it comes up over Google's chooser
+        if (OwnChooser.open(this)) return true;
         return startFirst(LauncherAccessibilityService.profileChooserIntent(), new Intent(Settings.ACTION_SYNC_SETTINGS));
     }
 

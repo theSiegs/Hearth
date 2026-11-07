@@ -153,6 +153,15 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <!-- Hearth's own profile picker over Google TV's chooser (experiment, OwnChooser): its own task, so closing it
+             uncovers Google's chooser underneath, never Hearth's home -->
+        <activity
+            android:name=".OwnChooserActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:taskAffinity="com.thesiegs.hearth.ownchooser"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
         <!-- Hearth as an agent in another Google TV profile's user: only enabled there (AgentService.hideFromHome);
              Hearth in the owner's user starts it to open things in that user -->
         <activity

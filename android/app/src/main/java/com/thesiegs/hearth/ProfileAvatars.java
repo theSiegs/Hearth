@@ -55,6 +55,70 @@ final class ProfileAvatars {
     }
 
     /**
+     * The profile's photo from Home Assistant (HaFaces; experiment, feature/own-chooser): its person's picture. When
+     * there is one it's the photo shown, and the chooser's tile isn't photographed for it.
+     */
+    private static File haFile(Context context, String name) {
+        File chooser = file(context, name);
+        return new File(new File(context.getFilesDir(), "profile_avatars_ha"), chooser.getName());
+    }
+
+    /** The photo to show: Home Assistant's when there is one, else the chooser's. */
+    private static File shown(Context context, String name) {
+        File ha = haFile(context, name);
+        return ha.exists() ? ha : file(context, name);
+    }
+
+    /** Saves a Home Assistant picture as the profile's photo: SAVED when new or changed, UNCHANGED, or FAILED. */
+    static int saveHaPhoto(Context context, String name, Bitmap picture) {
+        if (name == null || picture == null || picture.getWidth() < 16 || picture.getHeight() < 16) return FAILED;
+        int side = Math.min(picture.getWidth(), picture.getHeight());
+        Bitmap square = Bitmap.createBitmap(picture, (picture.getWidth() - side) / 2, (picture.getHeight() - side) / 2,
+                side, side);
+        Bitmap out = round(square, side);
+        File f = haFile(context, name);
+        if (looksSame(f, out)) {
+            f.setLastModified(System.currentTimeMillis());
+            return UNCHANGED;
+        }
+        File dir = f.getParentFile();
+        if (dir != null && !dir.exists() && !dir.mkdirs()) return FAILED;
+        File tmp = new File(f.getPath() + ".tmp");
+        try (FileOutputStream stream = new FileOutputStream(tmp)) {
+            out.compress(Bitmap.CompressFormat.PNG, 100, stream);
+        } catch (Exception e) {
+            Log.w(TAG, "Couldn't save the Home Assistant photo of " + LogNames.of(name), e);
+            return FAILED;
+        }
+        return tmp.renameTo(f) ? SAVED : FAILED;
+    }
+
+    /** No Home Assistant picture for this profile any more: the chooser's photo shows again. Whether one went. */
+    static boolean dropHaPhoto(Context context, String name) {
+        if (name == null) return false;
+        File f = haFile(context, name);
+        return f.exists() && f.delete();
+    }
+
+    /** Whether the profile's photo comes from Home Assistant. */
+    static boolean hasHaPhoto(Context context, String name) {
+        return name != null && haFile(context, name).exists();
+    }
+
+    /** A round {@link #SIZE} px picture of a square bitmap {@code side} px wide. */
+    private static Bitmap round(Bitmap square, int side) {
+        Bitmap out = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+        BitmapShader shader = new BitmapShader(square, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+        Matrix scale = new Matrix();
+        scale.setScale((float) SIZE / side, (float) SIZE / side);
+        shader.setLocalMatrix(scale);
+        paint.setShader(shader);
+        new Canvas(out).drawCircle(SIZE / 2f, SIZE / 2f, SIZE / 2f, paint);
+        return out;
+    }
+
+    /**
      * Earlier photos could include Google TV's PIN lock badge (v1: any tile; v2: the current account's tile while
      * another tile was selected). Runs once per process.
      */
@@ -84,6 +148,8 @@ final class ProfileAvatars {
 
     /** No photo yet for this profile, only a placeholder, or it's due a refresh. */
     static boolean isDue(Context context, String name) {
+        // Home Assistant has a picture: the chooser's tile is only the fallback
+        if (hasHaPhoto(context, name)) return false;
         File f = file(context, name);
         return !f.exists() || provisionalMark(f).exists()
                 || System.currentTimeMillis() - f.lastModified() > REFRESH_MS;
@@ -92,7 +158,7 @@ final class ProfileAvatars {
     /** The profile's photo as PNG bytes, or null. */
     static byte[] read(Context context, String name) {
         if (name == null) return null;
-        File f = file(context, name);
+        File f = shown(context, name);
         if (!f.exists()) return null;
         try {
             return Files.readAllBytes(f.toPath());
@@ -104,7 +170,7 @@ final class ProfileAvatars {
 
     /** When the profile's photo last changed (0: none), so Flutter knows when to reload it. */
     static long modified(Context context, String name) {
-        return name == null ? 0 : file(context, name).lastModified();
+        return name == null ? 0 : shown(context, name).lastModified();
     }
 
     /**
@@ -119,14 +185,7 @@ final class ProfileAvatars {
         Bitmap square = Bitmap.createBitmap(screen, r.centerX() - side / 2, r.centerY() - side / 2, side, side);
         if (isBlank(square)) return FAILED;
 
-        Bitmap out = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888);
-        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-        BitmapShader shader = new BitmapShader(square, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
-        Matrix scale = new Matrix();
-        scale.setScale((float) SIZE / side, (float) SIZE / side);
-        shader.setLocalMatrix(scale);
-        paint.setShader(shader);
-        new Canvas(out).drawCircle(SIZE / 2f, SIZE / 2f, SIZE / 2f, paint);
+        Bitmap out = round(square, side);
 
         int[] pixels = new int[SIZE * SIZE];
         out.getPixels(pixels, 0, SIZE, 0, 0, SIZE, SIZE);
