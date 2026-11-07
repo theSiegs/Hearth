@@ -1,0 +1,1 @@
+Setup explains that profiles and kids' apps are set in Google TV, and to leave Google's own time limits off with Home Assistant. The profile chooser now survives a power-button wake. Apps out of time look it, and Google TV's own limit is reported.
