@@ -60,9 +60,13 @@ def _error(status: HTTPStatus, reason: str) -> web.Response:
 async def _json_body(request: web.Request) -> Any:
     if request.content_length is not None and request.content_length > MAX_STATUS_BYTES:
         return None
-    body = await request.content.read(MAX_STATUS_BYTES + 1)
-    if len(body) > MAX_STATUS_BYTES:
-        return None
+    # StreamReader.read(n) returns what has arrived so far, not n bytes: a body split across TCP segments would be
+    # cut short. Read to the end, but never past the limit.
+    body = bytearray()
+    while chunk := await request.content.read(MAX_STATUS_BYTES + 1 - len(body)):
+        body += chunk
+        if len(body) > MAX_STATUS_BYTES:
+            return None
     try:
         return json.loads(body)
     except ValueError:

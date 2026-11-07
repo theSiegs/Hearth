@@ -120,6 +120,31 @@ async def test_pair_then_post_status(hass: HomeAssistant, hass_client_no_auth: C
     assert hass.states.get("binary_sensor.kitchen_connected").state == "on"
 
 
+async def test_a_status_that_arrives_in_pieces_is_read_whole(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """A big status split across TCP segments: the body is read to its end, not just what arrived first."""
+    import asyncio
+    import json
+
+    await _set_up(hass)
+    client = await hass_client_no_auth()
+    secret = await _pair(hass, client)
+    body = json.dumps({**STATUS, "media_title": "Episode " + "x" * 3000}).encode()
+
+    async def pieces():
+        for start in range(0, len(body), 512):
+            yield body[start : start + 512]
+            await asyncio.sleep(0.01)
+
+    response = await client.post(
+        f"/api/hearth/device/{TV_ID}/status", data=pieces(), headers={"X-Hearth-Secret": secret}
+    )
+    assert response.status == 200
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.kitchen_state").state == "playing"
+
+
 async def test_before_a_status_the_tv_is_unavailable(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
