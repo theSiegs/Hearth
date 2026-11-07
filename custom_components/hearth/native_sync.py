@@ -18,6 +18,7 @@ import voluptuous as vol
 
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from . import grants as g
@@ -40,8 +41,11 @@ EVENT_PARENT_GRANT = "hearth_parent_grant"
 class NativeSync:
     """Hearth's side of the two-way sync with the first-party parental control apps."""
 
-    def __init__(self, hass: HomeAssistant, household: Household) -> None:
+    def __init__(self, hass: HomeAssistant, household: Household, entry_id: str) -> None:
         self.hass = hass
+        # What Hearth itself added in the first-party apps is kept over a restart: forgotten, Hearth's own Family
+        # Link bonus would look like a parent's (a grant), and an allow would be given extra time a second time
+        self._store: Store[dict[str, Any]] = Store(hass, 1, f"hearth.sync.{entry_id}")
         self.household = household
         # The entities whose change may be a parent's (a state change of one recomputes)
         self.watched: set[str] = set()
@@ -50,6 +54,30 @@ class NativeSync:
         household.enforcement.on_applied = self.after_apply
         # Extra time Hearth gave in the first-party apps, by (person, why: allow:<id> or bonus:<when>)
         self._given: dict[tuple[str, str], dict[str, Any]] = {}
+
+    async def async_load(self) -> None:
+        stored = await self._store.async_load() or {}
+        today = dt_util.now().date().isoformat()
+        self.fl_added = {
+            person: record
+            for person, record in (stored.get("fl_added") or {}).items()
+            if isinstance(record, dict) and record.get("day") == today
+        }
+        given = {}
+        for key, record in (stored.get("given") or {}).items():
+            person, sep, why = key.partition("|")
+            if sep and isinstance(record, dict) and record.get("day") == today:
+                given[(person, why)] = record
+        self._given = given
+
+    def _data(self) -> dict[str, Any]:
+        return {"fl_added": self.fl_added, "given": {f"{p}|{why}": r for (p, why), r in self._given.items()}}
+
+    def _save(self) -> None:
+        self._store.async_delay_save(self._data, 2)
+
+    async def async_flush(self) -> None:
+        await self._store.async_save(self._data())
 
     def own_bonus(self) -> dict[str, float]:
         """The Family Link bonus minutes Hearth itself added today, by device id."""
@@ -189,6 +217,7 @@ class NativeSync:
                 if key in self._given or until <= now or not self._mirrors(person):
                     continue
                 self._given[key] = {"day": today, "devices": {}, "platforms": []}
+                self._save()
                 self.hass.async_create_task(
                     self._give_time(person, min(until, end_of_day(now)), key), "hearth first-party extra time"
                 )
@@ -205,6 +234,7 @@ class NativeSync:
         now = dt_util.now()
         key = (person, f"bonus:{now.isoformat()}")
         self._given[key] = {"day": now.date().isoformat(), "devices": {}, "platforms": []}
+        self._save()
         until = min(now + timedelta(minutes=left), end_of_day(now))
         self.hass.async_create_task(self._give_time(person, until, key), "hearth first-party extra time")
 
@@ -219,8 +249,11 @@ class NativeSync:
         if minutes <= 0:
             return
         record = self._given[key]
-        await self._give_family_link(person, minutes, key[1], record)
-        await self._give_family_safety(person, until, minutes, key[1], record)
+        try:
+            await self._give_family_link(person, minutes, key[1], record)
+            await self._give_family_safety(person, until, minutes, key[1], record)
+        finally:
+            self._save()
 
     async def _give_family_link(self, person: str, minutes: int, why: str, record: dict[str, Any]) -> None:
         """A today-only Family Link bonus on each of the child's devices whose own daily limit would block within
@@ -317,6 +350,7 @@ class NativeSync:
             if allow is not None and person in allow.until:
                 continue
             del self._given[key]
+            self._save()
             if record["devices"] or record["platforms"]:
                 self.hass.async_create_task(self._take_back(person, record), "hearth first-party extra time back")
 
@@ -342,6 +376,8 @@ class NativeSync:
                 mine.pop(device_id, None)
             except Exception as err:  # noqa: BLE001 - it lapses at midnight
                 error = f"Family Link bonus left to lapse at midnight: {err}"[:200]
+        if reset:
+            self._save()
         if reset or kept or error:
             self.household.enforcement.note(f"{FAMILY_LINK}|{person}", bonus_reset=reset, bonus_kept=kept, error=error)
         enforcer = self._enforcer(person, FAMILY_SAFETY)

@@ -412,6 +412,38 @@ async def test_allowing_all_screen_time_adds_a_family_link_bonus_where_google_wo
     assert [c.data for c in reset] == [{"entity_id": PHONE}]
 
 
+async def test_what_hearth_added_is_remembered_over_a_restart(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+    added = async_mock_service(hass, "familylink", "add_time_bonus")
+    reset = async_mock_service(hass, "familylink", "reset_bonus")
+    await _sam_with_family_link(hass, hass_client_no_auth)
+    _phone(hass)
+    _remaining(hass, 10)
+    allow_id = await _allow_all(hass, dt_util.now().replace(hour=13, minute=0).isoformat())
+    assert len(added) == 1
+
+    # A restart: what's in memory is gone, what was saved comes back
+    household = _household(hass)
+    await household.async_flush()
+    household.sync.fl_added, household.sync._given, household.enforcement.last = {}, {}, {}
+    await household.sync.async_load()
+    await household.enforcement.async_load()
+    assert household.enforcement.status_of("person.sam")["family_link"]["last"]["bonus_added"] == {"Sam's phone": 50}
+
+    # Hearth's own bonus is still Hearth's (no grant), and the allow isn't given extra time again
+    _phone(hass, bonus=50)
+    await _bonus(hass, "all", 0)
+    assert len(added) == 1
+    assert household.grants.of("person.sam") == []
+
+    # Ending the allow still takes Hearth's bonus back
+    await hass.services.async_call(DOMAIN, "allow_end", {"id": allow_id}, blocking=True)
+    await hass.async_block_till_done()
+    assert [c.data for c in reset] == [{"entity_id": PHONE}]
+
+
 async def test_a_device_with_time_enough_or_no_limit_gets_no_bonus(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:

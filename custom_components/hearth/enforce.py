@@ -317,6 +317,7 @@ class Enforcement:
             self.held[key] = Held(
                 set(data.get("items", [])), data.get("entity_id"), restore=dict(data.get("restore") or {})
             )
+        self.last = {key: dict(record) for key, record in (stored.get("last") or {}).items() if isinstance(record, dict)}
 
     def _save(self) -> None:
         self._store.async_delay_save(self._data, 2)
@@ -327,7 +328,9 @@ class Enforcement:
                 key: {"items": sorted(h.items), "entity_id": h.entity_id, "restore": h.restore}
                 for key, h in self.held.items()
                 if h.items or h.restore
-            }
+            },
+            # What Hearth last did through each parental control: kept over a restart for Hearth's page
+            "last": self.last,
         }
 
     async def async_flush(self) -> None:
@@ -347,10 +350,11 @@ class Enforcement:
     @callback
     def note(self, key: str, **what: Any) -> None:
         """What Hearth just did through a parental control (and whether it took), for Hearth's page: the last of
-        each enforcer, kept until a restart."""
+        each enforcer, kept over a restart."""
         record = {"at": dt_util.utcnow().isoformat(), "ok": not what.get("error")}
         record.update({k: v for k, v in what.items() if v not in (None, [], {})})
         self.last[key] = record
+        self._save()
 
     def status_of(self, person: str) -> dict[str, Any]:
         """Per parental control of the person's: what's held now, the last error and what Hearth last did."""

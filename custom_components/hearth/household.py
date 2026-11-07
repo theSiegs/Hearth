@@ -115,7 +115,7 @@ class Household:
         self.watch = WatchLog(hass, hub.entry.entry_id)
         self.allows = Allows(hass, hub.entry.entry_id)
         self.grants = Grants(hass, hub.entry.entry_id)
-        self.sync = NativeSync(hass, self)
+        self.sync = NativeSync(hass, self, hub.entry.entry_id)
         self.scheduler = Scheduler(hass, self, hub.entry.entry_id)
         self.chores = ChoreWatcher(hass, self)
         self.days: dict[str, PersonDay] = {}
@@ -138,6 +138,7 @@ class Household:
         await self.watch.async_load()
         await self.allows.async_load()
         await self.grants.async_load()
+        await self.sync.async_load()
         await self.scheduler.async_load()
 
     async def async_flush(self) -> None:
@@ -147,6 +148,7 @@ class Household:
         await self.watch.async_flush()
         await self.allows.async_flush()
         await self.grants.async_flush()
+        await self.sync.async_flush()
         await self.scheduler.async_flush()
 
     # The mapping
