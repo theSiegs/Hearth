@@ -718,7 +718,9 @@ three takes a person: it's always the caller's own, the person whose `user_id` i
 **`{"type": "hearth/me"}`** answers that person's document, exactly what a paired phone of theirs gets in `state`
 (see [What a device gets](#what-a-device-gets)), with `contract`. Kids, adults and anyone else with a person get their
 own; nothing about other people, approvals or pairing is in it (`media_rooms` is the house's players, as every phone
-gets). A user with no person (an administrator who isn't anyone, say) gets the error `not_found`. Trimmed:
+gets). A user with no person (an administrator who isn't anyone, say) gets the error `not_found`; while Hearth is
+loading (a restart, or a reload after an options change) the error is `not_set_up`, so try again shortly. None of these
+commands takes a person or any other key: an extra key gets Home Assistant's `invalid_format`. Trimmed:
 
 ```json
 {
