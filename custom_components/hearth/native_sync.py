@@ -362,6 +362,91 @@ class NativeSync:
                 error = str(err)[:200]
         self.household.enforcement.note(f"{FAMILY_SAFETY}|{person}", extra_time_cancelled=cancelled, error=error)
 
+    # What the first-party apps say now (Hearth's page, the household summary, explain)
+
+    def first_party(self, person: str) -> dict[str, Any]:
+        """Google's own daily limit per Family Link device, and Microsoft's allowance per Family Safety platform,
+        as their entities say now (only those there). blocking: the device's or platform's own limit stops it now,
+        not a hold of Hearth's; parent_lock: a parent's own Family Safety lock."""
+        from . import family_link as fl
+        from .enforce import DEVICES, FS_BLOCK_UNTIL, FS_HOLD_PARENT
+
+        found: dict[str, Any] = {}
+        child = self.household.family_link_child(person)
+        if child is not None:
+            held = self.household.enforcement.held.get(f"{FAMILY_LINK}|{person}")
+            hearth_holds = bool(held and DEVICES in held.items)
+            rows = []
+            for device in fl.devices(self.hass, child):
+                row = fl.device_limit(self.hass, child, device)
+                row.pop("remaining_entity", None)
+                row["bonus_left"] = fl.bonus_left(self.hass, child, device)
+                row["held_by_hearth"] = hearth_holds
+                out = row["reached"] or row["minutes_left"] == 0
+                row["blocking"] = bool(out and row["bonus_left"] <= 0 and not hearth_holds)
+                rows.append(row)
+            if rows:
+                found[FAMILY_LINK] = rows
+        enforcer = self._enforcer(person, FAMILY_SAFETY)
+        if enforcer is not None:
+            held = self.household.enforcement.held.get(enforcer.key)
+            rows = []
+            for platform in ("Windows", "Xbox"):
+                state = fs_platform_state(self.hass, enforcer.entity_id, platform)
+                if state is None:
+                    continue
+                allowed = state.get("state") if state["entity_id"].startswith("binary_sensor.") else None
+                hold = state.get("hold")
+                parent_lock = hold == FS_HOLD_PARENT and state.get("override") == FS_BLOCK_UNTIL
+                rows.append(
+                    {
+                        "platform": platform,
+                        "entity_id": state["entity_id"],
+                        "minutes_left": _int(state.get("remaining_minutes")),
+                        "allowance_minutes": _int(state.get("allowance_minutes")),
+                        "used_minutes": _int(state.get("used_minutes")),
+                        "allowed_now": None if allowed is None else allowed == "on",
+                        "reason": state.get("reason"),
+                        "hold": hold,
+                        "override_until": state.get("override_until"),
+                        "allow_until": state.get("allow_until"),
+                        "held_by_hearth": bool(held and platform in held.items),
+                        "parent_lock": parent_lock,
+                        # Microsoft's own allowance or hours stop it, not a lock of anyone's
+                        "blocking": allowed == "off" and hold in (None, "none") and not (held and platform in held.items),
+                    }
+                )
+            if rows:
+                found[FAMILY_SAFETY] = rows
+        return found
+
+    def blocked_by(self, person: str, midnight: str) -> list[dict[str, Any]]:
+        """For hearth.explain: the first-party limits that stop the person now on a device of theirs (device_limit:
+        Google's daily limit on a Family Link device, Microsoft's allowance on a platform) and a parent's own Family
+        Safety lock (parent_lock), so explain says what the device does."""
+        found: list[dict[str, Any]] = []
+        first = self.first_party(person)
+        for row in first.get(FAMILY_LINK, []):
+            if row["blocking"]:
+                found.append(
+                    {"kind": "device_limit", "by": row["entity_id"], "device": row["device"], "until": midnight}
+                )
+        for row in first.get(FAMILY_SAFETY, []):
+            if row["parent_lock"]:
+                found.append(
+                    {
+                        "kind": "parent_lock",
+                        "by": row["entity_id"],
+                        "platform": row["platform"],
+                        "until": row["override_until"],
+                    }
+                )
+            elif row["blocking"]:
+                found.append(
+                    {"kind": "device_limit", "by": row["entity_id"], "platform": row["platform"], "until": None}
+                )
+        return found
+
 
 def fs_platform_state(hass: HomeAssistant, entity_id: str, platform: str) -> dict[str, Any] | None:
     """A Family Safety platform today, from a newer Family Safety: its Allowed Now sensor's attributes (reason,
@@ -389,6 +474,11 @@ def fs_platform_state(hass: HomeAssistant, entity_id: str, platform: str) -> dic
 
 def _fs_target(entity_id: str) -> dict[str, Any]:
     return {"entity_id": entity_id} if "." in entity_id else {"account_id": entity_id}
+
+
+def _int(value: Any) -> int | None:
+    number = _number(value)
+    return None if number is None else int(number)
 
 
 def _number(value: Any) -> float | None:

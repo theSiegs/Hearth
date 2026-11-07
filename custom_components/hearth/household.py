@@ -922,6 +922,9 @@ class Household:
                     "until": None,
                 }
             )
+        # Google's and Microsoft's own limits, and a parent's own Family Safety lock: they stop a device of theirs
+        # whatever Hearth allows
+        blocked += self.sync.blocked_by(person, midnight)
         if app is not None:
             for enforcer in enforcers_from_options(self.options):
                 if enforcer.person == person and app in enforcer.school_apps and self.in_school_time(enforcer):

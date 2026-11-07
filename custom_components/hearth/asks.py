@@ -88,6 +88,8 @@ class Ask:
     platform: str | None = None
     app_name: str | None = None
     requested_time: Any = None
+    # Answered in the first-party app instead (family_safety), not by an adult in Hearth
+    answered_in: str | None = None
 
     @property
     def external(self) -> bool:
@@ -125,6 +127,8 @@ class Ask:
             "expires": self.expires.isoformat(),
             "offered": self.offered,
             "source": self.source,
+            "status": self.status,
+            "answered_in": self.answered_in,
             **(
                 {"platform": self.platform, "app_name": self.app_name, "requested_time": self.requested_time}
                 if self.external
@@ -304,6 +308,58 @@ class Asks:
         # The device hears it in its next status answer: everyone's documents again now
         self.hub.household.recompute()
         return ask
+
+    @callback
+    def resolved_elsewhere(self, request_id: str, outcome: str | None, minutes: Any = None) -> Ask | None:
+        """A Family Safety request answered in the Family Safety app (microsoft_family_safety_request_resolved, via
+        app): its open ask closes as answered there. None when no open ask has that request id."""
+        self._tidy()
+        ask = next(
+            (
+                a
+                for a in self._s.asks.values()
+                if a.source == FAMILY_SAFETY and a.external_id == str(request_id) and a.status == PENDING
+            ),
+            None,
+        )
+        if ask is None:
+            return None
+        ask.answered = dt_util.utcnow()
+        ask.answered_in = FAMILY_SAFETY
+        ask.status = {"approved": APPROVED, "denied": DENIED}.get(str(outcome or "").lower(), EXPIRED)
+        if ask.status == APPROVED and isinstance(minutes, (int, float)) and minutes > 0:
+            ask.granted = int(minutes)
+        self.hass.bus.async_fire(
+            EVENT_MORE_TIME_ANSWERED,
+            {
+                "id": ask.id,
+                "person": ask.person,
+                "status": ask.status,
+                "minutes": ask.granted,
+                "by": None,
+                "answered_in": FAMILY_SAFETY,
+            },
+        )
+        self._clear_notification(ask)
+        async_dispatcher_send(self.hass, SIGNAL_PAIRINGS)
+        self.hub.household.recompute()
+        return ask
+
+    def answered_elsewhere(self, person: str) -> list[dict[str, Any]]:
+        """The person's asks answered in a first-party app lately (shown for a while, as answered asks are)."""
+        self._tidy()
+        return [
+            {
+                "id": a.id,
+                "status": a.status,
+                "answered_in": a.answered_in,
+                "text": "answered in the Family Safety app",
+                "platform": a.platform,
+                "answered": a.answered.isoformat() if a.answered else None,
+            }
+            for a in sorted(self._s.asks.values(), key=lambda a: a.asked)
+            if a.person == person and a.answered_in
+        ]
 
     async def _answer_family_safety(self, ask: Ask) -> None:
         """The answer in Family Safety: approve_request with the minutes, or deny_request. A failure is told."""

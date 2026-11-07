@@ -513,3 +513,90 @@ async def test_family_safety_extra_time_unavailable_is_shown_not_raised(
     await _allow_all(hass, dt_util.now().replace(hour=13, minute=0).isoformat())
     status = _household(hass).enforcement.status_of("person.sam")["family_safety"]
     assert "unavailable" in status["last"]["error"] and status["last"]["ok"] is False
+
+
+# E. Explain says what the device does
+
+
+async def test_explain_names_google_s_own_device_limit(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    await _sam_with_family_link(hass, hass_client_no_auth)
+    _phone(hass)
+    _remaining(hass, 0)
+    hass.states.async_set(
+        "binary_sensor.sam_s_phone_daily_limit_reached", "on", {"child_id": CHILD, "device_id": "dev1"}
+    )
+    explained = await hass.services.async_call(
+        DOMAIN, "explain", {"person": "person.sam", "app": "com.example.chat"}, blocking=True, return_response=True
+    )
+    assert explained["allowed"] is False
+    assert explained["blocked_by"][-1]["kind"] == "device_limit"
+    assert explained["blocked_by"][-1]["device"] == "Sam's phone"
+
+    # A bonus on the device: Google's limit doesn't stop it
+    _phone(hass, bonus=15)
+    explained = await hass.services.async_call(
+        DOMAIN, "explain", {"person": "person.sam", "app": "com.example.chat"}, blocking=True, return_response=True
+    )
+    assert all(b["kind"] != "device_limit" for b in explained["blocked_by"])
+
+
+async def test_explain_names_a_parent_s_own_family_safety_lock(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    hass.states.async_set(
+        "binary_sensor.sam_xbox_allowed_now",
+        "off",
+        {
+            "user_id": 123456,
+            "platform": "Xbox",
+            "hold": "parent",
+            "override": "blockUntil",
+            "override_until": "2026-11-08T07:00:00-05:00",
+            "allowance_minutes": 60,
+            "used_minutes": 10,
+            "remaining_minutes": 0,
+        },
+    )
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY})
+    explained = await hass.services.async_call(
+        DOMAIN, "explain", {"person": "person.sam", "group": "games"}, blocking=True, return_response=True
+    )
+    lock = next(b for b in explained["blocked_by"] if b["kind"] == "parent_lock")
+    assert lock["platform"] == "Xbox" and lock["until"] == "2026-11-08T07:00:00-05:00"
+    first = _household(hass).sync.first_party("person.sam")["family_safety"][0]
+    assert first["parent_lock"] and first["allowance_minutes"] == 60
+
+
+async def test_a_request_answered_in_the_family_safety_app_closes_its_ask(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY})
+    hub = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
+    hass.bus.async_fire(
+        "microsoft_family_safety_request", {"account_id": "123456", "request_id": "r1", "platform": "Xbox"}
+    )
+    await hass.async_block_till_done()
+    assert len(hub.asks.pending()) == 1
+
+    # Hearth's own answer comes back as via service: nothing more
+    hass.bus.async_fire(
+        "microsoft_family_safety_request_resolved",
+        {"account_id": "123456", "request_id": "r1", "outcome": "approved", "via": "service"},
+    )
+    await hass.async_block_till_done()
+    assert len(hub.asks.pending()) == 1
+
+    hass.bus.async_fire(
+        "microsoft_family_safety_request_resolved",
+        {"account_id": "123456", "request_id": "r1", "outcome": "approved", "minutes": 30, "via": "app"},
+    )
+    await hass.async_block_till_done()
+    assert hub.asks.pending() == []
+    answered = hub.asks.answered_elsewhere("person.sam")
+    assert answered[0]["text"] == "answered in the Family Safety app" and answered[0]["status"] == "approved"

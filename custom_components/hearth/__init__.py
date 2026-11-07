@@ -54,6 +54,7 @@ _VIEWS_REGISTERED = f"{DOMAIN}_views"
 
 # Microsoft Family Safety: a child asked for more time on an Xbox or a PC
 EVENT_FS_REQUEST = "microsoft_family_safety_request"
+EVENT_FS_RESOLVED = "microsoft_family_safety_request_resolved"
 SERVICE_ADD_BONUS = "add_bonus"
 SERVICE_SET_BUDGET = "set_budget"
 
@@ -664,6 +665,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
                 return
 
     entry.async_on_unload(hass.bus.async_listen(EVENT_FS_REQUEST, family_safety_request))
+
+    @callback
+    def family_safety_resolved(event) -> None:
+        """A Family Safety request answered: in the Family Safety app (via app), its ask closes as answered there;
+        answered by Hearth itself (via service), nothing more to do."""
+        if event.data.get("via") == "service" or not event.data.get("request_id"):
+            return
+        hub.asks.resolved_elsewhere(str(event.data["request_id"]), event.data.get("outcome"), event.data.get("minutes"))
+
+    entry.async_on_unload(hass.bus.async_listen(EVENT_FS_RESOLVED, family_safety_resolved))
 
     @callback
     def parent_change_filter(event_data) -> bool:
