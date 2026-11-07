@@ -1,0 +1,1 @@
+Each kid's TV profile is the same kid on every TV for Home Assistant's limits (pick the profiles again in Home Assistant), and switching profiles no longer hangs on the welcome card.

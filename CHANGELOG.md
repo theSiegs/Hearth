@@ -26,6 +26,13 @@
 - **Home Assistant: family pause.** `hearth.pause` (for some minutes or until a time, with a reason, everyone by default) holds the kids' Hearth devices; `hearth.pause_end` lets them go. Hearth's page has a Pause everyone bar.
 - **Home Assistant: bedtime heads-up.** Each person's state says when their lock ends and when the next bedtime or school time starts (from Family Link's sensors), for devices to wind down; Hearth's page shows "Bedtime in 15 min".
 
+## 2026.11.07 (pre-release)
+
+- **A kid's TV profile is the same kid on every TV.** Each TV numbers its profiles itself (one kid is profile 10 on one TV and 12 on the next), and Home Assistant mapped them by that number, so on a second TV one kid could get another's limits and count against their time. Hearth now tells Home Assistant who each profile is by its name, the same on every TV, and Home Assistant maps profiles by name (or, for a TV with an older Hearth, per TV).
+- **Switching profiles no longer hangs on the welcome card.** A switch Google TV announced while Hearth was still checking the profile was missed: the "Hi" card stayed up for about 30 seconds, ignoring the remote, and then the previous kid's home showed. Hearth now checks again.
+- **Home Assistant: TV profiles by name.** Hearth's page and Configure list each TV profile by name, once for all the TVs that have it. Old mappings by number no longer count; a repair issue asks an adult to pick the profiles again.
+- **Home Assistant:** a TV's bigger status posts were sometimes refused (400) when they arrived in pieces; they're now read whole.
+
 ## 2026.11.06 (pre-release)
 
 - **Time's up on the TV, with asking for more.** On a TV connected to Home Assistant, an app a kid can't open now shows Hearth's time's up card instead of a short message: why (a group's time is up, a family pause with its reason, bedtime, school time) and until when. When time is up and nothing else holds them, the kid can ask an adult for 15, 30, 45 or 60 more minutes right there, and the card shows the answer as it comes: waiting, an adult added time, not now (with a short wait before asking again) or no answer in time. The home's "Nothing to watch" card says the same.
