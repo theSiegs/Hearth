@@ -114,6 +114,17 @@ class HearthPanel extends HTMLElement {
     const hash = (window.location.hash || "").replace("#", "");
     if (hash === "approvals") this._tab = "today";
     else if (TABS.some((t) => t.id === hash)) this._tab = hash;
+    // A request's notification opens /hearth?ask=<id>: Today, scrolled to that request
+    try {
+      const ask = new URLSearchParams(window.location.search).get("ask");
+      if (ask) {
+        this._askFocus = ask;
+        this._askShown = false;
+        this._tab = "today";
+      }
+    } catch (_err) {
+      // No query string to read
+    }
     if (this._hass && !this._unsub) this._start();
   }
 
@@ -562,6 +573,17 @@ class HearthPanel extends HTMLElement {
         await this._setOption("school_days", value, "School days saved");
         return;
       }
+      case "ask-on":
+      case "ask-link": {
+        const key = action === "ask-on" ? "ask_notify_off" : "ask_deep_link";
+        const byAdult = cfg.ask_phones || {};
+        const set = new Set(Object.keys(byAdult).filter((p) => (action === "ask-on" ? !byAdult[p].on : byAdult[p].deep_link)));
+        // ask_notify_off lists who is off: a ticked "Requests" takes them out
+        if ((action === "ask-on") !== el.checked) set.add(d.person);
+        else set.delete(d.person);
+        await this._setOption(key, [...set], `${this._personName(d.person)}: ${action === "ask-on" ? (el.checked ? "gets requests" : "no requests") : el.checked ? "opens in their app" : "opens Hearth's page"}`);
+        return;
+      }
       case "new-apps-save": {
         const entities = [...this.shadowRoot.querySelectorAll("[data-app-watch]:checked")].map((x) => x.value);
         await this._ws({ type: "hearth/config/set", key: "app_watch", value: entities });
@@ -672,6 +694,20 @@ class HearthPanel extends HTMLElement {
         if (focusValue !== null && again.value !== focusValue && again.tagName === "INPUT") again.value = focusValue;
       }
     }
+    this._showAsk();
+  }
+
+  // Once, after opening /hearth?ask=<id>: scroll to that request, or say it's already been answered
+  _showAsk() {
+    if (!this._askFocus || this._askShown || !this._summary || !this._config || this._setupStep !== null || this._tab !== "today") return;
+    this._askShown = true;
+    const card = this.shadowRoot.getElementById(`ask-${this._askFocus}`);
+    if (card) {
+      card.scrollIntoView({ block: "center", behavior: "smooth" });
+      return;
+    }
+    this._askFocus = null;
+    setTimeout(() => this._notify("That request has already been answered"), 0);
   }
 
   _page() {
@@ -763,7 +799,7 @@ class HearthPanel extends HTMLElement {
     const asks = (this._summary?.approvals || []).filter((a) => a.type === "more_time");
     return asks
       .map(
-        (a) => `<div class="card attention ask">
+        (a) => `<div class="card attention ask ${a.id === this._askFocus ? "focus" : ""}" id="ask-${esc(a.id)}">
         <div class="row">${this._avatar(a.person, 36)}<div class="grow">
           <div class="strong">${a.source === "family_safety"
             ? `${esc(a.person_name)} asks for more time${a.platform ? ` on ${esc(a.platform)}` : ""}${a.app_name ? ` for ${esc(a.app_name)}` : ""} (Family Safety)`
@@ -1201,14 +1237,32 @@ class HearthPanel extends HTMLElement {
         .join("")}
       <section class="card">
         <h3><ha-icon icon="mdi:bell-badge-outline"></ha-icon>Where new apps are noticed, and requests</h3>
-        <p class="muted">Hearth's TVs and phones report their apps. These lists of a kid's apps (Family Link's) add the rest. Requests for more time go to the phone below.</p>
+        <p class="muted">Hearth's TVs and phones report their apps. These lists of a kid's apps (Family Link's) add the rest. Requests for more time, offers and chores go to every adult's Home Assistant app; tapping one opens it here.</p>
         <div class="muted small">Watch these lists of a kid's apps:</div>
         <div class="checks">${(cfg.choices?.app_lists || [])
           .map((e) => `<label class="check"><input type="checkbox" data-app-watch value="${esc(e.entity_id)}" ${(cfg.app_watch || []).includes(e.entity_id) ? "checked" : ""}> ${esc(e.name)}</label>`)
           .join("") || `<span class="muted small">No Family Link app lists found.</span>`}</div>
-        <label class="field">Phone that gets requests for more time<select id="ask-notify">${this._options((cfg.notify_services || []).map((n) => ({ value: n, label: n.replace("notify.mobile_app_", "") })), cfg.ask_notify || "", "Only in Home Assistant")}</select></label>
+        ${this._askPhones()}
+        <label class="field">Another phone that gets them too<select id="ask-notify">${this._options((cfg.notify_services || []).map((n) => ({ value: n, label: n.replace("notify.mobile_app_", "") })), cfg.ask_notify || "", "None")}</select></label>
         <div class="actions"><button class="btn primary" data-action="new-apps-save">Save</button></div>
       </section>`;
+  }
+
+  // Each adult on Hearth's page, their companion apps, and whether requests reach them
+  _askPhones() {
+    const byAdult = this._config.ask_phones || {};
+    const adults = Object.keys(byAdult);
+    if (!adults.length) return `<div class="muted small">No adults yet: mark them in Family.</div>`;
+    return `<ul class="list">${adults
+      .map((p) => {
+        const a = byAdult[p];
+        const found = (a.phones || []).map((x) => `${x.service.replace("notify.mobile_app_", "")}${x.os ? ` (${x.os === "ios" ? "iOS" : "Android"})` : ""}`);
+        return `<li>${this._avatar(p, 32)}<div class="grow">${esc(this._personName(p))}
+          <div class="muted small">${found.length ? esc(found.join(", ")) : "No Home Assistant app found for them"}</div></div>
+          <label class="check"><input type="checkbox" data-change="ask-on" data-person="${esc(p)}" ${a.on ? "checked" : ""}> Requests</label>
+          <label class="check" title="Android: a tap opens hearth://ask/&lt;id&gt; (their own app) instead of this page"><input type="checkbox" data-change="ask-link" data-person="${esc(p)}" ${a.deep_link ? "checked" : ""}> Open in their app</label></li>`;
+      })
+      .join("")}</ul>`;
   }
 
   _familyTab() {
@@ -1409,6 +1463,7 @@ p { margin: 6px 0 12px; line-height: 1.45; }
   box-shadow: var(--ha-card-box-shadow, 0 1px 3px rgba(0,0,0,.12)); border: var(--ha-card-border-width, 1px) solid var(--ha-card-border-color, var(--divider-color, transparent));
   margin-bottom: var(--gap); }
 .card.attention { border-color: var(--warning-color, #ffa600); border-width: 2px; }
+.card.ask.focus { box-shadow: 0 0 0 3px var(--primary-color, #03a9f4); }
 .card.pause { padding: 12px 16px; }
 .card.pause.on { border-color: var(--primary-color); border-width: 2px; }
 .card.pause ha-icon { color: var(--primary-color); }

@@ -672,15 +672,41 @@ person; a TV for the profile's, the one in front when none is given). 200 `{"ok"
 `cooldown` with `retry_in` (10 minutes after "not now"); 404 `no_person`; 429 `too_often` past 10 asks and event posts a minute; 400 otherwise. A request is open 30 minutes.
 
 The adults are told: `hearth_more_time_requested` (`id`, `person`, `person_name`, `minutes`, `group`, `note`,
-`device_id`, `asked`, `expires`), a notification in Home Assistant, and on the phone chosen for new apps an actionable
-one (the asked amount, the next one up, Not now: `HEARTH_MORE|<id>|<minutes>`, 0 for not now). The first answer wins,
-once: from that phone, Hearth's page, or `{"type": "hearth/approvals/answer", "request_id", "minutes" (1-600) |
+`device_id`, `asked`, `expires`), a notification in Home Assistant, and an actionable one on the adults' phones (the
+asked amount, the next one up, Not now: `HEARTH_MORE|<id>|<minutes>`, 0 for not now; see [The adults'
+phones](#the-adults-phones)). The first answer wins, once: from a phone, Hearth's page, or `{"type": "hearth/approvals/answer", "request_id", "minutes" (1-600) |
 "deny": true}` on the WebSocket, or the service `hearth.answer_request` (`request_id`; `minutes` 1-600 or `deny:
 true`; returns the request as the device sees it; a second answer, or one to an expired request, is refused with a
 validation error) (administrators, and adults on Hearth's page). More time is extra time today (as `add_bonus`); the answer fires
 `hearth_more_time_answered` (`id`, `person`, `status`, `minutes`, `by`: the user). The asking device sees it in the
 person's state document: `request` {id, status: pending | approved | denied | expired, minutes (granted when
 approved), asked_minutes, group, expires, answered (when it was answered or expired, null while pending)}, for two hours after.
+
+#### The adults' phones
+
+Every adult on Hearth's page gets requests for more time, offers (Configure > Offer more time) and chores done on each
+of their Home Assistant companion apps: a `mobile_app` registration that their person follows as a device tracker
+(`device_trackers`), or that their Home Assistant user registered. Its notify service is `notify.mobile_app_<device
+name, slugified>`, as the companion app names it. The phone chosen in Configure > Watch for new apps (option
+`ask_notify`) gets them too, each service once. Per adult, on Hearth's page (Apps > Where new apps are noticed, and
+requests) or in Configure > Watch for new apps:
+
+- `ask_notify_off`: a list of person entity ids whose phones get none (default: everyone on).
+- `ask_deep_link`: a list of person entity ids whose Android phones open the deep link instead of Hearth's page.
+
+A request's notification carries `data.tag: "hearth_more_<id>"`, `data.actions` as above, and what a tap opens:
+
+| Phone | `data` |
+|---|---|
+| Android | `"clickAction": "/hearth?ask=<id>"`, or `"clickAction": "hearth://ask/<id>"` with `ask_deep_link` |
+| iOS | `"url": "/hearth?ask=<id>"` (always the page) |
+| Not a known companion app (`ask_notify` only) | both, `/hearth?ask=<id>` |
+
+`/hearth?ask=<id>` opens Hearth's page on Today and scrolls to that request (highlighted), or says it was already
+answered. `hearth://ask/<id>` is exactly that: scheme `hearth`, host `ask`, the request id as the path; an app that
+handles it (Hearth's own phone app, Glint) answers through the WebSocket (`hearth/approvals/answer`). Once a request is
+answered anywhere (a button, Hearth's page, the service, the WebSocket, Family Safety's own app) or expires, every phone
+that would get it is sent `{"message": "clear_notification", "data": {"tag": "hearth_more_<id>"}}`.
 
 **From Family Safety:** a request made on an Xbox or a Windows PC (`microsoft_family_safety_request`) becomes a request
 of the person whose Family Safety account it is (Configure > Enforce), once per request id, with `source:

@@ -1,10 +1,10 @@
 """Asking for more time (docs/home-assistant-integration.md, Ask for more): one pipeline for every device.
 
 A kid's device asks (a TV for its profile's person, a phone for its own) for 15, 30, 45 or 60 minutes of a group. The
-request gets an id and an expiry; the adults are told (an event, an actionable notification on the chosen phone, the
-household summary's approvals), and the first adult to answer decides, once: more time is extra time today
-(add_bonus), maybe another amount than asked; "not now" starts a cooldown before that person may ask again. The asking
-device sees the answer in its next status answer (the person's state document, "request").
+request gets an id and an expiry; the adults are told (an event, an actionable notification on every adult's phone
+(phones.py), the household summary's approvals), and the first adult to answer decides, once: more time is extra
+time today (add_bonus), maybe another amount than asked; "not now" starts a cooldown before that person may ask again.
+The asking device sees the answer in its next status answer (the person's state document, "request").
 
 An offer goes the other way (Configure > Offer more time): when a chosen group of a kid's runs out, the adults are
 asked whether to give some more, with the same buttons; nothing is asked of the kid, and their devices aren't told
@@ -35,6 +35,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
+from . import phones
 from .const import DOMAIN, SIGNAL_PAIRINGS
 
 _LOGGER = logging.getLogger(__name__)
@@ -385,15 +386,6 @@ class Asks:
 
     # Telling the adults
 
-    def _phone(self) -> tuple[str, str] | None:
-        from .apps import CONF_ASK_NOTIFY
-
-        service = self.hub.entry.options.get(CONF_ASK_NOTIFY)
-        if not service or "." not in service:
-            return None
-        domain, name = service.split(".", 1)
-        return (domain, name) if self.hass.services.has_service(domain, name) else None
-
     def _tell_adults(self, ask: Ask) -> None:
         who = self.hub.household.person_name(ask.person)
         group = self.hub.household.group(ask.group)
@@ -416,50 +408,28 @@ class Asks:
             title=title,
             notification_id=f"hearth_more_{ask.id}",
         )
-        phone = self._phone()
-        if phone is None:
-            return
         # The asked amount first; Android shows three buttons, so: asked, the next one up, not now
         amounts = [ask.minutes] + [m for m in AMOUNTS if m > ask.minutes][:1]
         actions = [{"action": f"{ACTION_PREFIX}{ask.id}|{m}", "title": f"+{m} min"} for m in amounts]
         actions.append({"action": f"{ACTION_PREFIX}{ask.id}|0", "title": "Not now"})
-        self.hass.async_create_task(
-            self.hass.services.async_call(
-                phone[0],
-                phone[1],
-                {
-                    "title": title,
-                    "message": message,
-                    "data": {"tag": f"hearth_more_{ask.id}", "actions": actions},
-                },
-                blocking=False,
-            )
+        phones.send(
+            self.hass,
+            self.hub.entry.options,
+            title,
+            message,
+            {"tag": f"hearth_more_{ask.id}", "actions": actions},
+            ask_id=ask.id,
         )
 
     def tell(self, title: str, message: str, tag: str) -> None:
-        """News for the adults, the way requests reach them: a notification here, and on the chosen phone."""
+        """News for the adults, the way requests reach them: a notification here, and on the adults' phones."""
         persistent_notification.async_create(self.hass, message, title=title, notification_id=tag)
-        phone = self._phone()
-        if phone is None:
-            return
-        self.hass.async_create_task(
-            self.hass.services.async_call(
-                phone[0], phone[1], {"title": title, "message": message, "data": {"tag": tag}}, blocking=False
-            )
-        )
+        phones.send(self.hass, self.hub.entry.options, title, message, {"tag": tag})
 
     def _clear_notification(self, ask: Ask) -> None:
+        """An answered (or expired) request comes off Home Assistant's notifications and every adult's phone."""
         persistent_notification.async_dismiss(self.hass, f"hearth_more_{ask.id}")
-        phone = self._phone()
-        if phone is not None:
-            self.hass.async_create_task(
-                self.hass.services.async_call(
-                    phone[0],
-                    phone[1],
-                    {"message": "clear_notification", "data": {"tag": f"hearth_more_{ask.id}"}},
-                    blocking=False,
-                )
-            )
+        phones.clear(self.hass, self.hub.entry.options, f"hearth_more_{ask.id}")
 
     @callback
     def phone_answer(self, action: str, user_id: str | None) -> bool:

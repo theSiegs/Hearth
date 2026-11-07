@@ -261,10 +261,12 @@
       },
       "new_apps": {
         "title": "Watch for new apps",
-        "description": "Apps the kids start using on Hearth's devices are noticed by themselves. Add sensors that list a kid's allowed apps (Family Link's Apps without limits and Apps with time limits) to notice an app as soon as it's allowed. A phone, if chosen, is asked which group each new app counts in.",
+        "description": "Apps the kids start using on Hearth's devices are noticed by themselves. Add sensors that list a kid's allowed apps (Family Link's Apps without limits and Apps with time limits) to notice an app as soon as it's allowed. Requests for more time, offers and chores go to every adult's Home Assistant companion app, and to the phone chosen here, if any.",
         "data": {
           "entities": "App lists",
-          "notify": "Ask on this phone"
+          "notify": "Also tell this phone",
+          "ask_off": "Adults whose own phones don't get requests",
+          "ask_deep_link": "Adults whose Android phones open hearth://ask/<id> (their own app) instead of Hearth's page"
         }
       },
       "sort_apps": {

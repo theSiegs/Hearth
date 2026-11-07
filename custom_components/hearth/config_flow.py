@@ -70,6 +70,7 @@ from .chores import CONF_CHORES, DEFAULT_MINUTES
 from .asks import AMOUNTS, CONF_OFFER_MORE
 from .sources import CONF_SOURCES, CONF_TITLES
 from . import parent_pin
+from . import phones as adult_phones
 from .push import clean_server
 from .profiles import is_local_key, is_ref, is_tv_key
 from .places import CONF_PLACES, FAVORITES, MAX_FAVORITES, MAX_NAME, SCHOOLS, TRACKERS, favorite_key
@@ -556,11 +557,17 @@ class HearthOptionsFlow(OptionsFlow):
                     **options,
                     CONF_APP_WATCH: list(user_input.get("entities", [])),
                     CONF_ASK_NOTIFY: user_input.get("notify") or None,
+                    adult_phones.CONF_ASK_NOTIFY_OFF: list(user_input.get("ask_off", [])),
+                    adult_phones.CONF_ASK_DEEP_LINK: list(user_input.get("ask_deep_link", [])),
                 }
             )
         phones = sorted(
             f"notify.{name}" for name in self.hass.services.async_services().get("notify", {}) if name.startswith("mobile_app_")
         )
+        adults = [
+            SelectOptionDict(value=p, label=(self.hass.states.get(p).name if self.hass.states.get(p) else p))
+            for p in adult_phones.adults(options)
+        ]
         schema = vol.Schema(
             {
                 vol.Optional("entities", default=list(options.get(CONF_APP_WATCH, []))): EntitySelector(
@@ -569,6 +576,13 @@ class HearthOptionsFlow(OptionsFlow):
                 vol.Optional("notify", description={"suggested_value": options.get(CONF_ASK_NOTIFY)}): SelectSelector(
                     SelectSelectorConfig(options=[SelectOptionDict(value=p, label=p) for p in phones])
                 ),
+                # Every adult's own phones get requests too, unless switched off here
+                vol.Optional("ask_off", default=list(options.get(adult_phones.CONF_ASK_NOTIFY_OFF, []))): SelectSelector(
+                    SelectSelectorConfig(options=adults, multiple=True)
+                ),
+                vol.Optional(
+                    "ask_deep_link", default=list(options.get(adult_phones.CONF_ASK_DEEP_LINK, []))
+                ): SelectSelector(SelectSelectorConfig(options=adults, multiple=True)),
             }
         )
         return self.async_show_form(step_id="new_apps", data_schema=schema)

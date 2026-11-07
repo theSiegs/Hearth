@@ -3,7 +3,7 @@ bonus minutes to one of their groups today.
 
 Configure > Chores, per person: a to-do list, the group, and the minutes a chore is worth (15 by default). A chore's
 text can say its own worth with a "+N" tag ("Dishes +30"). A checked-off item is added once and then removed from the
-list, so it can't count twice; the adults are told (an event, and the phone that answers requests for more time).
+list, so it can't count twice; the adults are told (an event, and their phones, as for requests for more time).
 """
 
 from __future__ import annotations
@@ -110,24 +110,14 @@ class ChoreWatcher:
             self._busy.discard(chores.todo)
 
     def _tell(self, chores: Chores, summary: str, minutes: int) -> None:
-        from .apps import CONF_ASK_NOTIFY
+        """The adults' phones hear of it, as they hear of requests for more time (phones.py)."""
+        from . import phones
 
-        service = self.household.options.get(CONF_ASK_NOTIFY)
-        if not service or "." not in service:
-            return
-        domain, name = service.split(".", 1)
-        if not self.hass.services.has_service(domain, name):
-            return
         group = self.household.group(chores.group)
         who = self.household.person_name(chores.person)
-        self.hass.async_create_task(
-            self.hass.services.async_call(
-                domain,
-                name,
-                {
-                    "title": f"{who} finished a chore",
-                    "message": f"{summary}: +{minutes} min of {group.name if group else chores.group} today",
-                },
-                blocking=False,
-            )
+        phones.send(
+            self.hass,
+            self.household.options,
+            f"{who} finished a chore",
+            f"{summary}: +{minutes} min of {group.name if group else chores.group} today",
         )

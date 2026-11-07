@@ -52,7 +52,7 @@ from .places import CONF_PLACES, FAVORITES, MAX_FAVORITES, MAX_NAME, RESERVED, S
 from .schooldays import CONF_SCHOOL_DAYS
 from .sources import CONF_SOURCES, CONF_TITLES
 from .profiles import OPTION_KEY
-from . import parent_pin
+from . import parent_pin, phones
 from .push import clean_server
 
 URL_PATH = "hearth"
@@ -218,6 +218,8 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
         "school_days": dict(options.get(CONF_SCHOOL_DAYS) or {}),
         "app_watch": list(options.get(CONF_APP_WATCH, [])),
         "ask_notify": options.get(CONF_ASK_NOTIFY),
+        # Each adult's phones, and whether they get requests (and open hearth://ask/<id> on Android)
+        "ask_phones": phones.page_view(hass, options),
         "notify_services": sorted(
             f"notify.{name}" for name in hass.services.async_services().get("notify", {}) if name.startswith("mobile_app_")
         ),
@@ -284,6 +286,8 @@ OPTION_SCHEMAS: dict[str, Any] = {
     CONF_INSIDE_ALL: [_ID],
     CONF_MEDIA_PLAYERS: vol.Schema({cv.string: cv.entity_domain("media_player")}),
     CONF_ASK_NOTIFY: vol.Any(None, cv.string),
+    phones.CONF_ASK_NOTIFY_OFF: [_PERSON],
+    phones.CONF_ASK_DEEP_LINK: [_PERSON],
     CONF_PUSH_SERVER: clean_server,
     CONF_PLACES: vol.Schema(
         {
@@ -331,7 +335,8 @@ def ws_config_set(hass: HomeAssistant, connection: websocket_api.ActiveConnectio
         return
     key = msg["key"]
     try:
-        value = OPTION_SCHEMAS[key](msg.get("value"))
+        # vol.Schema: a list ([_PERSON]) is a schema too, but not a callable
+        value = vol.Schema(OPTION_SCHEMAS[key])(msg.get("value"))
     except vol.Invalid as err:
         connection.send_error(msg["id"], "invalid", str(err))
         return
