@@ -64,6 +64,8 @@ ADD_BONUS_SCHEMA = vol.Schema(
         vol.Required("person"): cv.entity_id,
         vol.Required("minutes"): vol.All(vol.Coerce(int), vol.Range(min=-1440, max=1440)),
         vol.Optional("group", default="all"): cv.string,
+        # Only on this device of theirs (a target id: hearth:<id>, fl:<id>, fs:xbox, nintendo:<entity>)
+        vol.Optional("device"): cv.string,
     }
 )
 SET_BUDGET_SCHEMA = vol.Schema(
@@ -172,9 +174,18 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
     @callback
     def add_bonus(call: ServiceCall) -> None:
-        """Minutes added to (or, negative, taken from) a person's group today: the one way to extend."""
+        """Minutes added to (or, negative, taken from) a person's group today: the one way to extend. With a device,
+        minutes on that device only (device_extra.py)."""
         target = household(call)
-        target.add_bonus(call.data["person"], group_id(target, call.data["group"]), call.data["minutes"])
+        group = group_id(target, call.data["group"])
+        if call.data.get("device"):
+            if call.data["minutes"] <= 0:
+                raise ServiceValidationError("Extra time on one device is a number of minutes more than 0")
+            if group != ALL and target.group(group) is None:
+                raise ServiceValidationError(f"No group {call.data['group']}")
+            target.add_device_extra(call.data["person"], call.data["device"].strip(), "bonus", group, call.data["minutes"])
+            return
+        target.add_bonus(call.data["person"], group, call.data["minutes"])
 
     @callback
     def set_budget(call: ServiceCall) -> None:
@@ -299,6 +310,8 @@ ALLOW_SCHEMA = vol.All(
             vol.Optional("until", default=END_OF_DAY): vol.Any(vol.In((END_OF_DAY, SCHOOL_TIME_END)), cv.time, cv.datetime),
             vol.Optional("reason"): cv.string,
             vol.Optional("ends_on"): ENDS_ON_SCHEMA,
+            # Only on this device of theirs (a target id): a group, open there until the time
+            vol.Optional("device"): cv.string,
         }
     ),
     cv.has_at_least_one_key("app", "group"),
@@ -310,6 +323,8 @@ ALLOW_END_SCHEMA = vol.All(
             vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id]),
             vol.Exclusive("app", "what"): cv.string,
             vol.Exclusive("group", "what"): cv.string,
+            # Extra time on this device ends (a bonus or an allow there)
+            vol.Optional("device"): cv.string,
         }
     ),
     cv.has_at_least_one_key("id", "people"),
@@ -388,6 +403,20 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         app, group = what(household, call.data)
         now = dt_util.now()
         until = {p: until_for(household, p, call.data["until"], now) for p in people}
+        if call.data.get("device"):
+            if app is not None:
+                raise ServiceValidationError("On one device, allow a group (an app goes with every device)")
+            if call.data.get("ends_on"):
+                raise ServiceValidationError("An allow on one device ends at a time, not at a place")
+            extras = [
+                household.add_device_extra(p, call.data["device"].strip(), "allow", group, until=until[p],
+                                           reason=call.data.get("reason"))
+                for p in people
+            ]
+            return {
+                "id": extras[0].id if len(extras) == 1 else [e.id for e in extras],
+                "until": {p: dt_util.as_local(u).isoformat() for p, u in until.items()},
+            }
         ends_on = _place_ends_on(household, people, call.data.get("ends_on"))
         allowed = household.allows.add(until, app, group, call.data.get("reason"), ends_on)
         household.recompute()
@@ -405,6 +434,13 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         # A parent's grant (grants.py) ends by its id too
         grant = household.end_grant(call.data["id"]) if call.data.get("id") else None
         ended = [grant.id] if grant is not None else []
+        # Extra time on one device: by its id, or the people's on that device
+        if call.data.get("device") or (call.data.get("id") or "").startswith("dx_"):
+            ended += household.end_device_extras(
+                call.data.get("id"), call.data.get("people"), (call.data.get("device") or "").strip() or None
+            )
+            if call.data.get("device"):
+                return {"ended": ended}
         ended += household.allows.end(call.data.get("id"), call.data.get("people"), app, group)
         household.recompute()
         # Extra time Hearth gave in Family Link or Family Safety for an allow that ended goes too

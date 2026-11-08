@@ -243,19 +243,46 @@ class NativeSync:
             e.person == person and e.kind in (FAMILY_LINK, FAMILY_SAFETY) for e in self.household.enforcement.enforcers
         )
 
-    async def _give_time(self, person: str, until, key: tuple[str, str]) -> None:
+    async def _give_time(
+        self, person: str, until, key: tuple[str, str], fl_device: str | None = None, platform: str | None = None
+    ) -> None:
+        """[fl_device] or [platform]: only that Family Link device or Family Safety platform (extra time on one
+        device, device_extra.py); neither: every one that would block."""
         now = dt_util.now()
         minutes = math.ceil((until - now).total_seconds() / 60)
         if minutes <= 0:
             return
         record = self._given[key]
         try:
-            await self._give_family_link(person, minutes, key[1], record)
-            await self._give_family_safety(person, until, minutes, key[1], record)
+            if platform is None:
+                await self._give_family_link(person, minutes, key[1], record, only=fl_device)
+            if fl_device is None:
+                await self._give_family_safety(person, until, minutes, key[1], record, only=platform)
         finally:
             self._save()
 
-    async def _give_family_link(self, person: str, minutes: int, why: str, record: dict[str, Any]) -> None:
+    @callback
+    def give_device(self, person: str, extra_id: str, until, fl_device: str | None, platform: str | None) -> None:
+        """Extra time on one Family Link device or Family Safety platform (hearth.add_bonus or hearth.allow with a
+        device), until [until]."""
+        key = (person, f"device:{extra_id}")
+        self._given[key] = {"day": dt_util.now().date().isoformat(), "devices": {}, "platforms": []}
+        self._save()
+        self.hass.async_create_task(
+            self._give_time(person, until, key, fl_device, platform), "hearth extra time on one device"
+        )
+
+    @callback
+    def device_ended(self, person: str, extra_id: str) -> None:
+        """Extra time on one device ended early: what Hearth gave for it in Family Link or Family Safety goes."""
+        record = self._given.pop((person, f"device:{extra_id}"), None)
+        self._save()
+        if record and (record["devices"] or record["platforms"]):
+            self.hass.async_create_task(self._take_back(person, record), "hearth extra time on one device back")
+
+    async def _give_family_link(
+        self, person: str, minutes: int, why: str, record: dict[str, Any], only: str | None = None
+    ) -> None:
         """A today-only Family Link bonus on each of the child's devices whose own daily limit would block within
         [minutes] (a device with no limit gets none)."""
         from . import family_link as fl
@@ -267,6 +294,8 @@ class NativeSync:
         error = None
         for device in fl.devices(self.hass, child):
             info = fl.device_limit(self.hass, child, device)
+            if only is not None and info["device_id"] != only:
+                continue
             left = info["minutes_left"]
             if left is None or left >= minutes:
                 continue
@@ -288,7 +317,9 @@ class NativeSync:
         if added or error:
             self.household.enforcement.note(f"{FAMILY_LINK}|{person}", bonus_added=added, reason=why, error=error)
 
-    async def _give_family_safety(self, person: str, until, minutes: int, why: str, record: dict[str, Any]) -> None:
+    async def _give_family_safety(
+        self, person: str, until, minutes: int, why: str, record: dict[str, Any], only: str | None = None
+    ) -> None:
         """Family Safety extra time (its experimental add_time_bonus) on the enforcer's platforms whose allowance
         would block within [minutes]. Extra time replaces Hearth's own lock there (released_hold). A failure says
         Family Safety's extra time is unavailable, and isn't retried."""
@@ -298,6 +329,8 @@ class NativeSync:
         given: dict[str, Any] = {}
         error = None
         for platform in enforcer.platforms:
+            if only is not None and platform != only:
+                continue
             if platform not in ("Windows", "Xbox") or not self._fs_would_block(enforcer.entity_id, platform, minutes):
                 continue
             data = {

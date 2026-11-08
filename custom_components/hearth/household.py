@@ -10,7 +10,7 @@ from here.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime, timedelta
 import hashlib
 import json
 from typing import TYPE_CHECKING, Any
@@ -49,6 +49,7 @@ from .limits import CONF_APP_GROUPS, OTHER, OTHER_DAY, SCHOOL_DAY, Group, GroupS
 from .enforce import FAMILY_LINK, FAMILY_SAFETY, Enforcement, enforcers_from_options, fs_account_of, fs_app, fs_app_platform
 from .exceptions import Allows, Lifted, end_of_day
 from .grants import Grants
+from .device_extra import ALLOW as EXTRA_ALLOW, BONUS as EXTRA_BONUS, DeviceExtra, DeviceExtras
 from .native_sync import NativeSync
 from . import family_link as fl
 from .chores import ChoreWatcher
@@ -116,6 +117,7 @@ class Household:
         self.watch = WatchLog(hass, hub.entry.entry_id)
         self.allows = Allows(hass, hub.entry.entry_id)
         self.grants = Grants(hass, hub.entry.entry_id)
+        self.device_extras = DeviceExtras(hass, hub.entry.entry_id)
         self.sync = NativeSync(hass, self, hub.entry.entry_id)
         self.scheduler = Scheduler(hass, self, hub.entry.entry_id)
         self.chores = ChoreWatcher(hass, self)
@@ -140,6 +142,7 @@ class Household:
         await self.watch.async_load()
         await self.allows.async_load()
         await self.grants.async_load()
+        await self.device_extras.async_load()
         await self.sync.async_load()
         await self.scheduler.async_load()
 
@@ -150,6 +153,7 @@ class Household:
         await self.watch.async_flush()
         await self.allows.async_flush()
         await self.grants.async_flush()
+        await self.device_extras.async_flush()
         await self.sync.async_flush()
         await self.scheduler.async_flush()
 
@@ -560,6 +564,7 @@ class Household:
 
         self.allows.prune()
         self.grants.prune()
+        self._prune_device_extras()
         # A parent's changes in their own apps first: they lift what they came from
         self.sync.detect()
         self.enforcement.update(
@@ -571,6 +576,7 @@ class Household:
             groups_of_app=membership,
             granted_of=self.grants.lifted,
             paused_of=lambda person: self.paused_packages(person, membership, with_fs=True),
+            device_lifted_of=self._device_lifted,
         )
         # An adult's allow of All screen time opens Google's and Microsoft's own limits too
         self.sync.mirror_allows()
@@ -812,22 +818,30 @@ class Household:
                         found.add(candidate)
         return sorted(found - self._spared(membership))
 
-    def _person_document(self, person: str) -> dict[str, Any]:
+    def _person_document(self, person: str, device_id: str | None = None) -> dict[str, Any]:
+        """[device_id]: the Hearth device asking, whose extra time of the person's (device_extra.py) shows here only."""
         day = self.days.get(person)
         membership = self.membership()
+        extras = self.device_extras.of(person, f"hearth:{device_id}") if device_id else []
+        allowed_here = {e.group for e in extras if e.kind == EXTRA_ALLOW}
+        bonus_here: dict[str, int] = {}
+        for extra in extras:
+            if extra.kind == EXTRA_BONUS:
+                bonus_here[extra.group] = max(bonus_here.get(extra.group, 0), self._extra_left(extra) or 0)
         # An adult's allows: an allowed group is left out (nothing holds it), an allowed app is taken out of every
         # group and is one of All screen time's exceptions
         lifted = self.allows.lifted(person)
         groups = []
         for group in self.groups:
             state = day.limits.get(group.id) if day else None
-            if state is None or state.budget_min is None or lifted.group(group.id):
+            if state is None or state.budget_min is None or lifted.group(group.id) or group.id in allowed_here:
                 continue
             apps = self._group_apps(group, membership)
             entry = {
                 "id": group.id,
                 "name": group.name,
-                "minutes_left": state.minutes_left,
+                # Extra time on this device: what's left of it here, when that's more than the pool's
+                "minutes_left": max(state.minutes_left, bonus_here.get(group.id, 0)),
                 "apps": [p for p in apps if not lifted.app(p, membership(p))] if lifted else apps,
             }
             # All screen time holds every app but these (a group outside it: music, say; what an allow lifts)
@@ -879,7 +893,7 @@ class Household:
             profiles = self.device_profile_people(device_id)
             body: dict[str, Any] = {
                 "profiles": {
-                    profile_id: self._person_document(profiles[profile_id])
+                    profile_id: self._person_document(profiles[profile_id], device_id)
                     for profile_id in sorted(profile_ids)
                     if profiles.get(profile_id)
                 },
@@ -915,14 +929,14 @@ class Household:
                 if status.get("parent_pins_version") != pins_version:
                     body["parent_pins"] = listed
         else:
-            body = self._phone_body(device.get(CONF_PERSON))
+            body = self._phone_body(device.get(CONF_PERSON), device_id)
         body["version"] = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()[:16]
         body["contract"] = CONTRACT
         return body
 
-    def _phone_body(self, person: str | None) -> dict[str, Any]:
+    def _phone_body(self, person: str | None, device_id: str | None = None) -> dict[str, Any]:
         """What a phone of [person]'s is told (without version and contract)."""
-        body: dict[str, Any] = {"person": self._person_document(person) if person else None}
+        body: dict[str, Any] = {"person": self._person_document(person, device_id) if person else None}
         if body["person"] is not None:
             role = self.options.get(CONF_ROLES, {}).get(person)
             # kid / adult as set on Hearth's page (kind_set); else a kid when they have limits
@@ -1153,7 +1167,122 @@ class Household:
             "lifted": lifted_holds,
             "exceptions": self.allow_views(person, applying) + granted,
             "school_time_off": self.off_views(person),
+            # Extra time on one device (a device's own bonus or allow): that device may go on whatever the pool says
+            "device_extras": [
+                v for v in self.device_extra_views(person) if v["group"] == ALL or v["group"] in groups
+            ],
         }
+
+    # Extra time on one device (device_extra.py)
+
+    def _device_group_seconds(self, person: str, device_id: str, group: str) -> float:
+        day = self.days.get(person)
+        usage = day.devices.get(device_id) if day else None
+        if usage is None:
+            return 0.0
+        return group_seconds({device_id: usage}, self.membership(), self.outside_all()).get(group, 0.0)
+
+    def _extra_left(self, extra: DeviceExtra, now: datetime | None = None) -> int | None:
+        """Minutes left of it: a Hearth device's bonus by what that device used of the group since; a Family Link
+        device's bonus is Google's to count (its minutes as given); the rest by the clock."""
+        now = now or dt_util.now()
+        if extra.kind == EXTRA_BONUS and extra.target.startswith("hearth:"):
+            used = self._device_group_seconds(extra.person, extra.target.removeprefix("hearth:"), extra.group)
+            return max(0, int((extra.minutes or 0) - (used - extra.base_s) / 60))
+        if extra.kind == EXTRA_BONUS and extra.via == "family_link":
+            return extra.minutes
+        return max(0, int((extra.until - now).total_seconds() // 60))
+
+    def _prune_device_extras(self) -> None:
+        self.device_extras.prune()
+        for extra in list(self.device_extras.extras.values()):
+            if extra.kind == EXTRA_BONUS and extra.target.startswith("hearth:") and self._extra_left(extra) == 0:
+                self.device_extras.end(extra.id, None, None)
+
+    def _device_lifted(self, enforcer) -> set[str]:
+        """What extra time on one device lifts of an enforcer's holds: a Family Safety platform, the Switch."""
+        from .enforce import NINTENDO, SWITCH
+
+        lifted: set[str] = set()
+        for extra in self.device_extras.of(enforcer.person):
+            if enforcer.kind == FAMILY_SAFETY and extra.target.startswith("fs:"):
+                platform = extra.target.removeprefix("fs:").capitalize()
+                if platform in enforcer.platforms:
+                    lifted.add(platform)
+            elif enforcer.kind == NINTENDO and extra.target == f"nintendo:{enforcer.entity_id}":
+                lifted.add(SWITCH)
+        return lifted
+
+    def device_extra_views(self, person: str) -> list[dict[str, Any]]:
+        """[{id, target, name, via, kind (bonus | allow), group, until, minutes_left, reason}]"""
+        from .targets import targets_of
+
+        names = {t["id"]: t["name"] for t in targets_of(self, person)}
+        return [
+            {
+                "id": e.id,
+                "target": e.target,
+                "name": names.get(e.target, e.target),
+                "via": e.via,
+                "kind": e.kind,
+                "group": e.group,
+                "until": dt_util.as_local(e.until).isoformat(),
+                "minutes_left": self._extra_left(e),
+                "reason": e.reason,
+            }
+            for e in self.device_extras.of(person)
+        ]
+
+    def add_device_extra(
+        self,
+        person: str,
+        target: str,
+        kind: str,
+        group: str,
+        minutes: int | None = None,
+        until: datetime | None = None,
+        reason: str | None = None,
+    ) -> DeviceExtra:
+        """Extra time for the person on one of their devices: a bonus of [minutes] from now, or an allow of [group]
+        until [until]. Only All screen time on a device whose holds are the whole account's (Family Link, Family
+        Safety, a Switch)."""
+        from homeassistant.exceptions import ServiceValidationError
+
+        from .targets import targets_of
+
+        found = next((t for t in targets_of(self, person) if t["id"] == target), None)
+        if found is None:
+            raise ServiceValidationError(f"{target} isn't one of {self.person_name(person)}'s devices")
+        if group != ALL and not found["groups"]:
+            raise ServiceValidationError(
+                f"Only All screen time can be given on {found['name']}: what holds a group there holds it on every "
+                "device of theirs"
+            )
+        now = dt_util.now()
+        midnight = end_of_day(now)
+        base_s = 0.0
+        if kind == EXTRA_BONUS:
+            if found["via"] == "hearth":
+                until = midnight
+                base_s = self._device_group_seconds(person, target.removeprefix("hearth:"), group)
+            else:
+                until = min(now + timedelta(minutes=minutes or 0), midnight)
+        extra = self.device_extras.add(person, target, found["via"], kind, group, until, minutes, base_s, reason)
+        self.recompute()
+        if found["via"] == "family_link":
+            self.sync.give_device(person, extra.id, until, target.removeprefix("fl:"), None)
+        elif found["via"] == "family_safety":
+            self.sync.give_device(person, extra.id, until, None, target.removeprefix("fs:").capitalize())
+        return extra
+
+    def end_device_extras(self, extra_id: str | None, people: list[str] | None, target: str | None) -> list[str]:
+        ended = self.device_extras.end(extra_id, people, target)
+        for extra in ended:
+            if extra.via in ("family_link", "family_safety"):
+                self.sync.device_ended(extra.person, extra.id)
+        if ended:
+            self.recompute()
+        return [e.id for e in ended]
 
     @callback
     def end_grant(self, grant_id: str):

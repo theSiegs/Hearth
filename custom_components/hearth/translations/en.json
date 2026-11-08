@@ -463,6 +463,10 @@
         "group": {
           "name": "Group",
           "description": "The group's id: all, video, games, or one of your own."
+        },
+        "device": {
+          "name": "Device",
+          "description": "Only on this device of theirs, today (a target id from the household summary: hearth:<id>, fl:<id>, fs:xbox, fs:windows, nintendo:<entity>): it may go past their shared time there. Only All screen time on a Family Link device, a Family Safety platform or a Switch."
         }
       }
     },
@@ -657,6 +661,10 @@
         "ends_on": {
           "name": "Ends on",
           "description": "Or ends sooner, for each person, when they arrive at a place or leave one: {\"arrive\": \"home\"}, {\"leave\": \"school\"} or a favorite place's key. The time stays the cap; an unknown or stale place never ends it."
+        },
+        "device": {
+          "name": "Device",
+          "description": "Only on this device of theirs (a target id): the group is open there until the time. Only All screen time on a Family Link device, a Family Safety platform or a Switch."
         }
       }
     },
@@ -679,6 +687,10 @@
         "group": {
           "name": "Group",
           "description": "Only those of this group."
+        },
+        "device": {
+          "name": "Device",
+          "description": "End the extra time given on this device (a target id): its bonus or allow there."
         }
       }
     },

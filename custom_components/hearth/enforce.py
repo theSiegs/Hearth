@@ -394,11 +394,13 @@ class Enforcement:
         groups_of_app=None,
         granted_of=None,
         paused_of=None,
+        device_lifted_of=None,
     ) -> None:
         """[apps_of]: a group id's packages for a person (for All screen time, every app of theirs). [lifted_of]: what
         a person's allows lift (Lifted); [school_time_of]: whether an enforcer's child is in School time now;
         [groups_of_app]: an app's groups; [granted_of]: what a person's parent grants lift, by enforcer kind (the
-        held items: grants.py); [paused_of]: the packages an adult paused for a person."""
+        held items: grants.py); [paused_of]: the packages an adult paused for a person; [device_lifted_of]: what extra
+        time on one device lifts of an enforcer's holds (a Family Safety platform, a Switch: device_extra.py)."""
         self.enforcers = enforcers
         now = dt_util.now()
         wanted_now: dict[str, set[str]] = {}
@@ -420,7 +422,8 @@ class Enforcement:
                 if paused_of
                 else set()
             )
-            wanted_now[e.key] = (budget | school | paused) - granted
+            device_lifted = device_lifted_of(e) if device_lifted_of else set()
+            wanted_now[e.key] = (budget | school | paused) - granted - device_lifted
         # What an enforcer no longer configured held is let go
         for key in self.held:
             wanted_now.setdefault(key, set())

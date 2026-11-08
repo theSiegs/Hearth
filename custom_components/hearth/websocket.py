@@ -34,7 +34,7 @@ from .media import media_rooms
 from .auth import is_adult_user
 from .glance import household_glance, person_glance
 from .places import SIGNAL_PLACES
-from .targets import target_of_counted
+from .targets import target_of_counted, targets_of
 
 SEND_EVERY = timedelta(seconds=2)
 
@@ -98,6 +98,9 @@ def summary(hub) -> dict[str, Any]:
                 "allows": household.allow_views(person),
                 # An adult's pauses of one app or group (hearth.pause with app or group), apart from the family pause
                 "pauses": household.app_pause_views(person),
+                # Their devices by id, for extra time on one device; and that extra time now
+                "targets": targets_of(household, person),
+                "device_extras": household.device_extra_views(person),
                 "grants": [g.view() for g in household.grants.of(person)],
                 # Google's own daily limit per Family Link device, Microsoft's allowance per platform
                 "first_party": household.sync.first_party(person),

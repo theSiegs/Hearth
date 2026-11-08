@@ -173,6 +173,18 @@ def _sync_items(sync: dict[str, Any]) -> list[dict[str, str]]:
     return found
 
 
+def _extra_text(extra: dict[str, Any], names: dict[str, str]) -> str:
+    where = (extra.get("name") or extra["target"]).lower()
+    what = "" if extra.get("group") in (None, ALL) else f"{_group_word(extra['group'], names)} "
+    if extra.get("kind") == "allow":
+        return f"{where} · {what}open{_till(extra.get('until'))}"
+    if extra.get("via") == "hearth":
+        return f"{where} · {what}{extra.get('minutes_left') or 0} left there"
+    if extra.get("via") == "family_link":
+        return f"{where} · +{extra.get('minutes_left') or 0} {what}in family link".replace("  ", " ")
+    return f"{where} · {what}open{_till(extra.get('until'))}"
+
+
 def _paused_key(paused: dict[str, Any]) -> str:
     return f"app:{paused['app']}" if paused.get("app") else f"group:{paused['group']}"
 
@@ -242,6 +254,9 @@ def person_glance(
         news.append(_item(f"{what} allowed{_till(allow.get('until'))}", NOTICE, "allow", allow["id"]))
     for off in school_time_off:
         news.append(_item("no school time today", NOTICE, "school_off", off["id"]))
+    # Extra time on one device: "xbox · +30 till 6:30", "kitchen · 25 left there", "pixel · games open till 8:00"
+    for extra in person.get("device_extras") or []:
+        news.append(_item(_extra_text(extra, names), NOTICE, "device_bonus", extra["target"]))
     # An adult's pause of one app or group: "youtube paused · homework till 19:00"
     for paused in person.get("pauses") or []:
         reason = (paused.get("reason") or "").strip().lower()
@@ -310,6 +325,17 @@ def person_glance(
                 "hearth.pause",
                 {"people": [entity], "minutes": PAUSE_MINUTES},
                 confirm=f"pause {name.lower()} for {PAUSE_MINUTES} min?",
+            )
+        )
+    for target in dict.fromkeys(e["target"] for e in person.get("device_extras") or []):
+        where = next(e["name"] for e in person["device_extras"] if e["target"] == target).lower()
+        actions.append(
+            _action(
+                f"device_bonus_end:{target}",
+                f"end {where} extra time",
+                "hearth.allow_end",
+                {"people": [entity], "device": target},
+                confirm=f"end {name.lower()}'s extra time on {where}?",
             )
         )
     # School time not over yet today and not already off: "no school time today"

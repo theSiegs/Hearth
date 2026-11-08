@@ -407,6 +407,27 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
   leave, `place` (its name), `text`: "ends when Sam gets home, or 21:00"} on the Screen time today sensor, in
   `hearth.explain` (with the exception, and with a pause in `blocked_by`) and in the household summary. A pause for
   several people ends per person (each person's pause is their own), so the others stay paused until they move too.
+- **Extra time on one device.** `hearth.add_bonus` with `device` (a target id from the household summary's
+  `targets`: `hearth:<device_id>`, `fl:<Family Link device id>`, `fs:xbox`, `fs:windows`, `nintendo:<entity>`) gives
+  that many minutes (more than 0) on that device only, today; `hearth.allow` with `device` opens a group there until
+  the time (no `app`, no `ends_on`; returns the `dx_...` id). The person's shared time keeps counting and every other
+  device still reads it: only that device may go past it. Ended early by `hearth.allow_end` with `people` and the
+  same `device`, or with its id. On a Family Link device, a Family Safety platform or a Switch (`groups: false` in
+  `targets`) only `all` can be given: what holds a group there holds it on every device of theirs (Family Link's app
+  pauses are the child's, Family Safety's app blocks the account's). What it does, by device:
+  - a Hearth TV or phone: that device's state document shows the group with what's left of the bonus there (the
+    minutes less what that device used of the group since; an allow: the group isn't held there), never less than
+    the pool; until midnight.
+  - a Family Link device: a Family Link bonus of that many minutes on that device (`add_time_bonus`, only where
+    Google's own limit would stop it, as for an allow of All screen time: the limit Hearth sets to 0 when All screen
+    time is out, say), which Google counts down; Hearth remembers it as its own, so it's no parent's grant, and
+    ending it early resets it (unless a parent's bonus came on top).
+  - a Family Safety platform: Hearth's lock of that platform is let go, and Microsoft's own allowance gets extra
+    time where it would stop it (`add_time_bonus`, until then); by the clock, from now. When it ends, Hearth locks
+    the platform again if the pool is still out.
+  - a Switch: Hearth's hold of the Switch is let go (its own limit and Suspend software put back, which still
+    apply); by the clock, from now.
+  Each shows in the summary's `device_extras`, in `hearth.explain` (`device_extras`) and as a contract 2 line.
 - Bedtime, School time itself and a family pause still lock the person. An allow lifts Hearth's holds, not those
   locks: a TV can't open one app through a lock without a change on the TV, and Family Link's own bedtime still locks
   the phone. To lift School time, take it off (`hearth.school_time_off`).
@@ -849,6 +870,14 @@ then sends the same object as an event whenever it changes, at most every 2 seco
   Family Safety's). An app's minutes are summed over the devices.
 - each person with Family Link also has `school_time` {`start`, `end`} (local times) on a school or half day: today's
   School time window (a half day's ends early as configured).
+- each person also has `targets` `[{id, name, kind, via, groups}]`: their devices, for extra time on one device
+  (above). `kind`: `tv`, `phone`, `xbox`, `windows` or `switch`; `via`: `hearth` (a Hearth TV with one of their
+  profiles, or their Hearth phone), `family_link` (each Family Link device, `fl:<device id>`), `family_safety` (each
+  platform Hearth's Family Safety enforcer of theirs holds, `fs:xbox`, `fs:windows`) or `nintendo` (their Switch,
+  `nintendo:<the enforcer's entity>`); `groups` true where one group can be held or given on that device alone
+  (Hearth's own devices). And `device_extras` `[{id, target, name, via, kind (bonus | allow), group, until,
+  minutes_left, reason}]`: that extra time now (`minutes_left`: a Hearth device's by its use, a Family Link bonus as
+  given, the rest by the clock).
 - `groups`: every group of the household, budget or not today: `[{id, name, not_screen_time}]`.
 - `not_screen_time`, `contract`, and `version` (changes with any of it).
 - `media_rooms`: the house's media players by room, below.
@@ -880,6 +909,7 @@ The **headline** is the first of these that holds (glance.py), in this order:
 | notice | a group out, or under 10 minutes (fewest first) | `youtube · out`, `youtube · 7 left` | `out:<group>`, `low:<group>` |
 | notice | an allow (`hearth.allow`) | `youtube allowed till 8:00` | `allow:<id>` |
 | notice | School time taken off today | `no school time today` | `school_off:<id>` |
+| notice | extra time on one device | `kitchen · 25 left there`, `xbox · open till 6:30`, `pixel · +30 in family link`, `tv · games open till 8:00` | `device_bonus:<target>` |
 | notice | an adult's pause of one app or group | `youtube paused · homework till 7:00` | `paused:group:<id>`, `paused:app:<package>` |
 | notice | a parent's grant | `switch open · the nintendo app till 9:00` | `grant:<id>` |
 | notice | Google's or Microsoft's own limit stops a device of theirs (Hearth isn't holding it) | `sam's phone · google's own limit`, `xbox · microsoft's own limit` | `device_limit:<entity or platform>` |
@@ -904,6 +934,7 @@ calls `service` with exactly `data`, with the adult's own Home Assistant sign-in
 | `pause` (confirm) | not paused | `hearth.pause` `{people: [person], minutes: 30}` |
 | `pause_end` | paused (the family pause) | `hearth.pause_end` `{people: [person]}` (ends that pause only) |
 | `pause_end:group:<id>`, `pause_end:app:<package>` | an app or group paused | `hearth.pause_end` `{people: [person], group}` or `{people: [person], app}` |
+| `device_bonus_end:<target>` (confirm) | extra time on that device | `hearth.allow_end` `{people: [person], device: <target>}` |
 | `school_off` (confirm) | a school or half day, before the person's School time ends, and not taken off for them today | `hearth.school_time_off` `{people: [person]}` |
 | `allow_end:<id>` (confirm) | an allow | `hearth.allow_end` `{people: [person], group}` or `{people: [person], app}` |
 | `grant_end:<id>` (confirm) | a parent's grant that maps to a write in their app (`endable`) | `hearth.allow_end` `{id}` |
