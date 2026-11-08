@@ -5,6 +5,7 @@
 
 ## Unreleased
 
+- **Home Assistant: a negative bonus takes time away.** `hearth.add_bonus` with negative minutes (and the panel's −15) did nothing unless a bonus had been given that day, because Bonus today stopped at 0. It now goes below 0, so the minutes left drop (to none at most) for today only.
 - **Home Assistant: speakers in different rooms stay apart.** Two players of the same kind (for example two ESPHome voice satellites, whose entities are all called "Media Player") were taken for one player and shown in one room. A generic name no longer joins players, and players in different areas are never put together.
 - **Home Assistant: Music Assistant display players join their TV.** A player named like `<tv>_music_assistant_display` or "<TV> (Music Assistant Display)" is now grouped with its TV in the media rooms, as the other Music Assistant players are.
 - **Home Assistant: explain names a parent's Family Link app limit.** When an app has a Family Link app limit a parent set (not one of Hearth's pauses) and it's used up on a device today, `hearth.explain` now lists it as `app_limit` (the app, the device, the limit and the minutes used) instead of saying the app is allowed. Hearth's allows and bonuses don't raise that limit: an adult raises or removes it in Family Link.

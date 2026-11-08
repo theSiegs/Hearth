@@ -317,6 +317,9 @@ minutes, group: All screen time by default; by title isn't built), whoever asks:
   the list; `hearth_chore_done` (person, chore, group, minutes) and the adults' phone are told.
 - **Automations, a dashboard button**: call `hearth.add_bonus`.
 
+Negative minutes take time away today (`minutes: -60`), even with no bonus given: Bonus today goes below 0 and the
+minutes left stop at none. It ends at midnight like any bonus.
+
 **Who enforces.** When one of a person's groups is out of time, its apps are held everywhere the household chose,
 until the group has time again (a bonus, a higher budget, a new day):
 

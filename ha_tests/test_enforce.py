@@ -78,6 +78,19 @@ async def test_family_link_pauses_the_group_s_apps_and_resumes_them(
     assert len(paused) == 1 and len(resumed) == 1
 
 
+async def test_a_negative_bonus_takes_time_away(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
+    paused, _ = _family_link(hass)
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    await _budget(hass, "video", 60)  # 10 watched: 50 left
+    assert not paused
+
+    await _bonus(hass, "video", -120)  # none left today, though no bonus was given before
+    bonus = next(s for s in hass.states.async_all("number") if s.entity_id.endswith("_video_bonus_today"))
+    assert float(bonus.state) == -120
+    assert len(paused) == 1
+
+
 async def test_family_safety_locks_xbox_while_games_are_out_of_time(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
