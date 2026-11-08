@@ -54,7 +54,7 @@ async def test_minutes_by_device_and_by_app(hass: HomeAssistant, hass_client_no_
     sam = _sam(hass)
     assert sam["devices_today"] == [
         {"target": "fl:d1", "name": "Sam's phone", "minutes": 45},
-        {"target": TV, "name": "Kitchen", "minutes": 15},
+        {"target": TV, "name": "Kitchen TV", "minutes": 15},
     ]
     apps = {a["package"]: a["minutes"] for a in sam["apps_today"]}
     assert apps == {"com.example.game": 35, "com.thesiegs.hearthtube": 10}
@@ -96,7 +96,7 @@ async def test_extra_time_on_a_hearth_tv_counts_down_there_and_nowhere_else(
     [extra] = sam["device_extras"]
     assert extra["target"] == TV and extra["kind"] == "bonus" and extra["minutes_left"] == 20
     assert any(
-        line["key"] == f"device_bonus:{TV}" and line["text"] == "kitchen · 20 left there"
+        line["key"] == f"device_bonus:{TV}" and line["text"] == "kitchen tv · 20 left there"
         for line in [sam["headline"], *sam["lines"]]
     )
     [end] = [a for a in sam["actions"] if a["id"] == f"device_bonus_end:{TV}"]
@@ -228,3 +228,53 @@ async def test_extra_time_on_the_switch_lets_go_of_hearth_s_hold(
     assert set_value[-1].data == {"entity_id": NINTENDO_LIMIT, "value": 120}
     [extra] = _sam(hass)["device_extras"]
     assert extra["name"] == "Sam's Switch" and extra["minutes_left"] == 20
+
+
+async def test_a_device_bonus_answers_its_id_and_playing_names_its_target(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    await _budget(hass, "all", 15)
+    [target] = _sam(hass)["targets"]
+    # A TV's name as shown: the TV is "Kitchen", shown "Kitchen TV"
+    assert target["name"] == "Kitchen TV"
+
+    first = await hass.services.async_call(
+        DOMAIN, "add_bonus", {"person": "person.sam", "minutes": 15, "device": TV}, blocking=True, return_response=True
+    )
+    second = await hass.services.async_call(
+        DOMAIN, "add_bonus", {"person": "person.sam", "minutes": 10, "device": TV}, blocking=True, return_response=True
+    )
+    assert first["id"].startswith("dx_") and first["id"] != second["id"]
+    # Undo ends just that one
+    await hass.services.async_call(DOMAIN, "allow_end", {"id": second["id"]}, blocking=True)
+    assert [e["id"] for e in _sam(hass)["device_extras"]] == [first["id"]]
+
+    await _post(client, secret, body=_tv_status(hearthtube_s=600))
+    await hass.async_block_till_done()
+    assert {p["target"] for p in _sam(hass)["playing"]} <= {TV}
+
+
+async def test_one_handset_as_a_hearth_phone_and_a_family_link_device_is_marked(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    from datetime import timedelta
+
+    from test_init import NONCE, PHONE_ID
+
+    await _sam_with_family_link(hass, hass_client_no_auth)
+    _phone(hass)
+    client = await hass_client_no_auth()
+    # One address may ask to pair every 10 seconds
+    freezer.tick(timedelta(seconds=11))
+    await client.post(
+        "/api/hearth/pair", json={"device_id": PHONE_ID, "kind": "mobile", "name": "Sam's phone", "nonce": NONCE}
+    )
+    await hass.async_block_till_done()
+    flow = hass.config_entries.flow.async_progress_by_handler(DOMAIN)[0]
+    await hass.config_entries.flow.async_configure(flow["flow_id"], {"person": "person.sam"})
+    await hass.async_block_till_done()
+
+    targets = {t["id"]: t for t in _sam(hass)["targets"]}
+    assert targets["fl:dev1"]["same_as"] == f"hearth:{PHONE_ID}"
+    assert targets[f"hearth:{PHONE_ID}"]["also"] == ["fl:dev1"]

@@ -39,7 +39,7 @@ def targets_of(household: Household, person: str) -> list[dict[str, Any]]:
             found.append(
                 {
                     "id": f"{HEARTH}:{device_id}",
-                    "name": device.get("name") or device_id,
+                    "name": _shown(device.get("name") or device_id, tv),
                     "kind": "tv" if tv else "phone",
                     "via": HEARTH,
                     "groups": True,
@@ -57,6 +57,15 @@ def targets_of(household: Household, person: str) -> list[dict[str, Any]]:
                     "groups": False,
                 }
             )
+            # The same handset as a Hearth phone of theirs (by name): one device, shown once
+            twin = next(
+                (t for t in found if t["via"] == HEARTH and t["kind"] == "phone"
+                 and t["name"].casefold() == found[-1]["name"].casefold()),
+                None,
+            )
+            if twin is not None:
+                found[-1]["same_as"] = twin["id"]
+                twin.setdefault("also", []).append(found[-1]["id"])
     for enforcer in household.enforcement.enforcers:
         if enforcer.person != person:
             continue
@@ -85,6 +94,13 @@ def targets_of(household: Household, person: str) -> list[dict[str, Any]]:
     return found
 
 
+def _shown(name: str, tv: bool) -> str:
+    """A TV's name as shown: "Den" is "Den TV"; a name that says TV already stays."""
+    if tv and "tv" not in name.casefold().replace("-", " ").split():
+        return f"{name} TV"
+    return name
+
+
 def _device_name(household: Household, entity_id: str) -> str | None:
     from homeassistant.helpers import device_registry as dr
 
@@ -100,7 +116,8 @@ def target_of_counted(household: Household, person: str, key: str) -> tuple[str,
     device's own Daily screen time sensor is fl:<device>, a source on the Switch's device nintendo:<entity>, any other
     source source:<id>."""
     if key in household.hub.devices:
-        return f"{HEARTH}:{key}", household.hub.devices[key].get("name") or key
+        device = household.hub.devices[key]
+        return f"{HEARTH}:{key}", _shown(device.get("name") or key, device.get(CONF_KIND) == KIND_TV)
     source = next((s for s in household.sources if f"source:{s.id}" == key), None)
     if source is None:
         return key, key

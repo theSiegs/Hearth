@@ -111,7 +111,7 @@ def summary(hub) -> dict[str, Any]:
                 # pause, lock {by, until}, next_lock {at, by, kind}: as in the person's state document
                 **household._locks_document(person, day),
                 "playing": [
-                    {"app": p.app, "package": p.package, "device": p.device, "state": p.state}
+                    {"app": p.app, "package": p.package, "device": p.device, "state": p.state, "target": p.target}
                     for p in (day.playing if day else [])
                 ],
             }

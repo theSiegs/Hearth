@@ -409,8 +409,9 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
   several people ends per person (each person's pause is their own), so the others stay paused until they move too.
 - **Extra time on one device.** `hearth.add_bonus` with `device` (a target id from the household summary's
   `targets`: `hearth:<device_id>`, `fl:<Family Link device id>`, `fs:xbox`, `fs:windows`, `nintendo:<entity>`) gives
-  that many minutes (more than 0) on that device only, today; `hearth.allow` with `device` opens a group there until
-  the time (no `app`, no `ends_on`; returns the `dx_...` id). The person's shared time keeps counting and every other
+  that many minutes (more than 0) on that device only, today (returns `{id: "dx_...", until}`, so an undo can end
+  just that one); `hearth.allow` with `device` opens a group there until the time (`end_of_day`, `school_time_end` or
+  a time; no `app`, no `ends_on`; returns the `dx_...` id). The person's shared time keeps counting and every other
   device still reads it: only that device may go past it. Ended early by `hearth.allow_end` with `people` and the
   same `device`, or with its id. On a Family Link device, a Family Safety platform or a Switch (`groups: false` in
   `targets`) only `all` can be given: what holds a group there holds it on every device of theirs (Family Link's app
@@ -842,7 +843,7 @@ then sends the same object as an event whenever it changes, at most every 2 seco
 - `people`: `id`, `name`, `kind` (as set on Hearth's page, `kind_set` true; else `kid` when they have limits, otherwise
   `person`), `tv_profiles`, `all`
   (the shared pool: All screen time's `used_minutes` and `minutes_left`), `groups` (each with a budget or use today),
-  `locked` and `locked_by`, `playing`.
+  `locked` and `locked_by`, `playing` (each `{app, package, device, state, target}`; `target` as in `targets` below).
 - `devices`: each Hearth TV and phone: `id`, `name`, `kind`, `connected`, `screen`, `app`, `media_title`, `media_app`,
   `profile` (a TV's), `kids_profile`, `media_player` and `person`.
 - `approvals`: requests for more time (`type: "more_time"`, as the event above) and devices waiting to pair
@@ -875,7 +876,10 @@ then sends the same object as an event whenever it changes, at most every 2 seco
   profiles, or their Hearth phone), `family_link` (each Family Link device, `fl:<device id>`), `family_safety` (each
   platform Hearth's Family Safety enforcer of theirs holds, `fs:xbox`, `fs:windows`) or `nintendo` (their Switch,
   `nintendo:<the enforcer's entity>`); `groups` true where one group can be held or given on that device alone
-  (Hearth's own devices). And `device_extras` `[{id, target, name, via, kind (bonus | allow), group, until,
+  (Hearth's own devices). A TV's `name` is as shown ("Den" is "Den TV"). One handset that's both a Hearth phone and
+  a Family Link device of theirs (the same name) is both: the Family Link one says `same_as` (the Hearth phone's id)
+  and the Hearth phone `also` (`["fl:<id>"]`); show it once. Extra time there for one group goes on the Hearth phone;
+  for All screen time give it on both if Family Link holds the phone too. And `device_extras` `[{id, target, name, via, kind (bonus | allow), group, until,
   minutes_left, reason}]`: that extra time now (`minutes_left`: a Hearth device's by its use, a Family Link bonus as
   given, the rest by the clock).
 - `groups`: every group of the household, budget or not today: `[{id, name, not_screen_time}]`.

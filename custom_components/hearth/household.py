@@ -85,6 +85,8 @@ class Playing:
     package: str | None
     device: str
     state: str | None
+    # The device as a target id (targets.py): hearth:<id>, fl:<id>, nintendo:<entity> or source:<id>
+    target: str | None = None
 
 
 @dataclass
@@ -481,7 +483,7 @@ class Household:
                                                    status.get("app_seconds_today") or {}))
             package = status.get("app_package")
             if person and status.get("screen") == "on" and self.hub.connected(device_id) and package:
-                playing.setdefault(person, []).append(Playing(status.get("app"), package, name, status.get("state")))
+                playing.setdefault(person, []).append(Playing(status.get("app"), package, name, status.get("state"), f"hearth:{device_id}"))
                 key = self._key(package)
                 observations.append(Observation(person, device_id, key, None, self._label(key, status.get("app"))))
 
@@ -495,7 +497,10 @@ class Household:
                     observations.append(
                         Observation(source.person, device, key, source.reading_source, self._label(key, item))
                     )
-                    playing.setdefault(source.person, []).append(Playing(item, None, source.name, "playing"))
+                    from .targets import target_of_counted
+
+                    target, _ = target_of_counted(self, source.person, f"source:{source.id}")
+                    playing.setdefault(source.person, []).append(Playing(item, None, source.name, "playing", target))
             else:
                 reading = totals_reading(self.hass, source)
                 if reading is not None:

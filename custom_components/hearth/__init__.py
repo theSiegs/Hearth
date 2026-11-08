@@ -173,7 +173,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         return by_name or given
 
     @callback
-    def add_bonus(call: ServiceCall) -> None:
+    def add_bonus(call: ServiceCall) -> ServiceResponse:
         """Minutes added to (or, negative, taken from) a person's group today: the one way to extend. With a device,
         minutes on that device only (device_extra.py)."""
         target = household(call)
@@ -183,9 +183,13 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                 raise ServiceValidationError("Extra time on one device is a number of minutes more than 0")
             if group != ALL and target.group(group) is None:
                 raise ServiceValidationError(f"No group {call.data['group']}")
-            target.add_device_extra(call.data["person"], call.data["device"].strip(), "bonus", group, call.data["minutes"])
-            return
+            extra = target.add_device_extra(
+                call.data["person"], call.data["device"].strip(), "bonus", group, call.data["minutes"]
+            )
+            # Its id, so an undo ends just this one (hearth.allow_end {id})
+            return {"id": extra.id, "until": dt_util.as_local(extra.until).isoformat()}
         target.add_bonus(call.data["person"], group, call.data["minutes"])
+        return {}
 
     @callback
     def set_budget(call: ServiceCall) -> None:
@@ -195,7 +199,9 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         for kind in days:
             target.set_budget(call.data["person"], group_id(target, call.data["group"]), kind, call.data["minutes"])
 
-    register_service(hass, DOMAIN, SERVICE_ADD_BONUS, add_bonus, schema=ADD_BONUS_SCHEMA)
+    register_service(
+        hass, DOMAIN, SERVICE_ADD_BONUS, add_bonus, schema=ADD_BONUS_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    )
     register_service(hass, DOMAIN, SERVICE_SET_BUDGET, set_budget, schema=SET_BUDGET_SCHEMA)
 
     def loaded_household():
