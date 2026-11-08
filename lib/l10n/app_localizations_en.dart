@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -3781,4 +3780,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get setupChecklistGoogleLimitsOn => 'Google TV\'s own limit is on';
+
+  @override
+  String get remotePhonesTitle => 'Phones that control this TV';
+
+  @override
+  String get remotePhonesNone =>
+      'No phone is paired. A phone app such as Glint pairs with a code this TV shows.';
+
+  @override
+  String get remotePhonesAdult => 'An adult\'s phone';
+
+  @override
+  String get remotePhonesRestricted => 'Kid rules';
+
+  @override
+  String get remotePhonesMarkAdult => 'Mark as an adult\'s phone';
+
+  @override
+  String get remotePhonesMarkRestricted => 'Use kid rules';
+
+  @override
+  String get remotePhonesRemove => 'Remove';
+
+  @override
+  String get remotePhonesAdultOnly =>
+      'Only an adult\'s profile can mark a phone as an adult\'s.';
+
+  @override
+  String get remotePhonesAbout =>
+      'A phone with kid rules can\'t open apps the profile on the TV can\'t open now. Keys and power go through the TV\'s own remote, not Hearth.';
 }

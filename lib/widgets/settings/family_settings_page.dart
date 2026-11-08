@@ -31,6 +31,7 @@ import 'household_page.dart';
 import 'message_dialog.dart';
 import 'kids_profiles_page.dart';
 import 'profile_pairing_page.dart';
+import 'remote_phones_page.dart';
 import 'settings_page.dart';
 
 /// Settings > Family: what's the whole TV's rather than one profile's, a parent's to set. The parent PIN comes first,
@@ -82,6 +83,13 @@ class FamilySettingsPage extends StatelessWidget {
         ),
         // Every profile's look, layout, pairing choices and PINs, kept in step with the household's other TVs
         const _HouseholdTile(),
+        // Phone apps that pair with this TV's remote API, adult or kid rules
+        FocusableSettingsTile(
+          leading: const Icon(Icons.phonelink_ring),
+          title: Text(l.remotePhonesTitle, style: textTheme.bodyMedium),
+          trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+          onPressed: () => Navigator.of(context).pushNamed(RemotePhonesPage.routeName),
+        ),
       ],
     );
   }

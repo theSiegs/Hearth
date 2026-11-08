@@ -23,6 +23,7 @@ import 'package:flauncher/widgets/settings/kid_parent_pages.dart';
 import 'package:flauncher/widgets/settings/kid_profile_page.dart';
 import 'package:flauncher/widgets/settings/kids_profiles_page.dart';
 import 'package:flauncher/widgets/settings/profile_pairing_page.dart';
+import 'package:flauncher/widgets/settings/remote_phones_page.dart';
 import 'package:flauncher/widgets/settings/phone_approval_page.dart';
 import 'package:flauncher/widgets/settings/streaming_pins_page.dart';
 import 'package:flauncher/widgets/settings/home_assistant_page.dart';
@@ -179,6 +180,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     return _FastPageRoute(builder: (_) => const AccentColorPage());
                   case ProfilePairingPage.routeName:
                     return _FastPageRoute(builder: (_) => ProfilePairingPage(openApp: widget.openProfilePinsFor));
+                  case RemotePhonesPage.routeName:
+                    return _FastPageRoute(builder: (_) => const RemotePhonesPage());
                   case ProfilePairingAppPage.routeName:
                     return _FastPageRoute(
                         builder: (_) => ProfilePairingAppPage(app: settings.arguments as Map<dynamic, dynamic>));

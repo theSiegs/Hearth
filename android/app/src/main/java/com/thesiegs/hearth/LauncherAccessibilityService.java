@@ -546,6 +546,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
         mHaOverlay = new HaNotificationOverlay(this);
         // The Home Assistant link (server and status reports) runs on its own, so it outlives this service
         HaBridgeService.sync(this);
+        RemoteApiService.sync(this);
         mPlayback = new PlaybackRecorder(this);
         mPlayback.ensureStarted();
         mPlaying = new PlayingClock(this, mHandler, (pkg, ms, now) -> {

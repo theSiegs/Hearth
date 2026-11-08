@@ -122,13 +122,20 @@ public class HaBridgeService extends Service {
         return sStatus != null;
     }
 
+    /** The app the accessibility service last saw in front (null before it has), for the remote API. */
+    static String lastForegroundPackage() {
+        return sForegroundPackage;
+    }
+
     static void setForegroundPackage(String packageName) {
         sForegroundPackage = packageName;
+        RemoteApiService.stateChanged();
         HaStatusReporter status = sStatus;
         if (status != null) status.setForegroundPackage(packageName);
     }
 
     static void setScreenOn(boolean on) {
+        RemoteApiService.stateChanged();
         HaStatusReporter status = sStatus;
         if (status != null) status.setScreenOn(on);
     }

@@ -1,7 +1,9 @@
 # Hearth TV remote API, version 1 (contract)
 
-> **Contract, not built yet.** Agreed with Glint (the phone launcher) on 2026-11-07. Glint mirrors it in its own
-> design notes. A change to anything here is a change to the contract: bump `v` and tell the Glint side.
+> **Contract, built on branch `feature/tv-remote-api`, not yet tried on a TV.** Agreed with Glint (the phone launcher)
+> on 2026-11-07. Glint mirrors it in its own design notes. A change to anything here is a change to the contract: bump
+> `v` and tell the Glint side. The TV side is `RemoteApiService` (server, key, announcement, code), `RemotePolo`
+> (pairing), `RemoteSession` (messages and rules), `RemoteTv` (media, volume, apps) and `RemotePhones` (the list).
 
 ## What it is for
 
@@ -46,7 +48,8 @@ ack → options {input, hex 6} → the phone's options → configuration {input,
 
 - Secret = SHA-256(client modulus ‖ client exponent ‖ server modulus ‖ server exponent ‖ the code's last 4 hex digits
   as 2 bytes), the numbers as unsigned big-endian bytes; its first byte equals the code's first two digits. A wrong
-  secret: status 402, the overlay shows a new code.
+  secret: status 402 and the connection closes; pairing again (after 10 seconds) shows a new code. One pairing at a
+  time.
 - The code shows only while the TV's screen is on; pairing a sleeping TV fails (the phone says so).
 - On success Hearth TV stores the phone's **certificate fingerprint** (SHA-256), the client name, the time, and
   the phone's role: **restricted** for every new phone.
@@ -113,8 +116,16 @@ session to control), `bad_request`.
 - Hearth TV logs one line per pairing, session start and end, and refused command, with the phone's name; never the
   content of a command beyond its type and app.
 
-## Open on a TV
+## While a kids profile is in front
 
-- Whether the owner user's media session listener sees a media session playing inside a Google TV kids profile
-  user. If not, while a kids profile is in front `state` carries `app` and `profile` only (`title` null, all
-  `actions` false).
+A Google TV kids profile is another Android user, and the server runs in the owner's user, which can't see or
+control that user's media sessions. There `state` carries what Hearth's agent in that profile last reported playing
+(`title`, `subtitle`, `positionMs`, `durationMs`; `playing` while the report is under 2 minutes old) with `artId`
+null and every `actions` flag false, so `media` and `seek` answer `unsupported`. `launch` opens the app through the
+agent, and only an app approved for that profile. A later version may add media commands to the agent.
+
+## To try on a TV
+
+- The code pop-up shows over a kids profile (it's drawn by the owner user's accessibility service).
+- Starting an app from the background service in the owner's user (`launch` in an adult profile).
+- The volume over HDMI-CEC to a soundbar (`volumeSettable`).
