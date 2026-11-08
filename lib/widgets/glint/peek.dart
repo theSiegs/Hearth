@@ -119,7 +119,8 @@ class _PeekState extends State<Peek> with WidgetsBindingObserver {
       notifications: notifications != null && notifications.hasPermission && settings.showNotificationsWidgetInStatusBar
           ? notifications.notifications
           : const [],
-      house: _house.items,
+      // The house only where this profile shows it (Look > Family and house)
+      house: householdTilesShown(context) ? _house.items : const [],
     ).orDemo();
     String time(DateTime t) {
       try {

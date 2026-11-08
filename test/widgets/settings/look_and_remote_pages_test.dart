@@ -1,3 +1,6 @@
+import 'package:flauncher/providers/profile_service.dart';
+import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/widgets/glint/glint_house_feed.dart';
 import 'package:flauncher/widgets/settings/accent_color_page.dart';
 import 'package:flauncher/widgets/settings/animations_sound_page.dart';
 import 'package:flauncher/widgets/settings/back_button_action_page.dart';
@@ -6,10 +9,14 @@ import 'package:flauncher/widgets/settings/dock_labels_page.dart';
 import 'package:flauncher/widgets/settings/look_settings_page.dart';
 import 'package:flauncher/widgets/settings/remote_buttons_page.dart';
 import 'package:flauncher/widgets/settings/remote_search_settings_page.dart';
+import 'package:flauncher/widgets/settings/settings_lock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/mockito.dart';
+import 'package:provider/provider.dart';
 
+import '../../mocks.mocks.dart';
 import 'settings_test_app.dart';
 
 /// A stand-in page per route, saying which one was opened.
@@ -103,6 +110,88 @@ void main() {
       await settings.setGlintHome(true);
       await tester.pumpAndSettle();
       expect(find.text("Peek tiles"), findsNothing);
+    });
+
+    group("Family and house", () {
+      MockProfileService profile({required bool kids, String? key = "user:10"}) {
+        final p = MockProfileService();
+        when(p.isKidsProfile).thenReturn(kids);
+        when(p.settledOnce).thenReturn(true);
+        when(p.activeProfileKey).thenReturn(key);
+        return p;
+      }
+
+      /// The Look page in a profile, Settings unlocked by a parent or not; [shown] reports what the glance page would do.
+      Widget app(SettingsService settings, ProfileService profiles, {bool unlocked = false, List<bool>? shown}) =>
+          ChangeNotifierProvider<ProfileService>.value(
+            value: profiles,
+            child: settingsTestApp(
+              settings,
+              SettingsUnlock(
+                notifier: ValueNotifier(unlocked),
+                child: Column(
+                  children: [
+                    Builder(builder: (context) {
+                      shown?.add(householdTilesShown(context));
+                      return const SizedBox.shrink();
+                    }),
+                    const Expanded(child: LookSettingsPage()),
+                  ],
+                ),
+              ),
+              routes: routes,
+            ),
+          );
+
+      testWidgets("on in an adult's profile, and the adult can turn it off", (tester) async {
+        final settings = await freshSettings();
+        final shown = <bool>[];
+        await tester.pumpWidget(app(settings, profile(kids: false), shown: shown));
+        await tester.pumpAndSettle();
+        expect(find.text("Family and house"), findsOneWidget);
+        expect(settings.householdTiles(kids: false), isTrue);
+        expect(shown.last, isTrue);
+
+        await tester.tap(find.text("Family and house"));
+        await tester.pumpAndSettle();
+        expect(settings.householdTiles(kids: false), isFalse);
+        expect(shown.last, isFalse);
+      });
+
+      testWidgets("a kids profile doesn't see the switch, and the tiles are off there", (tester) async {
+        final settings = await freshSettings();
+        final shown = <bool>[];
+        await tester.pumpWidget(app(settings, profile(kids: true), shown: shown));
+        await tester.pumpAndSettle();
+        expect(find.text("Family and house"), findsNothing);
+        expect(find.text("Glint home"), findsOneWidget, reason: "the kid's own look is still theirs");
+        expect(shown.last, isFalse);
+      });
+
+      testWidgets("an adult can turn them on for a kids profile, past the parent PIN", (tester) async {
+        final settings = await freshSettings();
+        final shown = <bool>[];
+        // Settings unlocked by a parent (an unlock holds for the profile it was made in; this one, with no key, for any)
+        await tester.pumpWidget(app(settings, profile(kids: true, key: null), unlocked: true, shown: shown));
+        await tester.pumpAndSettle();
+        expect(shown.last, isFalse);
+        expect(find.text("Family and house"), findsOneWidget);
+        await tester.tap(find.text("Family and house"));
+        await tester.pumpAndSettle();
+        expect(settings.householdTiles(kids: true), isTrue);
+        expect(shown.last, isTrue);
+      });
+
+      test("unset, it follows the profile; once chosen, it's the choice", () async {
+        final settings = await freshSettings();
+        expect(settings.householdTiles(kids: false), isTrue);
+        expect(settings.householdTiles(kids: true), isFalse);
+        await settings.setHouseholdTiles(false);
+        expect(settings.householdTiles(kids: false), isFalse);
+        await settings.setHouseholdTiles(true);
+        expect(settings.householdTiles(kids: true), isTrue);
+        expect(settings.settingKeys, contains("household_tiles"), reason: "per profile, in its layout and backups");
+      });
     });
 
     testWidgets("the trailing style name follows the setting", (tester) async {

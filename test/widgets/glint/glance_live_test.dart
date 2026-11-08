@@ -97,7 +97,9 @@ void main() {
         ],
       ),
       people: const [GlancePerson("Alex", "home"), GlancePerson("Sam", "school"), GlancePerson("Robin", "")],
-      lists: const [GlanceList("Chores", 3, entity: "todo.chores", next: ["Dishes", "Bins"])],
+      lists: const [
+        GlanceList("Chores", 3, entity: "todo.chores", next: [GlanceTodoItem("Dishes", "1"), GlanceTodoItem("Bins", "2")]),
+      ],
       weather: GlanceWeather(
         icon: Icons.wb_sunny_outlined,
         temp: 12,
@@ -120,7 +122,8 @@ void main() {
       });
       final faces = {for (final t in tiles) if (!t.action) t.id: t.faces};
       expect(faces["family"], 3, reason: "everyone, then Alex, then Sam (Robin has no place)");
-      expect(faces["lists"], 2);
+      expect(faces["lists"], 1, reason: "a face per list");
+      expect(faces["today"], 1, reason: "today shows its next events at once and doesn't turn");
       expect(faces["weather"], 2);
       expect(faces["screen-time"], 2);
     });
@@ -252,11 +255,14 @@ void main() {
       expect(parsed.weather.single.daily, isTrue);
       expect(GlanceHaFeed.nextOf({
         "items": [
-          {"summary": "Dishes", "status": "needs_action"},
-          {"summary": "Laundry", "status": "completed"},
+          {"summary": "Dishes", "status": "needs_action", "uid": "a1"},
+          {"summary": "Laundry", "status": "completed", "uid": "a2"},
           {"summary": "Bins", "status": "needs_action"},
         ],
-      }), ["Dishes", "Bins"]);
+      }), [const GlanceTodoItem("Dishes", "a1"), const GlanceTodoItem("Bins")]);
+      expect(GlanceHaFeed.doneData(const GlanceTodoItem("Dishes", "a1")), {"item": "a1", "status": "completed"});
+      expect(GlanceHaFeed.doneData(const GlanceTodoItem("Bins")), {"item": "Bins", "status": "completed"},
+          reason: "without an id, by what it says");
     });
   });
 }

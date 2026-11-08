@@ -20,6 +20,7 @@ import 'dart:math' as math;
 
 import 'package:flauncher/actions.dart';
 import 'package:flauncher/flauncher_channel.dart';
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/models/ha_lock_state.dart';
 import 'package:flauncher/providers/calendars.dart';
 import 'package:flauncher/providers/ha_panel_service.dart';
@@ -38,16 +39,18 @@ import 'package:flauncher/widgets/glint/glint_tile.dart';
 import 'package:flauncher/widgets/glint/ha_lock_feed.dart';
 import 'package:flauncher/widgets/settings/notifications_panel.dart';
 import 'package:flauncher/widgets/settings/settings_panel.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:provider/provider.dart';
 
 /// The glance page (Peek: Top shelf + glance page), down from the dock: its own page over a dark backdrop that hides
-/// the home (the top bar stays). Live tiles on a clean two-column grid inside the TV's safe area: a kid's time (what's
-/// held, the minutes left in each group), today (the date, what's on), the weather, the family and where they are, the
-/// to-do lists and what's going on around the house; then a small row of ways out (All apps, Home Assistant's panel,
-/// notifications, Settings).
+/// the home (the top bar stays, without its weather and date and time: the page's own tiles have them). Live tiles on a
+/// clean two-column grid inside the TV's safe area: a kid's time (what's held, the minutes left in each group), today
+/// (the date, what's on next), the weather, the family and where they are, the to-do lists and what's going on around
+/// the house; then a small row of ways out (All apps, Home Assistant's panel, notifications, Settings). The family and
+/// the house show only where the profile shows them ([householdTilesShown]).
 ///
 /// The tiles are live: while one isn't selected, its face turns slowly through what it has (one page-wide
 /// [GlanceRotation], one tile at a time). The selected tile holds still. Pressing a tile always opens that tile's own
@@ -206,14 +209,16 @@ class GlancePageState extends State<GlancePage> with SingleTickerProviderStateMi
       final n = context.watch<NotificationsService?>();
       return n != null && n.hasPermission && settings.showNotificationsWidgetInStatusBar ? n.notifications : null;
     }();
+    // The family and the house only where this profile shows them (Look > Family and house)
+    final household = householdTilesShown(context);
     return GlanceInputs(
       lock: _lock.state,
       // Shown once everyone on it has been looked up
-      people: _family.people.every((p) => _photos.containsKey(p.name)) ? _family.people : const [],
+      people: household && _family.people.every((p) => _photos.containsKey(p.name)) ? _family.people : const [],
       photos: _photos,
       connection: _family.connection,
       lists: _family.lists,
-      house: _house.items,
+      house: household ? _house.items : const [],
       // The TV's own weather (Settings), else Home Assistant's
       weather: GlanceWeather.fromHearth(context.watch<WeatherService?>()?.weatherData, now) ?? _family.weatherAt(now),
       events: context.watch<CalendarService?>()?.today().take(GlanceInputs.eventCount).toList() ?? const [],
@@ -234,7 +239,7 @@ class GlancePageState extends State<GlancePage> with SingleTickerProviderStateMi
         barrierColor: Colors.black54,
         builder: (_) => ListenableBuilder(
           listenable: Listenable.merge([_family, _house, _lock]),
-          builder: (context, _) => GlanceViewPanel(view: view, inputs: _inputs(context)),
+          builder: (context, _) => GlanceViewPanel(view: view, inputs: _inputs(context), onDone: _family.markDone),
         ),
       );
     } finally {
@@ -613,13 +618,12 @@ List<GlanceTile> glanceTilesFor(GlanceInputs d) {
     ));
   }
   // Today is always there: ahead of what Home Assistant brings a moment later, so the page doesn't shift under the
-  // selection as it arrives
+  // selection as it arrives. It shows the next few events at once and doesn't turn.
   final upcoming = d.upcoming;
   tiles.add(GlanceTile(
     "today",
     view: GlanceView.today,
-    faces: math.max(1, upcoming.length),
-    (_, face, onPressed) => GlanceTodayFace(events: upcoming, face: face, onPressed: onPressed, clock: () => d.now),
+    (_, _, onPressed) => GlanceTodayFace(events: upcoming, onPressed: onPressed, clock: () => d.now),
   ));
   final weather = d.weather;
   if (weather != null) {
@@ -785,17 +789,26 @@ class GlanceFaceSwitch extends StatelessWidget {
   }
 }
 
-/// Today: the date, and what's on today, one event to a face. The time itself is the top bar's.
+/// Today: the date, and the next few of today's events at once, one to a line (as many as fit, at most [shown]), with
+/// how many more there are. It doesn't turn: the whole list is the tile's view.
 class GlanceTodayFace extends StatelessWidget {
   final List<CalendarEvent> events;
-  final int face;
   final VoidCallback? onPressed;
   final DateTime Function() clock;
-  const GlanceTodayFace(
-      {super.key, this.events = const [], this.face = 0, this.onPressed, this.clock = DateTime.now});
+  const GlanceTodayFace({super.key, this.events = const [], this.onPressed, this.clock = DateTime.now});
+
+  /// At most this many events on the tile.
+  static const int shown = 3;
+
+  /// Each event's line.
+  static const double lineHeight = 21;
+
+  /// How many events fit in [height], from one up to [shown].
+  static int fitting(double height) => (height / lineHeight).floor().clamp(1, shown);
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final now = clock();
     String date;
     try {
@@ -803,32 +816,80 @@ class GlanceTodayFace extends StatelessWidget {
     } catch (_) {
       date = DateFormat("EEE, MMM d").format(now);
     }
-    final e = events.isEmpty ? null : events[face % events.length];
     return GlintTile(
       key: const Key("glance_today"),
       onPressed: onPressed,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      child: LayoutBuilder(builder: (context, box) {
+        // The date takes about 26 of the height; the events what's left
+        final count = math.min(events.length, fitting(box.maxHeight - 30));
+        final more = events.length - count;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(date,
+                      style: GlintLook.primary.copyWith(fontSize: 18), maxLines: 1, overflow: TextOverflow.ellipsis),
+                ),
+                if (more > 0) Text(l10n.glanceMoreEvents(more), style: GlintLook.label),
+              ],
+            ),
+            const SizedBox(height: 4),
+            if (events.isEmpty)
+              Text(l10n.glanceNothingElseToday, style: GlintLook.secondaryText, maxLines: 1)
+            else
+              for (final e in events.take(count)) GlanceEventRow(event: e, now: now),
+          ],
+        );
+      }),
+    );
+  }
+}
+
+/// One of today's events on one line: a dot in its calendar's color, when (in the accent: all day, now, or when it
+/// starts), what.
+class GlanceEventRow extends StatelessWidget {
+  final CalendarEvent event;
+  final DateTime now;
+  const GlanceEventRow({super.key, required this.event, required this.now});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final settings = Provider.of<SettingsService?>(context, listen: false);
+    final e = event;
+    String when;
+    if (e.allDay) {
+      when = l10n.glanceAllDay;
+    } else if (e.isOn(now)) {
+      when = l10n.glanceNow;
+    } else {
+      try {
+        when = DateFormat(settings?.timeFormat ?? "h:mm a").format(e.start);
+      } catch (_) {
+        when = DateFormat("h:mm").format(e.start);
+      }
+    }
+    return SizedBox(
+      height: GlanceTodayFace.lineHeight,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(child: _label("Today")),
-              if (events.length > 1)
-                Text("${face % events.length + 1} of ${events.length}", style: GlintLook.label),
-            ],
+          Container(
+            width: 8,
+            height: 8,
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: e.color == null ? GlintLook.secondary : Color(e.color!).withValues(alpha: 1),
+              shape: BoxShape.circle,
+            ),
           ),
-          const SizedBox(height: 2),
-          Text(date, style: GlintLook.primary.copyWith(fontSize: 19), maxLines: 1, overflow: TextOverflow.ellipsis),
-          const Spacer(),
-          SizedBox(
-            height: 40,
-            child: e == null
-                ? Align(
-                    alignment: Alignment.bottomLeft,
-                    child: Text("Nothing else on today", style: GlintLook.secondaryText, maxLines: 1),
-                  )
-                : GlanceFaceSwitch(face: face, child: GlanceEventLine(event: e, now: now)),
+          Text(when, style: GlintLook.secondaryText.copyWith(color: GlintLook.accentText()), maxLines: 1),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(e.summary,
+                style: GlintLook.primary.copyWith(fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
           ),
         ],
       ),
@@ -1178,66 +1239,70 @@ Widget _table(List<(String, String)> rows) => Column(
   ],
 );
 
-/// The to-do lists: how much is left on each, then, a face each, the next things on each list.
+/// The to-do lists, a face each: the list's name, how much is left on it, and the first few things on it (as many as
+/// fit, at most [shown]). Pressing opens the lists' view, where OK marks a thing done.
 class GlanceListsFace extends StatelessWidget {
   final List<GlanceList> lists;
   final int face;
   final VoidCallback? onPressed;
   const GlanceListsFace({super.key, required this.lists, this.face = 0, this.onPressed});
 
-  /// The lists' faces: how much is left on them (in pages of [GlanceTableFace.perPage]), then each list with its next
-  /// things.
-  static int facesOf(List<GlanceList> lists) =>
-      GlanceTableFace.pagesOf(lists.length) + lists.where((l) => l.next.isNotEmpty).length;
+  /// One face per list.
+  static int facesOf(List<GlanceList> lists) => math.max(1, lists.length);
 
-  /// How many of a list's next things its face shows.
-  static const int shown = 2;
+  /// At most this many of a list's things on the tile.
+  static const int shown = 3;
+
+  /// Each thing's line.
+  static const double lineHeight = 21;
 
   @override
   Widget build(BuildContext context) {
-    final rows = [for (final l in lists) (l.name, "${l.open} left")];
-    final pages = [
-      for (var i = 0; i < rows.length; i += GlanceTableFace.perPage)
-        rows.sublist(i, math.min(i + GlanceTableFace.perPage, rows.length)),
-    ];
-    final withNext = [for (final l in lists) if (l.next.isNotEmpty) l];
-    final count = pages.length + withNext.length;
-    final i = count == 0 ? 0 : face % count;
-    Widget body;
-    if (i < pages.length) {
-      body = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [_label("To do"), const SizedBox(height: 2), _table(pages[i])],
-      );
+    final l10n = AppLocalizations.of(context)!;
+    final i = lists.isEmpty ? 0 : face % lists.length;
+    final Widget body;
+    if (lists.isEmpty) {
+      body = const SizedBox.shrink();
     } else {
-      final l = withNext[i - pages.length];
-      body = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
+      final l = lists[i];
+      body = LayoutBuilder(
+        builder: (context, box) {
+          // The name takes about 22 of the height; the things what's left
+          final fit = ((box.maxHeight - 24) / lineHeight).floor().clamp(1, shown);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(child: _label("To do · ${l.name}")),
-              Text("${l.open} left", style: GlintLook.label),
-            ],
-          ),
-          const SizedBox(height: 4),
-          for (final item in l.next.take(shown))
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Row(
+              Row(
                 children: [
-                  Icon(Icons.radio_button_unchecked, size: 14, color: GlintLook.secondary),
-                  const SizedBox(width: 8),
                   Expanded(
-                    child: Text(item,
-                        style: GlintLook.primary.copyWith(fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    child: Text(l.name,
+                        style: GlintLook.primary.copyWith(fontSize: 18), maxLines: 1, overflow: TextOverflow.ellipsis),
                   ),
+                  const SizedBox(width: 12),
+                  _Fading(l10n.glanceTodoLeft(l.open), GlintLook.label, align: TextAlign.end),
                 ],
               ),
-            ),
-        ],
+              const SizedBox(height: 2),
+              for (final item in l.next.take(fit))
+                SizedBox(
+                  height: lineHeight,
+                  child: Row(
+                    children: [
+                      Icon(Icons.radio_button_unchecked, size: 14, color: GlintLook.secondary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(item.summary,
+                            style: GlintLook.primary.copyWith(fontSize: 15),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          );
+        },
       );
     }
     return GlintTile(
@@ -1282,11 +1347,13 @@ Widget _houseItem(GlintHouseItem item, {int lines = 2}) => Column(
   ],
 );
 
-/// A tile's view, over the glance page: everything the tile has, at once and still. Back closes it.
+/// A tile's view, over the glance page: everything the tile has, at once and still. Back closes it. In the lists' view
+/// OK on a thing marks it done ([onDone]: false when Home Assistant didn't); without [onDone] the lists are only read.
 class GlanceViewPanel extends StatelessWidget {
   final GlanceView view;
   final GlanceInputs inputs;
-  const GlanceViewPanel({super.key, required this.view, required this.inputs});
+  final Future<bool> Function(String entity, GlanceTodoItem item)? onDone;
+  const GlanceViewPanel({super.key, required this.view, required this.inputs, this.onDone});
 
   static String titleOf(GlanceView view) => switch (view) {
     GlanceView.screenTime => "Screen time left",
@@ -1340,22 +1407,7 @@ class GlanceViewPanel extends StatelessWidget {
             ),
           ),
       ],
-      GlanceView.lists => [
-        for (final l in d.lists) ...[
-          Row(
-            children: [
-              Expanded(child: Text(l.name, style: GlintLook.primary.copyWith(fontSize: 17))),
-              Text("${l.open} left", style: GlintLook.secondaryText),
-            ],
-          ),
-          for (final item in l.next)
-            Padding(
-              padding: const EdgeInsets.only(left: 12, top: 2),
-              child: Text("·  $item", style: GlintLook.secondaryText, maxLines: 1, overflow: TextOverflow.ellipsis),
-            ),
-          gap,
-        ],
-      ],
+      GlanceView.lists => [GlanceTodoView(lists: d.lists, onDone: onDone)],
       GlanceView.house => [
         for (final item in d.house) ...[_houseItem(item, lines: 3), gap],
       ],
@@ -1393,6 +1445,167 @@ class GlanceViewPanel extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The lists' view: each list's name and how much is left, and the things on it. With [onDone] each thing can be
+/// selected and OK marks it done (it stays where it is, ticked, so nothing moves under the selection); without it
+/// (no Home Assistant to tell) the lists are only read. The lists are taken as the view opens and hold still.
+class GlanceTodoView extends StatefulWidget {
+  final List<GlanceList> lists;
+  final Future<bool> Function(String entity, GlanceTodoItem item)? onDone;
+  const GlanceTodoView({super.key, required this.lists, this.onDone});
+
+  @override
+  State<GlanceTodoView> createState() => _GlanceTodoViewState();
+}
+
+class _GlanceTodoViewState extends State<GlanceTodoView> {
+  late List<GlanceList> _lists = widget.lists;
+  final Set<GlanceTodoItem> _done = {};
+  final Set<GlanceTodoItem> _busy = {};
+  final FocusNode _first = FocusNode(debugLabel: "glance_todo_first");
+  bool _failed = false;
+
+  bool get _marks => widget.onDone != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusFirst();
+  }
+
+  void _focusFirst() {
+    if (!_marks || !_lists.any((l) => l.entity != null && l.next.isNotEmpty)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _first.context != null && !_first.hasFocus) _first.requestFocus();
+    });
+  }
+
+  /// A list whose things hadn't come yet when the view opened takes them when they come; the others hold still.
+  @override
+  void didUpdateWidget(GlanceTodoView old) {
+    super.didUpdateWidget(old);
+    final fresh = {for (final l in widget.lists) if (l.entity != null) l.entity!: l};
+    final next = [
+      for (final l in _lists)
+        if (l.next.isEmpty && fresh[l.entity]?.next.isNotEmpty == true) fresh[l.entity]! else l,
+    ];
+    if (listEquals(next, _lists)) return;
+    _lists = next;
+    _focusFirst();
+  }
+
+  @override
+  void dispose() {
+    _first.dispose();
+    super.dispose();
+  }
+
+  Future<void> _mark(String entity, GlanceTodoItem item) async {
+    final onDone = widget.onDone;
+    if (onDone == null || _done.contains(item) || !_busy.add(item)) return;
+    setState(() => _failed = false);
+    final ok = await onDone(entity, item);
+    if (!mounted) return;
+    setState(() {
+      _busy.remove(item);
+      if (ok) {
+        _done.add(item);
+      } else {
+        _failed = true;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    var firstGiven = false;
+    final children = <Widget>[];
+    for (final l in _lists) {
+      final left = l.open - l.next.where(_done.contains).length;
+      children.add(Row(
+        children: [
+          Expanded(child: Text(l.name, style: GlintLook.primary.copyWith(fontSize: 17))),
+          Text(l10n.glanceTodoLeft(math.max(0, left)), style: GlintLook.secondaryText),
+        ],
+      ));
+      for (final item in l.next) {
+        final entity = l.entity;
+        final canMark = _marks && entity != null;
+        final focusNode = canMark && !firstGiven ? _first : null;
+        if (canMark) firstGiven = true;
+        children.add(_GlanceTodoRow(
+          key: ValueKey("${l.entity}:${item.uid ?? item.summary}"),
+          item: item,
+          done: _done.contains(item),
+          focusNode: focusNode,
+          onPressed: canMark ? () => _mark(entity, item) : null,
+        ));
+      }
+      children.add(const SizedBox(height: 14));
+    }
+    children.add(Text(
+      _failed ? l10n.glanceTodoFailed : (_marks ? l10n.glanceTodoHint : ""),
+      key: const Key("glance_todo_note"),
+      style: GlintLook.secondaryText,
+    ));
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: children);
+  }
+}
+
+/// One thing on a list in the lists' view: selectable when it can be marked done, ticked once it is.
+class _GlanceTodoRow extends StatefulWidget {
+  final GlanceTodoItem item;
+  final bool done;
+  final FocusNode? focusNode;
+  final VoidCallback? onPressed;
+  const _GlanceTodoRow({super.key, required this.item, required this.done, this.focusNode, this.onPressed});
+
+  @override
+  State<_GlanceTodoRow> createState() => _GlanceTodoRowState();
+}
+
+class _GlanceTodoRowState extends State<_GlanceTodoRow> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final glow = GlintTileStyle.of(context)?.glow ?? Colors.white;
+    final row = Container(
+      margin: const EdgeInsets.only(top: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(GlintLook.corner),
+        color: _focused ? GlintTileStyle.selectedFill : Colors.transparent,
+        border: Border.all(color: _focused ? glow.withValues(alpha: 0.9) : Colors.transparent, width: 2),
+      ),
+      child: Row(
+        children: [
+          Icon(widget.done ? Icons.check_circle : Icons.radio_button_unchecked,
+              size: 16, color: widget.done ? GlintLook.accentText() : GlintLook.secondary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              widget.item.summary,
+              style: widget.done
+                  ? GlintLook.secondaryText.copyWith(decoration: TextDecoration.lineThrough)
+                  : GlintLook.primary.copyWith(fontSize: 16),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+    if (widget.onPressed == null) return row;
+    return GlintPress(
+      focusNode: widget.focusNode,
+      onPressed: widget.onPressed,
+      onFocusChange: (focused) => setState(() => _focused = focused),
+      child: row,
     );
   }
 }

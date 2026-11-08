@@ -52,6 +52,8 @@ const String _dockEnabledKey = "dock_enabled";
 const String _glintHomeKey = "glint_home";
 const String _glintMotionKey = "glint_motion";
 const String _peekKey = "peek";
+// Per profile: unset, it follows the profile (on in an adult's, off in a kids profile)
+const String _householdTilesKey = "household_tiles";
 const String _dockBlurEnabledKey = "dock_blur_enabled";
 const String _dockDarkBackgroundKey = "dock_dark_background";
 const String _dockShadowEnabledKey = "dock_shadow_enabled";
@@ -182,6 +184,7 @@ class SettingsService extends ChangeNotifier {
     _glintHomeKey,
     _glintMotionKey,
     _peekKey,
+    _householdTilesKey,
     _dockBlurEnabledKey,
     _dockDarkBackgroundKey,
     _dockShadowEnabledKey,
@@ -579,6 +582,12 @@ class SettingsService extends ChangeNotifier {
   String get peek => _string(_peekKey, const String.fromEnvironment("PEEK_DEFAULT", defaultValue: "off"));
 
   Future<void> setPeek(String place) => _setString(_peekKey, place);
+
+  /// The family tile (everyone Home Assistant has, and where they are) and the house tile (what the other TVs play)
+  /// show. Per profile: on in an adult's profile, off in a kids profile until an adult turns it on there.
+  bool householdTiles({required bool kids}) => _sharedPreferences.getBool(_householdTilesKey) ?? !kids;
+
+  Future<void> setHouseholdTiles(bool shown) => _setBool(_householdTilesKey, shown);
 
   bool get dockBlurEnabled => _bool(_dockBlurEnabledKey, true);
 

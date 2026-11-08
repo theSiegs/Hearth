@@ -73,6 +73,34 @@ void main() {
     expect(find.byKey(const Key('statusbar_clock')), findsOneWidget);
   });
 
+  testWidgets('with the glance page up, the date and time step aside; over the home they show', (WidgetTester tester) async {
+    Widget bar(bool glanceOpen) => MultiProvider(
+      providers: [
+        ChangeNotifierProvider<SettingsService>.value(value: mockSettingsService),
+        ChangeNotifierProvider<TvInputsService>.value(value: mockTvInputsService),
+        ChangeNotifierProvider<NotificationsService>.value(value: mockNotificationsService),
+        ChangeNotifierProvider<WeatherService>.value(value: mockWeatherService),
+      ],
+      child: MaterialApp(
+        home: Scaffold(appBar: FocusAwareAppBar(glanceOpen: glanceOpen), body: Container()),
+      ),
+    );
+    double opacity() => tester.widget<AnimatedOpacity>(find.byKey(const Key('statusbar_home_only'))).opacity;
+
+    await tester.pumpWidget(bar(false));
+    expect(opacity(), 1);
+
+    await tester.pumpWidget(bar(true));
+    await tester.pumpAndSettle();
+    expect(opacity(), 0);
+    expect(
+      tester.widget<ExcludeFocus>(find.ancestor(of: find.byKey(const Key('statusbar_clock')), matching: find.byType(ExcludeFocus)).first).excluding,
+      isTrue,
+      reason: "the hidden date and time can't be selected",
+    );
+    expect(find.byIcon(Icons.person), findsOneWidget, reason: "the rest of the bar stays");
+  });
+
   testWidgets('FocusAwareAppBar auto-hide logic', (WidgetTester tester) async {
     when(mockSettingsService.autoHideAppBarEnabled).thenReturn(true);
 

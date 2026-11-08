@@ -4691,5 +4691,47 @@
     "askFailed": "Couldn't ask just now. Try again in a moment.",
     "@askFailed": {
         "description": "Time's up card: Home Assistant refused the request for another reason"
+    },
+    "householdTiles": "Family and house",
+    "@householdTiles": {
+        "description": "Settings switch (Look), per profile, only for an adult: the glance page's family tile (everyone in Home Assistant and where they are) and the house tile (what the other TVs are playing)"
+    },
+    "householdTilesDescription": "Where everyone is and what the other TVs are playing. Off in kids profiles until an adult turns it on",
+    "@householdTilesDescription": {
+        "description": "Under the Family and house switch"
+    },
+    "glanceMoreEvents": "+{count} more",
+    "@glanceMoreEvents": {
+        "description": "Glance page's Today tile: how many more of today's events there are than the tile shows",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "glanceNothingElseToday": "Nothing else on today",
+    "@glanceNothingElseToday": {
+        "description": "Glance page's Today tile: no more events today"
+    },
+    "glanceAllDay": "All day",
+    "@glanceAllDay": {
+        "description": "Glance page's Today tile: an all-day event, in place of its time"
+    },
+    "glanceNow": "Now",
+    "@glanceNow": {
+        "description": "Glance page's Today tile: an event that's on now, in place of its time"
+    },
+    "glanceTodoLeft": "{count} left",
+    "@glanceTodoLeft": {
+        "description": "Glance page's to-do tile and view: how many things are still to do on a list",
+        "placeholders": {
+            "count": {"type": "int"}
+        }
+    },
+    "glanceTodoHint": "Press OK on a thing to mark it done",
+    "@glanceTodoHint": {
+        "description": "Glance page's to-do view, under the lists: how to mark something done"
+    },
+    "glanceTodoFailed": "Couldn't mark that done. Try again in a moment.",
+    "@glanceTodoFailed": {
+        "description": "Glance page's to-do view: Home Assistant didn't mark the thing done"
     }
 }

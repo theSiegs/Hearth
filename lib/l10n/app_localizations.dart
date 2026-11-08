@@ -6302,6 +6302,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t ask just now. Try again in a moment.'**
   String get askFailed;
+
+  /// Settings switch (Look), per profile, only for an adult: the glance page's family tile (everyone in Home Assistant and where they are) and the house tile (what the other TVs are playing)
+  ///
+  /// In en, this message translates to:
+  /// **'Family and house'**
+  String get householdTiles;
+
+  /// Under the Family and house switch
+  ///
+  /// In en, this message translates to:
+  /// **'Where everyone is and what the other TVs are playing. Off in kids profiles until an adult turns it on'**
+  String get householdTilesDescription;
+
+  /// Glance page's Today tile: how many more of today's events there are than the tile shows
+  ///
+  /// In en, this message translates to:
+  /// **'+{count} more'**
+  String glanceMoreEvents(int count);
+
+  /// Glance page's Today tile: no more events today
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing else on today'**
+  String get glanceNothingElseToday;
+
+  /// Glance page's Today tile: an all-day event, in place of its time
+  ///
+  /// In en, this message translates to:
+  /// **'All day'**
+  String get glanceAllDay;
+
+  /// Glance page's Today tile: an event that's on now, in place of its time
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get glanceNow;
+
+  /// Glance page's to-do tile and view: how many things are still to do on a list
+  ///
+  /// In en, this message translates to:
+  /// **'{count} left'**
+  String glanceTodoLeft(int count);
+
+  /// Glance page's to-do view, under the lists: how to mark something done
+  ///
+  /// In en, this message translates to:
+  /// **'Press OK on a thing to mark it done'**
+  String get glanceTodoHint;
+
+  /// Glance page's to-do view: Home Assistant didn't mark the thing done
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t mark that done. Try again in a moment.'**
+  String get glanceTodoFailed;
 }
 
 class _AppLocalizationsDelegate

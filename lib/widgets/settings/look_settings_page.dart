@@ -16,6 +16,7 @@
  */
 
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/widgets/glint/peek.dart';
 import 'package:flauncher/widgets/glint/glint_look.dart';
@@ -28,6 +29,7 @@ import 'dock_labels_page.dart';
 import 'focusable_settings_tile.dart';
 import 'animations_sound_page.dart';
 import 'card_style_page.dart';
+import 'settings_lock.dart';
 import 'settings_page.dart';
 
 /// How the home screen looks and feels: card style, accent color, the dock and labels, animations and sound.
@@ -113,6 +115,19 @@ class LookSettingsPage extends StatelessWidget {
           subtitle: Text(localizations.glintHomeDescription, style: textTheme.bodySmall),
           secondary: const Icon(Icons.dashboard_outlined),
         ),
+        // Where everyone is and what the other TVs play: an adult's choice, so a locked kids profile doesn't see it
+        if (!settingsLocked(context))
+          Builder(builder: (context) {
+            final kids = context.select<ProfileService?, bool>((p) => p?.isKidsProfile ?? false);
+            return RoundedSwitchListTile(
+              key: const Key("household_tiles"),
+              value: context.select<SettingsService, bool>((s) => s.householdTiles(kids: kids)),
+              onChanged: (value) => context.read<SettingsService>().setHouseholdTiles(value),
+              title: Text(localizations.householdTiles, style: textTheme.bodyMedium),
+              subtitle: Text(localizations.householdTilesDescription, style: textTheme.bodySmall),
+              secondary: const Icon(Icons.family_restroom),
+            );
+          }),
         if (context.select<SettingsService, bool>((s) => s.glintHome))
           FocusableSettingsTile(
             leading: const Icon(Icons.motion_photos_on_outlined),

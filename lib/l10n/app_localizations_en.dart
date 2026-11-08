@@ -3777,4 +3777,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get askFailed => 'Couldn\'t ask just now. Try again in a moment.';
+
+  @override
+  String get householdTiles => 'Family and house';
+
+  @override
+  String get householdTilesDescription =>
+      'Where everyone is and what the other TVs are playing. Off in kids profiles until an adult turns it on';
+
+  @override
+  String glanceMoreEvents(int count) {
+    return '+$count more';
+  }
+
+  @override
+  String get glanceNothingElseToday => 'Nothing else on today';
+
+  @override
+  String get glanceAllDay => 'All day';
+
+  @override
+  String get glanceNow => 'Now';
+
+  @override
+  String glanceTodoLeft(int count) {
+    return '$count left';
+  }
+
+  @override
+  String get glanceTodoHint => 'Press OK on a thing to mark it done';
+
+  @override
+  String get glanceTodoFailed =>
+      'Couldn\'t mark that done. Try again in a moment.';
 }

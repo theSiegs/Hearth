@@ -24,7 +24,8 @@ import 'package:flauncher/widgets/glint/glance_weather.dart';
 import 'package:flutter/foundation.dart';
 
 /// A person in the family and where they are, as Home Assistant's person entity says ("home", "away" or a zone);
-/// [where] is empty for someone Home Assistant can't place (no tracker yet).
+/// [where] is empty for someone Home Assistant can't place (no tracker yet). The tiles show [where] as it is, one place
+/// in words, so a finer one (the room someone is in) can take the zone's place here without changing them.
 class GlancePerson {
   final String name;
   final String where;
@@ -41,15 +42,31 @@ class GlancePerson {
   int get hashCode => Object.hash(name, where, picture);
 }
 
+/// One thing still to do on a list: what it says, and Home Assistant's id for it (to mark it done).
+class GlanceTodoItem {
+  final String summary;
+  final String? uid;
+  const GlanceTodoItem(this.summary, [this.uid]);
+
+  @override
+  bool operator ==(Object other) => other is GlanceTodoItem && other.summary == summary && other.uid == uid;
+
+  @override
+  int get hashCode => Object.hash(summary, uid);
+
+  @override
+  String toString() => summary;
+}
+
 /// A to-do list with something left on it ("Chores", 3), its entity and, once fetched, the next things on it.
 class GlanceList {
   final String name;
   final int open;
   final String? entity;
-  final List<String> next;
+  final List<GlanceTodoItem> next;
   const GlanceList(this.name, this.open, {this.entity, this.next = const []});
 
-  GlanceList withNext(List<String> next) => GlanceList(name, open, entity: entity, next: next);
+  GlanceList withNext(List<GlanceTodoItem> next) => GlanceList(name, open, entity: entity, next: next);
 
   @override
   bool operator ==(Object other) =>
@@ -114,7 +131,7 @@ class GlanceHaFeed extends ChangeNotifier {
   List<GlancePerson> _people = const [];
   List<GlanceList> _lists = const [];
   List<GlanceList> _merged = const [];
-  final Map<String, List<String>> _items = {};
+  final Map<String, List<GlanceTodoItem>> _items = {};
   GlanceHaWeatherEntity? _weather;
   final Map<String, List<Object?>> _forecasts = {};
   final List<Future<void> Function()> _forecastSubs = [];
@@ -155,8 +172,8 @@ class GlanceHaFeed extends ChangeNotifier {
       "{%- for w in states.weather -%}{%- set ns.weather = ns.weather + [[w.entity_id, w.state, w.attributes.temperature, w.attributes.temperature_unit | default('', true), w.attributes.supported_features | default(0, true)]] -%}{%- endfor -%}"
       "{{ {'people': ns.people, 'lists': ns.lists, 'weather': ns.weather} | tojson }}";
 
-  /// How many of a list's next things it keeps.
-  static const int nextItems = 3;
+  /// How many of a list's next things it keeps (the tile shows the first few, the list's view all of these).
+  static const int nextItems = 8;
 
   Future<void> _start() async {
     try {
@@ -215,14 +232,41 @@ class GlanceHaFeed extends ChangeNotifier {
 
   /// The things still to do in a todo/item/list reply, in the list's order.
   @visibleForTesting
-  static List<String> nextOf(Object? reply) {
+  static List<GlanceTodoItem> nextOf(Object? reply) {
     final items = reply is Map && reply["items"] is List ? reply["items"] as List : const [];
     return [
       for (final i in items)
         if (i is Map && i["status"] == "needs_action" && i["summary"] is String && (i["summary"] as String).trim().isNotEmpty)
-          (i["summary"] as String).trim(),
+          GlanceTodoItem((i["summary"] as String).trim(), i["uid"] is String ? i["uid"] as String : null),
     ].take(nextItems).toList();
   }
+
+  /// Marks [item] on the list [entity] done (todo.update_item, by its id, else by what it says); false when Home
+  /// Assistant isn't there or says no. Once it's done it leaves the list's next things; Home Assistant's new count
+  /// follows through the template.
+  Future<bool> markDone(String entity, GlanceTodoItem item) async {
+    final socket = _socket;
+    if (socket == null || _disposed) return false;
+    try {
+      await socket.callService("todo", "update_item",
+          target: {"entity_id": entity}, data: doneData(item));
+    } catch (err) {
+      noteFailure('glance_feed', err);
+      return false;
+    }
+    if (_disposed) return true;
+    final items = _items[entity];
+    if (items != null) {
+      _items[entity] = [for (final i in items) if (i != item) i];
+      _merge();
+      notifyListeners();
+    }
+    return true;
+  }
+
+  /// What todo.update_item takes to mark [item] done.
+  @visibleForTesting
+  static Map<String, Object?> doneData(GlanceTodoItem item) => {"item": item.uid ?? item.summary, "status": "completed"};
 
   /// Follows [weather]'s forecasts (the hours and the days), dropping the last entity's.
   Future<void> _followForecasts(GlanceHaWeatherEntity? weather) async {

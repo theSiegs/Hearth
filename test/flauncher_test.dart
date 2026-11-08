@@ -1662,6 +1662,8 @@ SettingsService mkSettingsService([MockSettingsService? mock]) {
   when(settingsService.glintHome).thenReturn(false);
   when(settingsService.glintMotion).thenReturn("easy");
   when(settingsService.peek).thenReturn("off");
+  when(settingsService.householdTiles(kids: false)).thenReturn(true);
+  when(settingsService.householdTiles(kids: true)).thenReturn(false);
   when(settingsService.dockBlurEnabled).thenReturn(true);
   when(settingsService.dockDarkBackground).thenReturn(false);
   when(settingsService.dockShadowEnabled).thenReturn(true);

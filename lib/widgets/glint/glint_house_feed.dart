@@ -19,8 +19,22 @@ import 'dart:async';
 
 import 'package:flauncher/providers/ha_entities.dart';
 import 'package:flauncher/providers/ha_socket.dart';
+import 'package:flauncher/providers/profile_service.dart';
+import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:provider/provider.dart';
+
+/// Whether this profile shows the family tile (everyone and where they are) and the house tile (what the other TVs
+/// play): Settings > Home screen > Look > Family and house. On in an adult's profile; in a kids profile off until an
+/// adult turns it on there. Hidden until Hearth knows which kind of profile this is.
+bool householdTilesShown(BuildContext context) {
+  final profile = context.select<ProfileService?, ({bool settled, bool kids})>(
+      (p) => (settled: p?.settledOnce ?? true, kids: p?.isKidsProfile ?? false));
+  if (!profile.settled) return false;
+  return context.select<SettingsService?, bool>((s) => s?.householdTiles(kids: profile.kids) ?? !profile.kids);
+}
 
 /// One thing going on around the house, for the Glint home's house tile: another TV playing something, or someone in
 /// a car.

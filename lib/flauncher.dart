@@ -799,7 +799,7 @@ class _FLauncherState extends State<FLauncher> {
                                 : _emptyState(context))
                         : Scaffold(
                             backgroundColor: Colors.transparent,
-                            appBar: FocusAwareAppBar(key: _appBarKey),
+                            appBar: FocusAwareAppBar(key: _appBarKey, glanceOpen: _glanceShown),
                             // Under the glance page the home fades away (the shelf and the dock never show through
                             // it); the top bar stays
                             body: AnimatedOpacity(

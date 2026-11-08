@@ -175,7 +175,8 @@ class _GlintHomeState extends State<GlintHome> with SingleTickerProviderStateMix
     final events = calendar?.today().take(3).toList() ?? const <CalendarEvent>[];
     if (events.isNotEmpty) tiles.add(_Tile("calendar", GlintSize.wide, (_) => CalendarFace(events: events)));
 
-    if (_house.items.isNotEmpty) {
+    // Only where this profile shows the house (Look > Family and house)
+    if (_house.items.isNotEmpty && householdTilesShown(context)) {
       tiles.add(_Tile("house", GlintSize.wide, (_) => HouseFace(items: _house.items)));
     }
 
