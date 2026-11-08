@@ -221,7 +221,6 @@ void main() {
     when(settingsService.continueWatchingMaxItems).thenReturn(10);
     when(settingsService.continueWatchingCardHeight).thenReturn(135);
     when(settingsService.continueWatchingShowProgress).thenReturn(true);
-    when(settingsService.continueWatchingShowPercentage).thenReturn(true);
     when(settingsService.continueWatchingShowDescription).thenReturn(true);
     final watchNextService = mkWatchNextService();
     when(watchNextService.hasPermission).thenReturn(true);
@@ -529,7 +528,6 @@ void main() {
       when(settingsService.continueWatchingMaxItems).thenReturn(10);
       when(settingsService.continueWatchingCardHeight).thenReturn(135);
       when(settingsService.continueWatchingShowProgress).thenReturn(true);
-      when(settingsService.continueWatchingShowPercentage).thenReturn(true);
       when(settingsService.continueWatchingShowDescription).thenReturn(true);
       watchNextService = mkWatchNextService(LiveWatchNextService()) as LiveWatchNextService;
       when(watchNextService.hasPermission).thenReturn(true);

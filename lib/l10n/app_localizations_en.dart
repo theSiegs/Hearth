@@ -703,7 +703,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get kidsProfilesFixBody =>
-      'Puts Hearth and HearthTube back where they\'re missing. Each kid they\'re added for gets one Family Link notice.';
+      'Puts Hearth and HearthTube back where they\'re missing.';
 
   @override
   String get kidsProfilesNone => 'There are no kids profiles on this TV.';
@@ -2084,9 +2084,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cwPlaybackProgressBar => 'Playback Progress Bar';
-
-  @override
-  String get cwPlaybackPercentage => 'Playback Percentage';
 
   @override
   String get cwEpisodeDetails => 'Episode & Video Details';

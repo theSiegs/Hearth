@@ -65,7 +65,6 @@ const String _showContinueWatchingKey = "show_continue_watching";
 const String _continueWatchingCardSizeKey = "continue_watching_card_size";
 const String _continueWatchingMaxItemsKey = "continue_watching_max_items";
 const String _continueWatchingShowProgressKey = "continue_watching_show_progress";
-const String _continueWatchingShowPercentageKey = "continue_watching_show_percentage";
 const String _continueWatchingShowDescriptionKey = "continue_watching_show_description";
 const String _continueWatchingOrderKey = "continue_watching_order";
 const String _hiddenWatchNextProgramIdsKey = "hidden_watch_next_program_ids";
@@ -189,7 +188,6 @@ class SettingsService extends ChangeNotifier {
     _continueWatchingCardSizeKey,
     _continueWatchingMaxItemsKey,
     _continueWatchingShowProgressKey,
-    _continueWatchingShowPercentageKey,
     _continueWatchingShowDescriptionKey,
     _continueWatchingOrderKey,
     _hiddenWatchNextProgramIdsKey,
@@ -341,8 +339,6 @@ class SettingsService extends ChangeNotifier {
   int get continueWatchingMaxItems => _int(_continueWatchingMaxItemsKey, 15);
 
   bool get continueWatchingShowProgress => _bool(_continueWatchingShowProgressKey, true);
-
-  bool get continueWatchingShowPercentage => _bool(_continueWatchingShowPercentageKey, false);
 
   bool get continueWatchingShowDescription => _bool(_continueWatchingShowDescriptionKey, true);
 
@@ -631,8 +627,6 @@ class SettingsService extends ChangeNotifier {
   Future<void> setContinueWatchingMaxItems(int count) => _setInt(_continueWatchingMaxItemsKey, count);
 
   Future<void> setContinueWatchingShowProgress(bool show) => _setBool(_continueWatchingShowProgressKey, show);
-
-  Future<void> setContinueWatchingShowPercentage(bool show) => _setBool(_continueWatchingShowPercentageKey, show);
 
   Future<void> setContinueWatchingShowDescription(bool show) => _setBool(_continueWatchingShowDescriptionKey, show);
 

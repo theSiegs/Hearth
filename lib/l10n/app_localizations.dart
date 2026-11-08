@@ -1255,7 +1255,7 @@ abstract class AppLocalizations {
   /// Kids profiles page: under the Fix button
   ///
   /// In en, this message translates to:
-  /// **'Puts Hearth and HearthTube back where they\'re missing. Each kid they\'re added for gets one Family Link notice.'**
+  /// **'Puts Hearth and HearthTube back where they\'re missing.'**
   String get kidsProfilesFixBody;
 
   /// Kids profiles page: when the TV has no kids profiles
@@ -3442,12 +3442,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Playback Progress Bar'**
   String get cwPlaybackProgressBar;
-
-  /// Switch on the Continue Watching page
-  ///
-  /// In en, this message translates to:
-  /// **'Playback Percentage'**
-  String get cwPlaybackPercentage;
 
   /// Switch on the Continue Watching page
   ///

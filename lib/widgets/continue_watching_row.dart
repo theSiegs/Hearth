@@ -383,7 +383,6 @@ class _WatchNextCardState extends State<WatchNextCard> with SingleTickerProvider
     final double cardHeight = context.select<SettingsService, int>((s) => s.continueWatchingCardHeight).toDouble();
     final double cardWidth = (cardHeight * 16 / 9).roundToDouble();
     final bool showProgress = context.select<SettingsService, bool>((s) => s.continueWatchingShowProgress);
-    final bool showPercentage = context.select<SettingsService, bool>((s) => s.continueWatchingShowPercentage);
     final bool showDescription = context.select<SettingsService, bool>((s) => s.continueWatchingShowDescription);
 
     final bool shouldHighlight = _shouldHighlight();
@@ -481,27 +480,6 @@ class _WatchNextCardState extends State<WatchNextCard> with SingleTickerProvider
                           ),
                         ),
                       const Spacer(),
-                      if (showPercentage && progress > 0)
-                        Container(
-                          // Over poster art the badge needs its own backing to stay readable.
-                          padding: hasPoster
-                              ? const EdgeInsets.symmetric(horizontal: 6, vertical: 2)
-                              : EdgeInsets.zero,
-                          decoration: hasPoster
-                              ? BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.7),
-                                  borderRadius: BorderRadius.circular(6),
-                                )
-                              : null,
-                          child: Text(
-                            '${(progress * 100).round()}%',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: accentColor,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                   const Spacer(),

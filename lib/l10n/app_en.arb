@@ -533,7 +533,7 @@
     "@kidsProfilesFix": {
         "description": "Kids profiles page: the button that puts Hearth back on the profiles that need it"
     },
-    "kidsProfilesFixBody": "Puts Hearth and HearthTube back where they're missing. Each kid they're added for gets one Family Link notice.",
+    "kidsProfilesFixBody": "Puts Hearth and HearthTube back where they're missing.",
     "@kidsProfilesFixBody": {
         "description": "Kids profiles page: under the Fix button"
     },
@@ -2431,10 +2431,6 @@
     },
     "cwPlaybackProgressBar": "Playback Progress Bar",
     "@cwPlaybackProgressBar": {
-        "description": "Switch on the Continue Watching page"
-    },
-    "cwPlaybackPercentage": "Playback Percentage",
-    "@cwPlaybackPercentage": {
         "description": "Switch on the Continue Watching page"
     },
     "cwEpisodeDetails": "Episode & Video Details",

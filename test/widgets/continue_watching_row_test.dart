@@ -81,7 +81,6 @@ void main() {
     when(settingsService.continueWatchingMaxItems).thenReturn(10);
     when(settingsService.continueWatchingCardHeight).thenReturn(135);
     when(settingsService.continueWatchingShowProgress).thenReturn(true);
-    when(settingsService.continueWatchingShowPercentage).thenReturn(true);
     when(settingsService.continueWatchingShowDescription).thenReturn(true);
     when(settingsService.showCategoryTitles).thenReturn(true);
     when(settingsService.showCategoryAppCount).thenReturn(false);
