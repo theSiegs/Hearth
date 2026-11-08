@@ -34,6 +34,7 @@ from .media import media_rooms
 from .auth import is_adult_user
 from .glance import household_glance, person_glance
 from .places import SIGNAL_PLACES
+from .targets import target_of_counted
 
 SEND_EVERY = timedelta(seconds=2)
 
@@ -112,6 +113,9 @@ def summary(hub) -> dict[str, Any]:
                 ],
             }
         )
+        # Today's minutes per counted device and per app or title (each device's time once, as counted)
+        if day is not None:
+            people[-1]["devices_today"], people[-1]["apps_today"] = _today_by_device_and_app(household, person, day)
         # Today's School time window, on a school or half day ({start, end}, local), for "no school time today"
         if (window := household.scheduler.window_today(person, now)) is not None:
             people[-1]["school_time"] = {"start": window[0].isoformat(), "end": window[1].isoformat()}
@@ -181,6 +185,30 @@ def summary(hub) -> dict[str, Any]:
     }
     body["version"] = hashlib.sha256(json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()[:16]
     return body
+
+
+def _today_by_device_and_app(household, person: str, day) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    devices: dict[str, dict[str, Any]] = {}
+    apps: dict[str, float] = {}
+    for key, usage in day.devices.items():
+        target, name = target_of_counted(household, person, key)
+        row = devices.setdefault(target, {"target": target, "name": name, "seconds": 0.0})
+        row["seconds"] += usage.total_s
+        for item, seconds in usage.items.items():
+            apps[item] = apps.get(item, 0.0) + seconds
+    by_device = [
+        {"target": r["target"], "name": r["name"], "minutes": _minutes(r["seconds"])}
+        for r in sorted(devices.values(), key=lambda r: -r["seconds"])
+        if _minutes(r["seconds"]) > 0
+    ]
+    by_app = []
+    for item, seconds in sorted(apps.items(), key=lambda kv: -kv[1])[:50]:
+        if _minutes(seconds) <= 0:
+            continue
+        known = household.apps.apps.get(item)
+        name = household._label(item, known.name if known else None)
+        by_app.append({"package": item, "name": name, "minutes": _minutes(seconds)})
+    return by_device, by_app
 
 
 def _hub(hass: HomeAssistant):

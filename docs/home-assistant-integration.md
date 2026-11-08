@@ -840,6 +840,13 @@ then sends the same object as an event whenever it changes, at most every 2 seco
   summary is an administrator or an adult. An allow and a pause that end on a place carry `ends_on` (above).
 - each person also has `pauses`: an adult's pauses of one app or group, `[{app, group, name, until, reason}]` (`app`
   or `group` is null), apart from the family `pause`.
+- each person also has `devices_today` `[{target, name, minutes}]` (most first) and `apps_today` `[{package, name,
+  minutes}]` (an app's package, or `title:<id>` for a title; most first, at most 50): today's minutes as Hearth counts
+  them, each device's time once. `target` is the device's id as in `targets` (below) where Hearth can tell:
+  `hearth:<device_id>` for a Hearth TV or phone, `fl:<device id>` for a source that is one Family Link device's own
+  Daily screen time sensor, `nintendo:<entity>` for a source on the same Home Assistant device as the person's
+  Nintendo enforcer; any other source is `source:<id>` (a child's Family Link total for all their devices, say, or
+  Family Safety's). An app's minutes are summed over the devices.
 - each person with Family Link also has `school_time` {`start`, `end`} (local times) on a school or half day: today's
   School time window (a half day's ends early as configured).
 - `groups`: every group of the household, budget or not today: `[{id, name, not_screen_time}]`.
