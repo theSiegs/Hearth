@@ -49,6 +49,11 @@ const String _timeBasedWallpaperEnabledKey = "time_based_wallpaper_enabled";
 const String _bingWallpaperEnabledKey = "bing_wallpaper_enabled";
 const String _matchSelectedAppBackgroundKey = "match_selected_app_background";
 const String _dockEnabledKey = "dock_enabled";
+const String _glintHomeKey = "glint_home";
+const String _glintMotionKey = "glint_motion";
+const String _peekKey = "peek";
+// Per profile: unset, it follows the profile (on in an adult's, off in a kids profile)
+const String _householdTilesKey = "household_tiles";
 const String _dockBlurEnabledKey = "dock_blur_enabled";
 const String _dockDarkBackgroundKey = "dock_dark_background";
 const String _dockShadowEnabledKey = "dock_shadow_enabled";
@@ -176,6 +181,10 @@ class SettingsService extends ChangeNotifier {
     _bingWallpaperEnabledKey,
     _matchSelectedAppBackgroundKey,
     _dockEnabledKey,
+    _glintHomeKey,
+    _glintMotionKey,
+    _peekKey,
+    _householdTilesKey,
     _dockBlurEnabledKey,
     _dockDarkBackgroundKey,
     _dockShadowEnabledKey,
@@ -555,6 +564,30 @@ class SettingsService extends ChangeNotifier {
   bool get dockEnabled => _bool(_dockEnabledKey, true);
 
   Future<void> setDockEnabled(bool enabled) => _setBool(_dockEnabledKey, enabled);
+
+  /// The Glint home (live tiles over the picture, in Glint's design language) instead of the dock and rows. Off unless
+  /// the build says otherwise (a test build: `--dart-define=GLINT_HOME_DEFAULT=true`).
+  bool get glintHome => _bool(_glintHomeKey, const bool.fromEnvironment("GLINT_HOME_DEFAULT"));
+
+  Future<void> setGlintHome(bool enabled) => _setBool(_glintHomeKey, enabled);
+
+  /// How much the Glint home moves: a [GlintMotion] name (lively, easy, calm, still); Easy unless chosen.
+  String get glintMotion => _string(_glintMotionKey, "easy");
+
+  Future<void> setGlintMotion(String motion) => _setString(_glintMotionKey, motion);
+
+  /// Peek tiles on the dock home: live glass tiles (the weather, today's next event, notifications, the house) that
+  /// show what's going on without taking the selection. "off", "row" (above the dock) or "column" (top right); off
+  /// unless the build says otherwise (a test build: `--dart-define=PEEK_DEFAULT=row`).
+  String get peek => _string(_peekKey, const String.fromEnvironment("PEEK_DEFAULT", defaultValue: "off"));
+
+  Future<void> setPeek(String place) => _setString(_peekKey, place);
+
+  /// The family tile (everyone Home Assistant has, and where they are) and the house tile (what the other TVs play)
+  /// show. Per profile: on in an adult's profile, off in a kids profile until an adult turns it on there.
+  bool householdTiles({required bool kids}) => _sharedPreferences.getBool(_householdTilesKey) ?? !kids;
+
+  Future<void> setHouseholdTiles(bool shown) => _setBool(_householdTilesKey, shown);
 
   bool get dockBlurEnabled => _bool(_dockBlurEnabledKey, true);
 

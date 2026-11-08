@@ -27,7 +27,11 @@ import 'package:flauncher/widgets/setup/setup_chip.dart';
 
 class FocusAwareAppBar extends StatefulWidget implements PreferredSizeWidget
 {
-  const FocusAwareAppBar({super.key});
+  /// The glance page is up: its own tiles have the weather and today, so the bar's weather and date and time step
+  /// aside (they show only over the home).
+  final bool glanceOpen;
+
+  const FocusAwareAppBar({super.key, this.glanceOpen = false});
 
   @override
   State<FocusAwareAppBar> createState() => FocusAwareAppBarState();
@@ -239,6 +243,9 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const SetupChip(),
+                  _HomeOnly(
+                    hidden: widget.glanceOpen,
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Consumer<WeatherService>(
                     builder: (context, weatherService, _) {
                       return Selector<SettingsService, bool>(
@@ -312,6 +319,8 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
                       );
                     },
                   ),
+                    ]),
+                  ),
                 ],
               ),
             ),
@@ -321,6 +330,28 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
       ),
     );
   }
+}
+
+/// The bar's weather and date and time: they fade away while the glance page is up, and can't be selected meanwhile.
+class _HomeOnly extends StatelessWidget {
+  final bool hidden;
+  final Widget child;
+  const _HomeOnly({required this.hidden, required this.child});
+
+  @override
+  Widget build(BuildContext context) => ExcludeFocus(
+    excluding: hidden,
+    child: IgnorePointer(
+      ignoring: hidden,
+      child: AnimatedOpacity(
+        key: const Key("statusbar_home_only"),
+        opacity: hidden ? 0 : 1,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        child: child,
+      ),
+    ),
+  );
 }
 
 /// The date and time: a focus stop only while the profile has calendars on the TV to show. Focused, what's left of today

@@ -16,7 +16,11 @@
  */
 
 import 'package:flauncher/l10n/app_localizations.dart';
+import 'package:flauncher/providers/profile_service.dart';
 import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/widgets/glint/peek.dart';
+import 'package:flauncher/widgets/glint/glint_look.dart';
+import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -25,6 +29,7 @@ import 'dock_labels_page.dart';
 import 'focusable_settings_tile.dart';
 import 'animations_sound_page.dart';
 import 'card_style_page.dart';
+import 'settings_lock.dart';
 import 'settings_page.dart';
 
 /// How the home screen looks and feels: card style, accent color, the dock and labels, animations and sound.
@@ -40,6 +45,22 @@ class LookSettingsPage extends StatelessWidget {
         "classic": localizations.cardStyleClassic,
         "minimal": localizations.cardStyleMinimal,
         "capsule": localizations.cardStyleCapsule,
+      };
+
+  /// The Glint home's motion levels, with their names in the current language.
+  static Map<PeekPlace, String> peekPlaces(AppLocalizations localizations) => {
+        PeekPlace.off: localizations.peekOff,
+        PeekPlace.row: localizations.peekRow,
+        PeekPlace.column: localizations.peekColumn,
+        PeekPlace.headline: localizations.peekHeadline,
+        PeekPlace.shelf: localizations.peekShelf,
+      };
+
+  static Map<GlintMotion, String> glintMotions(AppLocalizations localizations) => {
+        GlintMotion.lively: localizations.glintMotionLively,
+        GlintMotion.easy: localizations.glintMotionEasy,
+        GlintMotion.calm: localizations.glintMotionCalm,
+        GlintMotion.still: localizations.glintMotionStill,
       };
 
   const LookSettingsPage({super.key});
@@ -74,6 +95,54 @@ class LookSettingsPage extends StatelessWidget {
           title: Text(AppLocalizations.of(context)!.animationsSoundTitle, style: textTheme.bodyMedium),
           onPressed: () => Navigator.of(context).pushNamed(AnimationsSoundPage.routeName),
         ),
+        if (!context.select<SettingsService, bool>((s) => s.glintHome))
+          FocusableSettingsTile(
+            leading: const Icon(Icons.view_quilt_outlined),
+            title: Text(localizations.peek, style: textTheme.bodyMedium),
+            trailing: Text(peekPlaces(localizations)[PeekPlace.fromName(
+                context.select<SettingsService, String>((s) => s.peek))]!, style: textTheme.bodySmall),
+            // Select steps to the next place, round from Top right to Off
+            onPressed: () {
+              final settings = context.read<SettingsService>();
+              final now = PeekPlace.fromName(settings.peek);
+              settings.setPeek(PeekPlace.values[(now.index + 1) % PeekPlace.values.length].name);
+            },
+          ),
+        RoundedSwitchListTile(
+          value: context.select<SettingsService, bool>((s) => s.glintHome),
+          onChanged: (value) => context.read<SettingsService>().setGlintHome(value),
+          title: Text(localizations.glintHome, style: textTheme.bodyMedium),
+          subtitle: Text(localizations.glintHomeDescription, style: textTheme.bodySmall),
+          secondary: const Icon(Icons.dashboard_outlined),
+        ),
+        // Where everyone is and what the other TVs play: an adult's choice, so a locked kids profile doesn't see it
+        if (!settingsLocked(context))
+          Builder(builder: (context) {
+            final kids = context.select<ProfileService?, bool>((p) => p?.isKidsProfile ?? false);
+            return RoundedSwitchListTile(
+              key: const Key("household_tiles"),
+              value: context.select<SettingsService, bool>((s) => s.householdTiles(kids: kids)),
+              onChanged: (value) => context.read<SettingsService>().setHouseholdTiles(value),
+              title: Text(localizations.householdTiles, style: textTheme.bodyMedium),
+              subtitle: Text(localizations.householdTilesDescription, style: textTheme.bodySmall),
+              secondary: const Icon(Icons.family_restroom),
+            );
+          }),
+        if (context.select<SettingsService, bool>((s) => s.glintHome))
+          FocusableSettingsTile(
+            leading: const Icon(Icons.motion_photos_on_outlined),
+            title: Text(localizations.glintMotion, style: textTheme.bodyMedium),
+            trailing: Text(
+              glintMotions(localizations)[GlintMotion.fromName(context.select<SettingsService, String>((s) => s.glintMotion))]!,
+              style: textTheme.bodySmall,
+            ),
+            // Select steps to the next level, round from Still to Lively
+            onPressed: () {
+              final settings = context.read<SettingsService>();
+              final now = GlintMotion.fromName(settings.glintMotion);
+              settings.setGlintMotion(GlintMotion.values[(now.index + 1) % GlintMotion.values.length].name);
+            },
+          ),
       ],
     );
   }

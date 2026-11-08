@@ -125,6 +125,9 @@ class FocusCardFrame extends StatelessWidget {
 
   /// Rounds the dimming layer's corners too.
   final bool roundedDim;
+
+  /// The corners are no rounder than this (null: the card style's own), see [CardStyle.cappedAt].
+  final double? maxRadius;
   final List<Widget> children;
 
   const FocusCardFrame({
@@ -135,12 +138,13 @@ class FocusCardFrame extends StatelessWidget {
     this.height,
     this.color,
     this.roundedDim = false,
+    this.maxRadius,
     required this.children,
   });
 
   @override
   Widget build(BuildContext context) {
-    final CardStyle style = CardStyle.of(context.select<SettingsService, String>((s) => s.themes));
+    final CardStyle style = CardStyle.of(context.select<SettingsService, String>((s) => s.themes)).cappedAt(maxRadius);
     final Color accentColor = context.select<SettingsService, Color>((s) => s.accentColor);
     final bool hideHighlightOutlineOnHomescreen = context.select<SettingsService, bool>((s) => s.hideHighlightOutlineOnHomescreen);
     final bool appHighlightAnimationEnabled = context.select<SettingsService, bool>((s) => s.appHighlightAnimationEnabled);

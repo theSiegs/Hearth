@@ -39,6 +39,9 @@ class NotificationItem {
   /// first button, so a stray OK never presses one.
   final bool carefulActions;
 
+  /// Who it's from, when it's a message from a person (a messaging app's); empty otherwise.
+  final String sender;
+
   NotificationItem({
     required this.key,
     required this.packageName,
@@ -49,6 +52,7 @@ class NotificationItem {
     this.canOpen = false,
     this.actions = const [],
     this.carefulActions = false,
+    this.sender = '',
   });
 
   /// Whether this says and offers the same as [other]: an app that changes only its buttons is a change too, else
@@ -61,6 +65,7 @@ class NotificationItem {
       isClearable == other.isClearable &&
       canOpen == other.canOpen &&
       carefulActions == other.carefulActions &&
+      sender == other.sender &&
       const ListEquality<NotificationAction>().equals(actions, other.actions);
 
   factory NotificationItem.fromMap(Map<dynamic, dynamic> map) {
@@ -78,6 +83,7 @@ class NotificationItem {
             NotificationAction(action['index'] as int, action['title'] as String),
       ],
       carefulActions: map['carefulActions'] as bool? ?? false,
+      sender: map['sender'] as String? ?? '',
     );
   }
 }

@@ -236,6 +236,10 @@ class WatchNextCard extends StatefulWidget {
   final bool isLastInRow;
   final bool autofocus;
 
+  /// The card's corners are no rounder than this (null: the card style's), so a capsule style doesn't cut the
+  /// thumbnail, the progress bar or the words off (the top shelf's cards).
+  final double? maxRadius;
+
   /// Called when this card gains focus (the row names it above the cards).
   final ValueChanged<WatchNextProgram>? onFocused;
 
@@ -248,6 +252,7 @@ class WatchNextCard extends StatefulWidget {
     this.isFirstInRow = false,
     this.isLastInRow = false,
     this.autofocus = false,
+    this.maxRadius,
     this.onFocused,
   });
 
@@ -378,7 +383,8 @@ class _WatchNextCardState extends State<WatchNextCard> with SingleTickerProvider
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final CardStyle style = CardStyle.of(context.select<SettingsService, String>((s) => s.themes));
+    final CardStyle style =
+        CardStyle.of(context.select<SettingsService, String>((s) => s.themes)).cappedAt(widget.maxRadius);
     final Color accentColor = context.select<SettingsService, Color>((s) => s.accentColor);
     final double cardHeight = context.select<SettingsService, int>((s) => s.continueWatchingCardHeight).toDouble();
     final double cardWidth = (cardHeight * 16 / 9).roundToDouble();
@@ -420,6 +426,7 @@ class _WatchNextCardState extends State<WatchNextCard> with SingleTickerProvider
           height: cardHeight,
           color: Colors.transparent,
           roundedDim: true,
+          maxRadius: widget.maxRadius,
           children: [
             if (hasPoster)
               Image.memory(

@@ -42,6 +42,10 @@ import 'package:flauncher/widgets/category_row.dart';
 import 'package:flauncher/widgets/app_card.dart';
 import 'package:flauncher/widgets/focus_aware_app_bar.dart';
 import 'package:flauncher/widgets/home_dock.dart';
+import 'package:flauncher/widgets/glint/dock_shelf.dart';
+import 'package:flauncher/widgets/glint/glance_page.dart';
+import 'package:flauncher/widgets/glint/glint_home.dart';
+import 'package:flauncher/widgets/glint/glint_tile.dart';
 import 'package:flauncher/widgets/continue_watching_row.dart';
 import 'package:flauncher/widgets/search/search_entry.dart';
 import 'package:flauncher/widgets/search/search_grid_page.dart';
@@ -118,6 +122,39 @@ void main() {
     expect(find.byType(CategoryRow), findsOneWidget);
     expect(find.byType(AppsGrid), findsOneWidget);
     expect(find.text("This category is empty."), findsNWidgets(2));
+  });
+
+  testWidgets("The Glint home shows live tiles in place of the top bar, the dock and the rows", (tester) async {
+    final appsService = mkAppService();
+    final favoritesCategory = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+    final applicationsCategory = fakeCategory(name: "Applications", order: 1);
+    final app = fakeApp(packageName: "me.efesser.flauncher.1", name: "FLauncher 1");
+    favoritesCategory.applications.add(app);
+    applicationsCategory.applications.add(fakeApp(packageName: "me.efesser.flauncher.2", name: "FLauncher 2"));
+    when(appsService.launcherSections).thenReturn([favoritesCategory, applicationsCategory]);
+    final settingsService = mkSettingsService();
+    when(settingsService.dockEnabled).thenReturn(true);
+    when(settingsService.glintHome).thenReturn(true);
+
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService);
+
+    expect(find.byType(GlintHome), findsOneWidget);
+    expect(find.byType(FocusAwareAppBar), findsNothing);
+    expect(find.byType(HomeDock), findsNothing);
+    // Favorites as tiles; the other sections' apps are in All apps, not on the home
+    expect(find.text("FLauncher 1"), findsOneWidget);
+    expect(find.text("FLauncher 2"), findsNothing);
+    expect(find.text("All apps"), findsOneWidget);
+    expect(find.text("Settings"), findsOneWidget);
+
+    // Select on an app's tile opens it
+    final tile = find.ancestor(of: find.text("FLauncher 1"), matching: find.byType(GlintTile));
+    Focus.of(tester.element(find.text("FLauncher 1"))).requestFocus();
+    await tester.pump();
+    expect(tester.widget<GlintTile>(tile.first).onPressed, isNotNull);
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pump();
+    verify(appsService.launchApp(app)).called(1);
   });
 
   testWidgets("Dock shows Favorites along the bottom of the first screen", (tester) async {
@@ -1452,6 +1489,144 @@ void main() {
     await tester.pump();
     expect(isProfileButtonFocused(tester), isTrue);
   });
+
+  group("Top shelf + glance page", () {
+    WatchNextProgram program(int id, String package, String title) => WatchNextProgram(
+          id: id, packageName: package, title: title, description: "", watchNextType: 0,
+          lastEngagementTime: 0, playbackPosition: 50, duration: 100, intentUri: "intent://$id", posterArtUri: "");
+
+    Future<void> pumpShelf(WidgetTester tester) async {
+      final appsService = mkAppService();
+      final video = fakeApp(packageName: "com.example.video", name: "Video");
+      final other = fakeApp(packageName: "com.example.other", name: "Other");
+      when(appsService.applications).thenReturn([video, other]);
+      final favorites = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+      favorites.applications.addAll([video, other]);
+      when(appsService.launcherSections).thenReturn([favorites]);
+      final settingsService = mkSettingsService();
+      when(settingsService.dockEnabled).thenReturn(true);
+      when(settingsService.peek).thenReturn("shelf");
+      when(settingsService.showContinueWatching).thenReturn(true);
+      when(settingsService.hiddenWatchNextProgramIds).thenReturn([]);
+      when(settingsService.hiddenWatchNextPackages).thenReturn([]);
+      when(settingsService.continueWatchingMaxItems).thenReturn(10);
+      when(settingsService.continueWatchingCardHeight).thenReturn(135);
+      when(settingsService.continueWatchingShowProgress).thenReturn(true);
+      when(settingsService.continueWatchingShowPercentage).thenReturn(true);
+      when(settingsService.continueWatchingShowDescription).thenReturn(true);
+      final watchNextService = mkWatchNextService();
+      when(watchNextService.hasPermission).thenReturn(true);
+      when(watchNextService.programs).thenReturn([
+        program(1, "com.example.video", "Big Buck Bunny"),
+        program(2, "com.example.video", "Sintel"),
+      ]);
+      await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService,
+          watchNextService: watchNextService);
+      await tester.pumpAndSettle();
+
+    }
+
+    bool inShelf() =>
+        FocusManager.instance.primaryFocus?.context?.findAncestorWidgetOfExactType<DockShelf>() != null;
+    bool inGlance() =>
+        FocusManager.instance.primaryFocus?.context?.findAncestorWidgetOfExactType<GlancePage>() != null;
+    DockShelfState shelf(WidgetTester tester) => tester.state<DockShelfState>(find.byType(DockShelf));
+
+    testWidgets("lands on the dock; the selected app's cards are above it and there's no Continue Watching row",
+        (tester) async {
+      await pumpShelf(tester);
+      expect(getFocusNodeForApp(tester, "com.example.video")!.hasFocus, isTrue,
+          reason: "opening a streaming service stays one press from the home");
+      expect(find.byKey(const Key("home_recents")), findsNothing);
+      expect(shelf(tester).look!.package, "com.example.video");
+      expect(find.descendant(of: find.byType(DockShelf), matching: find.byType(WatchNextCard)), findsNWidgets(2));
+      expect(find.text("Video"), findsWidgets);
+    });
+
+    testWidgets("a kid's shelf says the minutes left today in the app's group", (tester) async {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          const MethodChannel('me.efesser.flauncher/method'), (call) async {
+        if (call.method == "getHaLockState") {
+          return {
+            "paired": true,
+            "kids": true,
+            "groups": [
+              {"id": "video", "name": "Video", "minutesLeft": 25, "apps": ["com.example.video"], "except": []},
+            ],
+          };
+        }
+        return call.method.startsWith("check") ? false : null;
+      });
+      addTearDown(() => tester.binding.defaultBinaryMessenger
+          .setMockMethodCallHandler(const MethodChannel('me.efesser.flauncher/method'), null));
+      await pumpShelf(tester);
+      // The first look was taken before Home Assistant answered; the next move of the selection takes it in
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pumpAndSettle();
+      expect(find.text("Video  ·  25 min left today"), findsOneWidget);
+    });
+
+    testWidgets("Up goes into the cards, Down goes back to the same app", (tester) async {
+      await pumpShelf(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pumpAndSettle();
+      expect(inShelf(), isTrue);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      expect(getFocusNodeForApp(tester, "com.example.video")!.hasFocus, isTrue);
+    });
+
+    testWidgets("an app with nothing to continue shows the quiet line; the shelf changes only with the dock's selection",
+        (tester) async {
+      await pumpShelf(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      expect(getFocusNodeForApp(tester, "com.example.other")!.hasFocus, isTrue);
+      expect(shelf(tester).look!.package, "com.example.other");
+      expect(find.byKey(const Key("shelf_quiet")), findsOneWidget);
+      expect(find.byKey(const Key("shelf_cards")), findsNothing);
+      // Up with no cards doesn't land in the shelf
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key("shelf_cards")), findsOneWidget);
+
+      // In the cards, moving along them leaves the shelf as it is: nothing changes under the selection
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pumpAndSettle();
+      final before = shelf(tester).look;
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      expect(inShelf(), isTrue);
+      expect(identical(shelf(tester).look, before), isTrue);
+    });
+
+    testWidgets("Down from the dock opens the glance page; Up from its top row and Back close it", (tester) async {
+      await pumpShelf(tester);
+      expect(find.byType(GlancePage), findsNothing);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      expect(find.byType(GlancePage), findsOneWidget);
+      expect(inGlance(), isTrue);
+      // Its own page: the home under it (the shelf and the dock) is gone, nothing shows through
+      expect(tester.widget<AnimatedOpacity>(find.byKey(const Key("home_body"))).opacity, 0);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pumpAndSettle();
+      expect(find.byType(GlancePage), findsNothing);
+      expect(getFocusNodeForApp(tester, "com.example.video")!.hasFocus, isTrue);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+      expect(inGlance(), isTrue);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.byType(GlancePage), findsNothing);
+      expect(getFocusNodeForApp(tester, "com.example.video")!.hasFocus, isTrue);
+      expect(tester.widget<AnimatedOpacity>(find.byKey(const Key("home_body"))).opacity, 1);
+    });
+  });
 }
 
 /// Mocks whose listeners hear [LiveListeners.changed], for tests where the home changes under the selection.
@@ -1484,6 +1659,11 @@ SettingsService mkSettingsService([MockSettingsService? mock]) {
   when(settingsService.showContinueWatching).thenReturn(false);
   when(settingsService.continueWatchingOrder).thenReturn(0);
   when(settingsService.dockEnabled).thenReturn(false);
+  when(settingsService.glintHome).thenReturn(false);
+  when(settingsService.glintMotion).thenReturn("easy");
+  when(settingsService.peek).thenReturn("off");
+  when(settingsService.householdTiles(kids: false)).thenReturn(true);
+  when(settingsService.householdTiles(kids: true)).thenReturn(false);
   when(settingsService.dockBlurEnabled).thenReturn(true);
   when(settingsService.dockDarkBackground).thenReturn(false);
   when(settingsService.dockShadowEnabled).thenReturn(true);
@@ -1504,6 +1684,7 @@ WallpaperService mkWallpaperService([bool wallpaper = true]) {
   when(wallpaperService.focusedAppColor).thenReturn(null);
   when(wallpaperService.wallpaper).thenReturn(wallpaper ? Image.asset('assets/icon.png').image : null);
   when(wallpaperService.version).thenReturn(0);
+  when(wallpaperService.appColor(any)).thenAnswer((_) async => null);
   return wallpaperService;
 }
 

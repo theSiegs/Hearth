@@ -84,6 +84,7 @@ final class NotificationsEventStreamHandler implements EventChannel.StreamHandle
                     map.put("appLabel", label);
                     map.put("title", title);
                     map.put("text", text);
+                    map.put("sender", notification != null ? NotificationContent.sender(notification) : "");
                     map.put("postTime", sbn.getPostTime());
                     map.put("isClearable", sbn.isClearable());
                     // What a tap on the notification does (else the app opens), and its buttons (not ones that need

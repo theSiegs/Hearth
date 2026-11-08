@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -846,6 +847,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get haPanelTitle => 'Dashboard panel';
+
+  @override
+  String get glintHome => 'Glint home';
+
+  @override
+  String get glintHomeDescription =>
+      'Live tiles over the picture, like the Glint phone launcher';
+
+  @override
+  String get glintMotion => 'Glint motion';
+
+  @override
+  String get glintMotionLively => 'Lively';
+
+  @override
+  String get glintMotionEasy => 'Easy';
+
+  @override
+  String get glintMotionCalm => 'Calm';
+
+  @override
+  String get glintMotionStill => 'Still';
+
+  @override
+  String get peek => 'Peek tiles';
+
+  @override
+  String get peekOff => 'Off';
+
+  @override
+  String get peekRow => 'Above the dock';
+
+  @override
+  String get peekColumn => 'Top right';
+
+  @override
+  String get peekShelf => 'Top shelf + glance page';
+
+  @override
+  String get shelfPickUp => 'Pick up where you left off';
+
+  @override
+  String shelfMinutesLeft(int minutes) {
+    return '$minutes min left today';
+  }
+
+  @override
+  String get shelfNoTimeLeft => 'No time left today';
+
+  @override
+  String get peekHeadline => 'Headlines';
+
+  @override
+  String glintBedtimeAt(String time) {
+    return 'Bedtime at $time';
+  }
+
+  @override
+  String glintSchoolTimeAt(String time) {
+    return 'School time at $time';
+  }
 
   @override
   String get lookTitle => 'Look';
@@ -3810,4 +3872,37 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get remotePhonesAbout =>
       'A phone with kid rules can\'t open apps the profile on the TV can\'t open now. Keys and power go through the TV\'s own remote, not Hearth.';
+
+  @override
+  String get householdTiles => 'Family and house';
+
+  @override
+  String get householdTilesDescription =>
+      'Where everyone is and what the other TVs are playing. Off in kids profiles until an adult turns it on';
+
+  @override
+  String glanceMoreEvents(int count) {
+    return '+$count more';
+  }
+
+  @override
+  String get glanceNothingElseToday => 'Nothing else on today';
+
+  @override
+  String get glanceAllDay => 'All day';
+
+  @override
+  String get glanceNow => 'Now';
+
+  @override
+  String glanceTodoLeft(int count) {
+    return '$count left';
+  }
+
+  @override
+  String get glanceTodoHint => 'Press OK on a thing to mark it done';
+
+  @override
+  String get glanceTodoFailed =>
+      'Couldn\'t mark that done. Try again in a moment.';
 }

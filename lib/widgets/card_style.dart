@@ -69,6 +69,19 @@ class CardStyle {
 
   BorderRadius get borderRadius => BorderRadius.circular(radius);
 
+  /// This style with its corners no rounder than [maxRadius]: a picture card (a 16:9 thumbnail) keeps its own shape
+  /// whatever the app tiles are (a capsule would cut its art and its words off). Null leaves it as it is.
+  CardStyle cappedAt(double? maxRadius) => maxRadius == null || radius <= maxRadius
+      ? this
+      : CardStyle._(
+          radius: maxRadius,
+          focusScale: focusScale,
+          focusElevation: focusElevation,
+          glow: glow,
+          outlineWidth: outlineWidth,
+          twoTone: twoTone,
+        );
+
   /// For the black line just inside the two-tone outline.
   BorderRadius get innerBorderRadius => BorderRadius.circular(max(radius - 2, 0));
 

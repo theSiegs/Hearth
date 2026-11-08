@@ -287,8 +287,10 @@ class _TimeUpCardState extends State<TimeUpCard> {
 }
 
 /// The time's up card over the home, after an app picked there was held ([group]: its group's name; null: a family
-/// pause). Read first, so the focus lands on the first ask button when the kid can ask, else on Close.
-Future<void> showTimeUpDialog(BuildContext context, FLauncherChannel channel, String? group) async {
+/// pause, unless [heldByPause] says otherwise: the Glint home opens it from its time tile with nothing held). Read
+/// first, so the focus lands on the first ask button when the kid can ask, else on Close.
+Future<void> showTimeUpDialog(BuildContext context, FLauncherChannel channel, String? group,
+    {bool? heldByPause, String? fallback}) async {
   HaLockState state;
   try {
     state = await channel.getHaLockState();
@@ -309,7 +311,8 @@ Future<void> showTimeUpDialog(BuildContext context, FLauncherChannel channel, St
             channel: channel,
             heldGroup: group,
             // Nothing named and no pause: a lock (bedtime, School time) holds it, as the card then says
-            heldByPause: group == null && (state.paused || state.lockKind == null),
+            heldByPause: heldByPause ?? (group == null && (state.paused || state.lockKind == null)),
+            fallback: fallback,
             initial: state,
             autofocus: state.canAsk,
           ),

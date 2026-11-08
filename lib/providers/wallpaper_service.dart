@@ -52,6 +52,11 @@ class WallpaperService extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// An app's colour (from its banner or icon), as the Glint home's tiles show it down their left edge.
+  Future<Color?> appColor(String packageName) async => _appColorCache.containsKey(packageName)
+      ? _appColorCache[packageName]
+      : (_appColorCache[packageName] = await _extractAppColor(packageName));
+
   Future<Color?> _extractAppColor(String packageName) async {
     try {
       Uint8List bytes = await _fLauncherChannel.getApplicationBanner(packageName);

@@ -76,4 +76,20 @@ void main() {
     expect(minutesRoundedUp(const Duration(minutes: 7)), 7);
     expect(minutesRoundedUp(Duration.zero), 1);
   });
+  test("minutes left for an app: the fewest of the groups it counts in", () {
+    final state = HaLockState.fromMap({
+      "paired": true,
+      "kids": true,
+      "groups": [
+        {"id": "games", "name": "Games", "minutesLeft": 20, "apps": ["com.example.game"], "except": []},
+        {"id": "all", "name": "All screen time", "minutesLeft": 45, "apps": [], "except": ["com.example.music"]},
+        {"id": "bad", "name": "No minutes"},
+      ],
+    });
+    expect(state.groups.length, 2);
+    expect(state.minutesLeftFor("com.example.game"), 20);
+    expect(state.minutesLeftFor("com.example.tv"), 45);
+    expect(state.minutesLeftFor("com.example.music"), isNull);
+    expect(HaLockState.none.minutesLeftFor("com.example.tv"), isNull);
+  });
 }

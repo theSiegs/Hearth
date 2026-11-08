@@ -1504,6 +1504,114 @@ abstract class AppLocalizations {
   /// **'Dashboard panel'**
   String get haPanelTitle;
 
+  /// Settings switch: the home screen as live tiles over the picture, in the design language of Glint (the household's phone launcher), instead of the dock and rows
+  ///
+  /// In en, this message translates to:
+  /// **'Glint home'**
+  String get glintHome;
+
+  /// Under the Glint home switch
+  ///
+  /// In en, this message translates to:
+  /// **'Live tiles over the picture, like the Glint phone launcher'**
+  String get glintHomeDescription;
+
+  /// Settings row, shown while the Glint home is on: how much its live tiles move. Select steps through the levels
+  ///
+  /// In en, this message translates to:
+  /// **'Glint motion'**
+  String get glintMotion;
+
+  /// Glint motion level: tiles turn often
+  ///
+  /// In en, this message translates to:
+  /// **'Lively'**
+  String get glintMotionLively;
+
+  /// Glint motion level: tiles turn now and then, one at a time (the default)
+  ///
+  /// In en, this message translates to:
+  /// **'Easy'**
+  String get glintMotionEasy;
+
+  /// Glint motion level: nothing turns while you look; tiles change between visits
+  ///
+  /// In en, this message translates to:
+  /// **'Calm'**
+  String get glintMotionCalm;
+
+  /// Glint motion level: nothing moves
+  ///
+  /// In en, this message translates to:
+  /// **'Still'**
+  String get glintMotionStill;
+
+  /// Settings row on the dock home: live tiles (weather, next event, notifications, the house) that show what's going on without being selected. Select steps through Off, Above the dock, Top right, Headlines and Top shelf + glance page
+  ///
+  /// In en, this message translates to:
+  /// **'Peek tiles'**
+  String get peek;
+
+  /// Peek tiles: none
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get peekOff;
+
+  /// Peek tiles: a row just above the dock
+  ///
+  /// In en, this message translates to:
+  /// **'Above the dock'**
+  String get peekRow;
+
+  /// Peek tiles: a column at the top right, under the clock
+  ///
+  /// In en, this message translates to:
+  /// **'Top right'**
+  String get peekColumn;
+
+  /// Peek tiles: no tiles on the home; above the dock, what the selected app has to continue (or a quiet line), and Down from the dock opens a page of live tiles
+  ///
+  /// In en, this message translates to:
+  /// **'Top shelf + glance page'**
+  String get peekShelf;
+
+  /// Top shelf above the dock, with no app selected (or a Hearth tile): programs from every app to continue
+  ///
+  /// In en, this message translates to:
+  /// **'Pick up where you left off'**
+  String get shelfPickUp;
+
+  /// Top shelf, in a kids profile with Home Assistant: minutes left today for the selected app's group
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min left today'**
+  String shelfMinutesLeft(int minutes);
+
+  /// Top shelf, in a kids profile with Home Assistant: the selected app's group has no minutes left today
+  ///
+  /// In en, this message translates to:
+  /// **'No time left today'**
+  String get shelfNoTimeLeft;
+
+  /// Peek tiles: no tiles, lines of text on the picture at the top left
+  ///
+  /// In en, this message translates to:
+  /// **'Headlines'**
+  String get peekHeadline;
+
+  /// Glint home's time tile (a kids profile, Home Assistant's Hearth integration): bedtime starts soon; {time} is a time of day, such as 8:30 PM
+  ///
+  /// In en, this message translates to:
+  /// **'Bedtime at {time}'**
+  String glintBedtimeAt(String time);
+
+  /// Glint home's time tile: school time starts soon; {time} is a time of day, such as 8:00 AM
+  ///
+  /// In en, this message translates to:
+  /// **'School time at {time}'**
+  String glintSchoolTimeAt(String time);
+
   /// Settings page title, also its row in the page that opens it
   ///
   /// In en, this message translates to:
@@ -6350,6 +6458,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A phone with kid rules can\'t open apps the profile on the TV can\'t open now. Keys and power go through the TV\'s own remote, not Hearth.'**
   String get remotePhonesAbout;
+
+  /// Settings switch (Look), per profile, only for an adult: the glance page's family tile (everyone in Home Assistant and where they are) and the house tile (what the other TVs are playing)
+  ///
+  /// In en, this message translates to:
+  /// **'Family and house'**
+  String get householdTiles;
+
+  /// Under the Family and house switch
+  ///
+  /// In en, this message translates to:
+  /// **'Where everyone is and what the other TVs are playing. Off in kids profiles until an adult turns it on'**
+  String get householdTilesDescription;
+
+  /// Glance page's Today tile: how many more of today's events there are than the tile shows
+  ///
+  /// In en, this message translates to:
+  /// **'+{count} more'**
+  String glanceMoreEvents(int count);
+
+  /// Glance page's Today tile: no more events today
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing else on today'**
+  String get glanceNothingElseToday;
+
+  /// Glance page's Today tile: an all-day event, in place of its time
+  ///
+  /// In en, this message translates to:
+  /// **'All day'**
+  String get glanceAllDay;
+
+  /// Glance page's Today tile: an event that's on now, in place of its time
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get glanceNow;
+
+  /// Glance page's to-do tile and view: how many things are still to do on a list
+  ///
+  /// In en, this message translates to:
+  /// **'{count} left'**
+  String glanceTodoLeft(int count);
+
+  /// Glance page's to-do view, under the lists: how to mark something done
+  ///
+  /// In en, this message translates to:
+  /// **'Press OK on a thing to mark it done'**
+  String get glanceTodoHint;
+
+  /// Glance page's to-do view: Home Assistant didn't mark the thing done
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t mark that done. Try again in a moment.'**
+  String get glanceTodoFailed;
 }
 
 class _AppLocalizationsDelegate
