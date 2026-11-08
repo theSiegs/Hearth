@@ -113,6 +113,15 @@ final class HaLocks {
                 Map<String, Object> map = new HashMap<>();
                 map.put("id", text(group, "id"));
                 map.put("name", name);
+                JSONObject paused = group.optJSONObject("paused");
+                if (paused != null) {
+                    // An adult paused it: the card says so, until when, and offers no ask
+                    Map<String, Object> pause = new HashMap<>();
+                    pause.put("name", text(paused, "name"));
+                    pause.put("reason", text(paused, "reason"));
+                    pause.put("until", parseTime(paused.optString("until", null)));
+                    map.put("paused", pause);
+                }
                 groups.add(map);
             }
             return groups;

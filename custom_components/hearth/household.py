@@ -735,7 +735,12 @@ class Household:
                     "name": f"{name} (paused: {pause['reason']})" if pause["reason"] else f"{name} (paused)",
                     "minutes_left": 0,
                     "apps": apps,
-                    "paused": {"until": dt_util.as_local(pause["until"]).isoformat(), "reason": pause["reason"]},
+                    # The plain name too, for a device that says "<name> is paused" (and offers no ask for it)
+                    "paused": {
+                        "until": dt_util.as_local(pause["until"]).isoformat(),
+                        "reason": pause["reason"],
+                        "name": name,
+                    },
                 }
             )
         return out

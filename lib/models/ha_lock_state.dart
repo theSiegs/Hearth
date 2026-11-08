@@ -84,12 +84,18 @@ class HaRequest {
       (status == HaRequestStatus.pending && expires != null && !now.isBefore(expires!));
 }
 
-/// A group whose time is up today: its id (for asking for more of it; null from an older Hearth) and name.
+/// A group whose time is up today: its id (for asking for more of it; null from an older Hearth) and name. Or an app
+/// or group an adult paused (hearth.pause with an app or group): [paused], with its plain name, reason and end; more
+/// time doesn't end it, so there's no asking for it.
 class HaTimeUpGroup {
   final String? id;
   final String name;
+  final bool paused;
+  final String? pausedName;
+  final String? pauseReason;
+  final DateTime? pauseUntil;
 
-  const HaTimeUpGroup(this.id, this.name);
+  const HaTimeUpGroup(this.id, this.name, {this.paused = false, this.pausedName, this.pauseReason, this.pauseUntil});
 }
 
 /// What the Hearth integration last said about the active profile: a family pause, the lock on now, the next bedtime
@@ -151,23 +157,39 @@ class HaLockState {
       timeUp: [
         if (timeUp is List)
           for (final group in timeUp)
-            if (group is Map && _text(group["name"]) != null) HaTimeUpGroup(_text(group["id"]), _text(group["name"])!),
+            if (group is Map && _text(group["name"]) != null)
+              HaTimeUpGroup(
+                _text(group["id"]),
+                _text(group["name"])!,
+                paused: group["paused"] is Map,
+                pausedName: group["paused"] is Map ? _text(group["paused"]["name"]) : null,
+                pauseReason: group["paused"] is Map ? _text(group["paused"]["reason"]) : null,
+                pauseUntil: group["paused"] is Map ? _time(group["paused"]["until"]) : null,
+              ),
       ],
     );
   }
 
   /// Whether the kid may ask for more time here at all: a kids profile on a paired TV, with time up and nothing more
   /// holding it (more time doesn't end a pause, a bedtime or a school time).
-  bool get canAsk => paired && kids && !paused && lockKind == null && timeUp.isNotEmpty;
+  bool get canAsk => paired && kids && !paused && lockKind == null && timeUp.any((g) => !g.paused);
+
+  /// The adult's pause of the held group or app, when that's what holds it (by its name as the TV was told).
+  HaTimeUpGroup? pauseOf(String? heldName) {
+    for (final group in timeUp) {
+      if (group.paused && group.name == heldName) return group;
+    }
+    return null;
+  }
 
   /// The group to ask more of: the held one when it's known by name, else the first out of time (All screen time
   /// first, as it holds everything); "all" when no id is known.
   String askGroupFor(String? heldName) {
-    final held = timeUp.where((g) => g.name == heldName && g.id != null);
+    final held = timeUp.where((g) => g.name == heldName && g.id != null && !g.paused);
     if (held.isNotEmpty) return held.first.id!;
     final all = timeUp.where((g) => g.id == "all");
     if (all.isNotEmpty) return "all";
-    final withId = timeUp.where((g) => g.id != null);
+    final withId = timeUp.where((g) => g.id != null && !g.paused);
     return withId.isNotEmpty ? withId.first.id! : "all";
   }
 

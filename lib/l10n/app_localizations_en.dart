@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -3658,6 +3657,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String appOutOfTimeLabel(String app) {
     return '$app, out of time';
+  }
+
+  @override
+  String timeUpGroupPaused(String group) {
+    return '$group is paused';
+  }
+
+  @override
+  String timeUpGroupPausedReason(String group, String reason) {
+    return '$group is paused: $reason';
   }
 
   @override

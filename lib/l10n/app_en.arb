@@ -4533,7 +4533,17 @@
             "app": {"type": "String"}
         }
     },
-    "timeUpForGroup": "Time's up for {group} today",
+    "timeUpGroupPaused": "{group} is paused",
+  "@timeUpGroupPaused": {
+    "description": "Time's up card: an adult paused this app or group (hearth.pause with an app or group).",
+    "placeholders": {"group": {"type": "String"}}
+  },
+  "timeUpGroupPausedReason": "{group} is paused: {reason}",
+  "@timeUpGroupPausedReason": {
+    "description": "Time's up card: an adult paused this app or group, with the reason they gave.",
+    "placeholders": {"group": {"type": "String"}, "reason": {"type": "String"}}
+  },
+  "timeUpForGroup": "Time's up for {group} today",
     "@timeUpForGroup": {
         "description": "Time's up card (a kids profile, Home Assistant's Hearth integration): an app's group has no time left today; {group} is the group's name, such as Games",
         "placeholders": {

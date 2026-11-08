@@ -269,7 +269,11 @@ final class HaAllowance {
                     if (left == 0) {
                         String name = group.optString("name", "");
                         if (name.trim().isEmpty()) name = group.optString("id", "");
-                        timeUpGroups.put(new JSONObject().put("id", group.optString("id", "")).put("name", name));
+                        JSONObject timeUp = new JSONObject().put("id", group.optString("id", "")).put("name", name);
+                        // An adult's pause of this group or app (hearth.pause with a group or app): no asking for more
+                        JSONObject paused = group.optJSONObject("paused");
+                        if (paused != null) timeUp.put("paused", paused);
+                        timeUpGroups.put(timeUp);
                         if (ALL_GROUP.equals(group.optString("id"))) {
                             allOutOfTime = name;
                             allExcept = group.optJSONArray("except");

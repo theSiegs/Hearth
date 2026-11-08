@@ -145,6 +145,39 @@ void main() {
     expect(find.text("Ask an adult for more time"), findsNothing);
   });
 
+  testWidgets("an adult's pause of the held group says so, with no asking", (tester) async {
+    state = {
+      "paired": true,
+      "kids": true,
+      "timeUp": [
+        {
+          "id": "pause:group:youtube",
+          "name": "YouTube (paused: Homework)",
+          "paused": {"name": "YouTube", "reason": "Homework", "until": ms(now.add(const Duration(minutes: 30)))},
+        }
+      ],
+    };
+    await pump(tester, heldGroup: "YouTube (paused: Homework)");
+    expect(find.text("YouTube is paused: Homework"), findsOneWidget);
+    expect(find.text("Ask an adult for more time"), findsNothing);
+  });
+
+  testWidgets("another group out of time can still be asked for beside a pause", (tester) async {
+    state["timeUp"] = <Object>[
+      {"id": "games", "name": "Games"},
+      {
+        "id": "pause:app:com.example.video",
+        "name": "Video (paused)",
+        "paused": {"name": "Video"},
+      },
+    ];
+    await pump(tester, heldGroup: "Games");
+    expect(find.text("Ask an adult for more time"), findsOneWidget);
+    await tester.tap(find.text("15 min"));
+    await tester.pumpAndSettle();
+    expect(asks.single["group"], "games");
+  });
+
   testWidgets("bedtime says so, with no asking", (tester) async {
     state["lock"] = {"kind": "bedtime", "until": ms(DateTime(2026, 10, 27, 7))};
     await pump(tester);

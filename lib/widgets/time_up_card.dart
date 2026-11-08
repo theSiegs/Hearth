@@ -179,6 +179,7 @@ class _TimeUpCardState extends State<TimeUpCard> {
     final now = widget.clock();
     final state = _state;
 
+    final heldPause = state.pauseOf(widget.heldGroup);
     IconData icon = Icons.nightlight_round;
     String? title;
     DateTime? until;
@@ -194,12 +195,19 @@ class _TimeUpCardState extends State<TimeUpCard> {
         HaLockKind.other => (Icons.lock_outline, l10n.timeUpLocked),
       };
       until = state.lockUntil;
+    } else if (heldPause != null) {
+      icon = Icons.pause_circle_outline;
+      final name = heldPause.pausedName ?? heldPause.name;
+      title = heldPause.pauseReason != null
+          ? l10n.timeUpGroupPausedReason(name, heldPause.pauseReason!)
+          : l10n.timeUpGroupPaused(name);
+      until = heldPause.pauseUntil;
     } else if (widget.heldGroup != null) {
       icon = Icons.hourglass_bottom;
       title = l10n.timeUpForGroup(widget.heldGroup!);
-    } else if (state.timeUp.isNotEmpty) {
+    } else if (state.timeUp.any((g) => !g.paused)) {
       icon = Icons.hourglass_bottom;
-      title = l10n.timeUpForGroup(state.timeUp.map((g) => g.name).join(", "));
+      title = l10n.timeUpForGroup(state.timeUp.where((g) => !g.paused).map((g) => g.name).join(", "));
     } else {
       title = widget.fallback;
     }
@@ -221,7 +229,8 @@ class _TimeUpCardState extends State<TimeUpCard> {
           Text(l10n.timeUpUntil(_time(context, until)),
               key: const Key("time_up_until"), style: const TextStyle(color: Colors.white70, fontSize: 16)),
         ],
-        if (state.canAsk) ..._askSection(context, l10n, now),
+        // More time doesn't end an adult's pause of the held app or group
+        if (state.canAsk && heldPause == null) ..._askSection(context, l10n, now),
       ],
     );
   }
@@ -311,7 +320,7 @@ Future<void> showTimeUpDialog(BuildContext context, FLauncherChannel channel, St
             // Nothing named and no pause: a lock (bedtime, School time) holds it, as the card then says
             heldByPause: group == null && (state.paused || state.lockKind == null),
             initial: state,
-            autofocus: state.canAsk,
+            autofocus: state.canAsk && state.pauseOf(group) == null,
           ),
           const SizedBox(height: 20),
           FocusableDialogButton(

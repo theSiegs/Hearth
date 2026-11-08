@@ -793,7 +793,8 @@ only that, for the people (everyone by default), for `minutes` or `until` a time
 the app or group's apps are held as a group out of time is, on every Hearth TV and phone (HearthTube too, in a group
 that lists it), by Family Link and by Family Safety's Xbox and Windows apps. The person's document has it as a group
 `{id: "pause:group:<id>" or "pause:app:<package>", name: "<name> (paused: <reason>)", minutes_left: 0, apps,
-paused: {until, reason}}`, so devices that know only groups hold it. An allow doesn't lift it, and `hearth.explain`
+paused: {until, reason, name}}`, so devices that know only groups hold it; Hearth TV's time's up card then says
+"<name> is paused" with no ask for more. An allow doesn't lift it, and `hearth.explain`
 lists it as `pause` with its `app` or `group`. A person can have several, besides a family pause.
 `hearth.pause_end` with the same `app` or `group` ends that one; without either it ends every pause, the family
 pause too.

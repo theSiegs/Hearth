@@ -6105,6 +6105,18 @@ abstract class AppLocalizations {
   /// **'{app}, out of time'**
   String appOutOfTimeLabel(String app);
 
+  /// Time's up card: an adult paused this app or group (hearth.pause with an app or group).
+  ///
+  /// In en, this message translates to:
+  /// **'{group} is paused'**
+  String timeUpGroupPaused(String group);
+
+  /// Time's up card: an adult paused this app or group, with the reason they gave.
+  ///
+  /// In en, this message translates to:
+  /// **'{group} is paused: {reason}'**
+  String timeUpGroupPausedReason(String group, String reason);
+
   /// Time's up card (a kids profile, Home Assistant's Hearth integration): an app's group has no time left today; {group} is the group's name, such as Games
   ///
   /// In en, this message translates to:
