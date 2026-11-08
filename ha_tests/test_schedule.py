@@ -371,3 +371,32 @@ async def test_the_adults_are_offered_more_when_a_group_runs_out(
     hub.asks.answer(offer.id, 30, None)
     await hass.async_block_till_done()
     assert hass.states.get("sensor.hearth_sam_video_minutes_left").state == "30"
+
+
+async def test_an_adult_s_app_is_offered_no_school_time_today_until_it_ends(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    from custom_components.hearth.websocket import summary
+
+    async_mock_service(hass, "switch", "turn_off")
+    monday = date(2026, 11, 9)
+    household = await _set_up(hass, hass_client_no_auth, freezer, _at(monday, 9), YEAR, {})
+    hub = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
+
+    def sam():
+        return next(p for p in summary(hub)["people"] if p["id"] == "person.sam")
+
+    assert sam()["school_time"]["end"].startswith("2026-11-09T15:00")
+    [offer] = [a for a in sam()["actions"] if a["id"] == "school_off"]
+    assert offer["service"] == "hearth.school_time_off" and offer["data"] == {"people": ["person.sam"]}
+    assert offer["confirm"] == "no school time today for sam?"
+
+    # Once it's off today, not again
+    await hass.services.async_call(DOMAIN, "school_time_off", {"people": ["person.sam"]}, blocking=True)
+    assert not [a for a in sam()["actions"] if a["id"] == "school_off"]
+    household.scheduler.offs.clear()
+    # After School time ends, and on a weekend, nothing
+    freezer.move_to(_at(monday, 15, 1))
+    assert not [a for a in sam()["actions"] if a["id"] == "school_off"]
+    freezer.move_to(_at(date(2026, 11, 14), 9))
+    assert "school_time" not in sam()

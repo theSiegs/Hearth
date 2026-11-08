@@ -112,6 +112,9 @@ def summary(hub) -> dict[str, Any]:
                 ],
             }
         )
+        # Today's School time window, on a school or half day ({start, end}, local), for "no school time today"
+        if (window := household.scheduler.window_today(person, now)) is not None:
+            people[-1]["school_time"] = {"start": window[0].isoformat(), "end": window[1].isoformat()}
         # Where a kid is, by name only (no coordinates): every reader of the summary is an adult (_may_read)
         if (place := household.places.summary(person)) is not None:
             people[-1]["place"] = place

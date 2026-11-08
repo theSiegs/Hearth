@@ -275,6 +275,20 @@ class Scheduler:
         """School time is off for the person by Hearth now (taken off, not put back yet)."""
         return next((o for o in self.offs.values() if o.person == person and o.applied), None)
 
+    def window_today(self, person: str, now: datetime | None = None) -> tuple[datetime, datetime] | None:
+        """The person's School time today (a school or half day with a Family Link window), as local datetimes."""
+        now = now or dt_util.now()
+        today = now.date()
+        kind = self.day_type(today)
+        child = self.child(person)
+        if kind not in (SCHOOL, HALF_DAY) or child is None:
+            return None
+        window = self._window(person, child, today, kind, self.config)
+        if window is None:
+            return None
+        zone = now.tzinfo
+        return datetime.combine(today, window[0], zone), datetime.combine(today, window[1], zone)
+
     def offs_of(self, person: str) -> list[dict[str, Any]]:
         return [o.view() for o in sorted(self.offs.values(), key=lambda o: (o.day, o.id)) if o.person == person]
 

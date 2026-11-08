@@ -312,6 +312,18 @@ def person_glance(
                 confirm=f"pause {name.lower()} for {PAUSE_MINUTES} min?",
             )
         )
+    # School time not over yet today and not already off: "no school time today"
+    window = person.get("school_time") or {}
+    if (end := dt_util.parse_datetime(window.get("end") or "")) is not None and now < end and not school_time_off:
+        actions.append(
+            _action(
+                "school_off",
+                "no school time today",
+                "hearth.school_time_off",
+                {"people": [entity]},
+                confirm=f"no school time today for {name.lower()}?",
+            )
+        )
     for paused in person.get("pauses") or []:
         what = {"app": paused["app"]} if paused.get("app") else {"group": paused["group"]}
         actions.append(
