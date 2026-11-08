@@ -170,6 +170,9 @@ class GroupState:
         return max(0, int(self.budget_min + self.bonus_min - self.counted_min))
 
 
+MAX_BONUS = 24 * 60
+
+
 @dataclass
 class LimitsData:
     # person -> group -> {"weekday": minutes | None, "weekend": minutes | None}
@@ -233,7 +236,8 @@ class Limits:
         return self.data.bonus.get(person, {}).get(group, 0)
 
     def set_bonus(self, person: str, group: str, minutes: int) -> None:
-        self.data.bonus.setdefault(person, {})[group] = max(0, minutes)
+        # Negative takes time away today (down to none left; minutes_left never goes below 0)
+        self.data.bonus.setdefault(person, {})[group] = max(-MAX_BONUS, min(MAX_BONUS, minutes))
         self._save()
 
     def mark_reached(self, person: str, group: str) -> bool:

@@ -199,6 +199,14 @@ pause:
       example: '{"arrive": "home"}'
       selector:
         object:
+    app:
+      example: com.thesiegs.hearthtube
+      selector:
+        text:
+    group:
+      example: youtube
+      selector:
+        text:
 
 pause_end:
   fields:
@@ -207,6 +215,14 @@ pause_end:
         entity:
           domain: person
           multiple: true
+    app:
+      example: com.thesiegs.hearthtube
+      selector:
+        text:
+    group:
+      example: youtube
+      selector:
+        text:
 
 play_on_tv:
   fields:

@@ -419,6 +419,14 @@
         "ends_on": {
           "name": "Ends on",
           "description": "Or ends sooner, for each person, when they arrive at a place or leave one: {\"arrive\": \"home\"}, {\"leave\": \"school\"} or a favorite place's key. The time (the end of the day when none is given) stays the cap; an unknown or stale place never ends it."
+        },
+        "app": {
+          "name": "App",
+          "description": "Pause only this app (its package name), not all screen time."
+        },
+        "group": {
+          "name": "Group",
+          "description": "Pause only this group's apps (its id or name, such as youtube), not all screen time."
         }
       }
     },
@@ -429,6 +437,14 @@
         "people": {
           "name": "People",
           "description": "Who; everyone paused when empty."
+        },
+        "app": {
+          "name": "App",
+          "description": "End only the pause of this app. With no app or group, only the family pause ends."
+        },
+        "group": {
+          "name": "Group",
+          "description": "End only the pause of this group."
         }
       }
     },

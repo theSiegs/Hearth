@@ -187,6 +187,8 @@ async def test_a_summary_with_alex_waiting_paused_and_low_and_sam_calm(
     assert sam["lines"][-1]["text"] == "bedtime at 9:00"
     assert body["household"]["headline"] == {"text": "alex asks for 30 more", "level": "urgent", "key": f"asks:{ask_id}"}
     assert {a["id"] for a in body["household"]["actions"]} == {f"ask_yes:{ask_id}", f"ask_no:{ask_id}", "pause_end", "pause_all"}
+    # Every group at the top, budget or not
+    assert {"id": "video", "name": "Video", "not_screen_time": False} in body["groups"]
 
     # For the docs and Glint: HEARTH_EXAMPLE_OUT=<file> writes this summary out
     if out := os.environ.get("HEARTH_EXAMPLE_OUT"):
@@ -205,6 +207,17 @@ async def test_a_summary_with_alex_waiting_paused_and_low_and_sam_calm(
     alex = next(p for p in body["people"] if p["id"] == "person.alex")
     assert alex["headline"]["key"].startswith("pause:")
     assert next(g for g in alex["groups"] if g["id"] == "video")["minutes_left"] == 35
+
+    # A pause of one group: in the summary with its own line and end
+    await hass.services.async_call(
+        DOMAIN, "pause", {"group": "games", "minutes": 20, "reason": "Homework", "people": ["person.alex"]}, blocking=True
+    )
+    body = await _summary(ws, 3)
+    alex = next(p for p in body["people"] if p["id"] == "person.alex")
+    [paused] = alex["pauses"]
+    assert paused["group"] == "games" and paused["app"] is None and paused["reason"] == "Homework"
+    assert any(line["key"] == "paused:group:games" for line in alex["lines"])
+    assert any(a["id"] == "pause_end:group:games" for a in alex["actions"])
 
 
 async def test_answer_request_wants_minutes_or_deny(
@@ -294,3 +307,20 @@ async def test_an_adult_who_isn_t_an_administrator_gets_contract_2_without_pairi
 def test_google_tv_s_own_limit_is_a_notice_like_a_lock() -> None:
     person = {**_person(all=90), "google_tv_limit": ["Kitchen"]}
     assert _glance(person)["headline"] == {"text": "google tv's own limit", "level": "notice", "key": "google_limit:Kitchen"}
+
+
+def test_a_pause_of_one_app_or_group_is_a_line_with_its_own_end() -> None:
+    person = _person(all=90, youtube=40)
+    person["pauses"] = [
+        {"app": None, "group": "youtube", "name": "YouTube", "until": _at(19, 0).isoformat(), "reason": "Homework"},
+        {"app": "com.example.game", "group": None, "name": "Game", "until": _at(18, 30).isoformat(), "reason": ""},
+    ]
+    glance = _glance(person)
+    texts = {item["key"]: item["text"] for item in [glance["headline"], *glance["lines"]]}
+    assert texts["paused:group:youtube"] == "youtube paused · homework till 7:00"
+    assert texts["paused:app:com.example.game"] == "game paused till 6:30"
+    actions = {a["id"]: a for a in glance["actions"]}
+    assert actions["pause_end:group:youtube"]["data"] == {"people": ["person.alex"], "group": "youtube"}
+    assert actions["pause_end:app:com.example.game"]["data"] == {"people": ["person.alex"], "app": "com.example.game"}
+    # Not a family pause: the person can still be paused as a whole
+    assert "pause" in actions and "pause_end" not in actions

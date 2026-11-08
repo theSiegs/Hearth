@@ -106,3 +106,86 @@ async def test_family_safety_downtime_is_a_bedtime(
     await hass.async_block_till_done()
     body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
     assert body["state"]["profiles"][KID]["lock"]["kind"] == "bedtime"
+
+
+async def test_a_pause_of_one_group_holds_only_its_apps(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, monkeypatch
+) -> None:
+    from pytest_homeassistant_custom_component.common import async_mock_service
+
+    from custom_components.hearth import enforce
+
+    monkeypatch.setattr(enforce, "SETTLE", timedelta(0))
+
+    paused = async_mock_service(hass, "familylink", "pause_app")
+    resumed = async_mock_service(hass, "familylink", "resume_app")
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    hass.states.async_set("sensor.sam_family_link_daily_screen_time", "0", {"unit_of_measurement": "min", "child_id": "42"})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": "sensor.sam_family_link_daily_screen_time"})
+
+    await hass.services.async_call(
+        DOMAIN, "pause", {"group": "video", "minutes": 30, "reason": "Homework", "people": ["person.sam"]}, blocking=True
+    )
+    await hass.async_block_till_done()
+
+    # The TV and phone get it as a group with no time left; the person isn't locked
+    body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
+    sam = body["state"]["profiles"][KID]
+    assert sam["locked"] is False and "pause" not in sam
+    [group] = [g for g in sam["groups"] if g["id"] == "pause:group:video"]
+    assert group["minutes_left"] == 0 and "com.thesiegs.hearthtube" in group["apps"]
+    assert group["name"].endswith("(paused: Homework)")
+    await hass.async_block_till_done()
+    # Family Link pauses the group's apps on the phone
+    assert len(paused) == 1 and "com.thesiegs.hearthtube" in paused[0].data["packages"]
+
+    # Explain names it; an allow doesn't lift it
+    await hass.services.async_call(
+        DOMAIN, "allow", {"people": ["person.sam"], "group": "video"}, blocking=True, return_response=True
+    )
+    why = await hass.services.async_call(
+        DOMAIN, "explain", {"person": "person.sam", "app": "com.thesiegs.hearthtube"}, blocking=True,
+        return_response=True,
+    )
+    assert why["allowed"] is False
+    [pause] = [b for b in why["blocked_by"] if b["kind"] == "pause"]
+    assert pause["group"] == "video" and pause["reason"] == "Homework"
+    other = await hass.services.async_call(
+        DOMAIN, "explain", {"person": "person.sam", "group": "games"}, blocking=True, return_response=True
+    )
+    assert other["allowed"] is True
+
+    # Ending that group's pause lets it go
+    await hass.services.async_call(DOMAIN, "pause_end", {"group": "video"}, blocking=True)
+    await hass.async_block_till_done()
+    body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
+    assert not [g for g in body["state"]["profiles"][KID]["groups"] if g["id"].startswith("pause:")]
+    await hass.async_block_till_done()
+    assert len(resumed) == 1
+
+
+async def test_a_pause_of_one_app_ends_on_its_own(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    await hass.services.async_call(
+        DOMAIN, "pause", {"app": "com.thesiegs.hearthtube", "minutes": 10}, blocking=True
+    )
+    body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
+    [group] = [g for g in body["state"]["profiles"][KID]["groups"] if g["id"].startswith("pause:")]
+    assert group["id"] == "pause:app:com.thesiegs.hearthtube" and group["apps"] == ["com.thesiegs.hearthtube"]
+
+    # pause_end with nothing ends the family pause only; the app's pause stays until it's ended by name
+    await hass.services.async_call(DOMAIN, "pause", {"minutes": 10}, blocking=True)
+    await hass.services.async_call(DOMAIN, "pause_end", {}, blocking=True)
+    body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
+    sam = body["state"]["profiles"][KID]
+    assert sam["locked"] is False and [g for g in sam["groups"] if g["id"].startswith("pause:")]
+    await hass.services.async_call(DOMAIN, "pause_end", {"app": "com.thesiegs.hearthtube"}, blocking=True)
+    body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
+    assert not [g for g in body["state"]["profiles"][KID]["groups"] if g["id"].startswith("pause:")]
+
+    await hass.services.async_call(DOMAIN, "pause", {"app": "com.thesiegs.hearthtube", "minutes": 10}, blocking=True)
+    freezer.tick(timedelta(minutes=11))
+    body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
+    assert not [g for g in body["state"]["profiles"][KID]["groups"] if g["id"].startswith("pause:")]

@@ -26,7 +26,7 @@ from homeassistant.util import dt as dt_util
 from .api import async_register_views
 from .auth import register_service
 from .websocket import async_register_commands
-from .pause import end_pause, set_pause
+from .pause import end_app_pause, end_pause, set_app_pause, set_pause
 from .places import ARRIVE, LEAVE
 from . import panel
 from .apps import ACTION_PREFIX
@@ -94,11 +94,38 @@ PAUSE_SCHEMA = vol.All(
             vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id]),
             # With no minutes or until, the end of the day is its cap
             vol.Optional("ends_on"): ENDS_ON_SCHEMA,
+            # Only this app or group (the family pause holds everything)
+            vol.Exclusive("app", "what"): cv.string,
+            vol.Exclusive("group", "what"): cv.string,
         }
     ),
     cv.has_at_least_one_key("minutes", "until", "ends_on"),
 )
-PAUSE_END_SCHEMA = vol.Schema({vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id])})
+PAUSE_END_SCHEMA = vol.Schema(
+    {
+        vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id]),
+        vol.Exclusive("app", "what"): cv.string,
+        vol.Exclusive("group", "what"): cv.string,
+    }
+)
+
+
+def _paused_what(household, data, group_id) -> tuple[str | None, str | None]:
+    """A pause's app or group, (None, None) for the family pause; All screen time is the family pause too."""
+    if data.get("group") is not None:
+        given = data["group"].strip()
+        if given.casefold() == ALL:
+            return None, None
+        found = group_id(household, given)
+        if household.group(found) is None:
+            raise ServiceValidationError(f"No group {given}")
+        return (None, None) if found == ALL else (None, found)
+    if data.get("app") is not None:
+        app = data["app"].strip()
+        if not app:
+            raise ServiceValidationError("Give an app (its package name) or a group")
+        return app, None
+    return None, None
 GET_WATCH_LOG_SCHEMA = vol.Schema(
     {
         vol.Required("person"): cv.entity_id,
@@ -192,6 +219,13 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         unknown = [p for p in people if p not in household.people()]
         if unknown:
             raise ServiceValidationError(f"Not the household's: {', '.join(unknown)}")
+        app, group = _paused_what(household, call.data, group_id)
+        if app is not None or group is not None:
+            if call.data.get("ends_on"):
+                raise ServiceValidationError("A pause of one app or group ends at a time, not at a place")
+            set_app_pause(hass, people, until, call.data.get("reason"), app, group)
+            household.recompute()
+            return
         ends_on = _place_ends_on(household, people, call.data.get("ends_on"))
         set_pause(hass, people, until, call.data.get("reason"), ends_on)
         household.recompute()
@@ -199,7 +233,12 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     @callback
     def pause_end(call: ServiceCall) -> None:
         household = loaded_household()
-        end_pause(hass, call.data.get("people"))
+        app, group = _paused_what(household, call.data, group_id)
+        if app is None and group is None:
+            # The family pause only: an adult's pause of one app or group ("youtube for homework") stays
+            end_pause(hass, call.data.get("people"))
+        else:
+            end_app_pause(hass, call.data.get("people"), app, group)
         household.recompute()
 
     register_service(hass, DOMAIN, "pause", pause, schema=PAUSE_SCHEMA)

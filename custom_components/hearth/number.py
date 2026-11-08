@@ -58,7 +58,7 @@ class Bonus(HearthPersonEntity, NumberEntity):
     """Minutes added to a group's budget today (back to 0 at midnight)."""
 
     _attr_translation_key = "bonus_today"
-    _attr_native_min_value = 0
+    _attr_native_min_value = -MAX_MINUTES
     _attr_native_max_value = MAX_MINUTES
     _attr_native_step = 5
     _attr_mode = NumberMode.BOX

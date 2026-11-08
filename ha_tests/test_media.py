@@ -89,3 +89,41 @@ async def test_a_phone_and_the_summary_have_the_rooms(
     ws = await hass_ws_client(hass)
     await ws.send_json({"id": 1, "type": "hearth/household"})
     assert (await ws.receive_json())["result"]["media_rooms"][0]["room"] == "Lounge"
+
+
+def _satellite(hass: HomeAssistant, object_id: str, device_name: str, area: str) -> str:
+    """An ESPHome satellite's player: has_entity_name, so the entry's own name is only "Media Player"."""
+    entry = MockConfigEntry(domain="esphome")
+    entry.add_to_hass(hass)
+    area_id = ar.async_get(hass).async_get_or_create(area).id
+    device = dr.async_get(hass).async_get_or_create(
+        config_entry_id=entry.entry_id, identifiers={("esphome", object_id)}, name=device_name, model="Satellite"
+    )
+    dr.async_get(hass).async_update_device(device.id, area_id=area_id)
+    registered = er.async_get(hass).async_get_or_create(
+        "media_player", "esphome", object_id, suggested_object_id=f"{object_id}_media_player", config_entry=entry,
+        device_id=device.id, original_name="Media Player", has_entity_name=True,
+    )
+    hass.states.async_set(registered.entity_id, "idle", {"friendly_name": f"{device_name} Media Player"})
+    return registered.entity_id
+
+
+async def test_two_satellites_in_different_rooms_stay_apart(hass: HomeAssistant) -> None:
+    bedroom = _satellite(hass, "sat_a1", "Bedroom Satellite", "Bedroom")
+    lounge = _satellite(hass, "sat_b2", "Lounge Satellite", "Lounge")
+    bedroom_ma = _player(hass, "music_assistant", "sat_a1", "Bedroom Satellite", "Bedroom", "Satellite")
+    lounge_ma = _player(hass, "music_assistant", "sat_b2", "Lounge Satellite", "Lounge", "Satellite")
+
+    rooms = {r["room"]: r for r in media_rooms(hass)}
+    assert sorted(rooms) == ["Bedroom", "Lounge"]
+    assert rooms["Bedroom"]["entity_id"] == bedroom and rooms["Bedroom"]["also"] == [bedroom_ma]
+    assert rooms["Lounge"]["entity_id"] == lounge and rooms["Lounge"]["also"] == [lounge_ma]
+
+
+async def test_players_in_different_rooms_are_never_twins(hass: HomeAssistant) -> None:
+    study = _player(hass, "alexa_media", "study_echo", "Kitchen Echo", "Study", "Echo Dot")
+    kitchen = _player(hass, "sonos", "kitchen_echo", "Kitchen Echo", "Kitchen", "One")
+
+    rooms = {r["room"]: r for r in media_rooms(hass)}
+    assert rooms["Study"]["entity_id"] == study and rooms["Kitchen"]["entity_id"] == kitchen
+    assert rooms["Study"]["also"] == [] and rooms["Kitchen"]["also"] == []

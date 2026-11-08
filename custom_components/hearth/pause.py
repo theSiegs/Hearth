@@ -6,6 +6,11 @@ hearth.pause_end lets them go. While paused a person is locked, so a Hearth TV h
 their state document says why ("pause": {until, reason}). Pauses are kept outside the entry (an options change reloads
 it), not across a restart.
 
+hearth.pause with an app or a group pauses only that, for the chosen people (YouTube and HearthTube, say): its apps
+are held as a group out of time is (a Hearth TV and phone, Family Link, Family Safety's Xbox and Windows apps), and an
+allow doesn't lift it. A person may have several of these besides a family pause; pause_end with the same app or
+group ends that one, and pause_end without either ends only the family pause.
+
 A lock entity of Family Link's says when bedtime or school time starts and ends (bedtime_start / bedtime_end,
 schooltime_start / schooltime_end, local times): that's "lock" {by, until} while one is on, and "next_lock" {at, by}
 for the next one today, so a device can wind down before it. Family Safety's Downtime Active sensors (one per child and
@@ -46,6 +51,49 @@ def set_pause(
             "reason": (reason or "").strip()[:MAX_REASON],
             "ends_on": dict(ends_on) if ends_on else None,
         }
+
+
+def _app_pauses(hass: HomeAssistant) -> dict[str, dict[str, dict[str, Any]]]:
+    return hass.data.setdefault(f"{DOMAIN}_app_pauses", {})
+
+
+def _what_key(app: str | None, group: str | None) -> str:
+    return f"app:{app}" if app is not None else f"group:{group}"
+
+
+def set_app_pause(
+    hass: HomeAssistant, people: list[str], until: datetime, reason: str | None, app: str | None, group: str | None
+) -> None:
+    """Pauses one app or one group (not All screen time: that's the family pause) for the people."""
+    for person in people:
+        _app_pauses(hass).setdefault(person, {})[_what_key(app, group)] = {
+            "app": app,
+            "group": group,
+            "until": until,
+            "reason": (reason or "").strip()[:MAX_REASON],
+        }
+
+
+def end_app_pause(hass: HomeAssistant, people: list[str] | None, app: str | None = None, group: str | None = None) -> None:
+    """Ends the people's pause of that app or group; of every app and group without either."""
+    pauses = _app_pauses(hass)
+    for person in list(pauses) if people is None else people:
+        mine = pauses.get(person)
+        if not mine:
+            continue
+        if app is None and group is None:
+            mine.clear()
+        else:
+            mine.pop(_what_key(app, group), None)
+
+
+def app_pauses_of(hass: HomeAssistant, person: str, now: datetime | None = None) -> list[dict[str, Any]]:
+    """The person's app and group pauses while they last: [{app, group, until (datetime), reason}], soonest end first."""
+    mine = _app_pauses(hass).get(person) or {}
+    now = now or dt_util.now()
+    for key in [k for k, p in mine.items() if p["until"] <= now]:
+        mine.pop(key)
+    return sorted(mine.values(), key=lambda p: (p["until"], p["app"] or "", p["group"] or ""))
 
 
 def pause_ends_on(hass: HomeAssistant, person: str) -> tuple[dict[str, str], datetime] | None:
