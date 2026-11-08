@@ -440,7 +440,7 @@
         },
         "app": {
           "name": "App",
-          "description": "End only the pause of this app. With no app or group, every pause ends."
+          "description": "End only the pause of this app. With no app or group, only the family pause ends."
         },
         "group": {
           "name": "Group",

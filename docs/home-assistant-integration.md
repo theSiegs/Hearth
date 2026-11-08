@@ -599,7 +599,16 @@ The answer to each status post carries the person's (or, on a TV, each profile's
   "profiles": {
     "user:10": {
       "person": "person.sam",
-      "groups": [{"id": "youtube", "name": "YouTube", "minutes_left": 25, "apps": ["com.thesiegs.hearthtube"]}],
+      "groups": [
+        {"id": "youtube", "name": "YouTube", "minutes_left": 25, "apps": ["com.thesiegs.hearthtube"]},
+        {
+          "id": "pause:group:games",
+          "name": "Games (paused: Homework)",
+          "minutes_left": 0,
+          "apps": ["com.example.game"],
+          "paused": {"until": "2026-10-26T19:30:00-05:00", "reason": "Homework", "name": "Games"}
+        }
+      ],
       "locked": true,
       "pause": {"until": "2026-10-26T19:00:00-05:00", "reason": "Dinner"},
       "lock": {"by": ["pause"], "kind": "pause", "kinds": ["pause"], "until": "2026-10-26T19:00:00-05:00"},
@@ -616,7 +625,9 @@ The answer to each status post carries the person's (or, on a TV, each profile's
 }
 ```
 
-`groups` lists only groups with a budget; `minutes_left` null is no limit; All screen time may carry `except`, the apps
+`groups` lists only groups with a budget, and an adult's pauses of one app or group as groups with no time left and
+`paused` (see [Pause and locks](#pause-and-locks)): hold them like any group out of time, but say it's paused and
+**never offer to ask for more time for one**; `minutes_left` null is no limit; All screen time may carry `except`, the apps
 it never holds (a Not screen time group's). Each person's part is described under [Ask for more](#ask-for-more) and
 [Pause and locks](#pause-and-locks); an allow of theirs that ends on a place is in `allow_ends` [{id, app, group,
 until, text: "ends when you get home"}] (never where they are); a TV's also has every mapped profile's `youtube_blocks`, `people` (each mapped
@@ -794,10 +805,11 @@ the app or group's apps are held as a group out of time is, on every Hearth TV a
 that lists it), by Family Link and by Family Safety's Xbox and Windows apps. The person's document has it as a group
 `{id: "pause:group:<id>" or "pause:app:<package>", name: "<name> (paused: <reason>)", minutes_left: 0, apps,
 paused: {until, reason, name}}`, so devices that know only groups hold it; Hearth TV's time's up card then says
-"<name> is paused" with no ask for more. An allow doesn't lift it, and `hearth.explain`
+"<name> is paused" with no ask for more. **No device should offer to ask for more time for a `paused` group**: more
+time doesn't end it, only `hearth.pause_end` or its end does. An allow doesn't lift it, and `hearth.explain`
 lists it as `pause` with its `app` or `group`. A person can have several, besides a family pause.
-`hearth.pause_end` with the same `app` or `group` ends that one; without either it ends every pause, the family
-pause too.
+`hearth.pause_end` with the same `app` or `group` ends that one; without either (or with `group: all`) it ends only
+the family pause.
 
 ### Household summary
 
@@ -826,6 +838,9 @@ then sends the same object as an event whenever it changes, at most every 2 seco
   `answered_elsewhere` (requests answered in the Family Safety app lately).
 - each kid also has `place` {`name`, `fresh`} (where they are, by name only; [Places](#places)): every reader of the
   summary is an administrator or an adult. An allow and a pause that end on a place carry `ends_on` (above).
+- each person also has `pauses`: an adult's pauses of one app or group, `[{app, group, name, until, reason}]` (`app`
+  or `group` is null), apart from the family `pause`.
+- `groups`: every group of the household, budget or not today: `[{id, name, not_screen_time}]`.
 - `not_screen_time`, `contract`, and `version` (changes with any of it).
 - `media_rooms`: the house's media players by room, below.
 - Contract 2: each person's `headline`, `lines` and `actions`, and the household's `household` {`headline`,
@@ -856,6 +871,7 @@ The **headline** is the first of these that holds (glance.py), in this order:
 | notice | a group out, or under 10 minutes (fewest first) | `youtube · out`, `youtube · 7 left` | `out:<group>`, `low:<group>` |
 | notice | an allow (`hearth.allow`) | `youtube allowed till 8:00` | `allow:<id>` |
 | notice | School time taken off today | `no school time today` | `school_off:<id>` |
+| notice | an adult's pause of one app or group | `youtube paused · homework till 7:00` | `paused:group:<id>`, `paused:app:<package>` |
 | notice | a parent's grant | `switch open · the nintendo app till 9:00` | `grant:<id>` |
 | notice | Google's or Microsoft's own limit stops a device of theirs (Hearth isn't holding it) | `sam's phone · google's own limit`, `xbox · microsoft's own limit` | `device_limit:<entity or platform>` |
 | notice | a parent's own Family Safety lock | `xbox locked in family safety till 7:00` | `parent_lock:<platform>` |
@@ -877,14 +893,15 @@ calls `service` with exactly `data`, with the adult's own Home Assistant sign-in
 | `ask_yes:<id>` (primary), `ask_no:<id>` | a request waits | `hearth.answer_request` `{request_id, minutes: <asked>}` / `{request_id, deny: true}` |
 | `bonus:<group>` | each group with a limit today, fewest minutes first; primary when it's out | `hearth.add_bonus` `{person, minutes: 15, group}` |
 | `pause` (confirm) | not paused | `hearth.pause` `{people: [person], minutes: 30}` |
-| `pause_end` | paused | `hearth.pause_end` `{people: [person]}` |
+| `pause_end` | paused (the family pause) | `hearth.pause_end` `{people: [person]}` (ends that pause only) |
+| `pause_end:group:<id>`, `pause_end:app:<package>` | an app or group paused | `hearth.pause_end` `{people: [person], group}` or `{people: [person], app}` |
 | `allow_end:<id>` (confirm) | an allow | `hearth.allow_end` `{people: [person], group}` or `{people: [person], app}` |
 | `grant_end:<id>` (confirm) | a parent's grant that maps to a write in their app (`endable`) | `hearth.allow_end` `{id}` |
 
 `household` is the same for the whole house: a `headline` (urgent: requests waiting, `alex asks for 30 more` or `2
 asks waiting`; notice: a pause, `everyone paused till 6:30` or `sam paused till 6:30`; notice, administrators only: a
 device waiting to pair; notice: kids out of time; calm: `all clear`) and `actions`: each waiting request's yes and no
-(labelled with the kid's name), `pause_end` (`hearth.pause_end {}`, ends every pause) while anyone is paused, and
+(labelled with the kid's name), `pause_end` (`hearth.pause_end {}`, ends the family pause; app and group pauses stay) while anyone is paused, and
 `pause_all` (`hearth.pause {minutes: 30}`, confirm) unless everyone is. Approving a device to pair isn't an action:
 it's an administrator's step on Hearth's page, with no service.
 

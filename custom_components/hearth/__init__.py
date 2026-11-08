@@ -234,11 +234,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     def pause_end(call: ServiceCall) -> None:
         household = loaded_household()
         app, group = _paused_what(household, call.data, group_id)
-        if app is None and group is None and "app" not in call.data and "group" not in call.data:
-            # Everything: the family pause and every app and group pause
-            end_pause(hass, call.data.get("people"))
-            end_app_pause(hass, call.data.get("people"))
-        elif app is None and group is None:
+        if app is None and group is None:
+            # The family pause only: an adult's pause of one app or group ("youtube for homework") stays
             end_pause(hass, call.data.get("people"))
         else:
             end_app_pause(hass, call.data.get("people"), app, group)

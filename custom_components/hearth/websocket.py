@@ -95,6 +95,8 @@ def summary(hub) -> dict[str, Any]:
                 # An adult's allows (hearth.allow), and a parent's changes in their own apps that lift one of
                 # Hearth's holds (grants.py)
                 "allows": household.allow_views(person),
+                # An adult's pauses of one app or group (hearth.pause with app or group), apart from the family pause
+                "pauses": household.app_pause_views(person),
                 "grants": [g.view() for g in household.grants.of(person)],
                 # Google's own daily limit per Family Link device, Microsoft's allowance per platform
                 "first_party": household.sync.first_party(person),
@@ -165,6 +167,10 @@ def summary(hub) -> dict[str, Any]:
         "devices": devices,
         "approvals": approvals,
         "not_screen_time": sorted(household.outside_all()),
+        # Every group, budget or not today, for an app that offers to pause or allow one
+        "groups": [
+            {"id": g.id, "name": g.name, "not_screen_time": g.id in household.outside_all()} for g in household.groups
+        ],
         # The house's media players by room, twins put together (media.py)
         "media_rooms": media_rooms(household.hass),
         # Contract 2: the household's headline and actions (glance.py)

@@ -9,7 +9,7 @@ it), not across a restart.
 hearth.pause with an app or a group pauses only that, for the chosen people (YouTube and HearthTube, say): its apps
 are held as a group out of time is (a Hearth TV and phone, Family Link, Family Safety's Xbox and Windows apps), and an
 allow doesn't lift it. A person may have several of these besides a family pause; pause_end with the same app or
-group ends that one, and pause_end without either ends all of them.
+group ends that one, and pause_end without either ends only the family pause.
 
 A lock entity of Family Link's says when bedtime or school time starts and ends (bedtime_start / bedtime_end,
 schooltime_start / schooltime_end, local times): that's "lock" {by, until} while one is on, and "next_lock" {at, by}

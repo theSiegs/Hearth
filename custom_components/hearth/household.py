@@ -745,6 +745,28 @@ class Household:
             )
         return out
 
+    def app_pause_views(self, person: str) -> list[dict[str, Any]]:
+        """The person's app and group pauses as an adult's app shows them: [{app, group, name, until, reason}]."""
+        out = []
+        for pause in app_pauses_of(self.hass, person):
+            if pause["app"] is not None:
+                known = self.apps.apps.get(pause["app"])
+                name = (known.name if known else None) or pause["app"]
+            elif (group := self.group(pause["group"])) is not None:
+                name = group.name
+            else:
+                continue
+            out.append(
+                {
+                    "app": pause["app"],
+                    "group": pause["group"],
+                    "name": name,
+                    "until": dt_util.as_local(pause["until"]).isoformat(),
+                    "reason": pause["reason"],
+                }
+            )
+        return out
+
     def outside_all(self) -> set[str]:
         """The groups whose time isn't screen time (Configure > Not screen time)."""
         return {g.id for g in self.groups if not g.in_all and g.id != ALL}

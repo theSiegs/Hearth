@@ -175,12 +175,15 @@ async def test_a_pause_of_one_app_ends_on_its_own(
     [group] = [g for g in body["state"]["profiles"][KID]["groups"] if g["id"].startswith("pause:")]
     assert group["id"] == "pause:app:com.thesiegs.hearthtube" and group["apps"] == ["com.thesiegs.hearthtube"]
 
-    # pause_end with nothing ends every pause, the family one too
+    # pause_end with nothing ends the family pause only; the app's pause stays until it's ended by name
     await hass.services.async_call(DOMAIN, "pause", {"minutes": 10}, blocking=True)
     await hass.services.async_call(DOMAIN, "pause_end", {}, blocking=True)
     body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
     sam = body["state"]["profiles"][KID]
-    assert sam["locked"] is False and not [g for g in sam["groups"] if g["id"].startswith("pause:")]
+    assert sam["locked"] is False and [g for g in sam["groups"] if g["id"].startswith("pause:")]
+    await hass.services.async_call(DOMAIN, "pause_end", {"app": "com.thesiegs.hearthtube"}, blocking=True)
+    body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
+    assert not [g for g in body["state"]["profiles"][KID]["groups"] if g["id"].startswith("pause:")]
 
     await hass.services.async_call(DOMAIN, "pause", {"app": "com.thesiegs.hearthtube", "minutes": 10}, blocking=True)
     freezer.tick(timedelta(minutes=11))

@@ -173,6 +173,16 @@ def _sync_items(sync: dict[str, Any]) -> list[dict[str, str]]:
     return found
 
 
+def _paused_key(paused: dict[str, Any]) -> str:
+    return f"app:{paused['app']}" if paused.get("app") else f"group:{paused['group']}"
+
+
+def _paused_word(paused: dict[str, Any], names: dict[str, str]) -> str:
+    if paused.get("app"):
+        return (paused.get("name") or paused["app"]).lower()
+    return names.get(paused["group"], paused.get("name") or paused["group"]).lower()
+
+
 def person_glance(
     person: dict[str, Any],
     asks: list[dict[str, Any]],
@@ -232,6 +242,17 @@ def person_glance(
         news.append(_item(f"{what} allowed{_till(allow.get('until'))}", NOTICE, "allow", allow["id"]))
     for off in school_time_off:
         news.append(_item("no school time today", NOTICE, "school_off", off["id"]))
+    # An adult's pause of one app or group: "youtube paused · homework till 19:00"
+    for paused in person.get("pauses") or []:
+        reason = (paused.get("reason") or "").strip().lower()
+        news.append(
+            _item(
+                f"{_paused_word(paused, names)} paused{' · ' + reason if reason else ''}{_till(paused.get('until'))}",
+                NOTICE,
+                "paused",
+                _paused_key(paused),
+            )
+        )
     # The parents' own apps: what a parent opened there, their own limits and locks, and what didn't take
     news += _grant_items(grants or [])
     news += _first_party_items(person.get("first_party") or {})
@@ -289,6 +310,16 @@ def person_glance(
                 "hearth.pause",
                 {"people": [entity], "minutes": PAUSE_MINUTES},
                 confirm=f"pause {name.lower()} for {PAUSE_MINUTES} min?",
+            )
+        )
+    for paused in person.get("pauses") or []:
+        what = {"app": paused["app"]} if paused.get("app") else {"group": paused["group"]}
+        actions.append(
+            _action(
+                f"pause_end:{_paused_key(paused)}",
+                f"end {_paused_word(paused, names)} pause",
+                "hearth.pause_end",
+                {"people": [entity], **what},
             )
         )
     for allow in allows:
