@@ -54,7 +54,7 @@ from . import family_link as fl
 from .chores import ChoreWatcher
 from .schedule import Scheduler
 from .watch import WatchLog
-from .pause import PAUSE, end_pause, lock_kinds, lock_until, next_lock, pause_ends_on, pause_of
+from .pause import PAUSE, app_pauses_of, end_pause, lock_kinds, lock_until, next_lock, pause_ends_on, pause_of
 from .places import Places, happened, matches
 from . import parent_pin
 from .media import media_rooms
@@ -570,6 +570,7 @@ class Household:
             school_time_of=self.in_school_time,
             groups_of_app=membership,
             granted_of=self.grants.lifted,
+            paused_of=lambda person: self.paused_packages(person, membership, with_fs=True),
         )
         # An adult's allow of All screen time opens Google's and Microsoft's own limits too
         self.sync.mirror_allows()
@@ -703,6 +704,42 @@ class Household:
                     found.add(candidate)
         return sorted(found)
 
+    def paused_packages(self, person: str, membership, with_fs: bool = False) -> set[str]:
+        """The apps an adult paused for the person (hearth.pause with an app or a group), while those pauses last."""
+        found: set[str] = set()
+        for pause in app_pauses_of(self.hass, person):
+            if pause["app"] is not None:
+                found.add(pause["app"])
+            elif (group := self.group(pause["group"])) is not None:
+                found |= set(self._group_apps(group, membership, with_fs=with_fs))
+        return found
+
+    def _paused_groups_document(self, person: str, membership) -> list[dict[str, Any]]:
+        """The person's app and group pauses as groups with no time left, which every Hearth TV and phone already
+        holds (HearthTube too, when one lists it): {id "pause:<app or group>", name, minutes_left 0, apps, paused}."""
+        out = []
+        for pause in app_pauses_of(self.hass, person):
+            if pause["app"] is not None:
+                apps = [pause["app"]]
+                known = self.apps.apps.get(pause["app"])
+                key, name = f"app:{pause['app']}", (known.name if known else None) or pause["app"]
+            else:
+                group = self.group(pause["group"])
+                if group is None:
+                    continue
+                apps = self._group_apps(group, membership)
+                key, name = f"group:{group.id}", group.name
+            out.append(
+                {
+                    "id": f"pause:{key}",
+                    "name": f"{name} (paused: {pause['reason']})" if pause["reason"] else f"{name} (paused)",
+                    "minutes_left": 0,
+                    "apps": apps,
+                    "paused": {"until": dt_util.as_local(pause["until"]).isoformat(), "reason": pause["reason"]},
+                }
+            )
+        return out
+
     def outside_all(self) -> set[str]:
         """The groups whose time isn't screen time (Configure > Not screen time)."""
         return {g.id for g in self.groups if not g.in_all and g.id != ALL}
@@ -774,6 +811,7 @@ class Household:
                 if spared:
                     entry["except"] = sorted(spared)
             groups.append(entry)
+        groups += self._paused_groups_document(person, membership)
         return {
             "person": person,
             "groups": groups,
@@ -1004,6 +1042,28 @@ class Household:
                     "until": dt_util.as_local(until).isoformat() if until else None,
                 }
             )
+        # An adult's pause of this app or group (or of a group the app is in, or the app of a group asked about)
+        asked = {app} if app is not None else set(self._group_apps(target, membership)) if group != ALL and target else set()
+        for pause in app_pauses_of(self.hass, person, now):
+            if pause["group"] is not None and (pause["group"] == group or pause["group"] in groups):
+                hit = True
+            elif pause["group"] is not None and app is not None:
+                hit = (paused_group := self.group(pause["group"])) is not None and app in self._group_apps(
+                    paused_group, membership
+                )
+            else:
+                hit = pause["app"] is not None and (pause["app"] in asked)
+            if hit:
+                blocked.append(
+                    {
+                        "kind": "pause",
+                        "by": "hearth.pause",
+                        "app": pause["app"],
+                        "group": pause["group"],
+                        "until": dt_util.as_local(pause["until"]).isoformat(),
+                        "reason": pause["reason"],
+                    }
+                )
         # Google TV's own Kids daily limit: it holds the whole profile, whatever Hearth allows
         for device_id in self.google_tv_limits(person):
             blocked.append(

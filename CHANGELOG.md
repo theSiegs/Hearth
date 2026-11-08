@@ -5,6 +5,7 @@
 
 ## Unreleased
 
+- **Home Assistant: pause one app or group.** `hearth.pause` takes `app` or `group` (YouTube and HearthTube, say) and pauses only that, for some minutes or until a time, for the people chosen or everyone. Their Hearth TVs and phones hold it as a group with no time left, Family Link pauses its apps on phones and Family Safety its Xbox and Windows apps; an allow doesn't lift it and `hearth.explain` names it. `hearth.pause_end` with the same `app` or `group` ends just that one; without either, it ends every pause.
 - **Home Assistant: a negative bonus takes time away.** `hearth.add_bonus` with negative minutes (and the panel's −15) did nothing unless a bonus had been given that day, because Bonus today stopped at 0. It now goes below 0, so the minutes left drop (to none at most) for today only.
 - **Home Assistant: speakers in different rooms stay apart.** Two players of the same kind (for example two ESPHome voice satellites, whose entities are all called "Media Player") were taken for one player and shown in one room. A generic name no longer joins players, and players in different areas are never put together.
 - **Home Assistant: Music Assistant display players join their TV.** A player named like `<tv>_music_assistant_display` or "<TV> (Music Assistant Display)" is now grouped with its TV in the media rooms, as the other Music Assistant players are.

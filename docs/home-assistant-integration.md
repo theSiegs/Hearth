@@ -788,6 +788,16 @@ sensors carry `bedtime_start`/`bedtime_end` too and are a bedtime), so a device 
 a push, a device learns of a pause with its next status answer: a TV within 2 minutes (it posts at least that often
 while on), a phone at its next post.
 
+**One app or group.** `hearth.pause` with `app` (a package) or `group` (an id or name; `all` is the family pause) pauses
+only that, for the people (everyone by default), for `minutes` or `until` a time (no `ends_on`). Nobody is locked:
+the app or group's apps are held as a group out of time is, on every Hearth TV and phone (HearthTube too, in a group
+that lists it), by Family Link and by Family Safety's Xbox and Windows apps. The person's document has it as a group
+`{id: "pause:group:<id>" or "pause:app:<package>", name: "<name> (paused: <reason>)", minutes_left: 0, apps,
+paused: {until, reason}}`, so devices that know only groups hold it. An allow doesn't lift it, and `hearth.explain`
+lists it as `pause` with its `app` or `group`. A person can have several, besides a family pause.
+`hearth.pause_end` with the same `app` or `group` ends that one; without either it ends every pause, the family
+pause too.
+
 ### Household summary
 
 For an adult's app on Home Assistant's own WebSocket (administrators, and adults on Hearth's page whose person is their

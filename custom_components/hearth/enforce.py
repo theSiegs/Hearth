@@ -281,6 +281,16 @@ def school_wanted(enforcer: Enforcer, school_time: bool, lifted: Lifted | None =
     }
 
 
+def paused_wanted(enforcer: Enforcer, packages: set[str], fs_pauses_apps: bool = True) -> set[str]:
+    """The apps an adult paused for the person (hearth.pause with an app or group): Family Link's packages, Family
+    Safety's Xbox and Windows apps on its chosen platforms. An allow doesn't lift them."""
+    if enforcer.kind == FAMILY_LINK:
+        return set(sorted(p for p in packages if not essential(p) and not fs_app(p))[:MAX_PACKAGES])
+    if enforcer.kind == FAMILY_SAFETY and fs_pauses_apps:
+        return set(sorted(p for p in packages if fs_app(p) and fs_app_platform(p) in enforcer.platforms)[:MAX_PACKAGES])
+    return set()
+
+
 @dataclass
 class Held:
     items: set[str] = field(default_factory=set)
@@ -383,11 +393,12 @@ class Enforcement:
         school_time_of=None,
         groups_of_app=None,
         granted_of=None,
+        paused_of=None,
     ) -> None:
         """[apps_of]: a group id's packages for a person (for All screen time, every app of theirs). [lifted_of]: what
         a person's allows lift (Lifted); [school_time_of]: whether an enforcer's child is in School time now;
         [groups_of_app]: an app's groups; [granted_of]: what a person's parent grants lift, by enforcer kind (the
-        held items: grants.py)."""
+        held items: grants.py); [paused_of]: the packages an adult paused for a person."""
         self.enforcers = enforcers
         now = dt_util.now()
         wanted_now: dict[str, set[str]] = {}
@@ -404,7 +415,12 @@ class Enforcement:
             school = school_wanted(e, bool(school_time_of and school_time_of(e)), lifted, groups_of_app)
             # A parent's grant lifts only the hold it came from (that enforcer's item)
             granted = (granted_of(e.person) or {}).get(e.kind, set()) if granted_of else set()
-            wanted_now[e.key] = (budget | school) - granted
+            paused = (
+                paused_wanted(e, paused_of(e.person), self.hass.services.has_service(FS_DOMAIN, "pause_app"))
+                if paused_of
+                else set()
+            )
+            wanted_now[e.key] = (budget | school | paused) - granted
         # What an enforcer no longer configured held is let go
         for key in self.held:
             wanted_now.setdefault(key, set())
