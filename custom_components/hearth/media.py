@@ -21,8 +21,10 @@ TV = "tv"
 GROUP = "group"
 
 # A twin's entity_id or name is its player's plus one of these
-_ID_SUFFIX = re.compile(r"(_now_playing|_music_assistant|_media_player|_\d+)+$")
-_NAME_SUFFIX = re.compile(r"(\s*\(music assistant\)|\s+now playing|\s+media player)+$", re.IGNORECASE)
+_ID_SUFFIX = re.compile(r"(_now_playing|_music_assistant_display|_music_assistant|_media_player|_\d+)+$")
+_NAME_SUFFIX = re.compile(
+    r"(\s*\(music assistant(?: display)?\)|\s+now playing|\s+media player)+$", re.IGNORECASE
+)
 
 # Which of a player's entities to control: the integration closest to the thing first
 _CONTROL_ORDER = (
