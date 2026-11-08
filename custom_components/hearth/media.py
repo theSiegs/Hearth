@@ -41,11 +41,15 @@ _CONTROL_ORDER = (
 _TV_PLATFORMS = {"androidtv_remote", "androidtv", "xbox", "webostv", "samsungtv", "braviatv", "roku", "apple_tv"}
 
 
+# Names that say what a thing is, not which one: never a twin key on their own
+_GENERIC_KEYS = {"media player", "player", "speaker", "tv", "display", "music assistant", "now playing"}
+
+
 def _name_key(name: str | None) -> str | None:
     if not name:
         return None
     key = " ".join(_NAME_SUFFIX.sub("", name).lower().split())
-    return key or None
+    return key if key and key not in _GENERIC_KEYS else None
 
 
 def _kind(platform: str | None, model: str | None, device_class: str | None) -> str:
@@ -69,7 +73,11 @@ def media_rooms(hass: HomeAssistant) -> list[dict[str, Any]]:
         device = devices.async_get(entry.device_id) if entry and entry.device_id else None
         area_id = (entry.area_id if entry else None) or (device.area_id if device else None)
         platform = entry.platform if entry else None
-        names = {state.name, entry.name if entry else None, entry.original_name if entry else None}
+        names = {state.name}
+        if entry and not (device and entry.has_entity_name):
+            # With a device and has_entity_name, the entry's names are only the entity part ("Media Player"),
+            # the same on every device of the kind; the friendly name and the device's names carry which one
+            names |= {entry.name, entry.original_name}
         if device:
             names |= {device.name_by_user, device.name}
         found.append(
@@ -93,15 +101,21 @@ def media_rooms(hass: HomeAssistant) -> list[dict[str, Any]]:
             i = parent[i]
         return i
 
+    # Each player's area (of the first member that has one): members in different areas are never twins
+    area_of = [item["area_id"] for item in found]
     owner: dict[str, int] = {}
     for i, item in enumerate(found):
         if item["kind"] == GROUP:
             continue
         for key in item["keys"]:
-            if key in owner:
-                parent[root(i)] = root(owner[key])
-            else:
+            if key not in owner:
                 owner[key] = i
+                continue
+            mine, theirs = root(i), root(owner[key])
+            if mine == theirs or (area_of[mine] and area_of[theirs] and area_of[mine] != area_of[theirs]):
+                continue
+            parent[mine] = theirs
+            area_of[theirs] = area_of[theirs] or area_of[mine]
     players: dict[int, list[dict[str, Any]]] = {}
     for i, item in enumerate(found):
         players.setdefault(root(i), []).append(item)

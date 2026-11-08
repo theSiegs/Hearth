@@ -5,6 +5,7 @@
 
 ## Unreleased
 
+- **Home Assistant: speakers in different rooms stay apart.** Two players of the same kind (for example two ESPHome voice satellites, whose entities are all called "Media Player") were taken for one player and shown in one room. A generic name no longer joins players, and players in different areas are never put together.
 - **Home Assistant: Music Assistant display players join their TV.** A player named like `<tv>_music_assistant_display` or "<TV> (Music Assistant Display)" is now grouped with its TV in the media rooms, as the other Music Assistant players are.
 - **Home Assistant: explain names a parent's Family Link app limit.** When an app has a Family Link app limit a parent set (not one of Hearth's pauses) and it's used up on a device today, `hearth.explain` now lists it as `app_limit` (the app, the device, the limit and the minutes used) instead of saying the app is allowed. Hearth's allows and bonuses don't raise that limit: an adult raises or removes it in Family Link.
 - **Home Assistant: requests reach every adult's phone.** Requests for more time, offers and chores done go to each adult on Hearth's page, on every Home Assistant companion app of theirs (found from their person), as well as the phone chosen in Configure; each adult can be switched off on Hearth's page. A tap opens Hearth's page at that request (`/hearth?ask=<id>`), or on Android the deep link `hearth://ask/<id>` for an adult who chose it. Once a request is answered anywhere, it leaves every phone.
