@@ -42,7 +42,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.TrustManager;
@@ -60,7 +59,7 @@ public class RemoteApiService extends Service {
     static final int SESSION_PORT = 7677;
     static final int PAIRING_PORT = 7678;
     static final String SERVICE_TYPE = "_hearth-tv._tcp";
-    private static final String KEY_ALIAS = "hearth-remote-api";
+    private static final String KEY_ALIAS = "hearth-remote-api-v2";
     private static final String CHANNEL = "remote_api";
     private static final int NOTIFICATION_ID = 3;
     private static final String CODE_TAG = "hearth_remote_pair";
@@ -404,11 +403,15 @@ public class RemoteApiService extends Service {
         keyStore.load(null);
         if (!keyStore.containsAlias(KEY_ALIAS)) {
             KeyPairGenerator generator = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_RSA, "AndroidKeyStore");
-            generator.initialize(new KeyGenParameterSpec.Builder(KEY_ALIAS, KeyProperties.PURPOSE_SIGN)
+            // DECRYPT with no padding too: for TLS 1.3's RSA-PSS the TLS library pads itself and asks the keystore for
+            // the raw RSA operation
+            generator.initialize(new KeyGenParameterSpec.Builder(KEY_ALIAS,
+                    KeyProperties.PURPOSE_SIGN | KeyProperties.PURPOSE_DECRYPT)
                     .setKeySize(2048)
                     .setDigests(KeyProperties.DIGEST_NONE, KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA384,
                             KeyProperties.DIGEST_SHA512)
                     .setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1, KeyProperties.SIGNATURE_PADDING_RSA_PSS)
+                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE, KeyProperties.ENCRYPTION_PADDING_RSA_PKCS1)
                     .setCertificateSubject(new X500Principal("CN=hearth-tv"))
                     .setCertificateSerialNumber(BigInteger.ONE)
                     .setCertificateNotBefore(new Date(0))
@@ -419,11 +422,45 @@ public class RemoteApiService extends Service {
         X509Certificate cert = (X509Certificate) keyStore.getCertificate(KEY_ALIAS);
         mPublicKey = (RSAPublicKey) cert.getPublicKey();
         mTvId = Hex.of(MessageDigest.getInstance("SHA-256").digest(mPublicKey.getEncoded())).substring(0, 16);
-        KeyManagerFactory keys = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-        keys.init(keyStore, null);
+        java.security.PrivateKey key = (java.security.PrivateKey) keyStore.getKey(KEY_ALIAS, null);
         mTls = SSLContext.getInstance("TLS");
-        // Any phone certificate gets through the handshake: pairing needs it to pair, the session checks it's paired
-        mTls.init(keys.getKeyManagers(), new TrustManager[]{new AnyClient()}, new SecureRandom());
+        // Only this key: the keystore also holds Hearth's other keys (the household's EC key), which a key manager
+        // over the whole keystore may pick. Any phone certificate gets through the handshake: pairing needs it to
+        // pair, the session checks it's paired
+        mTls.init(new javax.net.ssl.KeyManager[]{new OneKey(key, cert)}, new TrustManager[]{new AnyClient()},
+                new SecureRandom());
+    }
+
+    /** Presents the remote API's own key, whatever else the keystore holds. */
+    private static final class OneKey extends javax.net.ssl.X509ExtendedKeyManager {
+        private final java.security.PrivateKey mKey;
+        private final X509Certificate mCert;
+
+        OneKey(java.security.PrivateKey key, X509Certificate cert) {
+            mKey = key;
+            mCert = cert;
+        }
+
+        @Override public String[] getClientAliases(String keyType, java.security.Principal[] issuers) { return null; }
+        @Override public String chooseClientAlias(String[] keyType, java.security.Principal[] issuers, Socket socket) {
+            return null;
+        }
+        @Override public String[] getServerAliases(String keyType, java.security.Principal[] issuers) {
+            return new String[]{KEY_ALIAS};
+        }
+        @Override public String chooseServerAlias(String keyType, java.security.Principal[] issuers, Socket socket) {
+            return KEY_ALIAS;
+        }
+        @Override public String chooseEngineServerAlias(String keyType, java.security.Principal[] issuers,
+                javax.net.ssl.SSLEngine engine) {
+            return KEY_ALIAS;
+        }
+        @Override public X509Certificate[] getCertificateChain(String alias) {
+            return KEY_ALIAS.equals(alias) ? new X509Certificate[]{mCert} : null;
+        }
+        @Override public java.security.PrivateKey getPrivateKey(String alias) {
+            return KEY_ALIAS.equals(alias) ? mKey : null;
+        }
     }
 
     private static final class AnyClient implements X509TrustManager {
