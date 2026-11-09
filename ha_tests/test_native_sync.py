@@ -328,6 +328,22 @@ async def test_an_app_a_parent_changed_in_family_link_is_a_grant(
     assert grants[0].data["target"] == {"kind": "app", "value": "com.thesiegs.hearthtube"}
     assert resumed[-1].data["packages"] == ["com.thesiegs.hearthtube"]
 
+    # The summary names the app (from Sam's Family Link sensors when Hearth's catalog has no name), never the package
+    from custom_components.hearth.websocket import _grant_views
+
+    household = _household(hass)
+    hass.states.async_set(
+        "sensor.sam_family_link_screen_time_by_app",
+        "1",
+        {"child_id": CHILD, "apps": [{"package": "com.thesiegs.hearthtube", "name": "Video Club", "minutes": 4}]},
+    )
+    household.apps.apps.pop("com.thesiegs.hearthtube", None)
+    assert household.app_names({"com.thesiegs.hearthtube", "com.example.unknown"}, "person.sam") == {
+        "com.thesiegs.hearthtube": "Video Club"
+    }
+    [view] = _grant_views(household, "person.sam")
+    assert view["name"] == "Video Club" and view["target"]["value"] == "com.thesiegs.hearthtube"
+
 
 async def test_extra_time_from_family_safety_is_a_grant_until_it_ends(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer

@@ -465,7 +465,8 @@ attribute present), so an older Family Link or Family Safety keeps working as be
   Link itself; its answer (`results`: `restored`, `kept_current`, ...) is read and shown.
 - **Parent grants.** A parent's change that lets a kid use what Hearth holds becomes a grant `{id, person, via
   (family_link, nintendo, family_safety), source ("from the Family Link app"), target {kind: device, app, switch or
-  platform; value}, until, since, reason, endable, end_with}`. It lifts only the hold it came from (the child's Family
+  platform; value}, until, since, reason, endable, end_with}`; in the household summary an app's grant also has the
+  app's `name` when Hearth knows it (its app catalog, or the kid's Family Link sensors). It lifts only the hold it came from (the child's Family
   Link device lock, the paused app, the Switch, a Family Safety platform), not a whole group everywhere as an allow
   does, and budgets keep counting. Grants are kept across restarts and end on their own; when one ends, enforcing goes
   on as usual. They show in `hearth.explain`'s `exceptions` (`type: "grant"`), the person's `exceptions` attribute,
@@ -915,7 +916,7 @@ The **headline** is the first of these that holds (glance.py), in this order:
 | notice | School time taken off today | `no school time today` | `school_off:<id>` |
 | notice | extra time on one device | `kitchen · 25 left there`, `xbox · open till 6:30`, `pixel · +30 in family link`, `tv · games open till 8:00` | `device_bonus:<target>` |
 | notice | an adult's pause of one app or group | `youtube paused · homework till 7:00` | `paused:group:<id>`, `paused:app:<package>` |
-| notice | a parent's grant | `switch open · the nintendo app till 9:00` | `grant:<id>` |
+| notice | a parent's grant: a bonus, an unlock or a changed daily limit, a Switch or a platform let go | `switch open · the nintendo app till 9:00` | `grant:<id>` |
 | notice | Google's or Microsoft's own limit stops a device of theirs (Hearth isn't holding it) | `sam's phone · google's own limit`, `xbox · microsoft's own limit` | `device_limit:<entity or platform>` |
 | notice | a parent's own Family Safety lock | `xbox locked in family safety till 7:00` | `parent_lock:<platform>` |
 | notice | a parental control Hearth couldn't hold or let go through | `family link · didn't take` | `sync_error:<kind>` |
@@ -923,9 +924,18 @@ The **headline** is the first of these that holds (glance.py), in this order:
 | calm | the most-used group with a limit (All screen time only when it's the only one) | `youtube · 25 left` | `left:<group>` |
 | calm | nothing else | `all clear` | `clear` |
 
-Times are local, 12-hour, without am/pm. **lines** are the rest of that list in the same order, then each group with a
-limit (All screen time first, `left`, `low` or `out` as above), what's playing (`hearthtube · kitchen`, key
-`playing:<package>`) and the next lock (`bedtime at 9:00`, key `next:<kind>:<at>`); never the headline again.
+Times are local, 12-hour, without am/pm; 12:00 at night and at midday are `midnight` and `noon` (`till midnight`).
+**lines** are the rest of that list in the same order, then each group with a limit (All screen time first, `left`,
+`low` or `out` as above), what's playing (`hearthtube · kitchen`, key `playing:<package>`), the next lock (`bedtime
+at 9:00`, key `next:<kind>:<at>`) and, last, the app limits a parent changed in their own app (below); never the
+headline again.
+
+An app's limit a parent changed in the Family Link app is a standing grant: Hearth sees it again every day, so it's
+`calm` and never the headline. Such grants with the same source and end are one line, by the app's name (never its
+package; a readable guess from the package when no name is known): `roblox open · the family link app till
+midnight` (key `grant:<id>`), two or three named (`youtube kids and roblox open · ...`, `a, b and c open · ...`),
+more counted (`16 apps open · the family link app till midnight`); a line of two or more has the key
+`grants:<via>:<until>:<apps>`, `<apps>` a short hash of the set of packages, so it stays while the set does.
 
 **actions** are what an adult can do for the person now, each `{id, label, service, data, confirm?, primary?}`: an app
 calls `service` with exactly `data`, with the adult's own Home Assistant sign-in, after asking `confirm` when it's set;

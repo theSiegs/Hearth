@@ -12,6 +12,7 @@ Everything here works on the summary's own fields (and the few extras passed in)
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import hashlib
 from typing import Any
 
 from homeassistant.util import dt as dt_util
@@ -46,11 +47,13 @@ def _group_word(group_id: str, names: dict[str, str]) -> str:
 
 
 def _clock(iso: str | None) -> str | None:
-    """6:30 (local, 12-hour) from an ISO time."""
+    """6:30 (local, 12-hour) from an ISO time; "midnight" and "noon" as words."""
     parsed = dt_util.parse_datetime(iso) if iso else None
     if parsed is None:
         return None
     local = dt_util.as_local(parsed)
+    if local.minute == 0 and local.hour in (0, 12):
+        return "midnight" if local.hour == 0 else "noon"
     return f"{local.hour % 12 or 12}:{local.minute:02d}"
 
 
@@ -119,27 +122,93 @@ SERVICE_WORDS = {"family_link": "family link", "family_safety": "family safety",
 APP_WORDS = {"family_link": "the family link app", "family_safety": "the family safety app", "nintendo": "the nintendo app"}
 
 
-def grant_word(grant: dict[str, Any]) -> str:
-    """What a parent's grant lifts, in a few words: "phone", an app, "switch", "xbox"."""
+# Package segments that name no app (a domain, a platform, a build), and ones that only qualify the one before
+_PACKAGE_NOISE = {
+    "com", "org", "net", "io", "co", "air", "android", "apps", "app", "mobile", "client", "free", "full", "paid",
+    "prod", "release", "main", "phone", "game", "games",
+}
+_PACKAGE_QUALIFIERS = {"kids", "tv", "lite", "go", "pro", "plus", "hd", "music", "studio"}
+
+
+def app_name_guess(package: str) -> str:
+    """A readable name from a package when no name is known: its last meaningful segment, title-cased
+    ("com.roblox.client" -> "Roblox", "com.google.android.apps.youtube.kids" -> "Youtube Kids")."""
+    parts = [p for p in package.replace("_", ".").split(".") if p]
+    words = [p for p in parts[1:] if p.lower() not in _PACKAGE_NOISE] if len(parts) > 1 else parts
+    if not words:
+        return (parts[-1] if parts else package).title()
+    picked = [words[-1]]
+    if picked[0].lower() in _PACKAGE_QUALIFIERS and len(words) > 1:
+        picked.insert(0, words[-2])
+    return " ".join(picked).title()
+
+
+def _app_names(person: dict[str, Any]) -> dict[str, str]:
+    """package -> name, from the person's apps today (the summary's apps_today)."""
+    return {
+        str(row["package"]): str(row["name"])
+        for row in person.get("apps_today") or []
+        if row.get("package") and row.get("name") and row["name"] != row["package"]
+    }
+
+
+def grant_word(grant: dict[str, Any], names: dict[str, str] | None = None) -> str:
+    """What a parent's grant lifts, in a few words: "devices", an app's name (never its package), "switch", "xbox".
+    An app's name is the grant's own, else one of [names] (package -> name), else a guess from the package."""
     target = grant.get("target") or {}
     kind, value = target.get("kind"), str(target.get("value") or "")
     if kind == "device":
         return "devices"
     if kind == "switch":
         return "switch"
+    if kind == "app":
+        return (grant.get("name") or (names or {}).get(value) or app_name_guess(value)).lower()
     return value.lower()
 
 
-def _grant_items(grants: list[dict[str, Any]]) -> list[dict[str, str]]:
-    return [
-        _item(
-            f"{grant_word(grant)} open · {APP_WORDS.get(grant.get('via'), 'their app')}{_till(grant.get('until'))}",
-            NOTICE,
-            "grant",
-            grant["id"],
+def _standing(grant: dict[str, Any]) -> bool:
+    """An app's own limit a parent changed in their app: it stands from day to day (Hearth sees it again each day), so
+    it's not news. A bonus, an unlock, a changed daily limit, a Switch or a platform let go is a parent's move: news."""
+    return (grant.get("target") or {}).get("kind") == "app"
+
+
+def _list_words(words: list[str]) -> str:
+    return words[0] if len(words) == 1 else f"{', '.join(words[:-1])} and {words[-1]}"
+
+
+def _grant_items(grants: list[dict[str, Any]], names: dict[str, str]) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    """A parent's grants: (news, standing). News is one notice per grant ("switch open · the nintendo app till 9:00");
+    standing grants (calm) are put together by where they came from and when they end: "roblox open · ...", "youtube
+    kids and roblox open · ...", up to 3 named, then "16 apps open · the family link app till midnight"."""
+    news = []
+    together: dict[tuple[Any, Any], list[dict[str, Any]]] = {}
+    for grant in grants:
+        if _standing(grant):
+            together.setdefault((grant.get("via"), grant.get("until")), []).append(grant)
+            continue
+        news.append(
+            _item(
+                f"{grant_word(grant, names)} open · {APP_WORDS.get(grant.get('via'), 'their app')}"
+                f"{_till(grant.get('until'))}",
+                NOTICE,
+                "grant",
+                grant["id"],
+            )
         )
-        for grant in grants
-    ]
+    standing = []
+    for (via, until), group in together.items():
+        where = f"{APP_WORDS.get(via, 'their app')}{_till(until)}"
+        if len(group) == 1:
+            standing.append(_item(f"{grant_word(group[0], names)} open · {where}", CALM, "grant", group[0]["id"]))
+            continue
+        words = sorted(dict.fromkeys(grant_word(g, names) for g in group))
+        what = _list_words(words) if len(group) <= 3 else f"{len(group)} apps"
+        # The key names the set of apps (not their names, which may resolve later): stable from refresh to refresh
+        apps = hashlib.sha256(
+            ",".join(sorted(str((g.get("target") or {}).get("value")) for g in group)).encode()
+        ).hexdigest()[:10]
+        standing.append(_item(f"{what} open · {where}", CALM, "grants", f"{via}:{until}:{apps}"))
+    return news, standing
 
 
 def _first_party_items(first_party: dict[str, Any]) -> list[dict[str, str]]:
@@ -215,7 +284,8 @@ def person_glance(
     The headline is the first of: urgent (a waiting ask, a pause, out of All screen time), notice (a bedtime or School
     time lock now, one starting within 15 minutes, a group out or under 10 minutes, an allow, School time off today),
     calm (the most-used limited group's minutes left, else "all clear"). The lines are the rest, then each limited
-    group, what's playing and the next lock.
+    group, what's playing, the next lock and, last, the app limits a parent changed in their own app (calm, put
+    together by app and end, never the headline).
     """
     entity = person["id"]
     names = {g["id"]: g["name"] for g in person.get("groups", [])}
@@ -269,7 +339,9 @@ def person_glance(
             )
         )
     # The parents' own apps: what a parent opened there, their own limits and locks, and what didn't take
-    news += _grant_items(grants or [])
+    app_names = _app_names(person)
+    grant_news, standing = _grant_items(grants or [], app_names)
+    news += grant_news
     news += _first_party_items(person.get("first_party") or {})
     news += _sync_items(person.get("sync") or {})
     for ask in answered or []:
@@ -302,6 +374,9 @@ def person_glance(
     if upcoming and (word := {"bedtime": "bedtime", "school_time": "school time"}.get(upcoming.get("kind"))):
         clock = _clock(upcoming.get("at"))
         add(_item(f"{word} at {clock}" if clock else word, CALM, "next", f"{upcoming.get('kind')}:{upcoming.get('at')}"))
+    # Last: what a parent left open in their app's own app limits (never the headline)
+    for item in standing:
+        add(item)
 
     name = person.get("name") or entity
     actions = _ask_actions(asks)
@@ -377,7 +452,7 @@ def person_glance(
     for grant in grants or []:
         if not grant.get("endable"):
             continue
-        word = grant_word(grant)
+        word = grant_word(grant, app_names)
         actions.append(
             _action(
                 f"grant_end:{grant['id']}",

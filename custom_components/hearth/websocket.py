@@ -33,6 +33,7 @@ from .limits import OTHER
 from .media import media_rooms
 from .auth import is_adult_user
 from .glance import household_glance, person_glance
+from .grants import APP
 from .places import SIGNAL_PLACES
 from .targets import target_of_counted, targets_of
 
@@ -101,7 +102,8 @@ def summary(hub) -> dict[str, Any]:
                 # Their devices by id, for extra time on one device; and that extra time now
                 "targets": targets_of(household, person),
                 "device_extras": household.device_extra_views(person),
-                "grants": [g.view() for g in household.grants.of(person)],
+                # An app's grant carries the app's name when Hearth knows it
+                "grants": _grant_views(household, person),
                 # Google's own daily limit per Family Link device, Microsoft's allowance per platform
                 "first_party": household.sync.first_party(person),
                 # Per parental control: what's held, the last error and what Hearth last did
@@ -188,6 +190,12 @@ def summary(hub) -> dict[str, Any]:
     }
     body["version"] = hashlib.sha256(json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()[:16]
     return body
+
+
+def _grant_views(household, person: str) -> list[dict[str, Any]]:
+    grants = household.grants.of(person)
+    names = household.app_names({g.value for g in grants if g.kind == APP}, person)
+    return [{**g.view(), **({"name": names[g.value]} if g.kind == APP and g.value in names else {})} for g in grants]
 
 
 def _today_by_device_and_app(household, person: str, day) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:

@@ -13,7 +13,7 @@ from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
 from custom_components.hearth.const import DOMAIN
-from custom_components.hearth.glance import household_glance, news_key, person_glance
+from custom_components.hearth.glance import app_name_guess, grant_word, household_glance, news_key, person_glance
 from test_init import NONCE, PHONE_ID, _post
 from test_people import _household_with_sam, _today
 from test_sources import _option
@@ -324,3 +324,94 @@ def test_a_pause_of_one_app_or_group_is_a_line_with_its_own_end() -> None:
     assert actions["pause_end:app:com.example.game"]["data"] == {"people": ["person.alex"], "app": "com.example.game"}
     # Not a family pause: the person can still be paused as a whole
     assert "pause" in actions and "pause_end" not in actions
+
+
+# A parent's grants: app names, put together, standing ones calm
+
+def _midnight() -> datetime:
+    """The end of the day of _at (local)."""
+    return _at(0, 0) + timedelta(days=1)
+
+
+def _grant(gid: str, value: str, kind: str = "app", via: str = "family_link", until=None, **extra) -> dict:
+    return {"id": gid, "type": "grant", "person": "person.alex", "via": via, "target": {"kind": kind, "value": value},
+            "until": (until or _midnight()).isoformat(), "endable": False, **extra}
+
+
+def _grant_glance(person, grants, now=None):
+    return person_glance(person, [], [], [], now or _at(17, 40), grants)
+
+
+def test_a_grant_names_the_app_never_the_package() -> None:
+    assert grant_word(_grant("g1", "com.example.drawing", name="Drawing Pad")) == "drawing pad"
+    assert grant_word(_grant("g1", "com.example.drawing"), {"com.example.drawing": "Sketchbook"}) == "sketchbook"
+    assert app_name_guess("com.google.android.apps.youtube.kids") == "Youtube Kids"
+    assert app_name_guess("com.example.blockbuilder.client") == "Blockbuilder"
+    assert app_name_guess("air.com.example.puzzleparty") == "Puzzleparty"
+    assert app_name_guess("drawing") == "Drawing"
+    assert grant_word(_grant("g1", "com.google.android.apps.youtube.kids")) == "youtube kids"
+    # A switch, the devices and a platform keep their words
+    assert grant_word(_grant("g2", "switch", kind="switch", via="nintendo")) == "switch"
+    assert grant_word(_grant("g3", "Devices", kind="device")) == "devices"
+    assert grant_word(_grant("g4", "Xbox", kind="platform", via="family_safety")) == "xbox"
+    # From the person's apps today when the grant has no name
+    person = {**_person(all=90), "apps_today": [{"package": "com.example.drawing", "name": "Sketchbook", "minutes": 5}]}
+    [line] = _grant_glance(person, [_grant("g1", "com.example.drawing")])["lines"][-1:]
+    assert line["text"] == "sketchbook open · the family link app till midnight"
+    assert "com." not in line["text"]
+
+
+def test_grants_with_the_same_source_and_end_are_one_line() -> None:
+    packages = [f"com.example.app{n:02d}" for n in range(16)]
+    grants = [_grant(f"g{n}", p, name=f"App {n}") for n, p in enumerate(packages)]
+    glance = _grant_glance(_person(), grants)
+    standing = [line for line in glance["lines"] if line["key"].startswith("grant")]
+    assert len(standing) == 1
+    [line] = standing
+    assert line["text"] == "16 apps open · the family link app till midnight" and line["level"] == "calm"
+    assert line["key"].startswith(f"grants:family_link:{_midnight().isoformat()}:")
+    # Stable: the same set in another order, or with names resolved since, keeps the key; another set changes it
+    again = _grant_glance(_person(), [_grant(g["id"], g["target"]["value"]) for g in reversed(grants)])
+    assert [x["key"] for x in again["lines"] if x["key"].startswith("grant")] == [line["key"]]
+    fewer = _grant_glance(_person(), grants[:15])
+    assert [x["key"] for x in fewer["lines"] if x["key"].startswith("grant")] != [line["key"]]
+
+    # Two or three are named; another end or another source is its own line
+    two = _grant_glance(_person(), [_grant("a", "com.example.blockbuilder.client", name="Block Builder"),
+                                    _grant("b", "com.google.android.apps.youtube.kids")])
+    assert [x["text"] for x in two["lines"]] == ["block builder and youtube kids open · the family link app till midnight"]
+    three = _grant_glance(_person(), [_grant("a", "com.example.a", name="Alpha"), _grant("b", "com.example.b", name="Beta"),
+                                      _grant("c", "com.example.c", name="Gamma"),
+                                      _grant("d", "com.example.d", name="Delta", until=_at(20, 0))])
+    assert [x["text"] for x in three["lines"]] == [
+        "alpha, beta and gamma open · the family link app till midnight",
+        "delta open · the family link app till 8:00",
+    ]
+    assert three["lines"][1]["key"] == "grant:d"
+
+
+def test_standing_grants_from_the_parent_s_app_are_not_the_headline() -> None:
+    grants = [_grant(f"g{n}", f"com.example.app{n}") for n in range(16)]
+    person = {**_person(all=90, youtube=40), "next_lock": {"at": _at(21, 0).isoformat(), "kind": "bedtime"}}
+    glance = _grant_glance(person, grants)
+    # The calm state leads; the grants come last, after the groups and the next lock
+    assert glance["headline"] == {"text": "youtube · 40 left", "level": "calm", "key": "left:youtube"}
+    assert [x["key"].split(":")[0] for x in glance["lines"]] == ["left", "next", "grants"]
+    assert _grant_glance(_person(), grants)["headline"]["key"] == "clear"
+    # A parent's move in their app (a Switch let go, a bonus on the devices) is still news, and so is an allow
+    switch = _grant("s1", "switch", kind="switch", via="nintendo", until=_at(21, 0), endable=True)
+    glance = _grant_glance(_person(all=90), [*grants, switch])
+    assert glance["headline"] == {"text": "switch open · the nintendo app till 9:00", "level": "notice", "key": "grant:s1"}
+    allow = {"id": "a1", "app": None, "group": "games", "until": _at(19, 0).isoformat(), "reason": ""}
+    glance = person_glance(_person(all=90), [], [allow], [], _at(17, 40), grants)
+    assert glance["headline"]["key"] == "allow:a1"
+
+
+def test_midnight_and_noon_are_words() -> None:
+    noon = _at(12, 0)
+    paused = {**_person(all=90), "pause": {"until": noon.isoformat(), "reason": ""}}
+    assert _glance(paused, now=_at(11, 0))["headline"]["text"] == "paused till noon"
+    upcoming = {**_person(all=90), "next_lock": {"at": _midnight().isoformat(), "kind": "bedtime"}}
+    assert _glance(upcoming)["lines"][-1]["text"] == "bedtime at midnight"
+    allow = {"id": "a1", "app": None, "group": "games", "until": _at(12, 30).isoformat(), "reason": ""}
+    assert _glance(_person(all=90), allows=[allow], now=_at(11, 0))["headline"]["text"] == "games allowed till 12:30"

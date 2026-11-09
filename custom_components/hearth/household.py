@@ -344,6 +344,31 @@ class Household:
                 found[key] = f"Old mapping {key}: the same number is a different profile on each TV, pick again"
         return found
 
+    def app_names(self, packages: set[str], person: str | None = None) -> dict[str, str]:
+        """package -> the app's name, for the packages a name is known for: Hearth's app catalog, else the `apps` lists
+        of the person's Family Link sensors (Apps with time limits, Daily screen time)."""
+        found: dict[str, str] = {}
+        for package in packages:
+            entry = self.apps.apps.get(package)
+            if entry is not None and entry.name and entry.name != package:
+                found[package] = entry.name
+        missing = packages - found.keys()
+        child = self.family_link_child(person) if missing and person else None
+        if child is None:
+            return found
+        for state in self.hass.states.async_all("sensor"):
+            if not missing:
+                break
+            if str(state.attributes.get("child_id")) != str(child):
+                continue
+            for app in state.attributes.get("apps") or []:
+                if not isinstance(app, dict) or app.get("package") not in missing:
+                    continue
+                if isinstance(name := app.get("name"), str) and name.strip() and name != app["package"]:
+                    found[app["package"]] = name.strip()[:64]
+                    missing.discard(app["package"])
+        return found
+
     def known_apps(self) -> dict[str, str]:
         """Apps, played titles and titles seen: key -> how to show it, for the options' choices."""
         apps: dict[str, str] = {}
