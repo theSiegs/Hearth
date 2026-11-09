@@ -38,11 +38,14 @@ import android.widget.Toast;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
@@ -144,6 +147,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private String mUnstartedPick;
     /** The profile Google TV's chooser marked as its current account when it was last read. */
     private String mChooserCurrent;
+    /** The profile tiles the chooser showed when it last read any (isChooserTile). */
+    private final Set<String> mChooserTiles = new HashSet<>();
     /** Reading who Google TV's home says is logged in, before Hearth covers it (readHomeAccount). */
     private boolean mReadingHomeAccount;
     /** The card is up for that read (an adult's pick), not for a kids home's grace: it goes when the read ends. */
@@ -253,6 +258,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private final Runnable mReadChooser = this::readChooser;
     private static final ContentPin.Trigger CONTENT_PIN_TRIGGER = new ContentPin.Trigger();
     private final Runnable mReadScreenTime = this::readScreenTime;
+    /** Why the home's grace (mKidsHomeTakeOver) is running, for the log: a kids home, or the one after a PIN. */
+    private String mHomeGraceWhy = "kids home";
     private final Runnable mKidsHomeTakeOver = () -> {
         // Not if Google TV put a screen of its own up (time up, PIN...) or the kid opened an app meanwhile
         if (autoTakeOverAllowed() && !mGoogleTvScreenInFront && GOOGLE_TV_PACKAGE.equals(mLastWindowPackage)) {
@@ -261,7 +268,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             // Hearth comes up under the card: it goes once Hearth is drawn, so Google's home never shows
             SwitchCover.hideSoon(800);
         } else {
-            logTakeOverDeclined("kids home, after the grace");
+            logTakeOverDeclined(mHomeGraceWhy + ", after the grace");
             SwitchCover.hideNow();
         }
     };
@@ -330,6 +337,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             return;
         }
         Log.i(TAG, "chooser closed (Google TV's home is up, naming " + LogNames.of(account) + ")");
+        cancelPickNotAProfile(mLastPick, account);
         mChooserOnScreen = false;
         mLastWindowPackage = GOOGLE_TV_PACKAGE;
         // Focus Hearth heard since the home came up was on the home's own tabs ("Home"), not on a profile tile: no
@@ -931,6 +939,11 @@ public class LauncherAccessibilityService extends AccessibilityService {
             Map<String, String> emails) {
         if (!mChooserOnScreen) return;
         if (current != null) mChooserCurrent = current;
+        // An empty read (the chooser already gone) keeps the last tiles
+        if (!names.isEmpty()) {
+            mChooserTiles.clear();
+            mChooserTiles.addAll(names);
+        }
         // How many tiles named an address (no names or addresses in the log): household sync identifies people by it
         Log.i(TAG, "Chooser read: " + names.size() + " profile(s), " + emails.size() + " with an account address");
         // Each profile's Google account address, which the TV's calendars are filed by (TvCalendars)
@@ -1492,6 +1505,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
             // One of this user's profiles was picked, but Google TV kept the last: its welcome card goes
             Log.i(TAG, "Picked " + LogNames.of(expected) + ", but " + LogNames.of(on) + " is on");
             MainActivity.notifyProfileSwitchCancelled();
+        } else if (expected != null && !confirmed) {
+            cancelPickNotAProfile(expected, mHomeAccountRead);
         }
         if ((takeOver || ifConfirmed && confirmed) && autoTakeOverAllowed() && !mGoogleTvScreenInFront
                 && GOOGLE_TV_PACKAGE.equals(mLastWindowPackage) && SystemClock.elapsedRealtime() >= mGoogleSetupUntil
@@ -1610,6 +1625,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             } else if (autoTakeOverAllowed() && grace > 0) {
                 // Take over only if the home is still in front once the grace is over (see homeGraceMs)
                 mHandler.removeCallbacks(mKidsHomeTakeOver);
+                mHomeGraceWhy = kidsHome ? "kids home" : "home after a profile PIN";
                 mHandler.postDelayed(mKidsHomeTakeOver, grace);
                 // A kids profile: Hearth's card over Google's home while it decides on bedtime (it keeps running)
                 if (kidsHome) SwitchCover.show(this, pick != null ? pick : ProfileUsers.profileName(this, mActiveSerial));
@@ -1738,7 +1754,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         long now = SystemClock.elapsedRealtime();
         if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_FOCUSED) {
             // OK picks the focused tile, and Google TV doesn't always report the click: remember the last one.
-            if (mChooserOnScreen) {
+            // Only the chooser's own tiles: a chooser Hearth wrongly thinks is up leaves focus on the home's tabs
+            if (mChooserOnScreen && isChooserTile(mChooserTiles, label)) {
                 mLastChooserFocus = label;
                 mLastChooserFocusAt = now;
                 // Its photo, if it's due one, once the tile has finished growing
@@ -1864,6 +1881,33 @@ public class LauncherAccessibilityService extends AccessibilityService {
         HaBridgeService.onProfileChanged();
     }
 
+    /**
+     * Whether a focused label may be a pick: one of the chooser's profile tiles (tiles, from its last read). After a
+     * profile PIN Google TV can report a chooser window that isn't up, and focus then lands on its home's tabs
+     * ("Home"), which were taken for a pick. Before the chooser has ever been read there's nothing to go by: any.
+     */
+    static boolean isChooserTile(Collection<String> tiles, String label) {
+        return label != null && (tiles == null || tiles.isEmpty() || tiles.contains(label));
+    }
+
+    /**
+     * Whether Google TV's home, naming homeNamed, says the pick won't come: it names someone else, and the pick
+     * isn't one of the chooser's profiles (so it isn't a new profile Google TV may still be setting up either).
+     */
+    static boolean pickNotAProfile(String pick, String homeNamed, Collection<String> tiles) {
+        return pick != null && homeNamed != null && !homeNamed.equals(pick)
+                && tiles != null && !tiles.isEmpty() && !tiles.contains(pick);
+    }
+
+    /** The home named someone other than a pick that isn't a profile: its welcome card goes now. */
+    private void cancelPickNotAProfile(String pick, String homeNamed) {
+        if (!pickNotAProfile(pick, homeNamed, mChooserTiles)) return;
+        Log.i(TAG, "Picked " + LogNames.of(pick) + ", which isn't a profile; Google TV's home names "
+                + LogNames.of(homeNamed));
+        MainActivity.notifyProfileSwitchCancelled();
+        if (pick.equals(mLastPick)) mLastPick = null;
+    }
+
     /** Settles a profile picked in the chooser, if any, to name the profile user it starts; whether one was. */
     private boolean commitPendingProfile() {
         long now = SystemClock.elapsedRealtime();
@@ -1872,7 +1916,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (mPendingProfile != null && now - mPendingProfileAt < PROFILE_CLICK_WINDOW_MS) {
             chosen = mPendingProfile;
             clicked = true;
-        } else if (mLastChooserFocus != null && now - mLastChooserFocusAt < PROFILE_CLICK_WINDOW_MS) {
+        } else if (mLastChooserFocus != null && now - mLastChooserFocusAt < PROFILE_CLICK_WINDOW_MS
+                && isChooserTile(mChooserTiles, mLastChooserFocus)) {
             chosen = mLastChooserFocus;
             Log.i(TAG, "No click seen; using the last focused tile: " + LogNames.of(chosen));
         }
