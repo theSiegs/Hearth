@@ -18,14 +18,11 @@ import java.io.OutputStream;
  * (github.com/Trooped/QuickBars, GPL-3.0), with the secret link added so nothing else on the network can push a
  * token in the meantime. The page seals what it sends with a key that's only in the link's #fragment (PhoneSeal), as
  * the PIN page does (PinSetupServer), so the token can't be read on the network. Stops after one successful send,
- * when Settings closes it, or after ten minutes. The same page takes the webhook id for TV status (HaStatusReporter),
- * so that needs no typing on the TV either.
+ * when Settings closes it, or after ten minutes.
  */
 final class HaSetupServer extends SecretLinkServer<HaSetupServer.Sent> {
     private static final String TAG = "HearthHaSetup";
     private static final int MAX_BODY_BYTES = 16 * 1024;
-    /** What a webhook id may hold: it goes into the URL Hearth posts the TV's status to. */
-    private static final java.util.regex.Pattern WEBHOOK_ID = java.util.regex.Pattern.compile("[A-Za-z0-9_-]{1,128}");
 
     /** The server running now: start sets it, stop clears it. Both guarded by HaSetupServer.class. */
     private static HaSetupServer sCurrent;
@@ -63,7 +60,7 @@ final class HaSetupServer extends SecretLinkServer<HaSetupServer.Sent> {
 
     @Override
     String page() {
-        // Only the address is filled in: the webhook id is a secret, and this page isn't sealed on its way out
+        // Only the address is filled in: the token is a secret, and this page isn't sealed on its way out
         return formPage(HaConfig.prefs(mContext).getString(HaConfig.URL_KEY, ""));
     }
 
@@ -75,24 +72,16 @@ final class HaSetupServer extends SecretLinkServer<HaSetupServer.Sent> {
     @Override
     void answer(Sent sent, OutputStream out) throws IOException {
         if (sent == null) {
-            // It opened, but the address, token or webhook id isn't usable: the page says so
+            // It opened, but the address or token isn't usable: the page says so
             MiniHttp.respond(out, 422, "Missing");
             return;
         }
         SharedPreferences.Editor edit = HaConfig.prefs(mContext).edit().putString(HaConfig.URL_KEY, sent.url);
         edit.apply();
-        if (!sent.token.isEmpty()) HaConfig.setToken(mContext, sent.token);
-        // Starts reporting right away when Home Button Fix runs; the reporter lives on the main thread. A new address
-        // or token alone posts the status at once too, where it already goes somewhere
-        if (sent.webhookOk) {
-            new Handler(Looper.getMainLooper())
-                    .post(() -> LauncherAccessibilityService.setHaStatusConfig(mContext, sent.url, sent.webhook));
-        } else {
-            new Handler(Looper.getMainLooper()).post(() -> HaBridgeService.sync(mContext));
-        }
-        // An administrator's token lets Hearth make the TV status automation itself: nobody has to find a webhook id
-        String state = sent.create ? HaProvision.setUp(mContext, ShareDiscovery.deviceName(mContext)).get("state").toString()
-                : "saved";
+        HaConfig.setToken(mContext, sent.token);
+        // The bridge lives on the main thread: a new token reaches what uses it at once
+        new Handler(Looper.getMainLooper()).post(() -> HaBridgeService.sync(mContext));
+        String state = "saved";
         finish();
         synchronized (HaSetupServer.class) {
             sLastReceived = true;
@@ -104,34 +93,23 @@ final class HaSetupServer extends SecretLinkServer<HaSetupServer.Sent> {
     static final class Sent {
         final String url;
         final String token;
-        final String webhook;
-        final boolean webhookOk;
-        /** The phone asked Hearth to make the TV status automation (it needs a token, and no webhook id came). */
-        final boolean create;
 
-        Sent(String url, String token, String webhook, boolean webhookOk, boolean create) {
+        Sent(String url, String token) {
             this.url = url;
             this.token = token;
-            this.webhook = webhook;
-            this.webhookOk = webhookOk;
-            this.create = create;
         }
     }
 
     /**
-     * Reads {"url", "token", "webhook", "create"}: the address, and a token or a webhook id (TV status alone needs no
-     * token); "create" asks Hearth to make the TV status automation with the token, unless a webhook id came too.
-     * Null when there's no address, neither a token nor a webhook id, or a webhook id that isn't one.
+     * Reads {"url", "token"}: the address and a token (anything else an older page sends is ignored). Null when either
+     * is missing.
      */
     static Sent parse(String json) throws JSONException {
         JSONObject fields = new JSONObject(json);
         String url = HaConfig.normalizeUrl(fields.optString("url", ""));
         String token = fields.optString("token", "").replaceAll("\\s", "");
-        String webhook = fields.optString("webhook", "").trim();
-        boolean webhookOk = WEBHOOK_ID.matcher(webhook).matches();
-        if (url == null || (token.isEmpty() && !webhookOk) || (!webhook.isEmpty() && !webhookOk)) return null;
-        boolean create = fields.optBoolean("create", false) && !token.isEmpty() && !webhookOk;
-        return new Sent(url, token, webhook, webhookOk, create);
+        if (url == null || token.isEmpty()) return null;
+        return new Sent(url, token);
     }
 
     private String formPage(String url) {
@@ -142,12 +120,6 @@ final class HaSetupServer extends SecretLinkServer<HaSetupServer.Sent> {
                 + "<textarea id='token' rows='5' placeholder='" + text(R.string.ha_setup_token_hint)
                 + "' autofocus></textarea>"
                 + "<p class='help'>" + text(R.string.ha_setup_token_help) + "</p>"
-                + "<label class='row'><input id='create' type='checkbox' checked> "
-                + text(R.string.ha_setup_create_label) + "</label>"
-                + "<p class='help'>" + text(R.string.ha_setup_create_help) + "</p>"
-                + "<details><summary>" + text(R.string.ha_setup_webhook_label) + "</summary>"
-                + "<input id='webhook' autocapitalize='off'>"
-                + "<p class='help'>" + text(R.string.ha_setup_webhook_help) + "</p></details>"
                 + "<p id='err' class='err'></p>"
                 + "<button type='submit'>" + text(R.string.ha_setup_send) + "</button></form>"
                 + "<div id='done' hidden><p>" + text(R.string.ha_setup_sent_detail) + "</p><p id='more'></p></div>"
@@ -155,14 +127,13 @@ final class HaSetupServer extends SecretLinkServer<HaSetupServer.Sent> {
         String script = "<script>" + raw(R.raw.phone_seal) + "</script><script>"
                 + "var M={missing:'" + js(R.string.ha_setup_missing) + "',failed:'" + js(R.string.ha_setup_failed)
                 + "',old:'" + js(R.string.pin_phone_old_browser) + "',sent:'" + js(R.string.ha_setup_sent_title)
-                + "',done:'" + js(R.string.ha_setup_created) + "',admin:'" + js(R.string.ha_setup_not_admin)
-                + "',nope:'" + js(R.string.ha_setup_create_failed) + "'};"
+                + "'};"
                 + PAGE_SCRIPT + "</script>";
         return page(mContext.getString(R.string.ha_setup_title), form, script);
     }
 
     /**
-     * Seals {"url", "token", "webhook"} with the key in the link's #fragment and posts it to this page's path; the
+     * Seals {"url", "token"} with the key in the link's #fragment and posts it to this page's path; the
      * fragment never leaves the phone. The token is cleared once the TV has it, not before, so a refused send can be
      * fixed and sent again.
      */
@@ -173,17 +144,13 @@ final class HaSetupServer extends SecretLinkServer<HaSetupServer.Sent> {
             + "err.textContent=M.old;}"
             + "f.addEventListener('submit',function(e){e.preventDefault();err.textContent='';"
             + "var body;try{body=HearthSeal.sealText(location.hash.substring(1),location.pathname,JSON.stringify("
-            + "{url:v('url').trim(),token:v('token').replace(/\\s/g,''),webhook:v('webhook').trim(),"
-            + "create:document.getElementById('create').checked}));}"
+            + "{url:v('url').trim(),token:v('token').replace(/\\s/g,'')}));}"
             + "catch(x){err.textContent=M.old;return;}"
             + "fetch(location.pathname,{method:'POST',headers:{'Content-Type':'text/plain'},body:body})"
             + ".then(function(r){if(r.status===422){err.textContent=M.missing;return null;}if(!r.ok)throw r;"
             + "return r.text();}).then(function(t){if(t===null)return;"
             + "document.getElementById('token').value='';f.hidden=true;document.getElementById('done').hidden=false;"
-            + "document.querySelector('h2').textContent=M.sent;"
-            + "if(t==='done')document.getElementById('more').textContent=M.done;"
-            + "else if(t==='not_admin')document.getElementById('more').textContent=M.admin;"
-            + "else if(t==='failed'||t==='not_set_up')document.getElementById('more').textContent=M.nope;})"
+            + "document.querySelector('h2').textContent=M.sent;})"
             + ".catch(function(){err.textContent=M.failed;});});";
 
     /** A string resource for a single-quoted JavaScript string. */

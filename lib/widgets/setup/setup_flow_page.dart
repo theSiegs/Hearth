@@ -33,6 +33,7 @@ import 'package:flauncher/widgets/settings/adb_command_dialog.dart';
 import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/widgets/settings/backup_restore_page.dart';
 import 'package:flauncher/widgets/settings/kids_profiles_page.dart';
+import 'package:flauncher/widgets/settings/ha_pair_page.dart';
 import 'package:flauncher/widgets/settings/ha_phone_setup_dialog.dart';
 import 'package:flauncher/widgets/settings/household_page.dart';
 import 'package:flauncher/widgets/settings/look_settings_page.dart';
@@ -358,7 +359,6 @@ class _SetupFlowPageState extends State<SetupFlowPage> with WidgetsBindingObserv
   bool? _haShareNowPlaying;
 
   /// What the last "create it in Home Assistant" said, when it didn't work.
-  String? _haCreateNote;
 
   /// Shows [screen]. [resumed]: picking up where the flow was left, so a step that's done by now says so (and moves
   /// on) rather than being skipped without a word.

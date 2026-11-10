@@ -84,16 +84,16 @@ your home network, and each part is set up separately in **Settings → Home Ass
   or none.
 - **Remote buttons that run Home Assistant**: a scene, a script, a button or a toggle, on a press or a hold.
 - **Approve from your phone**: a switch into your PIN-locked profile asks your phone first (see below).
-- **A YouTube allowance shared across devices**: Home Assistant can give each kid one daily pool for the TV, tablets
-  and phones, and Hearth TV applies the stricter of its own limit and that one.
+- **Screen time shared across devices**: paired with Hearth's integration, Home Assistant sets each kid's budgets for
+  the TV, tablets and phones together, and its rules win over the TV's own.
 
 **What Home Assistant gains**
 - **The TV as a notification target**, through the standard *Notifications for Android TV / Fire TV* integration.
-- **The TV's status for automations**, posted to a webhook within seconds of a change: screen on or off, the app in
+- **The TV's status for automations**, through Hearth's own integration, within seconds of a change: screen on or off, the app in
   front, playing or paused and what's playing, whose profile is on, whether it's a kids profile, Google TV's
   bedtime or time's-up screen and when it unlocks, and each profile's usage today per app. Dim the lights when a
   film starts, pause it when the doorbell rings, or count a kid's screen time with their other devices.
-- **A say in kids' YouTube time**, through one sensor Hearth TV reads (`sensor.hearth_allowance`).
+- **A say in kids' screen time**, through Hearth's own integration: budgets, bedtime, pauses and asks for more.
 
 ## Optional features that act on your behalf
 
@@ -180,7 +180,7 @@ Details, and every Android permission Hearth TV asks for and why: [docs/privacy.
 ## Documentation
 
 - [User guide](docs/user-guide.md): setup and every feature
-- [Home Assistant](docs/home-assistant.md): notifications, dashboard, status webhook, phone approval
+- [Home Assistant](docs/home-assistant.md): notifications, dashboard, the Hearth integration, phone approval
 - [Privacy](docs/privacy.md): what Hearth TV sends where, and its permissions
 - For contributors: [development](docs/development.md) and the [provider contract](docs/provider-contract.md)
   HearthTube reads

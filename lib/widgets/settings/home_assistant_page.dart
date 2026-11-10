@@ -46,7 +46,6 @@ class HomeAssistantPage extends StatefulWidget {
 class _HomeAssistantPageState extends State<HomeAssistantPage> {
   late final FLauncherChannel _channel = context.read<FLauncherChannel>();
   bool? _notifications;
-  bool? _reporting;
   bool? _paired;
   // HearthTube's now playing for Home Assistant: null when never asked (HearthTube's own default then, on)
   bool? _shareNowPlaying;
@@ -60,7 +59,6 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
   Future<void> _load() async {
     try {
       final enabled = await _channel.getHaNotificationsEnabled();
-      final config = await _channel.getHaStatusConfig();
       final integration = await _channel.getHaIntegration();
       bool? share;
       try {
@@ -71,8 +69,6 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
           _shareNowPlaying = share;
           _notifications = enabled;
           _paired = integration["paired"] == true;
-          _reporting = _paired! ||
-              (config["url"] as String? ?? "").isNotEmpty && (config["webhookId"] as String? ?? "").isNotEmpty;
         });
       }
     } catch (err) { noteFailure('home_assistant_page', err); }
@@ -111,13 +107,6 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
           title: Text(l.haPanelTitle, style: textTheme.bodyMedium),
           trailing: Text(_onOff(l, panel), style: textTheme.bodySmall),
           onPressed: () => _open(HaPanelPage.routeName),
-        ),
-        FocusableSettingsTile(
-          leading: const Icon(Icons.sensors_outlined),
-          title: Text(l.haTvStatusTitle, style: textTheme.bodyMedium),
-          trailing: Text(_reporting == null ? "" : (_reporting! ? l.haSummaryReporting : l.haSummaryOff),
-              style: textTheme.bodySmall),
-          onPressed: () => _open(HaStatusPage.routeName),
         ),
         RoundedSwitchListTile(
           value: _shareNowPlaying ?? true,
@@ -373,163 +362,6 @@ class _HaPanelPageState extends State<HaPanelPage> {
         ),
         if (_panelSaved != null) _note(context, _panelSaved!),
         _note(context, l.haPanelHelp(l.haTvStatusTitle)),
-      ],
-    );
-  }
-}
-
-/// What's on the TV, sent to a Home Assistant webhook as it changes.
-class HaStatusPage extends StatefulWidget {
-  static const String routeName = "home_assistant_status";
-
-  const HaStatusPage({super.key});
-
-  @override
-  State<HaStatusPage> createState() => _HaStatusPageState();
-}
-
-class _HaStatusPageState extends State<HaStatusPage> with WidgetsBindingObserver {
-  late final FLauncherChannel _channel = context.read<FLauncherChannel>();
-  final TextEditingController _url = TextEditingController();
-  final TextEditingController _webhook = TextEditingController();
-  bool _notificationAccess = false;
-  String? _statusSaved;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _load();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _url.dispose();
-    _webhook.dispose();
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _loadAccess();
-  }
-
-  Future<void> _load() async {
-    try {
-      final config = await _channel.getHaStatusConfig();
-      if (mounted) {
-        setState(() {
-          _url.text = config["url"] as String? ?? "";
-          _webhook.text = config["webhookId"] as String? ?? "";
-        });
-      }
-    } catch (err) { noteFailure('home_assistant_page', err); }
-    await _loadAccess();
-  }
-
-  Future<void> _loadAccess() async {
-    try {
-      final access = await _channel.checkNotificationListenerPermission();
-      if (mounted) setState(() => _notificationAccess = access);
-    } catch (err) { noteFailure('home_assistant_page', err); }
-  }
-
-  bool _creating = false;
-
-  /// Has Hearth make TV status in Home Assistant (helpers, automation, a new webhook id) and start reporting.
-  Future<void> _createStatus() async {
-    if (_creating) return;
-    final l = AppLocalizations.of(context)!;
-    setState(() {
-      _creating = true;
-      _statusSaved = l.haStatusCreating;
-    });
-    String message;
-    try {
-      final result = await _channel.setUpHaStatus();
-      switch (result["state"]) {
-        case "done":
-          message = l.haStatusCreated((result["automation"] as String?) ?? "");
-          await _load();
-        case "not_admin":
-          message = l.haStatusNotAdmin;
-        case "not_set_up":
-          message = l.haStatusNotSetUp;
-        default:
-          message = l.haStatusCreateFailed;
-      }
-    } catch (err) {
-      noteFailure('home_assistant_page', err);
-      message = l.haStatusCreateFailed;
-    }
-    if (mounted) {
-      setState(() {
-        _creating = false;
-        _statusSaved = message;
-      });
-    }
-  }
-
-  Future<void> _saveStatus() async {
-    final url = _url.text.trim();
-    final webhook = _webhook.text.trim();
-    await _channel.setHaStatusConfig(url.isEmpty ? null : url, webhook.isEmpty ? null : webhook);
-    if (mounted) {
-      final l = AppLocalizations.of(context)!;
-      setState(() => _statusSaved = url.isEmpty || webhook.isEmpty ? l.haStatusReportingOff : l.haStatusSaved);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    return SettingsPage(
-      title: l.haTvStatusTitle,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            children: [
-              RemoteTextField(
-                controller: _url,
-                keyboardType: TextInputType.url,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(labelText: l.haStatusAddressLabel, hintText: "http://192.168.1.10:8123"),
-              ),
-              RemoteTextField(
-                controller: _webhook,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _saveStatus(),
-                decoration: InputDecoration(labelText: l.haStatusWebhookLabel),
-              ),
-            ],
-          ),
-        ),
-        // Focus starts here, not in a text field, so the keyboard doesn't pop up on the way in
-        FocusableSettingsTile(
-          autofocus: true,
-          leading: const Icon(Icons.auto_fix_high),
-          title: Text(l.haStatusCreate, style: Theme.of(context).textTheme.bodyMedium),
-          onPressed: _createStatus,
-        ),
-        FocusableSettingsTile(
-          leading: const Icon(Icons.save_outlined),
-          title: Text(l.save, style: Theme.of(context).textTheme.bodyMedium),
-          onPressed: _saveStatus,
-        ),
-        if (_statusSaved != null) _note(context, _statusSaved!),
-        FocusableSettingsTile(
-          leading: Icon(Icons.music_note_outlined, color: _notificationAccess ? Colors.green : Colors.orange),
-          title: Text(
-            _notificationAccess ? l.haStatusNowPlayingOn : l.haStatusNowPlayingOff,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          onPressed: () async {
-            await _channel.requestNotificationListenerPermission();
-          },
-        ),
-        _note(context, l.haStatusHelp),
       ],
     );
   }

@@ -3161,7 +3161,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get setupFlowHaStatusBody =>
-      'The TV can send what\'s playing and the active profile to Home Assistant. On the same phone page, add the ID of a webhook automation from Home Assistant.';
+      'Pair the TV with Hearth in Home Assistant: it tells Home Assistant what\'s playing and the active profile, and takes each kid\'s limits from there. Pairing one TV pairs the others in your household too.';
 
   @override
   String get setupFlowHaStatusNoWebhook =>

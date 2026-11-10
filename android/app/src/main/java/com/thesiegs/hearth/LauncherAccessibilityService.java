@@ -404,7 +404,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
             if (mPlayback != null) mPlayback.ensureStarted();
             if (mPlaying != null && mPlaying.ensureStarted()) mPlaying.flush();
             addFrontSoFar();
-            readAllowance();
             holdRunningApp();
             // In case a switch broadcast was missed
             checkProfileUser("periodic check");
@@ -750,19 +749,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
         }
         restartFront();
         // The new profile's allowance, fresh
-        HaAllowance.readSoon();
-        readAllowance();
         return keyChanged;
     }
 
     /** Reads each profile's allowance from Home Assistant when due; HearthTube hears through the provider. */
-    private void readAllowance() {
-        if (!HaAllowance.due()) return;
-        HaApi.EXECUTOR.execute(() -> {
-            if (HaAllowance.read(this)) mHandler.post(() -> ProfileProvider.notifyChanged(this));
-        });
-    }
-
     // --- YouTube in a kids profile ---
 
     /** YouTube's own TV app. */
@@ -2129,15 +2119,6 @@ public class LauncherAccessibilityService extends AccessibilityService {
     }
 
     // --- Home Assistant notifications ("Notifications for Android TV / Fire TV" protocol, port 7676) ---
-
-    /** Status reporting to a Home Assistant webhook; empty values turn it off. */
-    static void setHaStatusConfig(Context context, String baseUrl, String webhookId) {
-        context.getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).edit()
-                .putString(HaConfig.URL_KEY, baseUrl)
-                .putString(HaConfig.WEBHOOK_KEY, webhookId)
-                .apply();
-        HaBridgeService.sync(context);
-    }
 
     static boolean isHaNotificationsEnabled(Context context) {
         return context.getSharedPreferences(DEVICE_PREFS, MODE_PRIVATE).getBoolean(HA_ENABLED_KEY, false);

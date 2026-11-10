@@ -466,11 +466,6 @@ class FLauncherChannel {
   Future<List<Map<dynamic, dynamic>>> getProfilePairingApps() async =>
       await _methodChannel.invokeListMethod<Map<dynamic, dynamic>>("getProfilePairingApps") ?? [];
 
-  /// Makes TV status in Home Assistant for this TV with its own token (helpers, an automation, a new webhook id) and
-  /// turns reporting on: {state: done | not_admin | not_set_up | failed, helpers?, webhook?, automation?}.
-  Future<Map<dynamic, dynamic>> setUpHaStatus() async =>
-      (await _methodChannel.invokeMapMethod<dynamic, dynamic>("setUpHaStatus")) ?? {"state": "failed"};
-
   /// Where this TV stands in its household: {joined, lost, removed, enabled, tvId, peers: [{tvId}], lastSyncAt,
   /// lastResult, members: [{tvId, name, self, online, lastSeen}], nearby: [[name, …], …],
   /// join: {state, code, via}}. `members` is the household's TVs (this one first); `removed` says another TV removed
@@ -825,12 +820,6 @@ class FLauncherChannel {
 
   /// True once a phone has sent the address and token through the setup page.
   Future<bool> getHaSetupReceived() async => await _methodChannel.invokeMethod<bool>("getHaSetupReceived") ?? false;
-
-  Future<Map<dynamic, dynamic>> getHaStatusConfig() async =>
-      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getHaStatusConfig") ?? {};
-
-  Future<void> setHaStatusConfig(String? url, String? webhookId) async =>
-      await _methodChannel.invokeMethod("setHaStatusConfig", {"url": url, "webhookId": webhookId});
 
   /// The Hearth integration for Home Assistant: {paired: bool, url: the address or null}.
   Future<Map<dynamic, dynamic>> getHaIntegration() async =>

@@ -285,11 +285,6 @@ public class MainActivity extends FlutterActivity {
                         call.arguments());
                 result.success(null);
             }
-            // Makes TV status in Home Assistant for this TV (helpers, automation, webhook id) with the TV's own token
-            case "setUpHaStatus" -> {
-                String tvName = ShareDiscovery.deviceName(this);
-                answerFrom(sIoExecutor, result, () -> HaProvision.setUp(this, tvName));
-            }
             case "getHaNotifyServices" -> answerFrom(sIoExecutor, result, () -> PhoneApproval.notifyServices(this));
             case "testPhoneApproval" -> {
                 String key = LauncherAccessibilityService.getActiveProfileKey(this);
@@ -580,7 +575,6 @@ public class MainActivity extends FlutterActivity {
                 startActivity(new Intent(this, HaPanelActivity.class));
                 result.success(null);
             }
-            case "getHaStatusConfig" -> result.success(getHaStatusConfig());
             // The Hearth integration for Home Assistant: pairing this TV (see HaIntegration)
             case "getHaIntegration" -> answerFrom(sIoExecutor, result, () -> {
                 Map<String, Object> state = new HashMap<>();
@@ -645,10 +639,6 @@ public class MainActivity extends FlutterActivity {
                 HaIntegration.unpair(this);
                 return null;
             });
-            case "setHaStatusConfig" -> {
-                LauncherAccessibilityService.setHaStatusConfig(this, call.argument("url"), call.argument("webhookId"));
-                result.success(null);
-            }
             case "getButtonMappings" -> result.success(ButtonMapper.getJson(this));
             case "setButtonMappings" -> setButtonMappings(call.arguments(), result);
             case "captureButton" -> captureButton(result);
@@ -922,14 +912,6 @@ public class MainActivity extends FlutterActivity {
         Map<String, Object> config = new HashMap<>();
         config.put("hasToken", HaPanelActivity.hasToken(this));
         config.put("dashboard", HaPanelActivity.getDashboard(this));
-        return config;
-    }
-
-    private Map<String, Object> getHaStatusConfig() {
-        SharedPreferences prefs = getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS, MODE_PRIVATE);
-        Map<String, Object> config = new HashMap<>();
-        config.put("url", prefs.getString(HaConfig.URL_KEY, null));
-        config.put("webhookId", prefs.getString(HaConfig.WEBHOOK_KEY, null));
         return config;
     }
 

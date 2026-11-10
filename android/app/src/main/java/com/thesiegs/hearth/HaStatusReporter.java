@@ -35,7 +35,7 @@ import java.util.Objects;
  * needs notification access), Google TV profile, kids profile, screen time lock, screen on/off, usage today and each
  * app's Android category. Sent on change (debounced) and as a heartbeat. Paired with the Hearth integration
  * ({@link HaIntegration}), it goes there with the TV's secret, and the answer is each profile's limits (kept as the
- * allowance HearthTube enforces); otherwise to a webhook, which needs no credentials for the TV.
+ * allowance HearthTube enforces). Without a pairing it sends nothing (the older webhook way is retired).
  */
 final class HaStatusReporter {
     // HaConfig's keys, under the names the activity and the accessibility service use
@@ -44,7 +44,7 @@ final class HaStatusReporter {
     private static final long HEARTBEAT_MS = 10 * 60_000;
     /**
      * Today's usage keeps growing while something is in front or playing: then a post this often (only when the counts
-     * changed). Every post runs Home Assistant's webhook automation (a logbook line, a trace), so not every minute;
+     * changed). Every post recomputes the household's limits in Home Assistant, so not every minute;
      * what matters at once (another app, play or pause, the profile, the screen, screen time) is posted as it happens.
      */
     private static final long USAGE_TICK_MS = 2 * 60_000;
@@ -148,20 +148,13 @@ final class HaStatusReporter {
     }
 
     static boolean isConfigured(Context context) {
-        return HaIntegration.isPaired(context) || webhookUrl(context) != null;
-    }
-
-    static String webhookUrl(Context context) {
-        String base = HaConfig.baseUrl(context);
-        String id = HaConfig.prefs(context).getString(HaConfig.WEBHOOK_KEY, null);
-        if (base == null || id == null || id.trim().isEmpty()) return null;
-        return base + "/api/webhook/" + id.trim();
+        return HaIntegration.isPaired(context);
     }
 
     void start() {
         stop();
         if (!isConfigured(mContext)) {
-            Log.i(TAG, "Status reporting off (no Home Assistant address/webhook)");
+            Log.i(TAG, "Status reporting off (not paired with the Hearth integration)");
             return;
         }
         Log.i(TAG, "Status reporting to Home Assistant started");
@@ -344,9 +337,7 @@ final class HaStatusReporter {
 
     /** Sends the status unless it's the same as the last one sent; a forced send goes out anyway. */
     private void send(boolean force) {
-        boolean paired = HaIntegration.isPaired(mContext);
-        String url = paired ? null : webhookUrl(mContext);
-        if (!paired && url == null) return;
+        if (!HaIntegration.isPaired(mContext)) return;
         Snapshot snapshot = new Snapshot(this, primaryController());
         // Labels, the profile and the allowed apps take PackageManager and UserManager calls: off the main thread
         sender().execute(() -> {
@@ -359,11 +350,7 @@ final class HaStatusReporter {
             }
             if (!force && body.equals(mLastSent)) return;
             mLastSent = body;
-            if (paired) {
-                postToIntegration(body);
-            } else {
-                post(url, body);
-            }
+            postToIntegration(body);
         });
     }
 
@@ -594,35 +581,4 @@ final class HaStatusReporter {
         if (answer.code == 401) mHandler.post(() -> HaBridgeService.sync(mContext));
     }
 
-    private void post(String url, String body) {
-        HttpURLConnection connection = null;
-        try {
-            URL target = new URL(url);
-            if (!LocalNet.allows(target)) {
-                Log.w(TAG, "Refusing plain HTTP to a non-local address; use https");
-                return;
-            }
-            connection = (HttpURLConnection) target.openConnection();
-            connection.setConnectTimeout(5_000);
-            connection.setReadTimeout(5_000);
-            connection.setRequestMethod("POST");
-            connection.setDoOutput(true);
-            connection.setRequestProperty("Content-Type", "application/json");
-            try (OutputStream out = connection.getOutputStream()) {
-                out.write(body.getBytes(StandardCharsets.UTF_8));
-            }
-            int code = connection.getResponseCode();
-            Log.d(TAG, "Status sent, Home Assistant answered " + code);
-            if (code >= 300) {
-                Log.w(TAG, "Home Assistant webhook returned " + code);
-                mLastSent = null;
-            }
-        } catch (Exception e) {
-            Log.w(TAG, "Couldn't reach Home Assistant: " + e.getMessage());
-            // Retry with the next change or heartbeat
-            mLastSent = null;
-        } finally {
-            if (connection != null) connection.disconnect();
-        }
-    }
 }

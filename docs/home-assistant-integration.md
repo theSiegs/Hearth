@@ -25,9 +25,9 @@ without hand-made helpers, tokens or YAML:
 - **People, not devices.** Screen time, allowances and approvals belong to a household person (Home Assistant's
   `person`), whichever device or service the minutes came from.
 
-**Hearth keeps working without it.** Everything Hearth does with Home Assistant today (webhook status, the panel's
-token, `rest_command` pop-ups, `sensor.hearth_allowance`) stays available. The integration is the easy path, not a
-requirement.
+**Hearth keeps working without it.** Hearth TV has its own screen-time rules, and the panel's token and pop-ups work
+without the integration. TV status and Home Assistant's say in screen time go through the integration only: the older
+webhook status and `sensor.hearth_allowance` are retired.
 
 ## What it replaces
 
@@ -84,7 +84,7 @@ A TV unpaired on purpose (on the TV, or deleted in Home Assistant) isn't paired 
 notification and fires `hearth_device_paired` for each one (see [Tickets](#the-devices-side-of-the-api)). The same
 tickets give a parent's phone its own pairing in one tap (TV remote API, Version 2, V2.10b).
 
-The legacy **Set up from your phone** page stays for the webhook-and-token path.
+**Set up from your phone** stays for the panel's token; the webhook part of it is retired.
 
 ## Data in
 
@@ -1459,7 +1459,8 @@ device removes it from the household.
    | `sensor.hearth_allowance` | the state document in each status answer |
 
    Each moves when an adult chooses, checked side by side in history for a few days first.
-4. After a release or two of both, the webhook path is documented as legacy.
+4. The webhook path and `sensor.hearth_allowance` are retired: Hearth TV no longer posts to a webhook or reads the
+   sensor, and a webhook id an older version kept is forgotten. Pair the TV instead.
 
 ### Replacing hand-written automations
 

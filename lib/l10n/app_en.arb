@@ -3842,7 +3842,7 @@
     "@setupFlowHaStatusTitle": {
         "description": "Setup flow: Home Assistant TV status step's title"
     },
-    "setupFlowHaStatusBody": "The TV can send what's playing and the active profile to Home Assistant. On the same phone page, add the ID of a webhook automation from Home Assistant.",
+    "setupFlowHaStatusBody": "Pair the TV with Hearth in Home Assistant: it tells Home Assistant what's playing and the active profile, and takes each kid's limits from there. Pairing one TV pairs the others in your household too.",
     "@setupFlowHaStatusBody": {
         "description": "Setup flow: Home Assistant TV status step"
     },

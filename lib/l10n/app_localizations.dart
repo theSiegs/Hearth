@@ -5274,7 +5274,7 @@ abstract class AppLocalizations {
   /// Setup flow: Home Assistant TV status step
   ///
   /// In en, this message translates to:
-  /// **'The TV can send what\'s playing and the active profile to Home Assistant. On the same phone page, add the ID of a webhook automation from Home Assistant.'**
+  /// **'Pair the TV with Hearth in Home Assistant: it tells Home Assistant what\'s playing and the active profile, and takes each kid\'s limits from there. Pairing one TV pairs the others in your household too.'**
   String get setupFlowHaStatusBody;
 
   /// Setup flow: Home Assistant TV status step, when the phone sent no webhook ID

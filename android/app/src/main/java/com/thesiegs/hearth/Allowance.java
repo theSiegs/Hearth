@@ -14,8 +14,7 @@ import java.util.Date;
  * A profile's YouTube allowance for HearthTube to enforce. Hearth works it out on its own: a daily limit set for the
  * profile in Hearth's Settings, less what HearthTube has played for it today (HearthTube reports that itself).
  * Home Assistant is optional. Without it, Hearth's own rules for the kid (LocalAllowance) say what Home Assistant would.
- * Paired with the Hearth integration, Home Assistant's say wins outright and Hearth's own limit stands aside; with only
- * the older entity, the stricter of the two counts.
+ * Paired with the Hearth integration, Home Assistant's say wins outright and Hearth's own limit stands aside.
  *
  * Paired with the Hearth integration, a kids profile's other groups are held too: an app whose group's time is up
  * today doesn't open from Hearth, and comes back to Hearth's home when it opens another way ({@link #timeUpGroup}).

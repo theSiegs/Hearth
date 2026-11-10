@@ -37,9 +37,9 @@ final class LocalAllowance {
     private LocalAllowance() {
     }
 
-    /** Home Assistant has the say on this TV (set up, paired or the older entity): Hearth's own rules aren't used. */
+    /** Home Assistant has the say on this TV (paired with the Hearth integration): Hearth's own rules aren't used. */
     static boolean homeAssistantDecides(Context context) {
-        return HaIntegration.isPaired(context) || HaConfig.isConfigured(context);
+        return HaIntegration.isPaired(context);
     }
 
     /** The rules set on this TV for the profile (null: none, no limits). */

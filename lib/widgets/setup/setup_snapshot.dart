@@ -231,12 +231,11 @@ class SetupSnapshot {
 
   static Future<({bool alerts, bool panel, bool status})> _loadHomeAssistant(FLauncherChannel channel) async {
     final panel = await _safe(channel.getHaPanelConfig, <dynamic, dynamic>{});
-    final status = await _safe(channel.getHaStatusConfig, <dynamic, dynamic>{});
-    final webhook = status["webhookId"] as String?;
+    final integration = await _safe(channel.getHaIntegration, <dynamic, dynamic>{});
     return (
       alerts: await _safe(channel.getHaNotificationsEnabled, false),
       panel: panel["hasToken"] == true,
-      status: webhook != null && webhook.trim().isNotEmpty,
+      status: integration["paired"] == true,
     );
   }
 

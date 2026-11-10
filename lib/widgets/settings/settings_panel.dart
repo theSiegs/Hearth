@@ -222,8 +222,6 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     return _FastPageRoute(builder: (_) => const HaNotificationsPage());
                   case HaPanelPage.routeName:
                     return _FastPageRoute(builder: (_) => const HaPanelPage());
-                  case HaStatusPage.routeName:
-                    return _FastPageRoute(builder: (_) => const HaStatusPage());
                   case HaPairPage.routeName:
                     return _FastPageRoute(builder: (_) => const HaPairPage());
                   case CalendarsPage.routeName:
