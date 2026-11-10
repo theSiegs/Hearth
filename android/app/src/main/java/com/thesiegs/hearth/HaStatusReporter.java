@@ -428,6 +428,13 @@ final class HaStatusReporter {
         status.put("usage_today", usage);
         status.put("allowed_apps", kids ? allowedApps(mContext, pm) : JSONObject.NULL);
         status.put("app_categories", categories(pm, usage, s.foregroundPackage));
+        // Hearth's own rules for the kids profiles, from before this TV was paired: Home Assistant takes them as each
+        // kid's first budgets, once (the integration's Household.import_local_rules)
+        JSONObject localRules = new JSONObject();
+        for (java.util.Map.Entry<String, JSONObject> rules : LocalAllowance.all(mContext).entrySet()) {
+            localRules.put(rules.getKey(), rules.getValue());
+        }
+        if (localRules.length() > 0) status.put("local_rules", localRules);
 
         String state = "idle";
         if (s.playback != null) {

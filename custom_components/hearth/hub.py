@@ -247,6 +247,9 @@ class HearthHub:
             self.commands.take_done(device_id, status["commands_done"])
         self._store.async_delay_save(self._data_to_save, 30)
         async_dispatcher_send(self.hass, SIGNAL_STATUS.format(device_id))
+        # A TV paired after it had rules of its own: they're the kids' first budgets
+        if status.get("local_rules") and self.kind(device_id) == KIND_TV:
+            self.household.import_local_rules(device_id, status["local_rules"])
         self.household.recompute()
 
     @callback

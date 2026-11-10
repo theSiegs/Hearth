@@ -158,7 +158,50 @@ def clean_status(raw: Any) -> dict[str, Any] | None:
     status["catalog_categories"] = _categories(raw.get("catalog_categories"))
     # The one-shot commands (commands.py) the TV ran, or couldn't, since its last post
     status["commands_done"] = _commands_done(raw.get("commands_done"))
+    # A TV's own screen-time rules for its kids profiles, from before it was paired: Hearth takes them as a kid's
+    # first budgets (Household.import_local_rules)
+    status["local_rules"] = local_rules(raw.get("local_rules"))
     return status
+
+
+MAX_RULES_PROFILES = 20
+MAX_RULES_GROUPS = 20
+_GROUP_ID = re.compile(r"^[a-z0-9_]{1,32}$")
+
+
+def _minutes_pair(value: Any) -> dict[str, int]:
+    """{"weekday": minutes, "weekend": minutes}, each left out when there is no limit."""
+    if not isinstance(value, dict):
+        return {}
+    out: dict[str, int] = {}
+    for kind in ("weekday", "weekend"):
+        minutes = number(value.get(kind), 0, 24 * 60)
+        if minutes is not None:
+            out[kind] = int(minutes)
+    return out
+
+
+def local_rules(value: Any) -> dict[str, dict[str, dict[str, int]]] | None:
+    """{profile_id: {group id: {"weekday": minutes, "weekend": minutes}}} from a TV's own rules
+    ({profile_id: {"all": {weekday, weekend}, "groups": [{id, weekday, weekend}]}}); None when it sent none."""
+    if not isinstance(value, dict):
+        return None
+    out: dict[str, dict[str, dict[str, int]]] = {}
+    for profile_id, rules in list(value.items())[:MAX_RULES_PROFILES]:
+        if not isinstance(profile_id, str) or not is_local_key(text(profile_id, 128)) or not isinstance(rules, dict):
+            continue
+        groups: dict[str, dict[str, int]] = {}
+        if minutes := _minutes_pair(rules.get("all")):
+            groups["all"] = minutes
+        listed = rules.get("groups")
+        for group in listed[:MAX_RULES_GROUPS] if isinstance(listed, list) else []:
+            if not isinstance(group, dict) or not isinstance(group.get("id"), str) or not _GROUP_ID.match(group["id"]):
+                continue
+            if minutes := _minutes_pair(group):
+                groups.setdefault(group["id"], minutes)
+        if groups:
+            out[profile_id] = groups
+    return out
 
 
 # What a TV says it did with a command; anything else it says counts as "failed"

@@ -1363,7 +1363,11 @@ wrong secret (it was removed: stop posting and offer to pair again); 429 `too_of
 `bad_request`. A refused secret is a plain 401, never a failed Home Assistant login, so it doesn't count toward Home
 Assistant's IP ban. The 200 answer carries the device's state document, `{"ok": true, "contract": 1, "state": {...}}` (see
 [What a device gets](#what-a-device-gets)). Every device endpoint answers 503 `not_set_up` while the integration is
-loading: try again, don't unpair. A device may also send `app_categories`, `{"<package>": "game" | "video" | ...}`
+loading: try again, don't unpair. A TV with screen-time rules of its own (set before it was paired, household-sync.md "Screen time without Home
+Assistant") sends them as `local_rules`, `{"<profile_id>": {"all": {"weekday", "weekend"}, "groups": [{"id",
+"weekday", "weekend"}]}}`: once a profile is mapped to a kid who has no budgets yet, they become that kid's budgets
+(only the groups Home Assistant has; bedtime isn't taken), with a notification. Each TV profile is taken or passed
+over once, so a budget cleared later doesn't come back. A device may also send `app_categories`, `{"<package>": "game" | "video" | ...}`
 (Android's category, lower case), which helps sort its apps into Video, Games, Social or Messaging. A TV's
 document also carries `commands` (one-shot commands such as a play, see [Play on a TV](#play-on-a-tv)), and the TV
 says which it ran in `commands_done`. A phone's answer also says `push` (its ntfy channel, or null; see [Away from

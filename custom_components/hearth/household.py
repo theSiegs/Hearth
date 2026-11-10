@@ -15,6 +15,7 @@ import hashlib
 import json
 from typing import TYPE_CHECKING, Any
 
+from homeassistant.components import persistent_notification
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
@@ -1362,6 +1363,34 @@ class Household:
     def set_budget(self, person: str, group: str, kind: str, minutes: int | None) -> None:
         self.limits.set_budget(person, group, kind, minutes)
         self.recompute()
+
+    @callback
+    def import_local_rules(self, device_id: str, rules: dict[str, dict[str, dict[str, int]]] | None) -> list[str]:
+        """A TV's own rules from before it was paired (status "local_rules"): each kids profile's, once mapped to a
+        kid, become that kid's budgets when the kid has none yet. Once per TV and profile; bedtime isn't taken (Home
+        Assistant's are lock entities). Returns the people whose budgets were set."""
+        taken: list[str] = []
+        groups = {group.id for group in self.groups}
+        roles = self.options.get(CONF_ROLES, {})
+        for profile_id, budgets in (rules or {}).items():
+            person = self.profile_person(device_id, profile_id)
+            if person is None or roles.get(person) == "adult":
+                continue
+            if self.limits.take_rules(f"{device_id}:{profile_id}", person, budgets, groups):
+                taken.append(person)
+        if taken:
+            self.recompute()
+            names = ", ".join(
+                (state.name if (state := self.hass.states.get(p)) else p) for p in taken
+            )
+            persistent_notification.async_create(
+                self.hass,
+                f"Hearth took the screen time set on a TV as the first daily limits for {names}. Change them on "
+                "Hearth's page. Bedtime set on the TV isn't taken: set it under Locks.",
+                title="Screen time from the TV",
+                notification_id=f"hearth_rules_{device_id}",
+            )
+        return taken
 
 
 def person_identifier(person: str) -> tuple[str, str]:
