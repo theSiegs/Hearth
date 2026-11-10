@@ -213,6 +213,7 @@ final class HouseholdLog {
             long age = nowMs - (entry.clock >> COUNTER_BITS);
             boolean expired = HouseholdBridge.WATCH.equals(entry.kind) && age > WatchHistory.MAX_AGE_MS
                     || HouseholdBridge.USAGE.equals(entry.kind) && age > USAGE_MAX_AGE_MS
+                    || HouseholdHa.TICKET.equals(entry.kind) && age > 2 * HouseholdHa.TICKET_MS
                     || HouseholdNotices.expired(entry, nowMs);
             if (expired || entry.deleted && !isFinal(entry) && age > TOMBSTONE_MS) {
                 it.remove();

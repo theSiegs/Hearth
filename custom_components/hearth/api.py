@@ -25,7 +25,18 @@ from homeassistant.util import dt as dt_util
 from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.util.network import is_local
 
-from .const import CONF_PUSH_SERVER, CONF_ROLES, CONTRACT, DOMAIN, KIND_MOBILE, KIND_TV, KINDS, MAX_STATUS_BYTES, PAIRING_EXPIRES
+from .const import (
+    CONF_PUSH_SERVER,
+    CONF_ROLES,
+    CONTRACT,
+    DOMAIN,
+    KIND_MOBILE,
+    KIND_TV,
+    KINDS,
+    MAX_STATUS_BYTES,
+    PAIRING_EXPIRES,
+    TICKET_EXPIRES,
+)
 from .hub import HearthHub, collect_secret, find_pairing, pin_lockout
 from .wait import WAIT_MAX
 from .push import clean_server, push_answer
@@ -159,24 +170,105 @@ class PairStatusView(HomeAssistantView):
         secret = collect_secret(hass, pairing)
         if secret is None:
             return web.json_response({"status": "pending"})
-        # Whose phone it is, and whether they're a kid or an adult (as set on Hearth's page; null when not set). The
-        # entry's options are read even while it reloads (approving the device reloads it)
-        entries = hass.config_entries.async_entries(DOMAIN)
-        options = entries[0].options if entries else {}
-        roles = options.get(CONF_ROLES, {})
-        return web.json_response(
-            {
-                "status": "approved",
-                "contract": CONTRACT,
-                "device_id": pairing.device_id,
-                "secret": secret,
-                "urls": _urls(hass),
-                "person": pairing.person,
-                "role": roles.get(pairing.person) if pairing.person else None,
-                # A phone's push channel: where to listen for "changed" (push.py); null without a push server
-                "push": push_answer(_server(options), pairing.push_topic) if pairing.kind == KIND_MOBILE else None,
-            }
+        return web.json_response(_approved(hass, pairing, secret))
+
+
+def _approved(hass: HomeAssistant, pairing, secret: str) -> dict[str, Any]:
+    """What an approved device is told, once: its secret, whose it is, and where Home Assistant answers."""
+    # Whose phone it is, and whether they're a kid or an adult (as set on Hearth's page; null when not set). The
+    # entry's options are read even while it reloads (approving the device reloads it)
+    entries = hass.config_entries.async_entries(DOMAIN)
+    options = entries[0].options if entries else {}
+    roles = options.get(CONF_ROLES, {})
+    return {
+        "status": "approved",
+        "contract": CONTRACT,
+        "device_id": pairing.device_id,
+        "secret": secret,
+        "urls": _urls(hass),
+        "person": pairing.person,
+        "role": roles.get(pairing.person) if pairing.person else None,
+        # A phone's push channel: where to listen for "changed" (push.py); null without a push server
+        "push": push_answer(_server(options), pairing.push_topic) if pairing.kind == KIND_MOBILE else None,
+    }
+
+
+class TicketView(HomeAssistantView):
+    """POST /api/hearth/device/{device_id}/ticket (header X-Hearth-Secret, a paired TV): {"kind": "tv"} for another
+    TV of its household, or {"kind": "mobile", "person": "person.x"} for a phone an adult bound as that adult's ->
+    {"ticket", "expires_in"}. The ticket pairs one device at once through /api/hearth/pair/redeem, with no code to
+    check: the paired TV vouches for it. Single use, five minutes."""
+
+    url = "/api/hearth/device/{device_id}/ticket"
+    name = "api:hearth:device:ticket"
+    requires_auth = False
+
+    async def post(self, request: web.Request, device_id: str) -> web.Response:
+        hass: HomeAssistant = request.app["hass"]
+        if not _local(request):
+            return _error(HTTPStatus.FORBIDDEN, "not_local")
+        hub = _hub(hass)
+        if hub is None:
+            return _error(HTTPStatus.SERVICE_UNAVAILABLE, "not_set_up")
+        if not hub.authorized(device_id, request.headers.get(HEADER_SECRET)):
+            return _error(HTTPStatus.UNAUTHORIZED, "not_paired")
+        if hub.kind(device_id) != KIND_TV:
+            return _error(HTTPStatus.FORBIDDEN, "not_a_tv")
+        body = await _json_body(request)
+        if not isinstance(body, dict) or body.get("kind") not in KINDS:
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        kind, person = body["kind"], body.get("person")
+        if kind == KIND_MOBILE:
+            # Only for an adult on Hearth's page: a ticket never makes a kid's phone, or an unknown person's
+            if not isinstance(person, str) or hub.entry.options.get(CONF_ROLES, {}).get(person) != "adult":
+                return _error(HTTPStatus.FORBIDDEN, "not_an_adult")
+        if hub.too_often(device_id):
+            return _error(HTTPStatus.TOO_MANY_REQUESTS, "too_often")
+        ticket = hub.mint_ticket(device_id, kind, person)
+        if ticket is None:
+            return _error(HTTPStatus.TOO_MANY_REQUESTS, "try_later")
+        return web.json_response({"ticket": ticket, "expires_in": int(TICKET_EXPIRES.total_seconds())})
+
+
+class RedeemView(HomeAssistantView):
+    """POST /api/hearth/pair/redeem {ticket, device_id, kind, name, model, version} -> the approved answer of a
+    pairing (as GET /api/hearth/pair/<id> gives it), at once. 404 "unknown" for a ticket that's unknown, used, expired
+    or for another kind; it's spent either way."""
+
+    url = "/api/hearth/pair/redeem"
+    name = "api:hearth:pair:redeem"
+    requires_auth = False
+
+    async def post(self, request: web.Request) -> web.Response:
+        hass: HomeAssistant = request.app["hass"]
+        if not _local(request):
+            return _error(HTTPStatus.FORBIDDEN, "not_local")
+        hub = _hub(hass)
+        if hub is None:
+            return _error(HTTPStatus.SERVICE_UNAVAILABLE, "not_set_up")
+        body = await _json_body(request)
+        if not isinstance(body, dict):
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        ticket, device_id = body.get("ticket"), body.get("device_id")
+        kind = body.get("kind", KIND_TV)
+        if (
+            not isinstance(ticket, str)
+            or not 16 <= len(ticket) <= 128
+            or not isinstance(device_id, str)
+            or not _ID.match(device_id)
+            or kind not in KINDS
+        ):
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        name = text(body.get("name"), 64) or ("TV" if kind == KIND_TV else "Phone")
+        pairing = await hub.async_redeem(
+            ticket, device_id, kind, name, text(body.get("model"), 64), text(body.get("version"), 32)
         )
+        if pairing is None:
+            return _error(HTTPStatus.NOT_FOUND, "unknown")
+        secret = collect_secret(hass, pairing)
+        if secret is None:
+            return _error(HTTPStatus.NOT_FOUND, "unknown")
+        return web.json_response(_approved(hass, pairing, secret))
 
 
 def _server(options) -> str | None:
@@ -402,5 +494,15 @@ class WaitView(HomeAssistantView):
 
 
 def async_register_views(hass: HomeAssistant) -> None:
-    for view in (PairStartView, PairStatusView, StatusView, EventsView, VerifyPinView, AskView, WaitView):
+    for view in (
+        PairStartView,
+        PairStatusView,
+        RedeemView,
+        StatusView,
+        EventsView,
+        VerifyPinView,
+        AskView,
+        WaitView,
+        TicketView,
+    ):
         hass.http.register_view(view())

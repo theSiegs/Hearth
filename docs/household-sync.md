@@ -40,6 +40,7 @@ replaces both Copy profiles between TVs and Household sync.
 | Home layout | profile | the dock, rows, app order, hidden apps, per-profile panel choices |
 | Continue Watching | profile | Hearth TV's own watch history (see below) |
 | Parent PIN | household | including every change to it; see Parent PIN |
+| Home Assistant pairing | TV | whether each TV is paired, and single-use tickets that pair the others; see below |
 | Screen time rules | kid | a kid's own limits and bedtime, without Home Assistant; see below |
 | Screen time minutes | kid, TV and day | what the kid used on each TV today, summed on every TV; see below |
 | Notifications | person, or every adult | Home Assistant's, and a TV asking to join; see [Notifications](#notifications) |
@@ -177,6 +178,14 @@ service does, Hearth TV's screen open or not:
   goes when no live entry names it any more, after each exchange. A kid's poster whose address is in the kid's own user
   (content://) can't be read from the owner's, so only one with a web address goes along.
 - Entries older than WatchHistory's 90 days leave every TV's log.
+
+**Home Assistant once.** Each TV writes an `ha_state` entry for itself (item its TV id): `paired`, or `left` when it
+was unpaired on purpose (on the TV, or deleted in Home Assistant); none when it was never paired. A paired TV, each
+round and after each exchange, asks Home Assistant for a single-use ticket for every TV of the household on the
+network now that has no state entry and no ticket from the last five minutes, and writes it as an `ha_ticket` entry
+(item that TV's id, value `{"url", "ticket"}`). That TV redeems it (`/api/hearth/pair/redeem`), keeps its own secret,
+and deletes the entry; a refused ticket is deleted too, and a paired TV makes another. Tickets leave the log after ten
+minutes (HouseholdHa).
 
 **Screen time without Home Assistant.** A kid's own rules (Settings > Family > Kids profiles > the kid > Screen time:
 minutes a day for All screen time, Games and YouTube, weekdays and weekends, and a bedtime) are one `rules` entry per

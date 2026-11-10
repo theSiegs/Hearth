@@ -77,6 +77,13 @@ No token, no webhook ID typed.
 4. The device gets its own secret, once. That is the only thing of Home Assistant's it keeps. Pairing again gives a
    new secret and ends the old one; deleting the device in Home Assistant ends it at once.
 
+**Once for the household.** A TV of a Hearth household that is paired gets a single-use ticket from Home Assistant for
+each TV of its household on the network that isn't paired, and leaves it for that TV in household sync, which pairs
+with it at once: no code, no administrator. So pairing one TV pairs them all, and a TV that joins later is paired too.
+A TV unpaired on purpose (on the TV, or deleted in Home Assistant) isn't paired again this way. Home Assistant shows a
+notification and fires `hearth_device_paired` for each one (see [Tickets](#the-devices-side-of-the-api)). The same
+tickets give a parent's phone its own pairing in one tap (TV remote API, Version 2, V2.10b).
+
 The legacy **Set up from your phone** page stays for the webhook-and-token path.
 
 ## Data in
@@ -1339,6 +1346,17 @@ What step 1 built. Every endpoint answers local network addresses only (403 othe
    [Away from home](#away-from-home)).
 4. The device keeps `secret`, and nothing else of Home Assistant's.
 
+**Tickets** (a paired TV only). `POST /api/hearth/device/<device_id>/ticket` with header `X-Hearth-Secret` and
+`{"kind": "tv"}` (for another TV of its household) or `{"kind": "mobile", "person": "person.alex"}` (for a phone an
+adult bound as that adult's; `person` must be an adult on Hearth's page, else 403 `not_an_adult`) answers
+`{"ticket", "expires_in": 300}`. 403 `not_a_tv` from a phone; 429 `too_often` past the status rate, or `try_later` with
+ten tickets outstanding. A ticket is single use and lives five minutes; Home Assistant keeps only its hash.
+`POST /api/hearth/pair/redeem` with `{"ticket", "device_id", "kind", "name", "model", "version"}` pairs that device at
+once and answers as an approved pairing does (step 3 above, `person` the ticket's). 404 `unknown` for a ticket that's
+unknown, used, expired, of another kind, or whose TV was removed since; it's spent either way. Each redeemed ticket
+fires `hearth_device_paired` (`device_id`, `name`, `kind`, `person`, `by`: the TV that vouched) and leaves a
+notification.
+
 **Status.** `POST /api/hearth/device/<device_id>/status` with header `X-Hearth-Secret: <secret>` and the status JSON
 (see [Device status](#device-status)), at most 64 KB. 200 (below); 401 `not_paired` for an unknown device or
 wrong secret (it was removed: stop posting and offer to pair again); 429 `too_often` past 20 posts a minute; 400
@@ -1407,7 +1425,10 @@ device removes it from the household.
 - Everything a device sends is untrusted: only known fields, lengths capped, control characters stripped, numbers
   bounded, never templated.
 - Kids' devices hold no Home Assistant token.
-- Pairing is the one step that needs an administrator.
+- Pairing is the one step that needs an administrator, once: after that, a paired TV can vouch for other devices with
+  tickets. A leaked TV secret could therefore pair another TV, or a phone for an adult on Hearth's page; each such
+  pairing leaves a notification and fires `hearth_device_paired`, and deleting the device ends it. Tickets travel only
+  inside the sealed household sync (TV to TV) or the paired, encrypted TV remote session.
 - **Who may call Hearth's services.** Every `hearth.*` service checks its caller: a call with no user (an automation,
   or a script an automation started) may; so may an administrator, and a user whose person is an adult on Hearth's
   page (the rule that lets them read the household summary, auth.py). Anyone else (a kid with a Home Assistant user of

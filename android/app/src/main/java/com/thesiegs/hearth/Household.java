@@ -228,6 +228,7 @@ final class Household {
                     applyWatch(null);
                     publishWatch();
                     applyRules(null);
+                    haRound();
                     // A notification past its time leaves the Bell
                     refreshNotices(sContext);
                     syncAll("periodic");
@@ -245,6 +246,7 @@ final class Household {
             publishUnpublishedRules();
             applyRules(null);
             readOtherUsage();
+            haRound();
             refreshNotices(sContext);
         });
         syncSoon();
@@ -354,6 +356,94 @@ final class Household {
         EXEC.execute(() -> {
             if (member(app)) publish(app, HouseholdBridge.WATCH, profileKey, HouseholdWatch.itemOf(kind, pkg, item), null);
         });
+    }
+
+    // ---- Home Assistant once for the household (HouseholdHa) ----
+
+    private static volatile boolean sHaBusy;
+
+    /** This TV paired with Home Assistant, or left it: the household hears soon, and pairs its other TVs. */
+    static void onHaChanged(Context context) {
+        if (!mayBeInHousehold(context)) return;
+        EXEC.execute(Household::haRound);
+    }
+
+    /**
+     * Says whether this TV is paired; paired, gets a ticket for each TV of the household on the network that isn't;
+     * not paired (and not unpaired on purpose), pairs with a ticket left for it. On the household thread; the calls to
+     * Home Assistant run on its own thread.
+     */
+    private static void haRound() {
+        if (sContext == null || !member(sContext)) return;
+        Context app = sContext;
+        HouseholdStore store = store(app);
+        HouseholdLog log = store.log();
+        String self = store.tvId();
+        long now = System.currentTimeMillis();
+        boolean paired = HaIntegration.isPaired(app);
+        boolean left = HaIntegration.leftOnPurpose(app);
+        String want = HouseholdHa.stateOf(paired, left);
+        HouseholdEntry have = log.get(HouseholdHa.STATE, HouseholdBridge.SHARED, self);
+        boolean hasState = have != null && !have.deleted;
+        if (want == null ? hasState : !hasState || !want.equals(have.value)) {
+            if (want == null) {
+                log.delete(HouseholdHa.STATE, HouseholdBridge.SHARED, self, now);
+            } else {
+                log.put(HouseholdHa.STATE, HouseholdBridge.SHARED, self, want, now);
+            }
+            store.save();
+            syncSoon();
+        }
+        if (sHaBusy) return;
+        List<HouseholdEntry> all = log.all();
+        if (paired) {
+            List<String> online = new ArrayList<>();
+            for (HouseholdNet.Peer peer : HouseholdNet.peers()) online.add(peer.tvId);
+            List<String> need = HouseholdHa.needTickets(all, self, online, now);
+            String url = HaConfig.baseUrl(app);
+            if (need.isEmpty() || url == null) return;
+            sHaBusy = true;
+            HaApi.EXECUTOR.execute(() -> {
+                try {
+                    for (String tv : need) {
+                        String ticket = HaIntegration.requestTicket(app, "tv", null);
+                        if (ticket == null) break;
+                        String value = HouseholdHa.ticketValue(url, ticket);
+                        EXEC.execute(() -> {
+                            if (value == null || !member(app)) return;
+                            store.log().put(HouseholdHa.TICKET, HouseholdBridge.SHARED, tv, value,
+                                    System.currentTimeMillis());
+                            store.save();
+                            Log.i(TAG, "Home Assistant: a pairing ticket for another TV of the household");
+                            syncSoon();
+                        });
+                    }
+                } finally {
+                    sHaBusy = false;
+                }
+            });
+        } else if (!left) {
+            String[] ticket = HouseholdHa.ticketFor(all, self, now);
+            if (ticket == null) return;
+            sHaBusy = true;
+            HaApi.EXECUTOR.execute(() -> {
+                try {
+                    String result = HaIntegration.redeemTicket(app, ticket[0], ticket[1]);
+                    Log.i(TAG, "Home Assistant: the household's pairing ticket " + result);
+                    if ("unreachable".equals(result)) return;
+                    EXEC.execute(() -> {
+                        if (!member(app)) return;
+                        // Spent either way: a refused one is made again by a paired TV
+                        store.log().delete(HouseholdHa.TICKET, HouseholdBridge.SHARED, self, System.currentTimeMillis());
+                        store.save();
+                        haRound();
+                        syncSoon();
+                    });
+                } finally {
+                    sHaBusy = false;
+                }
+            });
+        }
     }
 
     // ---- A kid's own rules and minutes (TVs without Home Assistant) ----
@@ -772,6 +862,7 @@ final class Household {
         applyWatch(result.applied);
         applyRules(result.applied);
         readOtherUsage();
+        haRound();
         noticesArrived(result.applied);
         publishUnpublished();
         sLastSyncAt = System.currentTimeMillis();

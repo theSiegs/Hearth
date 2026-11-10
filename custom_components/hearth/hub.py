@@ -9,6 +9,7 @@ import secrets
 from datetime import datetime
 from typing import Any
 
+from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_send
@@ -32,6 +33,10 @@ from .const import (
     MAX_STATUS_POSTS,
     PAIRING_EXPIRES,
     PAIRING_INTERVAL_PER_ADDRESS,
+    EVENT_DEVICE_PAIRED,
+    KIND_TV,
+    MAX_TICKETS,
+    TICKET_EXPIRES,
     SIGNAL_DEVICE_ADDED,
     SIGNAL_PAIRINGS,
     SIGNAL_STATUS,
@@ -73,10 +78,24 @@ class Pairing:
     denied: bool = False
 
 
+@dataclass
+class Ticket:
+    """A single-use pairing ticket a paired TV asked for: the device that redeems it pairs with no code to check."""
+
+    kind: str
+    # A phone's person (an adult's); None for a TV
+    person: str | None
+    # The paired TV that asked for it
+    minted_by: str
+    expires: datetime
+
+
 def _shared(hass: HomeAssistant) -> dict[str, dict]:
     """Pairings kept outside the entry: approving one saves the device, which reloads the entry, and the device
-    asking for its secret meanwhile must still find it."""
-    return hass.data.setdefault(f"{DOMAIN}_pairing", {"pairings": {}, "asked_at": {}})
+    asking for its secret meanwhile must still find it. Tickets too, so an options change doesn't void one."""
+    shared = hass.data.setdefault(f"{DOMAIN}_pairing", {"pairings": {}, "asked_at": {}})
+    shared.setdefault("tickets", {})
+    return shared
 
 
 @dataclass
@@ -136,6 +155,8 @@ class HearthHub:
         shared = _shared(hass)
         self._pairings: dict[str, Pairing] = shared["pairings"]
         self._asked_at: dict[str, datetime] = shared["asked_at"]
+        # Pairing tickets by their hash (the ticket itself is never kept)
+        self._tickets: dict[str, Ticket] = shared["tickets"]
         self.household = Household(hass, self)
         self.asks = Asks(hass, self)
         # One-shot commands for the TVs (hearth.play_on_tv), handed over in their state documents
@@ -339,6 +360,66 @@ class HearthHub:
         async_dispatcher_send(self.hass, SIGNAL_DEVICE_ADDED, pairing.device_id)
         async_dispatcher_send(self.hass, SIGNAL_PAIRINGS)
         return True
+
+    # Tickets: one confirmed pairing adds the household's other TVs, and a parent's phone in one tap
+
+    def mint_ticket(self, minted_by: str, kind: str, person: str | None) -> str | None:
+        """A single-use ticket a paired TV hands to another TV of its household (kind tv) or to a phone an adult bound
+        as a parent's (kind mobile, for that adult); None when too many are outstanding."""
+        now = dt_util.utcnow()
+        for gone in [h for h, t in self._tickets.items() if t.expires <= now]:
+            del self._tickets[gone]
+        if len(self._tickets) >= MAX_TICKETS:
+            return None
+        ticket = secrets.token_urlsafe(32)
+        self._tickets[hash_secret(ticket)] = Ticket(kind, person if kind == KIND_MOBILE else None, minted_by,
+                                                    now + TICKET_EXPIRES)
+        return ticket
+
+    async def async_redeem(
+        self,
+        ticket: str,
+        device_id: str,
+        kind: str,
+        name: str,
+        model: str | None,
+        sw_version: str | None,
+    ) -> Pairing | None:
+        """Pairs a device that holds a live ticket of its kind, at once (the TV that asked for the ticket vouched for
+        it); None when the ticket is unknown, used, expired or of another kind. The ticket is spent either way."""
+        now = dt_util.utcnow()
+        held = self._tickets.pop(hash_secret(ticket), None)
+        if held is None or held.expires <= now or held.kind != kind or held.minted_by not in self.devices:
+            return None
+        for old in [p.pairing_id for p in self._pairings.values() if p.device_id == device_id]:
+            del self._pairings[old]
+        pairing = Pairing(
+            pairing_id=secrets.token_urlsafe(16),
+            code="",
+            nonce_hash="",
+            device_id=device_id,
+            kind=kind,
+            name=name,
+            model=model,
+            sw_version=sw_version,
+            expires=now + APPROVED_EXPIRES,
+        )
+        self._pairings[pairing.pairing_id] = pairing
+        by_name = self.devices[held.minted_by].get("name") or held.minted_by
+        if not await self.async_approve(pairing.pairing_id, held.person):
+            return None
+        self.hass.bus.async_fire(
+            EVENT_DEVICE_PAIRED,
+            {"device_id": device_id, "name": name, "kind": kind, "person": held.person, "by": held.minted_by},
+        )
+        persistent_notification.async_create(
+            self.hass,
+            f"**{name}** paired with Hearth through **{by_name}**, which is already paired. If that wasn't you, delete "
+            "it in [Devices & services](/config/integrations/integration/hearth).",
+            title="A Hearth device paired",
+            notification_id=f"hearth_paired_{device_id}",
+        )
+        return pairing
 
     def deny(self, pairing_id: str) -> None:
         pairing = self.pairing(pairing_id)

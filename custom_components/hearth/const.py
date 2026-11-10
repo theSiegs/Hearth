@@ -24,6 +24,10 @@ APPROVED_EXPIRES = timedelta(minutes=2)
 # At most this many pairing requests wait at once, and one address may ask this often
 MAX_PENDING_PAIRINGS = 5
 PAIRING_INTERVAL_PER_ADDRESS = timedelta(seconds=10)
+# A pairing ticket (a paired TV vouching for another TV of its household, or for a parent's phone): single use
+TICKET_EXPIRES = timedelta(minutes=5)
+MAX_TICKETS = 10
+EVENT_DEVICE_PAIRED = "hearth_device_paired"
 
 # A status post bigger than this is refused
 MAX_STATUS_BYTES = 64 * 1024
