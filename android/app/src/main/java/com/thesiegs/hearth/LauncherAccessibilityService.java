@@ -846,6 +846,32 @@ public class LauncherAccessibilityService extends AccessibilityService {
         Allowance.showLocked(this);
     }
 
+    // --- Other computers' debugging (AdbPromptGuard) ---
+
+    /**
+     * Android's "Allow debugging?" for a key that isn't Hearth's own, with no parent allowing it: answered Cancel (or
+     * Back when there's no button to press), and the TV says why.
+     */
+    private void guardAdbPrompt(AccessibilityEvent event, String packageName) {
+        if (!packageName.startsWith("com.android.") && !packageName.startsWith("com.google.android.tv")) return;
+        AccessibilityNodeInfo root = event.getSource();
+        if (root == null) root = getRootInActiveWindow();
+        if (root == null) return;
+        String text = AdbPromptGuard.textOf(root);
+        if (!text.toLowerCase(java.util.Locale.ROOT).contains("debugging")) return;
+        long now = System.currentTimeMillis();
+        AdbPromptGuard.Verdict verdict = AdbPromptGuard.judge(packageName, text,
+                AdbPromptGuard.ownFingerprint(this), AdbPromptGuard.ownConnecting(now),
+                now < AdbPromptGuard.allowedUntil(this));
+        if (verdict != AdbPromptGuard.Verdict.DISMISS) return;
+        Log.w(TAG, "Another computer asked to debug this TV: answered Cancel");
+        AccessibilityNodeInfo cancel = AdbPromptGuard.cancelButton(root);
+        if (cancel == null || !cancel.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+            performGlobalAction(GLOBAL_ACTION_BACK);
+        }
+        Toast.makeText(this, R.string.adb_prompt_blocked, Toast.LENGTH_LONG).show();
+    }
+
     // --- Today's usage (UsageToday) ---
 
     /** The app in front changed (null: none counted, e.g. Hearth or Google TV's home). */
@@ -1323,6 +1349,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
 
         String packageName = pkg.toString();
         String className = cls.toString();
+        guardAdbPrompt(event, packageName);
         boolean isGoogleTv = GOOGLE_TV_PACKAGE.equals(packageName);
         boolean isHearth = packageName.equals(getPackageName());
         // Paramount+'s content PIN dialog (a title starting): Profile Pairing may type the saved PIN, once per dialog

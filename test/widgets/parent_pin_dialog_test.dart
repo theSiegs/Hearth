@@ -243,7 +243,22 @@ void main() {
   group("the lockout", () {
     final t0 = DateTime(2026, 10, 20, 12);
 
-    test("gives five tries, then waits 30 seconds and doubles up to five minutes", () {
+    test("with the TV's count, its word on how long to wait wins, and a right PIN clears it there", () async {
+      final store = _FakeStore()..until = t0.add(const Duration(minutes: 10)).millisecondsSinceEpoch;
+      final lock = PinLockout()..store = store;
+      // Hearth restarted mid-wait: the pad still waits
+      await lock.sync();
+      expect(lock.lockedAt(t0.add(const Duration(minutes: 9))), isTrue);
+      store.until = t0.add(const Duration(hours: 1)).millisecondsSinceEpoch;
+      await lock.miss(t0);
+      expect(store.misses, 1);
+      expect(lock.lockedAt(t0.add(const Duration(minutes: 59))), isTrue);
+      lock.clear();
+      expect(store.cleared, isTrue);
+      expect(lock.lockedAt(t0), isFalse);
+    });
+
+    test("gives five tries, then waits 30 seconds and doubles up to an hour", () {
       final lock = PinLockout();
       for (var i = 0; i < 4; i++) {
         lock.miss(t0);
@@ -260,8 +275,9 @@ void main() {
       for (var i = 0; i < 10; i++) {
         lock.miss(t0);
       }
-      expect(lock.lockedAt(t0.add(const Duration(seconds: 299))), isTrue);
-      expect(lock.lockedAt(t0.add(const Duration(seconds: 302))), isFalse);
+      // The 16th miss in a row waits 30 s doubled 11 times, past an hour: an hour
+      expect(lock.lockedAt(t0.add(const Duration(seconds: 3599))), isTrue);
+      expect(lock.lockedAt(t0.add(const Duration(seconds: 3602))), isFalse);
     });
 
     test("a right PIN clears it", () {
@@ -309,4 +325,25 @@ void main() {
       expect(find.byType(ParentPinDialog), findsOneWidget);
     });
   });
+}
+
+class _FakeStore implements PinLockoutStore {
+  int until = 0;
+  int misses = 0;
+  bool cleared = false;
+
+  @override
+  Future<int> lockedUntil() async => until;
+
+  @override
+  Future<int> miss() async {
+    misses++;
+    return until;
+  }
+
+  @override
+  Future<void> clear() async {
+    cleared = true;
+    until = 0;
+  }
 }

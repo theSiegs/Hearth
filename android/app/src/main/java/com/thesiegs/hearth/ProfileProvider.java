@@ -59,18 +59,12 @@ public class ProfileProvider extends ContentProvider {
     // SettingsService.defaultTimeFormat / defaultDateFormat
     private static final String DEFAULT_TIME_FORMAT = "h:mm a";
     private static final String DEFAULT_DATE_FORMAT = "EEE, MMM d";
-    private static final int MAX_PIN_TRIES = 5;
-    private static final long PIN_LOCKOUT_MS = 60_000;
     // SHA-256 of the certificate HearthTube must be signed with: Hearth's release key, which HearthTube's releases
     // use too. HearthTube's debug builds (and its releases before 32.63+4) are signed with a debug key and get no
     // PIN checks.
     private static final Set<String> TRUSTED_CERTS = new HashSet<>(Arrays.asList(
             "243bf074648ab3bfebb260d129e7c8203b407ca7677507ce93dbe72b02396d4c"));
 
-    // One lockout for every way in (HearthTube here, or a kid's HearthTube through that profile's agent), kept in the
-    // device prefs so a restarted Hearth doesn't hand out five fresh tries
-    private static final String PREF_WRONG_PINS = "parent_pin_wrong_tries";
-    private static final String PREF_PIN_LOCKED_UNTIL = "parent_pin_locked_until";
 
     /** content://<package>.profile/active (debug builds have a ".debug" package suffix). */
     static Uri activeUri(Context context) {
@@ -282,35 +276,9 @@ public class ProfileProvider extends ContentProvider {
         return false;
     }
 
-    /** Checks a PIN against Hearth's parent PIN (in the owner's user), with the shared lockout. */
-    static synchronized Bundle verifyParentPin(Context context, String pin) {
-        Bundle result = new Bundle();
-        SharedPreferences prefs = context.getSharedPreferences(LauncherAccessibilityService.DEVICE_PREFS,
-                Context.MODE_PRIVATE);
-        // Wall-clock time, so the lock outlives a restart or a reboot; a clock set back never stretches the wait
-        long now = System.currentTimeMillis();
-        long lockedUntil = Math.min(prefs.getLong(PREF_PIN_LOCKED_UNTIL, 0), now + PIN_LOCKOUT_MS);
-
-        if (now < lockedUntil) {
-            result.putBoolean("ok", false);
-            result.putInt("wait_seconds", (int) ((lockedUntil - now + 999) / 1000));
-            return result;
-        }
-
-        // The adults' from Home Assistant while there are any, else the TV's own (either form ParentPinHash keeps)
-        boolean ok = HaParentPins.verify(context, pin);
-
-        int wrong = ok ? 0 : prefs.getInt(PREF_WRONG_PINS, 0) + 1;
-        SharedPreferences.Editor editor = prefs.edit();
-        if (wrong >= MAX_PIN_TRIES) {
-            wrong = 0;
-            editor.putLong(PREF_PIN_LOCKED_UNTIL, now + PIN_LOCKOUT_MS);
-            HaParentPins.noteLockout(context);
-        }
-        editor.putInt(PREF_WRONG_PINS, wrong).commit();
-
-        result.putBoolean("ok", ok);
-        return result;
+    /** Checks a PIN against Hearth's parent PIN (in the owner's user), with the one lockout (ParentPinPolicy). */
+    static Bundle verifyParentPin(Context context, String pin) {
+        return ParentPinPolicy.verify(context, pin);
     }
 
     /** {date, time} formats. */

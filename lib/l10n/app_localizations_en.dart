@@ -3849,4 +3849,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bedtimeNightsWeekends => 'Friday and Saturday';
+
+  @override
+  String get adbAllowTitle => 'Allow a computer to connect';
+
+  @override
+  String get adbAllowBody =>
+      'For the next 2 minutes, when the TV asks \"Allow debugging?\", it\'s yours to answer. After that, Hearth says no to any computer but its own again.';
 }

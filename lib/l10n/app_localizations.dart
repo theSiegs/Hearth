@@ -6422,6 +6422,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Friday and Saturday'**
   String get bedtimeNightsWeekends;
+
+  /// Settings > Family: let a computer on the network debug the TV for two minutes (Hearth answers others Cancel)
+  ///
+  /// In en, this message translates to:
+  /// **'Allow a computer to connect'**
+  String get adbAllowTitle;
+
+  /// After the Parent PIN: what allowing a computer does; quotes Android's debugging prompt
+  ///
+  /// In en, this message translates to:
+  /// **'For the next 2 minutes, when the TV asks \"Allow debugging?\", it\'s yours to answer. After that, Hearth says no to any computer but its own again.'**
+  String get adbAllowBody;
 }
 
 class _AppLocalizationsDelegate

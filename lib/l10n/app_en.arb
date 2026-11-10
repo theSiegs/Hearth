@@ -4767,5 +4767,13 @@
     "bedtimeNightsWeekends": "Friday and Saturday",
     "@bedtimeNightsWeekends": {
         "description": "Bedtime nights: before a weekend day"
+    },
+    "adbAllowTitle": "Allow a computer to connect",
+    "@adbAllowTitle": {
+        "description": "Settings > Family: let a computer on the network debug the TV for two minutes (Hearth answers others Cancel)"
+    },
+    "adbAllowBody": "For the next 2 minutes, when the TV asks \"Allow debugging?\", it's yours to answer. After that, Hearth says no to any computer but its own again.",
+    "@adbAllowBody": {
+        "description": "After the Parent PIN: what allowing a computer does; quotes Android's debugging prompt"
     }
 }

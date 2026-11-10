@@ -74,6 +74,8 @@ public final class SelfAdb implements ProfileAppAccess.ShellRunner, AutoCloseabl
             AdbKeyPair.generate(privateKey, publicKey);
         }
         AdbKeyPair keyPair = AdbKeyPair.read(privateKey, publicKey);
+        // The prompt this may raise is Hearth's own: the guard against other computers leaves it to the parent
+        AdbPromptGuard.connecting();
         Log.i(TAG, "connecting to " + HOST + ":" + PORT + " (first time raises the Allow-debugging prompt)");
         return new SelfAdb(Dadb.create(HOST, PORT, keyPair, timeoutMs, timeoutMs), context.getApplicationContext());
     }

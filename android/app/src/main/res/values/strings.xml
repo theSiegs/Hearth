@@ -62,6 +62,8 @@
     <string name="pin_change">Change PIN</string>
     <string name="pin_close">Close</string>
     <string name="youtube_in_hearthtube">YouTube is in HearthTube here</string>
+    <!-- AdbPromptGuard answered another computer's "Allow debugging?" -->
+    <string name="adb_prompt_blocked">Another computer asked to control this TV. Hearth said no. A parent can allow it in Hearth’s Settings, Family.</string>
     <string name="time_up_for_group">Time\'s up for %1$s today. An adult can add more time.</string>
     <!-- A family pause (Home Assistant's hearth.pause) holds the apps: its reason, and until when -->
     <string name="paused_reason_until">Paused: %1$s, until %2$s</string>

@@ -135,18 +135,47 @@ Future<void> forgetHaParentPins(FLauncherChannel? channel) async {
 
 /// Full-screen PIN entry in Google TV's style: the shuffled row pad (see [_RowPad]), number keys type directly.
 /// Pops with the entered PIN, or null on Back.
+/// Where the TV keeps the one count of wrong Parent PINs (ParentPinPolicy on the Java side), so restarting Hearth gives
+/// no fresh tries and HearthTube's pads count in the same one: when the pad opens again (ms since the epoch, 0: open).
+abstract class PinLockoutStore {
+  Future<int> lockedUntil();
+
+  Future<int> miss();
+
+  Future<void> clear();
+}
+
+class ChannelPinLockoutStore implements PinLockoutStore {
+  final FLauncherChannel channel;
+
+  ChannelPinLockoutStore(this.channel);
+
+  @override
+  Future<int> lockedUntil() => channel.parentPinLockedUntil();
+
+  @override
+  Future<int> miss() => channel.parentPinMiss();
+
+  @override
+  Future<void> clear() => channel.parentPinClear();
+}
+
 /// Repeated wrong guesses lock a PIN pad for a while: after [freeTries] misses in a row it waits [baseSeconds], and
 /// each miss after that doubles the wait (up to [maxSeconds]). A right PIN clears it. Shared by every pad that checks
-/// a PIN, so closing and reopening the dialog doesn't give the tries back.
+/// a PIN, so closing and reopening the dialog doesn't give the tries back; with a [store] (the TV's), restarting Hearth
+/// doesn't either, and the store's word on how long to wait wins.
 class PinLockout {
   static const int freeTries = 5;
   static const int baseSeconds = 30;
-  static const int maxSeconds = 300;
+  static const int maxSeconds = 3600;
 
   static final PinLockout shared = PinLockout();
 
-  /// Told when a lockout starts (the Parent PIN pads count them for Home Assistant).
+  /// Told when a lockout starts without a [store] (one with a store counts them itself, for Home Assistant).
   void Function()? onLocked;
+
+  /// The TV's count, when there is one.
+  PinLockoutStore? store;
 
   int _misses = 0;
   DateTime? _until;
@@ -155,17 +184,32 @@ class PinLockout {
 
   int secondsLeft(DateTime now) => lockedAt(now) ? _until!.difference(now).inSeconds + 1 : 0;
 
-  void miss(DateTime now) {
+  /// A wrong PIN. Locks at once by this count; with a [store], then as long as the store says.
+  Future<void> miss(DateTime now) async {
     _misses++;
-    if (_misses < freeTries) return;
-    final seconds = (baseSeconds * (1 << (_misses - freeTries))).clamp(baseSeconds, maxSeconds);
-    _until = now.add(Duration(seconds: seconds));
-    onLocked?.call();
+    if (_misses >= freeTries) {
+      final seconds = (baseSeconds * (1 << (_misses - freeTries).clamp(0, 20))).clamp(baseSeconds, maxSeconds);
+      _until = now.add(Duration(seconds: seconds));
+      if (store == null) onLocked?.call();
+    }
+    final kept = store;
+    if (kept != null) _take(await kept.miss());
   }
 
   void clear() {
     _misses = 0;
     _until = null;
+    store?.clear();
+  }
+
+  /// Reads how long the store says to wait (a pad opening, or Hearth just started).
+  Future<void> sync() async {
+    final kept = store;
+    if (kept != null) _take(await kept.lockedUntil());
+  }
+
+  void _take(int untilMs) {
+    _until = untilMs > 0 ? DateTime.fromMillisecondsSinceEpoch(untilMs) : null;
   }
 }
 
@@ -221,6 +265,14 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
     super.initState();
     final phone = widget.phone;
     if (phone != null && widget.verify != null) _askPhone(phone);
+    // The TV's count: a wait from before (another pad, HearthTube, Hearth restarted) holds here too
+    if (widget.verify != null && _lockout.store != null) {
+      _lockout.sync().then((_) {
+        if (!mounted) return;
+        setState(() {});
+        if (_locked) _lock();
+      }).catchError((_) {});
+    }
   }
 
   @override
@@ -292,7 +344,8 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
       Navigator.of(context).pop(_entered);
       return;
     }
-    _lockout.miss(DateTime.now());
+    await _lockout.miss(DateTime.now()).catchError((_) {});
+    if (!mounted) return;
     if (_locked) _lock();
     setState(() => _error = true);
     Future.delayed(const Duration(milliseconds: 400), () {

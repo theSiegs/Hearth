@@ -548,6 +548,20 @@ class FLauncherChannel {
   /// A Parent PIN of this TV's own was set: the kept Home Assistant ones go.
   Future<void> forgetHaParentPins() async => await _methodChannel.invokeMethod("forgetHaParentPins");
 
+  /// The TV's one count of wrong Parent PINs (ParentPinPolicy): when a pad opens again (ms since the epoch, 0: open),
+  /// a wrong PIN (answers the same), a right one.
+  Future<int> parentPinLockedUntil() async => await _methodChannel.invokeMethod<int>("parentPinLockedUntil") ?? 0;
+
+  Future<int> parentPinMiss() async => await _methodChannel.invokeMethod<int>("parentPinMiss") ?? 0;
+
+  Future<void> parentPinClear() async => await _methodChannel.invokeMethod("parentPinClear");
+
+  /// A parent let a computer connect for two minutes (AdbPromptGuard): until when (ms since the epoch).
+  Future<int> allowAdbComputer() async => await _methodChannel.invokeMethod<int>("allowAdbComputer") ?? 0;
+
+  Future<int> adbComputerAllowedUntil() async =>
+      await _methodChannel.invokeMethod<int>("adbComputerAllowedUntil") ?? 0;
+
   /// A Parent PIN pad here locked out wrong guesses (counted for the integration).
   Future<void> noteParentPinLockout() async => await _methodChannel.invokeMethod("noteParentPinLockout");
 

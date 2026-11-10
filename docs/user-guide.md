@@ -188,6 +188,12 @@ Hearth TV treats a profile as a kids profile when Family Link supervises it.
   Assistant (**Hearth → Configure → Parent PINs**): a connected TV takes them in place of its own, any adult's works,
   and **Settings → Family → Parent PIN** says **Set in Home Assistant**. The TV keeps them, so they work while Home
   Assistant is down; if it's disconnected, it keeps the last ones until you set a PIN on the TV again.
+  Five wrong PINs in a row make every PIN pad on the TV (Hearth's and HearthTube's) wait 30 seconds, then twice as
+  long after each further wrong one, up to an hour; restarting the TV doesn't end the wait, and the right PIN clears it.
+- **Other computers stay out.** Hearth keeps the TV's debugging on for its own setup, so a computer on your Wi-Fi
+  could ask to control the TV. When the TV asks "Allow debugging?" for any computer but Hearth itself, Hearth answers
+  Cancel and says so. To let one in (yours, to install a build), choose **Settings → Family → Allow a computer to
+  connect** and enter the Parent PIN: for the next two minutes the prompt is yours to answer.
 - **YouTube only in HearthTube.** With HearthTube installed, a kids profile watches YouTube only there, where its
   YouTube time applies: YouTube's own app is hidden, and if it opens anyway (a voice search, a link) HearthTube opens
   over it. Adults' profiles start with YouTube's app hidden too; show it again from its app options if you want it.

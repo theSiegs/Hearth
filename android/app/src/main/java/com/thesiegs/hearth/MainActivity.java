@@ -476,6 +476,21 @@ public class MainActivity extends FlutterActivity {
                 HaParentPins.forget(this);
                 result.success(null);
             }
+            // The one count of wrong Parent PINs (ParentPinPolicy), for Hearth's own PIN pad: when it opens again
+            // (ms since the epoch, 0: open), a wrong PIN, a right one
+            // A parent let a computer connect (after the Parent PIN, in Flutter): AdbPromptGuard leaves "Allow
+            // debugging?" to them for two minutes; and until when that lasts (ms since the epoch)
+            case "allowAdbComputer" -> {
+                AdbPromptGuard.allow(this);
+                result.success(AdbPromptGuard.allowedUntil(this));
+            }
+            case "adbComputerAllowedUntil" -> result.success(AdbPromptGuard.allowedUntil(this));
+            case "parentPinLockedUntil" -> result.success(ParentPinPolicy.lockedUntil(this, System.currentTimeMillis()));
+            case "parentPinMiss" -> result.success(ParentPinPolicy.miss(this, System.currentTimeMillis()));
+            case "parentPinClear" -> {
+                ParentPinPolicy.clear(this);
+                result.success(null);
+            }
             case "noteParentPinLockout" -> {
                 HaParentPins.noteLockout(this);
                 result.success(null);
