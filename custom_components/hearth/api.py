@@ -27,6 +27,7 @@ from homeassistant.util.network import is_local
 
 from .const import CONF_PUSH_SERVER, CONF_ROLES, CONTRACT, DOMAIN, KIND_MOBILE, KIND_TV, KINDS, MAX_STATUS_BYTES, PAIRING_EXPIRES
 from .hub import HearthHub, collect_secret, find_pairing, pin_lockout
+from .wait import WAIT_MAX
 from .push import clean_server, push_answer
 from .notifications import notify_pairing
 from . import parent_pin
@@ -373,6 +374,33 @@ class AskView(HomeAssistantView):
         return web.json_response({"ok": True, "request": ask.device_view()})
 
 
+class WaitView(HomeAssistantView):
+    """GET /api/hearth/device/{device_id}/wait?version=<v>&timeout=<s> (header X-Hearth-Secret): {"changed": bool}
+    once the device's state document isn't <v>, or after <s> seconds (wait.py)."""
+
+    url = "/api/hearth/device/{device_id}/wait"
+    name = "api:hearth:device:wait"
+    requires_auth = False
+
+    async def get(self, request: web.Request, device_id: str) -> web.Response:
+        hass: HomeAssistant = request.app["hass"]
+        if not _local(request):
+            return _error(HTTPStatus.FORBIDDEN, "not_local")
+        hub = _hub(hass)
+        if hub is None:
+            return _error(HTTPStatus.SERVICE_UNAVAILABLE, "not_set_up")
+        if not hub.authorized(device_id, request.headers.get(HEADER_SECRET)):
+            return _error(HTTPStatus.UNAUTHORIZED, "not_paired")
+        version = request.query.get("version")
+        if version is not None and (not version or len(version) > 32):
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        try:
+            timeout = min(max(float(request.query.get("timeout", WAIT_MAX)), 1.0), float(WAIT_MAX))
+        except ValueError:
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        return web.json_response({"changed": await hub.waits.wait(device_id, version, timeout)})
+
+
 def async_register_views(hass: HomeAssistant) -> None:
-    for view in (PairStartView, PairStatusView, StatusView, EventsView, VerifyPinView, AskView):
+    for view in (PairStartView, PairStatusView, StatusView, EventsView, VerifyPinView, AskView, WaitView):
         hass.http.register_view(view())

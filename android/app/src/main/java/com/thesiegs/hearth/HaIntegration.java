@@ -257,6 +257,39 @@ final class HaIntegration {
         return answer;
     }
 
+    /** How a held wait ended (see {@link #waitForChange}). */
+    enum WaitResult { CHANGED, NOT_CHANGED, UNSUPPORTED, FAILED }
+
+    /**
+     * Holds the integration's long-poll (blocking, up to {@code timeoutS} seconds): CHANGED as soon as this TV's state
+     * document isn't {@code version} any more (a pause, a lock, an answered request), NOT_CHANGED at the timeout,
+     * UNSUPPORTED from an older integration without it (404), FAILED otherwise. It never carries the document: on
+     * CHANGED the status is posted and the answer read as usual. See the integration's wait.py.
+     */
+    static WaitResult waitForChange(Context context, String version, int timeoutS) {
+        String base = HaConfig.baseUrl(context);
+        String secret = secret(context);
+        if (base == null || secret == null) return WaitResult.FAILED;
+        Answer answer = request(waitUrl(base, deviceId(context), version, timeoutS), "GET", null, null, secret,
+                5_000, (timeoutS + 10) * 1_000);
+        return waitResult(answer.code, answer.body);
+    }
+
+    static String waitUrl(String base, String deviceId, String version, int timeoutS) {
+        StringBuilder url = new StringBuilder(base).append("/api/hearth/device/").append(deviceId)
+                .append("/wait?timeout=").append(timeoutS);
+        // The version is the document's short hex hash; anything else is left out (the integration then says changed)
+        if (version != null && version.matches("[0-9a-f]{1,32}")) url.append("&version=").append(version);
+        return url.toString();
+    }
+
+    static WaitResult waitResult(int code, JSONObject body) {
+        if (code == 200 && body != null) {
+            return body.optBoolean("changed", false) ? WaitResult.CHANGED : WaitResult.NOT_CHANGED;
+        }
+        return code == 404 ? WaitResult.UNSUPPORTED : WaitResult.FAILED;
+    }
+
     /**
      * Asks the integration whether {@code pin} is an adult's parent PIN (it keeps the lockout). UNKNOWN when it can't
      * say: unreachable, not paired any more, or it has none set. Quick to give up, as someone waits at the PIN pad.

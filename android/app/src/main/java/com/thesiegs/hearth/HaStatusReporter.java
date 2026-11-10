@@ -27,6 +27,8 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Objects;
 
 /**
  * Pushes what the TV is doing to Home Assistant: foreground app, now playing (from any app's media session, which
@@ -63,6 +65,20 @@ final class HaStatusReporter {
     private long mScreenTimeSeenAt;
     /** The last body sent; used on the sender thread (a new one after a restart, hence volatile). */
     private volatile String mLastSent;
+    /**
+     * Paired and the screen on, a thread holds the integration's long-poll so a pause, a lock or an answered request
+     * arrives in seconds rather than at the next two-minute post. Seconds each wait is held (the integration keeps
+     * it under a minute), and how long to wait after a failure before asking again.
+     */
+    private static final int WAIT_S = 50;
+    private static final long WAIT_RETRY_MS = 30_000;
+    /** The version of the last state document the integration answered with: what the wait compares against. */
+    private volatile String mStateVersion;
+    /** Bumped to end the waiting thread: a thread whose generation isn't current stops after its wait. */
+    private final AtomicInteger mWaitGeneration = new AtomicInteger();
+    /** The integration has no long-poll (an older one): not asked again until the next start(). Main thread. */
+    private boolean mWaitUnsupported;
+    private boolean mWaiting;
 
     /** What the reporter knows, copied on the main thread so the status can be built on the sender thread. */
     private static final class Snapshot {
@@ -160,9 +176,12 @@ final class HaStatusReporter {
         }
         mHandler.post(mHeartbeat);
         mHandler.postDelayed(mUsageTick, USAGE_TICK_MS);
+        mWaitUnsupported = false;
+        startWaiting();
     }
 
     void stop() {
+        stopWaiting();
         mHandler.removeCallbacks(mHeartbeat);
         mHandler.removeCallbacks(mUsageTick);
         if (mSessionManager != null) {
@@ -193,6 +212,67 @@ final class HaStatusReporter {
         mScreenOn = on;
         scheduleSend();
         if (on) BedtimeHeadsUp.schedule(mContext);
+        // Only while someone could be watching: asleep, the two-minute post is soon enough
+        if (on) startWaiting();
+        else stopWaiting();
+    }
+
+    /** Main thread. Starts holding the long-poll, unless it's already held, unpaired, the screen is off or unsupported. */
+    private void startWaiting() {
+        if (mWaiting || mWaitUnsupported || !mScreenOn || !HaIntegration.isPaired(mContext)) return;
+        mWaiting = true;
+        int generation = mWaitGeneration.incrementAndGet();
+        Thread thread = new Thread(() -> waitLoop(generation), "HearthHaWait");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    /** Main thread. The waiting thread stops after the wait it holds (at most WAIT_S seconds later). */
+    private void stopWaiting() {
+        mWaiting = false;
+        mWaitGeneration.incrementAndGet();
+    }
+
+    /** The waiting thread: hold, refresh on a change, hold again; quits once its generation is old. */
+    private void waitLoop(int generation) {
+        while (generation == mWaitGeneration.get()) {
+            String held = mStateVersion;
+            HaIntegration.WaitResult result = HaIntegration.waitForChange(mContext, held, WAIT_S);
+            if (generation != mWaitGeneration.get()) return;
+            switch (result) {
+                case CHANGED:
+                    mHandler.post(this::refreshNow);
+                    // Until the refreshed answer brings the new version (else the next wait answers at once)
+                    for (int i = 0; i < 20 && Objects.equals(held, mStateVersion); i++) {
+                        if (!pause(500) || generation != mWaitGeneration.get()) return;
+                    }
+                    break;
+                case NOT_CHANGED:
+                    break;
+                case UNSUPPORTED:
+                    Log.i(TAG, "This Home Assistant integration has no long-poll; the two-minute post stays");
+                    mHandler.post(() -> {
+                        if (generation == mWaitGeneration.get()) {
+                            mWaitUnsupported = true;
+                            mWaiting = false;
+                        }
+                    });
+                    return;
+                case FAILED:
+                    if (!pause(WAIT_RETRY_MS)) return;
+                    break;
+            }
+        }
+    }
+
+    private static boolean pause(long ms) {
+        try {
+            Thread.sleep(ms);
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
     }
 
     /** Posts the status now, changed or not, for a fresh answer (a request for more time waiting for its answer). */
@@ -486,6 +566,7 @@ final class HaStatusReporter {
         Log.d(TAG, "Status sent, the Hearth integration answered " + answer.code);
         if (answer.code == 200 && answer.body != null) {
             JSONObject state = answer.body.optJSONObject("state");
+            mStateVersion = state != null ? state.optString("version", null) : null;
             HaAllowance.fromDocument(mContext, state);
             // A parent's YouTube blocks set in Home Assistant, for HearthTube in the kids profiles
             ParentBlocks.applyDocument(mContext, state);

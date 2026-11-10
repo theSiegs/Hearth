@@ -1351,6 +1351,16 @@ document also carries `commands` (one-shot commands such as a play, see [Play on
 says which it ran in `commands_done`. A phone's answer also says `push` (its ntfy channel, or null; see [Away from
 home](#away-from-home)).
 
+**Wait for a change** (any paired device). `GET /api/hearth/device/<device_id>/wait?version=<v>&timeout=<s>` with
+the same header holds until the device's state document is no longer version `<v>` (the `version` of the last
+document it got), then answers `{"changed": true}`; after `<s>` seconds (at most 55) with nothing changed it answers
+`{"changed": false}`. A missing or old `<v>` answers changed at once. It never carries the document: on changed the
+device posts its status and reads the state from that answer. One wait per device: a new one ends the previous with
+`{"changed": false}`, and so does an options change (the integration reloads), so ask again. 401 and 503 as for
+Status; 400 for a bad `timeout`. A TV holds one while it's paired and its screen is on, so a pause, a lock or an
+answered request reaches it within seconds rather than at its next two-minute post; a phone holds one only while its
+ask waits. An older integration answers 404: keep posting as before.
+
 **Events** (a TV only). `POST /api/hearth/device/<device_id>/events` with the same header and
 `{"events": [...]}`, at most 50, each `{"type": "video_started", "profile_id", "t" (ms), "v" (video id), "title",
 "ch" (channel name), "cid" (channel id)}`. `profile_id` is the TV's own key for the profile (`user:10`), resolved

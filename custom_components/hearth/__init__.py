@@ -836,6 +836,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     # "Something changed" pings to the phones, when a push server is set
     hub.push.start()
     entry.async_on_unload(hub.push.stop)
+    hub.waits.start()
+    entry.async_on_unload(hub.waits.stop)
     # People and groups come from the entry: when it changes (options, a phone paired), its entities are made again
     entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
     return True
