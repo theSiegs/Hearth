@@ -83,6 +83,22 @@ final class UsageToday {
         return playing != null ? playing.optLong(packageName) : 0;
     }
 
+    /** Each app's time in front for this profile today, in milliseconds (empty: none, or a new day). */
+    static synchronized java.util.Map<String, Long> frontMs(Context context, String profile, long now) {
+        java.util.Map<String, Long> out = new java.util.HashMap<>();
+        if (profile == null) return out;
+        SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        if (!day(now).equals(prefs.getString(DAY_KEY, null))) return out;
+        JSONObject counts = parse(prefs.getString(DATA_KEY, null)).optJSONObject(profile);
+        JSONObject front = counts != null ? counts.optJSONObject(FRONT) : null;
+        for (java.util.Iterator<String> it = front != null ? front.keys() : java.util.Collections.emptyIterator();
+                it.hasNext(); ) {
+            String app = it.next();
+            out.put(app, front.optLong(app));
+        }
+        return out;
+    }
+
     /** The TV's local date, "YYYY-MM-DD". */
     static String day(long time) {
         return new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(new Date(time));

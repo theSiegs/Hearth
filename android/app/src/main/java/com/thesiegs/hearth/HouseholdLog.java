@@ -21,6 +21,8 @@ final class HouseholdLog {
     private static final int COUNTER_BITS = 16;
     /** A clock further ahead of this TV's than this is refused (a TV with a broken clock can't pin an entry forever). */
     static final long MAX_AHEAD_MS = 24L * 60 * 60 * 1000;
+    /** A day's minutes ({@link HouseholdBridge#USAGE}) matter for that day only; kept a few days for the record. */
+    static final long USAGE_MAX_AGE_MS = 3L * 24 * 60 * 60 * 1000;
 
     /** Signs this TV's entries of the kinds that carry a signature (HouseholdMembers.signs) with its TV key. */
     interface Signer {
@@ -199,7 +201,8 @@ final class HouseholdLog {
 
     /**
      * Forgets deletes older than {@link #TOMBSTONE_MS}, Continue Watching entries ({@link HouseholdBridge#WATCH})
-     * older than its {@link WatchHistory#MAX_AGE_MS}, and notifications, cleared or not, older than
+     * older than its {@link WatchHistory#MAX_AGE_MS}, a kid's minutes older than
+     * {@link #USAGE_MAX_AGE_MS}, and notifications, cleared or not, older than
      * {@link HouseholdNotices#MAX_AGE_MS}, which every TV forgets anyway; returns how many. A notification's delete is
      * always newer than what it cleared, so the delete outlives it.
      */
@@ -209,6 +212,7 @@ final class HouseholdLog {
             HouseholdEntry entry = it.next();
             long age = nowMs - (entry.clock >> COUNTER_BITS);
             boolean expired = HouseholdBridge.WATCH.equals(entry.kind) && age > WatchHistory.MAX_AGE_MS
+                    || HouseholdBridge.USAGE.equals(entry.kind) && age > USAGE_MAX_AGE_MS
                     || HouseholdNotices.expired(entry, nowMs);
             if (expired || entry.deleted && !isFinal(entry) && age > TOMBSTONE_MS) {
                 it.remove();

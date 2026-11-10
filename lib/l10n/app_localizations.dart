@@ -6314,6 +6314,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Google TV\'s own limit is on'**
   String get setupChecklistGoogleLimitsOn;
+
+  /// A kid's own screen-time rules (a TV without Home Assistant): the tile and page title
+  ///
+  /// In en, this message translates to:
+  /// **'Screen time'**
+  String get screenTimeTitle;
+
+  /// Screen time tile: the kid has no rules
+  ///
+  /// In en, this message translates to:
+  /// **'No limits'**
+  String get screenTimeNone;
+
+  /// Screen time tile: the kid has rules
+  ///
+  /// In en, this message translates to:
+  /// **'Limits set'**
+  String get screenTimeSet;
+
+  /// Screen time tile when Home Assistant decides the kid's limits
+  ///
+  /// In en, this message translates to:
+  /// **'Set in Home Assistant'**
+  String get screenTimeInHomeAssistant;
+
+  /// Screen time page: what the limits cover
+  ///
+  /// In en, this message translates to:
+  /// **'For this kid on every TV in your household. Time in any app counts, except Hearth itself.'**
+  String get screenTimeHint;
+
+  /// Screen time: the group of every app
+  ///
+  /// In en, this message translates to:
+  /// **'All screen time'**
+  String get screenTimeAll;
+
+  /// Screen time: the group of games
+  ///
+  /// In en, this message translates to:
+  /// **'Games'**
+  String get screenTimeGames;
+
+  /// Screen time: the group of YouTube and HearthTube
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube'**
+  String get screenTimeYouTube;
+
+  /// Screen time: minutes on Monday to Friday
+  ///
+  /// In en, this message translates to:
+  /// **'Weekdays'**
+  String get screenTimeWeekdays;
+
+  /// Screen time: minutes on Saturday and Sunday
+  ///
+  /// In en, this message translates to:
+  /// **'Weekends'**
+  String get screenTimeWeekends;
+
+  /// Screen time: a limit of 0 minutes
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get screenTimeNoneAllowed;
+
+  /// Screen time page: the bedtime section and its start
+  ///
+  /// In en, this message translates to:
+  /// **'Bedtime'**
+  String get bedtimeTitle;
+
+  /// Bedtime: none
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get bedtimeOff;
+
+  /// Bedtime: when it ends in the morning
+  ///
+  /// In en, this message translates to:
+  /// **'Until'**
+  String get bedtimeUntil;
+
+  /// Bedtime: which nights it holds
+  ///
+  /// In en, this message translates to:
+  /// **'Nights'**
+  String get bedtimeNights;
+
+  /// Bedtime nights: all
+  ///
+  /// In en, this message translates to:
+  /// **'Every night'**
+  String get bedtimeNightsAll;
+
+  /// Bedtime nights: before a weekday
+  ///
+  /// In en, this message translates to:
+  /// **'School nights (Sunday to Thursday)'**
+  String get bedtimeNightsWeekdays;
+
+  /// Bedtime nights: before a weekend day
+  ///
+  /// In en, this message translates to:
+  /// **'Friday and Saturday'**
+  String get bedtimeNightsWeekends;
 }
 
 class _AppLocalizationsDelegate

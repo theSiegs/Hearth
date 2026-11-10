@@ -19,6 +19,7 @@ import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/setup_flow_service.dart';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flauncher/models/kids_profiles.dart';
@@ -26,6 +27,7 @@ import 'package:flauncher/providers/companion_updater.dart';
 import 'package:flauncher/widgets/settings/kid_profile_page.dart';
 import 'package:flauncher/widgets/settings/kids_profiles_page.dart';
 import 'package:flauncher/widgets/settings/profiles_settings_page.dart';
+import 'package:flauncher/widgets/settings/screen_time_rules_page.dart';
 import 'package:flauncher/widgets/settings/family_settings_page.dart';
 import 'package:flauncher/widgets/settings/uninstall_hearth_tile.dart';
 import 'package:flutter/material.dart';
@@ -166,6 +168,20 @@ class _KidsChannel extends FLauncherChannel {
 
   @override
   Future<void> setYouTubeDailyMinutes(int minutes, {String? profileKey}) async => limits[profileKey] = minutes;
+
+  /// Each kid's own screen-time rules by profile key; whether Home Assistant decides instead.
+  final Map<String, String?> rules = {};
+  bool homeAssistant = false;
+
+  @override
+  Future<({String? rules, bool homeAssistant, int youtubeMinutes})> getLocalRules(String profileKey) async =>
+      (rules: rules[profileKey], homeAssistant: homeAssistant, youtubeMinutes: limits[profileKey] ?? 0);
+
+  @override
+  Future<void> setLocalRules(String profileKey, String? json) async {
+    rules[profileKey] = json;
+    limits.remove(profileKey);
+  }
 }
 
 /// HearthTube's newest release, downloaded at once.
@@ -217,6 +233,10 @@ void main() {
         home: Scaffold(body: page),
         // Settings' panel routes this one (settings_panel.dart)
         onGenerateRoute: (settings) {
+          if (settings.name == ScreenTimeRulesPage.routeName) {
+            return MaterialPageRoute(
+                builder: (_) => Scaffold(body: ScreenTimeRulesPage(profileKey: settings.arguments as String)));
+          }
           final (state, kid) = settings.arguments as (KidsProfilesState, KidProfile);
           return MaterialPageRoute(builder: (_) => Scaffold(body: KidProfilePage(state: state, kid: kid)));
         },
@@ -361,18 +381,51 @@ void main() {
     expect(channel.uninstalls, 1);
   });
 
-  testWidgets("a kid's own page sets their YouTube time, without switching to them", (tester) async {
+  testWidgets("a kid's own page sets their screen time, without switching to them", (tester) async {
     channel.kids = [
       {"userId": 10, "profileKey": "user:10", "name": "Sam", "hearth": true},
     ];
     await pump(tester, const KidsProfilesPage());
     await press(tester, "Sam");
-    expect(find.text("YouTube time per day"), findsOneWidget);
-    expect(find.text("No limit"), findsOneWidget);
-    await press(tester, "YouTube time per day");
-    await press(tester, "30 minutes");
-    expect(channel.limits, {"user:10": 30});
-    expect(find.text("30 minutes"), findsOneWidget);
+    expect(find.text("Screen time"), findsOneWidget);
+    expect(find.text("No limits"), findsOneWidget);
+    await press(tester, "Screen time");
+    // All screen time's weekdays come first
+    await tester.tap(find.text("Weekdays").first);
+    await tester.pumpAndSettle();
+    await press(tester, "45 minutes");
+    expect(jsonDecode(channel.rules["user:10"]!)["all"], {"weekday": 45});
+    // Further down the page
+    await tester.ensureVisible(find.byIcon(Icons.bedtime_outlined));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.bedtime_outlined));
+    await tester.pumpAndSettle();
+    await press(tester, _time(tester, 20, 30));
+    expect(jsonDecode(channel.rules["user:10"]!)["bedtime"], {"from": "20:30", "to": "07:00", "days": "all"});
+  });
+
+  testWidgets("the older YouTube limit starts a kid's YouTube time", (tester) async {
+    channel.kids = [
+      {"userId": 10, "profileKey": "user:10", "name": "Sam", "hearth": true},
+    ];
+    channel.limits["user:10"] = 30;
+    await pump(tester, const KidsProfilesPage());
+    await press(tester, "Sam");
+    expect(find.text("Limits set"), findsOneWidget);
+    await press(tester, "Screen time");
+    expect(find.text("30 minutes"), findsNWidgets(2));
+  });
+
+  testWidgets("with Home Assistant deciding, a kid's screen time says so and opens nothing", (tester) async {
+    channel.homeAssistant = true;
+    channel.kids = [
+      {"userId": 10, "profileKey": "user:10", "name": "Sam", "hearth": true},
+    ];
+    await pump(tester, const KidsProfilesPage());
+    await press(tester, "Sam");
+    expect(find.text("Set in Home Assistant"), findsOneWidget);
+    await press(tester, "Screen time");
+    expect(find.text("Weekdays"), findsNothing);
   });
 
   testWidgets("a kid's page that needs a fix goes back to Fix", (tester) async {
@@ -471,4 +524,10 @@ void main() {
     expect(find.text("Streaming app PINs"), findsOneWidget);
     expect(find.text("Hearth on other profiles"), findsNothing);
   });
+}
+
+/// A time as the page shows it (the test's locale).
+String _time(WidgetTester tester, int hour, int minute) {
+  final context = tester.element(find.byType(ScreenTimeRulesPage));
+  return MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay(hour: hour, minute: minute));
 }

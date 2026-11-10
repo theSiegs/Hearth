@@ -4695,5 +4695,77 @@
     "setupChecklistGoogleLimitsOn": "Google TV's own limit is on",
     "@setupChecklistGoogleLimitsOn": {
         "description": "Set up Hearth: the Google's time limits tile when Hearth saw Google TV's own time's up screen lately"
+    },
+    "screenTimeTitle": "Screen time",
+    "@screenTimeTitle": {
+        "description": "A kid's own screen-time rules (a TV without Home Assistant): the tile and page title"
+    },
+    "screenTimeNone": "No limits",
+    "@screenTimeNone": {
+        "description": "Screen time tile: the kid has no rules"
+    },
+    "screenTimeSet": "Limits set",
+    "@screenTimeSet": {
+        "description": "Screen time tile: the kid has rules"
+    },
+    "screenTimeInHomeAssistant": "Set in Home Assistant",
+    "@screenTimeInHomeAssistant": {
+        "description": "Screen time tile when Home Assistant decides the kid's limits"
+    },
+    "screenTimeHint": "For this kid on every TV in your household. Time in any app counts, except Hearth itself.",
+    "@screenTimeHint": {
+        "description": "Screen time page: what the limits cover"
+    },
+    "screenTimeAll": "All screen time",
+    "@screenTimeAll": {
+        "description": "Screen time: the group of every app"
+    },
+    "screenTimeGames": "Games",
+    "@screenTimeGames": {
+        "description": "Screen time: the group of games"
+    },
+    "screenTimeYouTube": "YouTube",
+    "@screenTimeYouTube": {
+        "description": "Screen time: the group of YouTube and HearthTube"
+    },
+    "screenTimeWeekdays": "Weekdays",
+    "@screenTimeWeekdays": {
+        "description": "Screen time: minutes on Monday to Friday"
+    },
+    "screenTimeWeekends": "Weekends",
+    "@screenTimeWeekends": {
+        "description": "Screen time: minutes on Saturday and Sunday"
+    },
+    "screenTimeNoneAllowed": "None",
+    "@screenTimeNoneAllowed": {
+        "description": "Screen time: a limit of 0 minutes"
+    },
+    "bedtimeTitle": "Bedtime",
+    "@bedtimeTitle": {
+        "description": "Screen time page: the bedtime section and its start"
+    },
+    "bedtimeOff": "Off",
+    "@bedtimeOff": {
+        "description": "Bedtime: none"
+    },
+    "bedtimeUntil": "Until",
+    "@bedtimeUntil": {
+        "description": "Bedtime: when it ends in the morning"
+    },
+    "bedtimeNights": "Nights",
+    "@bedtimeNights": {
+        "description": "Bedtime: which nights it holds"
+    },
+    "bedtimeNightsAll": "Every night",
+    "@bedtimeNightsAll": {
+        "description": "Bedtime nights: all"
+    },
+    "bedtimeNightsWeekdays": "School nights (Sunday to Thursday)",
+    "@bedtimeNightsWeekdays": {
+        "description": "Bedtime nights: before a weekday"
+    },
+    "bedtimeNightsWeekends": "Friday and Saturday",
+    "@bedtimeNightsWeekends": {
+        "description": "Bedtime nights: before a weekend day"
     }
 }

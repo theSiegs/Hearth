@@ -377,6 +377,21 @@ class FLauncherChannel {
 
   /// A profile's daily YouTube limit in HearthTube, in minutes; 0 for none. [profileKey]: a kids profile's
   /// ("user:11", from [getKidsProfilesState]); without it, the profile on now.
+  /// A kid's own screen-time rules ([ScreenTimeRules] JSON, null: none), whether Home Assistant decides instead
+  /// (then they aren't used), and the kid's older YouTube limit in minutes (0: none), to start the rules from.
+  Future<({String? rules, bool homeAssistant, int youtubeMinutes})> getLocalRules(String profileKey) async {
+    final map = await _methodChannel.invokeMapMethod<String, dynamic>("getLocalRules", profileKey) ?? {};
+    return (
+      rules: map["rules"] as String?,
+      homeAssistant: map["homeAssistant"] as bool? ?? false,
+      youtubeMinutes: map["youtubeMinutes"] as int? ?? 0,
+    );
+  }
+
+  /// Sets a kid's own rules (null: none); they take the place of the older YouTube limit, and reach the household.
+  Future<void> setLocalRules(String profileKey, String? rules) async =>
+      await _methodChannel.invokeMethod("setLocalRules", {"profileKey": profileKey, "rules": rules});
+
   Future<int> getYouTubeDailyMinutes({String? profileKey}) async =>
       await _methodChannel.invokeMethod<int>("getYouTubeDailyMinutes", profileKey) ?? 0;
 

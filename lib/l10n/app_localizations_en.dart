@@ -3794,4 +3794,59 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get setupChecklistGoogleLimitsOn => 'Google TV\'s own limit is on';
+
+  @override
+  String get screenTimeTitle => 'Screen time';
+
+  @override
+  String get screenTimeNone => 'No limits';
+
+  @override
+  String get screenTimeSet => 'Limits set';
+
+  @override
+  String get screenTimeInHomeAssistant => 'Set in Home Assistant';
+
+  @override
+  String get screenTimeHint =>
+      'For this kid on every TV in your household. Time in any app counts, except Hearth itself.';
+
+  @override
+  String get screenTimeAll => 'All screen time';
+
+  @override
+  String get screenTimeGames => 'Games';
+
+  @override
+  String get screenTimeYouTube => 'YouTube';
+
+  @override
+  String get screenTimeWeekdays => 'Weekdays';
+
+  @override
+  String get screenTimeWeekends => 'Weekends';
+
+  @override
+  String get screenTimeNoneAllowed => 'None';
+
+  @override
+  String get bedtimeTitle => 'Bedtime';
+
+  @override
+  String get bedtimeOff => 'Off';
+
+  @override
+  String get bedtimeUntil => 'Until';
+
+  @override
+  String get bedtimeNights => 'Nights';
+
+  @override
+  String get bedtimeNightsAll => 'Every night';
+
+  @override
+  String get bedtimeNightsWeekdays => 'School nights (Sunday to Thursday)';
+
+  @override
+  String get bedtimeNightsWeekends => 'Friday and Saturday';
 }

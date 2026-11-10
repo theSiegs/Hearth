@@ -405,6 +405,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             if (mPlaying != null && mPlaying.ensureStarted()) mPlaying.flush();
             addFrontSoFar();
             readAllowance();
+            holdRunningApp();
             // In case a switch broadcast was missed
             checkProfileUser("periodic check");
             LogNames.refresh(LauncherAccessibilityService.this);
@@ -819,6 +820,30 @@ public class LauncherAccessibilityService extends AccessibilityService {
             performGlobalAction(GLOBAL_ACTION_HOME);
         }
         Allowance.showTimeUp(this, group);
+    }
+
+    /**
+     * Without Home Assistant nothing else stops an app already open when the kid's minutes run out or bedtime comes
+     * (Home Assistant pauses it through Family Link): Hearth's own rules send the kid home from it, checked with the
+     * periodic check. With Home Assistant this does nothing.
+     */
+    private void holdRunningApp() {
+        String app = mFrontApp;
+        if (app == null || LocalAllowance.homeAssistantDecides(this) || !ProfileUsers.isKids(this)) return;
+        String held = Allowance.heldApps(this, java.util.Collections.singletonList(app)).get(app);
+        if (held == null) return;
+        if (!Allowance.HELD_ALL.equals(held)) {
+            holdForTime(app);
+            return;
+        }
+        if (mActiveSerial == ProfileUsers.UNKNOWN || mChooserOnScreen || mScreenTimeLock) return;
+        Log.i(TAG, app + ": held by Hearth's rules (bedtime), back home");
+        if (autoTakeOverAllowed()) {
+            openLauncher();
+        } else {
+            performGlobalAction(GLOBAL_ACTION_HOME);
+        }
+        Allowance.showLocked(this);
     }
 
     // --- Today's usage (UsageToday) ---

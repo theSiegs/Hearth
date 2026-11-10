@@ -330,6 +330,36 @@ public class MainActivity extends FlutterActivity {
             // The active profile's daily YouTube limit in HearthTube, in minutes (0: none)
             // A profile's daily YouTube limit: the profile on now's, or a kids profile's by its key (the parent
             // sets each kid's from Settings > Profiles > Kids profiles without switching to it)
+            // A kid's own screen-time rules (LocalAllowance), set from Settings > Family > Kids profiles > the kid
+            case "getLocalRules" -> {
+                String key = call.arguments();
+                org.json.JSONObject rules = LocalAllowance.rules(this, key);
+                Map<String, Object> out = new HashMap<>();
+                out.put("rules", rules != null ? rules.toString() : null);
+                out.put("homeAssistant", LocalAllowance.homeAssistantDecides(this));
+                out.put("youtubeMinutes", Allowance.dailyMinutes(this, key));
+                result.success(out);
+            }
+            case "setLocalRules" -> {
+                String key = call.argument("profileKey");
+                String json = call.argument("rules");
+                org.json.JSONObject rules = null;
+                if (json != null) {
+                    try {
+                        rules = new org.json.JSONObject(json);
+                    } catch (org.json.JSONException e) {
+                        result.error("bad_rules", e.getMessage(), null);
+                        return;
+                    }
+                }
+                if (key != null) {
+                    // The rules' YouTube group takes the place of the older YouTube limit
+                    Allowance.setDailyMinutes(this, key, 0);
+                    if (LocalAllowance.setRules(this, key, rules)) Household.onRulesChanged(this, key);
+                    ProfileProvider.notifyChanged(this);
+                }
+                result.success(null);
+            }
             case "getYouTubeDailyMinutes" -> {
                 String key = call.arguments();
                 result.success(Allowance.dailyMinutes(this,

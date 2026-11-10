@@ -339,6 +339,10 @@ final class HaAllowance {
 
     /** This profile's allowance as last read today; values null when Home Assistant has said nothing today. */
     static Values forProfile(Context context, String profileKey, long now) {
+        // Without Home Assistant, Hearth's own rules say the same things
+        if (!LocalAllowance.homeAssistantDecides(context)) {
+            return valuesOf(LocalAllowance.entryFor(context, profileKey, now), null);
+        }
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         if (profileKey == null || !UsageToday.day(now).equals(prefs.getString(DAY_KEY, null))) {
             return new Values(null, false, null, null);
@@ -347,8 +351,12 @@ final class HaAllowance {
         return valuesOf(entryFor(context, profileKey, now), checkedAt);
     }
 
-    /** This profile's entry as last read today (null: none, or nothing today). */
+    /**
+     * This profile's entry as Home Assistant last said today (null: none, or nothing today); without Home Assistant,
+     * from Hearth's own rules (LocalAllowance).
+     */
     static JSONObject entryFor(Context context, String profileKey, long now) {
+        if (!LocalAllowance.homeAssistantDecides(context)) return LocalAllowance.entryFor(context, profileKey, now);
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         if (profileKey == null || !UsageToday.day(now).equals(prefs.getString(DAY_KEY, null))) return null;
         try {

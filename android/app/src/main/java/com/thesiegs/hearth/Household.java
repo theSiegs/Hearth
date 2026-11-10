@@ -40,6 +40,8 @@ final class Household {
     /** A short wait after a change so several changes go out together; the periodic check is the backstop. */
     private static final long SYNC_DELAY_MS = 2_000;
     private static final long PERIODIC_MS = 5 * 60_000;
+    /** How often this TV tells the others a kid's minutes here (when they moved). */
+    private static final long USAGE_MS = 2 * 60_000;
     private static final int SOCKET_TIMEOUT_MS = 15_000;
     /** How long after a play is saved its title goes out: plays save often, and one sweep covers them all. */
     private static final long WATCH_DELAY_MS = 60_000;
@@ -225,10 +227,13 @@ final class Household {
                     // A profile whose Google account Hearth has seen since takes its titles now
                     applyWatch(null);
                     publishWatch();
+                    applyRules(null);
                     // A notification past its time leaves the Bell
                     refreshNotices(sContext);
                     syncAll("periodic");
                 }, PERIODIC_MS, PERIODIC_MS, TimeUnit.MILLISECONDS);
+                // A kid's minutes reach the other TVs within a couple of minutes, so they're the same everywhere
+                EXEC.scheduleWithFixedDelay(Household::publishUsage, USAGE_MS, USAGE_MS, TimeUnit.MILLISECONDS);
             }
         }
         EXEC.execute(() -> {
@@ -237,6 +242,9 @@ final class Household {
             applyEntries();
             applyWatch(null);
             publishWatch();
+            publishUnpublishedRules();
+            applyRules(null);
+            readOtherUsage();
             refreshNotices(sContext);
         });
         syncSoon();
@@ -346,6 +354,97 @@ final class Household {
         EXEC.execute(() -> {
             if (member(app)) publish(app, HouseholdBridge.WATCH, profileKey, HouseholdWatch.itemOf(kind, pkg, item), null);
         });
+    }
+
+    // ---- A kid's own rules and minutes (TVs without Home Assistant) ----
+
+    /** The other TVs' minutes today, profile key -> package -> milliseconds, as last read from the household. */
+    private static volatile Map<String, Map<String, Long>> sOtherUsage = new HashMap<>();
+    private static volatile String sOtherUsageDay = "";
+
+    /** Hearth's own rules for a profile were changed here: the household's other TVs take them. */
+    static void onRulesChanged(Context context, String profileKey) {
+        if (!mayBeInHousehold(context) || profileKey == null) return;
+        Context app = context.getApplicationContext();
+        EXEC.execute(() -> {
+            if (!member(app)) return;
+            org.json.JSONObject rules = LocalAllowance.rules(app, profileKey);
+            publish(app, HouseholdBridge.RULES, profileKey, "", rules != null ? rules.toString() : null);
+        });
+    }
+
+    /** Rules set on this TV for a person the household has none for become entries (the household's win otherwise). */
+    private static void publishUnpublishedRules() {
+        if (sContext == null || !member(sContext)) return;
+        HouseholdLog log = store(sContext).log();
+        for (Map.Entry<String, String> person : local(sContext).profiles().entrySet()) {
+            org.json.JSONObject rules = LocalAllowance.rules(sContext, person.getValue());
+            if (rules == null || log.get(HouseholdBridge.RULES, person.getKey(), "") != null) continue;
+            publish(sContext, HouseholdBridge.RULES, person.getValue(), "", rules.toString());
+        }
+    }
+
+    /** Puts the household's rules among {@code entries} (null: all) in place for this TV's profiles. */
+    private static void applyRules(List<HouseholdEntry> entries) {
+        if (sContext == null || !member(sContext)) return;
+        if (entries == null) entries = store(sContext).log().all();
+        Map<String, String> profiles = local(sContext).profiles();
+        int changed = 0;
+        for (HouseholdEntry entry : entries) {
+            if (!HouseholdBridge.RULES.equals(entry.kind)) continue;
+            String key = profiles.get(entry.profile);
+            if (key == null) continue;
+            org.json.JSONObject rules = null;
+            if (!entry.deleted) {
+                try {
+                    rules = new org.json.JSONObject(entry.value);
+                } catch (org.json.JSONException e) {
+                    continue;
+                }
+            }
+            if (LocalAllowance.setRules(sContext, key, rules)) changed++;
+        }
+        if (changed > 0) Log.i(TAG, "Screen time rules: took " + changed + " from the household");
+    }
+
+    /** Each kid's minutes on this TV today, when they moved, as this TV's usage entry. On the household thread. */
+    private static void publishUsage() {
+        if (sContext == null || !member(sContext)) return;
+        HouseholdStore store = store(sContext);
+        HouseholdLog log = store.log();
+        long now = System.currentTimeMillis();
+        String item = HouseholdUsage.item(store.tvId(), UsageToday.day(now));
+        int sent = 0;
+        for (Map.Entry<String, String> person : local(sContext).profiles().entrySet()) {
+            if (LocalAllowance.rules(sContext, person.getValue()) == null) continue;
+            Map<String, Long> ms = UsageToday.frontMs(sContext, person.getValue(), now);
+            ms.remove(sContext.getPackageName());
+            if (ms.isEmpty()) continue;
+            String value = HouseholdUsage.valueOf(ms);
+            HouseholdEntry have = log.get(HouseholdBridge.USAGE, person.getKey(), item);
+            if (have != null && value.equals(have.value)) continue;
+            if (log.put(HouseholdBridge.USAGE, person.getKey(), item, value, now) != null) sent++;
+        }
+        if (sent == 0) return;
+        store.save();
+        syncSoon();
+    }
+
+    /** Reads the other TVs' minutes today from the household's entries. On the household thread. */
+    private static void readOtherUsage() {
+        if (sContext == null || !member(sContext)) return;
+        HouseholdStore store = store(sContext);
+        String day = UsageToday.day(System.currentTimeMillis());
+        sOtherUsage = HouseholdUsage.others(store.log().all(), store.tvId(), day, local(sContext).profiles());
+        sOtherUsageDay = day;
+        LocalAllowance.forget();
+    }
+
+    /** The household's other TVs' minutes today for this profile, package -> milliseconds (empty: none). */
+    static Map<String, Long> otherUsage(Context context, String profileKey, long now) {
+        if (profileKey == null || !UsageToday.day(now).equals(sOtherUsageDay)) return new HashMap<>();
+        Map<String, Long> usage = sOtherUsage.get(profileKey);
+        return usage != null ? new HashMap<>(usage) : new HashMap<>();
     }
 
     /** Each person's own newest titles that differ from the household's become entries. On the household thread. */
@@ -671,6 +770,8 @@ final class Household {
         if (reviewing(sContext)) prefs(sContext).edit().putString(REVIEW_READY_PREF, "1").apply();
         applyEntries();
         applyWatch(result.applied);
+        applyRules(result.applied);
+        readOtherUsage();
         noticesArrived(result.applied);
         publishUnpublished();
         sLastSyncAt = System.currentTimeMillis();
