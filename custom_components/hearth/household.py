@@ -20,6 +20,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
+from .entry_tasks import entry_task
 from .const import (
     CONF_KIND,
     CONF_LOCKS,
@@ -135,6 +136,9 @@ class Household:
         self.categories: dict[str, str] = {}
         # Groups an item is in because of where its time came from (a Switch's titles are games)
         self._hints: dict[str, set[str]] = {}
+        # known_apps() for one document build: every builder makes one membership() and hands it to each
+        # _group_apps() call, so the walk over devices, sources and every sensor runs once per build, not per group
+        self._known_for: tuple[Any, dict[str, str]] | None = None
 
     async def async_load(self) -> None:
         await self.limits.async_load()
@@ -456,6 +460,7 @@ class Household:
 
     @callback
     def recompute(self) -> None:
+        self._known_for = None
         now = dt_util.now()
         # A TV's commands that waited too long are told as expired
         self.hub.commands.prune()
@@ -723,6 +728,15 @@ class Household:
 
     # What a device is told
 
+    def _known_apps_for(self, membership) -> dict[str, str]:
+        """known_apps(), computed once per membership() (one document build) rather than once per group."""
+        cached = self._known_for
+        if cached is not None and cached[0] is membership:
+            return cached[1]
+        known = self.known_apps()
+        self._known_for = (membership, known)
+        return known
+
     def _group_apps(self, group: Group, membership, with_fs: bool = False) -> list[str]:
         """The packages a device should hold to a group: its own list and the apps seen in it (a title's packages).
         [with_fs]: with the group's Xbox and Windows apps (Family Safety's ids), which no Hearth device holds."""
@@ -730,7 +744,7 @@ class Household:
             return []
         titles = {f"title:{t.id}": t for t in self.titles}
         found: set[str] = set()
-        for item in set(group.apps) | {k for k in self.known_apps() if group.id in membership(k)}:
+        for item in set(group.apps) | {k for k in self._known_apps_for(membership) if group.id in membership(k)}:
             title = titles.get(item)
             for candidate in (title.raw if title else (item,)):
                 if fs_app(candidate):
@@ -1062,7 +1076,7 @@ class Household:
         # Extra time Hearth gave in Family Link or Family Safety for an allow that ended goes too
         self.sync.allow_ended()
         if offs:
-            self.hass.async_create_task(self.scheduler.async_tick(), "hearth school time back")
+            entry_task(self.hass, self.hub.entry.entry_id, self.scheduler.async_tick(), "hearth school time back")
         who = self.person_name(person)
         lines = [
             f"{happened(ends_on, who, self.places.place_name(person, next(iter(ends_on.values()))))}; {what}."

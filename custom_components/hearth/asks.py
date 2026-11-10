@@ -35,6 +35,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
+from .entry_tasks import entry_task
 from . import phones
 from .const import DOMAIN, SIGNAL_PAIRINGS
 
@@ -322,7 +323,7 @@ class Asks:
             ask.granted = int(minutes)
             self.hub.household.add_bonus(ask.person, ask.group, ask.granted)
         if ask.source == FAMILY_SAFETY:
-            self.hass.async_create_task(self._answer_family_safety(ask), "hearth family safety answer")
+            entry_task(self.hass, self.hub.entry.entry_id, self._answer_family_safety(ask), "hearth family safety answer")
         self.hass.bus.async_fire(
             EVENT_MORE_TIME_ANSWERED,
             {"id": ask.id, "person": ask.person, "status": ask.status, "minutes": ask.granted, "by": by},

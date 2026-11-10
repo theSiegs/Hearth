@@ -26,7 +26,7 @@ from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.util.network import is_local
 
 from .const import CONF_PUSH_SERVER, CONF_ROLES, CONTRACT, DOMAIN, KIND_MOBILE, KIND_TV, KINDS, MAX_STATUS_BYTES, PAIRING_EXPIRES
-from .hub import HearthHub, collect_secret, find_pairing
+from .hub import HearthHub, collect_secret, find_pairing, pin_lockout
 from .push import clean_server, push_answer
 from .notifications import notify_pairing
 from . import parent_pin
@@ -298,28 +298,28 @@ class VerifyPinView(HomeAssistantView):
         stored = parent_pin.stored_pins(hub.entry.options)
         if not stored:
             return _error(HTTPStatus.NOT_FOUND, "no_pin")
-        state = hub.state(device_id)
+        lock = pin_lockout(hass, device_id)
         now = dt_util.utcnow()
-        if wait := parent_pin.retry_in(state.pin_locked_until, now):
+        if wait := parent_pin.retry_in(lock.locked_until, now):
             return web.json_response({"error": "locked_out", "retry_in": wait}, status=HTTPStatus.TOO_MANY_REQUESTS)
         body = await _json_body(request)
         pin = body.get("pin") if isinstance(body, dict) else None
         if not isinstance(pin, str):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
         # Counted before the slow check, so parallel guesses can't all slip in under the free tries
-        state.pin_failures += 1
+        lock.failures += 1
         if person := await hass.async_add_executor_job(parent_pin.whose, stored, pin):
-            state.pin_failures = 0
-            state.pin_locked_until = None
+            lock.failures = 0
+            lock.locked_until = None
             hass.bus.async_fire(parent_pin.EVENT_PARENT_PIN_USED, {"device_id": device_id, "person": person})
             return web.json_response({"ok": True, "person": person})
         answer: dict[str, Any] = {"ok": False}
-        if wait_for := parent_pin.lockout(state.pin_failures):
-            state.pin_locked_until = dt_util.utcnow() + wait_for
-            answer["retry_in"] = parent_pin.retry_in(state.pin_locked_until, dt_util.utcnow())
+        if wait_for := parent_pin.lockout(lock.failures):
+            lock.locked_until = dt_util.utcnow() + wait_for
+            answer["retry_in"] = parent_pin.retry_in(lock.locked_until, dt_util.utcnow())
             hass.bus.async_fire(
                 parent_pin.EVENT_PARENT_PIN_LOCKED_OUT,
-                {"device_id": device_id, "failures": state.pin_failures, "retry_in": answer["retry_in"]},
+                {"device_id": device_id, "failures": lock.failures, "retry_in": answer["retry_in"]},
             )
         return web.json_response(answer)
 

@@ -58,6 +58,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
+from .entry_tasks import entry_task
 from . import family_link as fl
 from .counting import ALL
 from .exceptions import Lifted, end_of_day
@@ -306,6 +307,9 @@ class Enforcement:
 
     def __init__(self, hass: HomeAssistant, entry_id: str) -> None:
         self.hass = hass
+        self._entry_id = entry_id
+        # Set by async_flush (the entry is unloading): no new enforcement pass starts after it
+        self._closed = False
         self._store: Store[dict[str, Any]] = Store(hass, 1, f"hearth.enforce.{entry_id}")
         self.held: dict[str, Held] = {}
         self.enforcers: list[Enforcer] = []
@@ -344,8 +348,13 @@ class Enforcement:
         }
 
     async def async_flush(self) -> None:
-        if self._task is not None and not self._task.done():
-            self._task.cancel()
+        self._closed = True
+        task = self._task
+        if task is not None and not task.done():
+            task.cancel()
+            # Wait for it to stop, so nothing of this instance saves after the store below (a reload's new
+            # instance loads from it)
+            await asyncio.gather(task, return_exceptions=True)
         await self._store.async_save(self._data())
 
     def held_for(self, person: str) -> dict[str, Any]:
@@ -465,10 +474,12 @@ class Enforcement:
         return dt_util.utcnow() - self.started >= SETTLE
 
     def _run(self) -> None:
+        if self._closed:
+            return
         if self._task is not None and not self._task.done():
             self._again = True
             return
-        self._task = self.hass.async_create_task(self._async_apply(), "hearth enforcement")
+        self._task = entry_task(self.hass, self._entry_id, self._async_apply(), "hearth enforcement")
 
     async def _async_apply(self) -> None:
         self._again = False

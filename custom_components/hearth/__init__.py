@@ -23,6 +23,7 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.util import dt as dt_util
 
+from .entry_tasks import entry_task
 from .api import async_register_views
 from .auth import register_service
 from .websocket import async_register_commands
@@ -476,14 +477,14 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         if ends_on and day != today:
             raise ServiceValidationError("ends_on works for today's School time off only")
         ids = household.scheduler.take_off(people, day, call.data.get("from"), call.data.get("reason"), ends_on)
-        hass.async_create_task(household.scheduler.async_tick())
+        entry_task(hass, household.hub.entry.entry_id, household.scheduler.async_tick(), "hearth school time off")
         return {"ids": ids}
 
     async def school_time_off_cancel(call: ServiceCall) -> ServiceResponse:
         household = loaded_household()
         people = people_of(household, call.data["people"]) if call.data.get("people") else None
         changed = household.scheduler.cancel(people, call.data.get("date"))
-        hass.async_create_task(household.scheduler.async_tick())
+        entry_task(hass, household.hub.entry.entry_id, household.scheduler.async_tick(), "hearth school time back")
         return {"ids": changed}
 
     register_service(

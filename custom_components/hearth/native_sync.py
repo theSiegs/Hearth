@@ -21,6 +21,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
+from .entry_tasks import entry_task
 from . import grants as g
 from .counting import ALL
 from .enforce import FAMILY_LINK, FAMILY_SAFETY, fs_account_of
@@ -147,7 +148,7 @@ class NativeSync:
     def end_grant(self, grant: Grant) -> None:
         """The first-party write that ends a grant early, where there is one."""
         if grant.end_with in (g.END_RESET_BONUS, g.END_CANCEL_BONUS):
-            self.hass.async_create_task(self._end_write(grant), "hearth grant end")
+            entry_task(self.hass, self.household.hub.entry.entry_id, self._end_write(grant), "hearth grant end")
 
     async def _end_write(self, grant: Grant) -> None:
         enforcer = self._enforcer(grant.person, grant.via)
@@ -218,8 +219,9 @@ class NativeSync:
                     continue
                 self._given[key] = {"day": today, "devices": {}, "platforms": []}
                 self._save()
-                self.hass.async_create_task(
-                    self._give_time(person, min(until, end_of_day(now)), key), "hearth first-party extra time"
+                entry_task(
+                    self.hass, self.household.hub.entry.entry_id,
+                    self._give_time(person, min(until, end_of_day(now)), key), "hearth first-party extra time",
                 )
 
     @callback
@@ -236,7 +238,7 @@ class NativeSync:
         self._given[key] = {"day": now.date().isoformat(), "devices": {}, "platforms": []}
         self._save()
         until = min(now + timedelta(minutes=left), end_of_day(now))
-        self.hass.async_create_task(self._give_time(person, until, key), "hearth first-party extra time")
+        entry_task(self.hass, self.household.hub.entry.entry_id, self._give_time(person, until, key), "hearth first-party extra time")
 
     def _mirrors(self, person: str) -> bool:
         return any(
@@ -268,8 +270,9 @@ class NativeSync:
         key = (person, f"device:{extra_id}")
         self._given[key] = {"day": dt_util.now().date().isoformat(), "devices": {}, "platforms": []}
         self._save()
-        self.hass.async_create_task(
-            self._give_time(person, until, key, fl_device, platform), "hearth extra time on one device"
+        entry_task(
+            self.hass, self.household.hub.entry.entry_id,
+            self._give_time(person, until, key, fl_device, platform), "hearth extra time on one device",
         )
 
     @callback
@@ -278,7 +281,7 @@ class NativeSync:
         record = self._given.pop((person, f"device:{extra_id}"), None)
         self._save()
         if record and (record["devices"] or record["platforms"]):
-            self.hass.async_create_task(self._take_back(person, record), "hearth extra time on one device back")
+            entry_task(self.hass, self.household.hub.entry.entry_id, self._take_back(person, record), "hearth extra time on one device back")
 
     async def _give_family_link(
         self, person: str, minutes: int, why: str, record: dict[str, Any], only: str | None = None
@@ -385,7 +388,7 @@ class NativeSync:
             del self._given[key]
             self._save()
             if record["devices"] or record["platforms"]:
-                self.hass.async_create_task(self._take_back(person, record), "hearth first-party extra time back")
+                entry_task(self.hass, self.household.hub.entry.entry_id, self._take_back(person, record), "hearth first-party extra time back")
 
     async def _take_back(self, person: str, record: dict[str, Any]) -> None:
         from . import family_link as fl

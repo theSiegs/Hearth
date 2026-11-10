@@ -78,6 +78,21 @@ def _shared(hass: HomeAssistant) -> dict[str, dict]:
     return hass.data.setdefault(f"{DOMAIN}_pairing", {"pairings": {}, "asked_at": {}})
 
 
+@dataclass
+class PinLockout:
+    """Wrong parent PINs in a row from one device, and the lockout they earned."""
+
+    failures: int = 0
+    locked_until: datetime | None = None
+
+
+def pin_lockout(hass: HomeAssistant, device_id: str) -> PinLockout:
+    """A device's parent-PIN lockout, kept outside the entry like the pairings: changing an option reloads the
+    entry, and that must not hand someone guessing the PIN a fresh set of tries. A restart still clears it."""
+    lockouts: dict[str, PinLockout] = hass.data.setdefault(f"{DOMAIN}_pin_lockout", {})
+    return lockouts.setdefault(device_id, PinLockout())
+
+
 def find_pairing(hass: HomeAssistant, pairing_id: str, nonce: str | None) -> Pairing | None:
     """A waiting pairing, only for the device that started it (it holds the nonce); works while the entry reloads."""
     pairings: dict[str, Pairing] = _shared(hass)["pairings"]
@@ -104,9 +119,6 @@ class DeviceState:
     seen: datetime | None = None
     posts: list[datetime] = field(default_factory=list)
     event_posts: list[datetime] = field(default_factory=list)
-    # Wrong parent PINs in a row, and the lockout they earned (kept until a restart)
-    pin_failures: int = 0
-    pin_locked_until: datetime | None = None
 
 
 class HearthHub:
