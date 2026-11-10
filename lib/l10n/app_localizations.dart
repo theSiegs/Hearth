@@ -3449,6 +3449,18 @@ abstract class AppLocalizations {
   /// **'Episode & Video Details'**
   String get cwEpisodeDetails;
 
+  /// Switch on the Continue Watching page: this profile's Continue Watching goes to the household's other TVs
+  ///
+  /// In en, this message translates to:
+  /// **'Share What I Watch With Our Other TVs'**
+  String get cwShareWatchHistory;
+
+  /// Subtitle of the share switch on the Continue Watching page
+  ///
+  /// In en, this message translates to:
+  /// **'What you watch shows in Continue Watching on your other TVs. Off: it stays on the TV you watched it on.'**
+  String get cwShareWatchHistoryDescription;
+
   /// Next to Apps with Continue Watching on the Continue Watching page: how many apps are blocked
   ///
   /// In en, this message translates to:

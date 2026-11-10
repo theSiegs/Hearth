@@ -62,6 +62,9 @@ const String _hiddenCalendarsKey = "hidden_calendars";
 const String _haPanelFullDashboardKey = "ha_panel_full_dashboard";
 const String _showInputsWidgetInStatusBarKey = "show_inputs_widget_in_status_bar";
 const String _showContinueWatchingKey = "show_continue_watching";
+/// Whether what this profile watches goes to the household's other TVs (Continue Watching). In the profile's look, so
+/// every TV in the household has the same answer; the Java side reads it from there (Household.publishWatch).
+const String _shareWatchHistoryKey = "share_watch_history";
 const String _continueWatchingCardSizeKey = "continue_watching_card_size";
 const String _continueWatchingMaxItemsKey = "continue_watching_max_items";
 const String _continueWatchingShowProgressKey = "continue_watching_show_progress";
@@ -190,6 +193,7 @@ class SettingsService extends ChangeNotifier {
     _continueWatchingShowProgressKey,
     _continueWatchingShowDescriptionKey,
     _continueWatchingOrderKey,
+    _shareWatchHistoryKey,
     _hiddenWatchNextProgramIdsKey,
     _hiddenWatchNextPackagesKey,
     _startOnBootKey,
@@ -329,6 +333,9 @@ class SettingsService extends ChangeNotifier {
   bool get showInputsWidgetInStatusBar => _bool(_showInputsWidgetInStatusBarKey, true);
 
   bool get showContinueWatching => _bool(_showContinueWatchingKey, true);
+
+  /// What this profile watches follows it to the household's other TVs (on unless the person turned it off).
+  bool get shareWatchHistory => _bool(_shareWatchHistoryKey, true);
 
   /// The Continue Watching cards' height, in dp.
   int get continueWatchingCardHeight {
@@ -620,6 +627,8 @@ class SettingsService extends ChangeNotifier {
   Future<void> setShowInputsWidgetInStatusBar(bool show) => _setBool(_showInputsWidgetInStatusBarKey, show);
 
   Future<void> setShowContinueWatching(bool show) => _setBool(_showContinueWatchingKey, show);
+
+  Future<void> setShareWatchHistory(bool share) => _setBool(_shareWatchHistoryKey, share);
 
   Future<void> setContinueWatchingCardHeight(int height) =>
       _setString(_continueWatchingCardSizeKey, height.toString());

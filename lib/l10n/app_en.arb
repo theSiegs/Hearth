@@ -2437,6 +2437,14 @@
     "@cwEpisodeDetails": {
         "description": "Switch on the Continue Watching page"
     },
+    "cwShareWatchHistory": "Share What I Watch With Our Other TVs",
+    "@cwShareWatchHistory": {
+        "description": "Switch on the Continue Watching page: this profile's Continue Watching goes to the household's other TVs"
+    },
+    "cwShareWatchHistoryDescription": "What you watch shows in Continue Watching on your other TVs. Off: it stays on the TV you watched it on.",
+    "@cwShareWatchHistoryDescription": {
+        "description": "Subtitle of the share switch on the Continue Watching page"
+    },
     "cwBlockedCount": "{count, plural, =1{1 blocked} other{{count} blocked}}",
     "@cwBlockedCount": {
         "description": "Next to Apps with Continue Watching on the Continue Watching page: how many apps are blocked",

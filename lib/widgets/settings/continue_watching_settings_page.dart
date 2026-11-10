@@ -148,6 +148,13 @@ class _ContinueWatchingSettingsPageState extends State<ContinueWatchingSettingsP
             title: Text(localizations.cwEpisodeDetails, style: Theme.of(context).textTheme.bodyMedium),
             secondary: const Icon(Icons.subtitles_outlined),
           ),
+          RoundedSwitchListTile(
+            value: settingsService.shareWatchHistory,
+            onChanged: (v) => settingsService.setShareWatchHistory(v),
+            title: Text(localizations.cwShareWatchHistory, style: Theme.of(context).textTheme.bodyMedium),
+            subtitle: Text(localizations.cwShareWatchHistoryDescription),
+            secondary: const Icon(Icons.connected_tv_outlined),
+          ),
           FocusableSettingsTile(
             leading: const Icon(Icons.apps_outlined),
             title: Text(localizations.cwAppsWithContinueWatching, style: Theme.of(context).textTheme.bodyMedium),

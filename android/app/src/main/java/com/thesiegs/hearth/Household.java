@@ -359,6 +359,9 @@ final class Household {
         int sent = 0;
         int[] fetches = {POSTER_FETCHES_PER_ROUND};
         for (Map.Entry<String, String> person : local(sContext).profiles().entrySet()) {
+            // A person who keeps what they watch on the TV they watched it on (their look says so) sends nothing
+            HouseholdEntry look = log.get(HouseholdBridge.LOOK, person.getKey(), "");
+            if (!HouseholdWatch.shares(look != null ? look.value : null)) continue;
             for (WatchHistory.Entry e : HouseholdWatch.toSend(history.ownEntries(person.getValue()), now)) {
                 String item = HouseholdWatch.itemOf(e.kind, e.packageName, e.item);
                 // A kept entry's poster goes with it: the other TV can't load this one's address for it

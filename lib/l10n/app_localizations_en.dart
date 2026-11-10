@@ -2089,6 +2089,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cwEpisodeDetails => 'Episode & Video Details';
 
   @override
+  String get cwShareWatchHistory => 'Share What I Watch With Our Other TVs';
+
+  @override
+  String get cwShareWatchHistoryDescription =>
+      'What you watch shows in Continue Watching on your other TVs. Off: it stays on the TV you watched it on.';
+
+  @override
   String cwBlockedCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
