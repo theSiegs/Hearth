@@ -201,7 +201,7 @@ A v2 TV answers:
 
 ```json
 {"t":"welcome","v":2,"role":"kid","mode":"local","person":{"id":"p_3f9a…","name":"Sam"},
- "tvs":[{"id":"9c1e44d07a2b11f0","n":"the den TV"},{"id":"51aa…","n":"the living room TV"}],
+ "tvs":[{"id":"9c1e44d07a2b11f0","n":"the kitchen TV"},{"id":"51aa…","n":"the bedroom TV"}],
  "now":1794336000000,"tz":"America/Denver"}
 ```
 
@@ -227,7 +227,7 @@ A v2 TV answers:
 - `time` is null for an adult profile or no limit. **In a kid session it is null unless the profile in front is that app's
   own kid**; a `none` session always gets null. Pushed on change like the rest of `state`; a minute ticking down is not a
   change (the app counts down from `minutesLeft` at receipt). In mode `ha` it reports what the TV enforces (HA's rules).
-- Glint's dealt TV tile gets "the den TV · title · 12 min left" from this.
+- Glint's dealt TV tile gets "the kitchen TV · title · 12 min left" from this.
 
 ### V2.4 Told roles (no detection)
 

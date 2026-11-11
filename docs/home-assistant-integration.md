@@ -884,7 +884,7 @@ then sends the same object as an event whenever it changes, at most every 2 seco
   profiles, or their Hearth phone), `family_link` (each Family Link device, `fl:<device id>`), `family_safety` (each
   platform Hearth's Family Safety enforcer of theirs holds, `fs:xbox`, `fs:windows`) or `nintendo` (their Switch,
   `nintendo:<the enforcer's entity>`); `groups` true where one group can be held or given on that device alone
-  (Hearth's own devices). A TV's `name` is as shown ("Den" is "Den TV"). One handset that's both a Hearth phone and
+  (Hearth's own devices). A TV's `name` is as shown ("Kitchen" is "Kitchen TV"). One handset that's both a Hearth phone and
   a Family Link device of theirs (the same name) is both: the Family Link one says `same_as` (the Hearth phone's id)
   and the Hearth phone `also` (`["fl:<id>"]`); show it once. Extra time there for one group goes on the Hearth phone;
   for All screen time give it on both if Family Link holds the phone too. And `device_extras` `[{id, target, name, via, kind (bonus | allow), group, until,

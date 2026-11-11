@@ -9,7 +9,7 @@ from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 from custom_components.hearth.const import DOMAIN, EVENT_DEVICE_PAIRED
 from test_init import PHONE_ID, STATUS, TV_ID, _pair, _post, _set_up
 
-DEN_ID = "tv-den-0123456789ab"
+STUDY_ID = "tv-study-0123456789"
 
 
 def _ticket(client, secret: str | None, body: dict, device_id: str = TV_ID):
@@ -17,7 +17,7 @@ def _ticket(client, secret: str | None, body: dict, device_id: str = TV_ID):
     return client.post(f"/api/hearth/device/{device_id}/ticket", json=body, headers=headers)
 
 
-def _redeem(client, ticket: str, device_id: str = DEN_ID, kind: str = "tv", name: str = "Den"):
+def _redeem(client, ticket: str, device_id: str = STUDY_ID, kind: str = "tv", name: str = "Study"):
     return client.post(
         "/api/hearth/pair/redeem",
         json={"ticket": ticket, "device_id": device_id, "kind": kind, "name": name, "model": "Box", "version": "1"},
@@ -42,12 +42,12 @@ async def test_a_paired_tv_adds_another_tv_with_no_code(
     redeemed = await _redeem(client, answer["ticket"])
     assert redeemed.status == 200
     body = await redeemed.json()
-    assert body["status"] == "approved" and body["device_id"] == DEN_ID and body["person"] is None
+    assert body["status"] == "approved" and body["device_id"] == STUDY_ID and body["person"] is None
     await hass.async_block_till_done()
 
     # The new TV posts with its own secret, and Home Assistant knows it
-    assert (await _post(client, body["secret"], device_id=DEN_ID)).status == 200
-    assert DEN_ID in hass.config_entries.async_entries(DOMAIN)[0].data["devices"]
+    assert (await _post(client, body["secret"], device_id=STUDY_ID)).status == 200
+    assert STUDY_ID in hass.config_entries.async_entries(DOMAIN)[0].data["devices"]
     assert fired[0].data["by"] == TV_ID and fired[0].data["kind"] == "tv"
     # Nobody had to confirm a code
     assert not hass.config_entries.flow.async_progress_by_handler(DOMAIN)

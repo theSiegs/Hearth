@@ -15,22 +15,22 @@ public class HouseholdUsageTest {
 
     @Test
     public void sumsTheOtherTvsMinutesForToday() {
-        HouseholdLog den = new HouseholdLog("den");
+        HouseholdLog study = new HouseholdLog("study");
         HouseholdLog loft = new HouseholdLog("loft");
         HouseholdLog here = new HouseholdLog("here");
         long now = 1_000_000L;
         List<HouseholdEntry> entries = List.of(
-                den.put(HouseholdBridge.USAGE, "p:sam", HouseholdUsage.item("den", DAY),
+                study.put(HouseholdBridge.USAGE, "p:sam", HouseholdUsage.item("study", DAY),
                         HouseholdUsage.valueOf(Map.of("com.example.game", 600_000L)), now),
                 loft.put(HouseholdBridge.USAGE, "p:sam", HouseholdUsage.item("loft", DAY),
                         HouseholdUsage.valueOf(Map.of("com.example.game", 300_000L, "com.example.video", 60_000L)), now),
                 // This TV's own and yesterday's don't count
                 here.put(HouseholdBridge.USAGE, "p:sam", HouseholdUsage.item("here", DAY),
                         HouseholdUsage.valueOf(Map.of("com.example.game", 999_000L)), now),
-                den.put(HouseholdBridge.USAGE, "p:sam", HouseholdUsage.item("den", "2026-11-10"),
+                study.put(HouseholdBridge.USAGE, "p:sam", HouseholdUsage.item("study", "2026-11-10"),
                         HouseholdUsage.valueOf(Map.of("com.example.game", 999_000L)), now),
                 // Someone this TV has no profile for
-                den.put(HouseholdBridge.USAGE, "p:alex", HouseholdUsage.item("den", DAY),
+                study.put(HouseholdBridge.USAGE, "p:alex", HouseholdUsage.item("study", DAY),
                         HouseholdUsage.valueOf(Map.of("com.example.game", 1L)), now));
 
         Map<String, Map<String, Long>> others = HouseholdUsage.others(entries, "here", DAY, Map.of("p:sam", "user:10"));

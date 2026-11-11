@@ -95,7 +95,7 @@ def targets_of(household: Household, person: str) -> list[dict[str, Any]]:
 
 
 def _shown(name: str, tv: bool) -> str:
-    """A TV's name as shown: "Den" is "Den TV"; a name that says TV already stays."""
+    """A TV's name as shown: "Kitchen" is "Kitchen TV"; a name that says TV already stays."""
     if tv and "tv" not in name.casefold().replace("-", " ").split():
         return f"{name} TV"
     return name
