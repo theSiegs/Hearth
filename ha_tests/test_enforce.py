@@ -672,3 +672,12 @@ async def test_family_link_never_pauses_an_app_with_unlimited_time(
     await _budget(hass, "video", 10)
     assert len(paused) == 1
     assert "com.thesiegs.hearthtube" not in paused[0].data["packages"]
+
+
+async def test_a_reload_does_not_start_the_settle_again(hass: HomeAssistant, freezer) -> None:
+    # Saving a setting reloads the entry: a hold due to be let go isn't kept another five minutes
+    first = enforce.Enforcement(hass, "entry-1")
+    freezer.tick(timedelta(minutes=10))
+    again = enforce.Enforcement(hass, "entry-1")
+    assert again.started == first.started
+    assert again._may_let_go()

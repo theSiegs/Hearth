@@ -275,8 +275,10 @@ final class HaAllowance {
             return valuesOf(LocalAllowance.entryFor(context, profileKey, now), null);
         }
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        if (profileKey == null || !UsageToday.day(now).equals(prefs.getString(DAY_KEY, null))) {
-            return new Values(null, false, null, null);
+        if (profileKey == null) return new Values(null, false, null, null);
+        // A new day before Home Assistant has answered: its lock or pause still running holds, the minutes don't
+        if (!UsageToday.day(now).equals(prefs.getString(DAY_KEY, null))) {
+            return valuesOf(entryFor(context, profileKey, now), null);
         }
         Long checkedAt = prefs.contains(CHECKED_KEY) ? prefs.getLong(CHECKED_KEY, 0) : null;
         return valuesOf(entryFor(context, profileKey, now), checkedAt);
@@ -289,9 +291,40 @@ final class HaAllowance {
     static JSONObject entryFor(Context context, String profileKey, long now) {
         if (!LocalAllowance.homeAssistantDecides(context)) return LocalAllowance.entryFor(context, profileKey, now);
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        if (profileKey == null || !UsageToday.day(now).equals(prefs.getString(DAY_KEY, null))) return null;
+        if (profileKey == null) return null;
+        JSONObject entry;
         try {
-            return new JSONObject(prefs.getString(PROFILES_KEY, "{}")).optJSONObject(profileKey);
+            entry = new JSONObject(prefs.getString(PROFILES_KEY, "{}")).optJSONObject(profileKey);
+        } catch (JSONException e) {
+            return null;
+        }
+        if (UsageToday.day(now).equals(prefs.getString(DAY_KEY, null))) return entry;
+        // Home Assistant hasn't answered since the day changed (it may be away): its last word still counts for what
+        // runs past midnight, never for yesterday's minutes
+        return carriedOver(entry, now);
+    }
+
+    /**
+     * What of yesterday's entry still holds today: a lock (bedtime) or a pause that hasn't ended, and nothing else (no
+     * minutes, no group out of time). Null when nothing does.
+     */
+    static JSONObject carriedOver(JSONObject entry, long now) {
+        JSONObject locks = entry != null ? entry.optJSONObject(LOCKS_KEY) : null;
+        if (locks == null) return null;
+        JSONObject kept = new JSONObject();
+        try {
+            for (String field : new String[]{"lock", "pause"}) {
+                JSONObject value = locks.optJSONObject(field);
+                Long until = value != null ? HaLocks.parseTime(value.optString("until", null)) : null;
+                if (until != null && until > now) kept.put(field, value);
+            }
+            if (kept.length() == 0) return null;
+            JSONObject out = new JSONObject();
+            out.put("youtube_minutes_left", JSONObject.NULL);
+            out.put("out_of_time", new JSONObject());
+            out.put("schedule_locked", kept.has("lock"));
+            out.put(LOCKS_KEY, kept);
+            return out;
         } catch (JSONException e) {
             return null;
         }

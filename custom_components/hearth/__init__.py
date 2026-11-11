@@ -5,6 +5,8 @@ See docs/home-assistant-integration.md.
 
 from __future__ import annotations
 
+import logging
+
 from datetime import datetime, timedelta
 
 import voluptuous as vol
@@ -26,12 +28,13 @@ from homeassistant.util import dt as dt_util
 from .entry_tasks import async_wait_for_entry_tasks
 from .entry_tasks import entry_task
 from .api import async_register_views
-from .auth import register_service
+from .auth import is_adult_user, register_service
 from .websocket import async_register_commands
 from .pause import end_app_pause, end_pause, set_app_pause, set_pause
 from .places import ARRIVE, LEAVE
 from . import panel
 from .apps import ACTION_PREFIX
+from .asks import ACTION_PREFIX as ASK_ACTION_PREFIX
 from .commands import is_profile_id, what_to_play
 from .const import CONF_DEVICES, CONF_KIND, CONF_PROFILES, CONF_PUSH_TOPIC, DOMAIN, KIND_MOBILE, KIND_TV
 from .profiles import ISSUE_PROFILE_KEYS, legacy_keys
@@ -112,6 +115,8 @@ PAUSE_END_SCHEMA = vol.Schema(
         vol.Exclusive("group", "what"): cv.string,
     }
 )
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def _paused_what(household, data, group_id) -> tuple[str | None, str | None]:
@@ -820,10 +825,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     # And whenever a screen time source changes
     if entities := hub.household.source_entities():
         entry.async_on_unload(async_track_state_change_event(hass, entities, recompute))
-    @callback
-    def phone_answer(event) -> None:
+    async def phone_answer(event) -> None:
         """A Sort button on a new app's phone notification: HEARTH_APP|<group>|<package>."""
         action = str(event.data.get("action") or "")
+        if not action.startswith((ASK_ACTION_PREFIX, ACTION_PREFIX)):
+            return
+        # Only an adult's (or an administrator's) phone answers or sorts: a kid with Home Assistant on their own phone
+        # can fire the same action, for their own ask
+        user = await hass.auth.async_get_user(event.context.user_id) if event.context.user_id else None
+        if not is_adult_user(hass, hub, user):
+            _LOGGER.warning("A Hearth notification action from someone who isn't an adult was ignored")
+            return
         # A request for more time: the first adult's answer decides
         if hub.asks.phone_answer(action, event.context.user_id):
             return

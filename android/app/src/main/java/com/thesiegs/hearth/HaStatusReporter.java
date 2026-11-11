@@ -72,12 +72,12 @@ final class HaStatusReporter {
      */
     private static final int WAIT_S = 50;
     private static final long WAIT_RETRY_MS = 30_000;
+    /** After a 404 (an older integration, or Home Assistant still loading), the long-poll waits this long to try again. */
+    private static final long WAIT_UNSUPPORTED_RETRY_MS = 10 * 60_000;
     /** The version of the last state document the integration answered with: what the wait compares against. */
     private volatile String mStateVersion;
     /** Bumped to end the waiting thread: a thread whose generation isn't current stops after its wait. */
     private final AtomicInteger mWaitGeneration = new AtomicInteger();
-    /** The integration has no long-poll (an older one): not asked again until the next start(). Main thread. */
-    private boolean mWaitUnsupported;
     private boolean mWaiting;
 
     /** What the reporter knows, copied on the main thread so the status can be built on the sender thread. */
@@ -169,7 +169,6 @@ final class HaStatusReporter {
         }
         mHandler.post(mHeartbeat);
         mHandler.postDelayed(mUsageTick, USAGE_TICK_MS);
-        mWaitUnsupported = false;
         startWaiting();
     }
 
@@ -212,7 +211,7 @@ final class HaStatusReporter {
 
     /** Main thread. Starts holding the long-poll, unless it's already held, unpaired, the screen is off or unsupported. */
     private void startWaiting() {
-        if (mWaiting || mWaitUnsupported || !mScreenOn || !HaIntegration.isPaired(mContext)) return;
+        if (mWaiting || !mScreenOn || !HaIntegration.isPaired(mContext)) return;
         mWaiting = true;
         int generation = mWaitGeneration.incrementAndGet();
         Thread thread = new Thread(() -> waitLoop(generation), "HearthHaWait");
@@ -243,14 +242,11 @@ final class HaStatusReporter {
                 case NOT_CHANGED:
                     break;
                 case UNSUPPORTED:
-                    Log.i(TAG, "This Home Assistant integration has no long-poll; the two-minute post stays");
-                    mHandler.post(() -> {
-                        if (generation == mWaitGeneration.get()) {
-                            mWaitUnsupported = true;
-                            mWaiting = false;
-                        }
-                    });
-                    return;
+                    // An older integration, or one restarting (its views register as it loads): the two-minute
+                    // post carries on meanwhile, and the long-poll is tried again later rather than given up for good
+                    Log.i(TAG, "Home Assistant has no long-poll right now; trying again in a while");
+                    if (!pause(WAIT_UNSUPPORTED_RETRY_MS)) return;
+                    break;
                 case FAILED:
                     if (!pause(WAIT_RETRY_MS)) return;
                     break;

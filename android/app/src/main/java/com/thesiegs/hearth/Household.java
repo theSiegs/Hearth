@@ -452,14 +452,20 @@ final class Household {
     private static volatile Map<String, Map<String, Long>> sOtherUsage = new HashMap<>();
     private static volatile String sOtherUsageDay = "";
 
-    /** Hearth's own rules for a profile were changed here: the household's other TVs take them. */
+    /**
+     * Hearth's own rules for a profile were changed here: the household's other TVs take them. The rules as saved
+     * travel with the call: a round applying the household's (older) entry meanwhile can't put the old ones back
+     * before they're published.
+     */
     static void onRulesChanged(Context context, String profileKey) {
         if (!mayBeInHousehold(context) || profileKey == null) return;
         Context app = context.getApplicationContext();
+        org.json.JSONObject saved = LocalAllowance.rules(app, profileKey);
         EXEC.execute(() -> {
             if (!member(app)) return;
-            org.json.JSONObject rules = LocalAllowance.rules(app, profileKey);
-            publish(app, HouseholdBridge.RULES, profileKey, "", rules != null ? rules.toString() : null);
+            // What this edit saved, here too, whatever a round put back since
+            LocalAllowance.setRules(app, profileKey, saved);
+            publish(app, HouseholdBridge.RULES, profileKey, "", saved != null ? saved.toString() : null);
         });
     }
 

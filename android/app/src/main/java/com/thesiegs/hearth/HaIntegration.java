@@ -93,9 +93,25 @@ final class HaIntegration {
         return HaConfig.prefs(context).getString(SECRET_SEALED_KEY, null);
     }
 
+    /**
+     * Whether this TV is paired with the Hearth integration. Asked several times per window change on the accessibility
+     * path, so whether the sealed secret opens is worked out once per pairing (its sealed form, new with every pairing)
+     * rather than with the Keystore every time.
+     */
     static boolean isPaired(Context context) {
-        return HaConfig.baseUrl(context) != null && secret(context) != null;
+        if (HaConfig.baseUrl(context) == null) return false;
+        String stamp = pairingStamp(context);
+        if (stamp == null) return false;
+        if (stamp.equals(sPairedStamp)) return sPairedOpens;
+        boolean opens = secret(context) != null;
+        sPairedOpens = opens;
+        sPairedStamp = stamp;
+        return opens;
     }
+
+    /** The sealed secret {@link #isPaired} last opened (or failed to), and whether it did. */
+    private static volatile String sPairedStamp;
+    private static volatile boolean sPairedOpens;
 
     static String statusUrl(Context context) {
         String base = HaConfig.baseUrl(context);

@@ -58,6 +58,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
+from .const import DOMAIN
 from .entry_tasks import entry_task
 from . import family_link as fl
 from .counting import ALL
@@ -313,7 +314,11 @@ class Enforcement:
         self._store: Store[dict[str, Any]] = Store(hass, 1, f"hearth.enforce.{entry_id}")
         self.held: dict[str, Held] = {}
         self.enforcers: list[Enforcer] = []
-        self.started = dt_util.utcnow()
+        # When Home Assistant started, not this entry: an entry reload (any setting saved) mustn't hold everything
+        # for another SETTLE. Kept outside the entry, as the pairings are
+        self.started: datetime = hass.data.setdefault(f"{DOMAIN}_enforce_started", {}).setdefault(
+            entry_id, dt_util.utcnow()
+        )
         self._wanted: dict[str, set[str]] = {}
         self._task: asyncio.Task | None = None
         self._again = False
