@@ -71,6 +71,8 @@ CONF_PUSH_TOPIC = "push_topic"
 SIGNAL_PEOPLE = "hearth_people"
 # A device asked to pair, or its pairing was answered
 SIGNAL_PAIRINGS = "hearth_pairings"
+# A one-shot command was queued for a TV (commands.py): its held wait wakes
+SIGNAL_COMMANDS = "hearth_commands"
 
 EVENT_BUDGET_REACHED = "hearth_budget_reached"
 EVENT_PLAYING_TOGETHER = "hearth_playing_together"

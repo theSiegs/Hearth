@@ -12,6 +12,8 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +28,9 @@ import java.util.Map;
  */
 final class LocalAllowance {
     private static final String PREFS = "ltv_local_rules";
+    /** Kept apart from the rules (whose prefs hold one entry per profile). */
+    private static final String TAKEN_PREFS = "ltv_local_rules_taken";
+    private static final String TAKEN_KEY = "profiles";
     /** Entries are worked out again at most this often (the minutes move by the minute). */
     private static final long CACHE_MS = 15_000;
 
@@ -69,6 +74,23 @@ final class LocalAllowance {
         editor.apply();
         forget();
         return true;
+    }
+
+    /** The profiles whose rules Home Assistant has taken (or passed over) for good: they aren't sent again. */
+    static Set<String> takenByHomeAssistant(Context context) {
+        return new HashSet<>(context.getSharedPreferences(TAKEN_PREFS, Context.MODE_PRIVATE)
+                .getStringSet(TAKEN_KEY, new HashSet<>()));
+    }
+
+    /** Home Assistant's answer said which profiles' rules it has taken. */
+    static void noteTaken(Context context, org.json.JSONArray profiles) {
+        if (profiles == null || profiles.length() == 0) return;
+        Set<String> taken = takenByHomeAssistant(context);
+        boolean added = false;
+        for (int i = 0; i < profiles.length(); i++) added |= taken.add(profiles.optString(i, ""));
+        if (added) {
+            context.getSharedPreferences(TAKEN_PREFS, Context.MODE_PRIVATE).edit().putStringSet(TAKEN_KEY, taken).apply();
+        }
     }
 
     /** Every profile with rules: profile key -> rules. */

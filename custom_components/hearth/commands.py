@@ -16,9 +16,10 @@ import secrets
 from typing import Any
 
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import DOMAIN, SIGNAL_COMMANDS
 from .status import text
 from .watch import video_id_of
 
@@ -115,6 +116,8 @@ class Commands:
             expires=now + COMMAND_EXPIRES,
         )
         waiting.append(command)
+        # The TV holding a wait hears it in seconds, not at its next post
+        async_dispatcher_send(self.hass, SIGNAL_COMMANDS)
         return command
 
     def document_for(self, device_id: str) -> list[dict[str, Any]]:

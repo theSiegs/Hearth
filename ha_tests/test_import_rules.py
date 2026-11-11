@@ -28,7 +28,9 @@ async def test_the_tv_rules_are_a_kid_s_first_budgets(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
     client, secret = await _household_with_sam(hass, hass_client_no_auth)
-    assert (await _post(client, secret, body={**_tv_status(), "local_rules": RULES})).status == 200
+    response = await _post(client, secret, body={**_tv_status(), "local_rules": RULES})
+    # The TV is told they're taken, so it stops sending them
+    assert (await response.json())["local_rules_taken"] == [KID]
     await hass.async_block_till_done()
 
     limits = _limits(hass)
@@ -70,3 +72,16 @@ def test_the_rules_are_cleaned() -> None:
         {"user:10": {"all": {"weekday": 99999, "weekend": 90}, "groups": [{"id": "Bad Id", "weekday": 5}]}}
     ) == {"user:10": {"all": {"weekend": 90}}}
     assert local_rules({"not a key": {"all": {"weekday": 5}}}) == {}
+
+
+async def test_the_tv_youtube_limit_becomes_video_without_a_youtube_group(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    rules = {KID: {"groups": [{"id": "youtube", "name": "YouTube", "weekday": 60, "weekend": 90}]}}
+    assert (await _post(client, secret, body={**_tv_status(), "local_rules": rules})).status == 200
+    limits = _limits(hass)
+    groups = {g.id for g in hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household.groups}
+    target = "youtube" if "youtube" in groups else "video"
+    assert limits.budget("person.sam", target, "weekday") == 60
+    assert limits.budget("person.sam", target, "weekend") == 90

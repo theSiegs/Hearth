@@ -185,6 +185,10 @@ class LimitsData:
     imported: list[str] = field(default_factory=list)
 
 
+# A TV's own rules name their groups all, games and youtube (ScreenTimeRules on the TV)
+TV_GROUP_ALIASES: dict[str, tuple[str, ...]] = {"youtube": ("youtube", "video")}
+
+
 class Limits:
     """The household's budgets and today's bonuses, kept across restarts."""
 
@@ -244,15 +248,18 @@ class Limits:
 
     def take_rules(self, key: str, person: str, budgets: dict[str, dict[str, int]], groups: set[str]) -> bool:
         """A TV's own rules for one of its profiles ([key]: "device_id:profile_id"), mapped to [person]: they become
-        the person's budgets when the person has none yet, once per key. Groups Home Assistant doesn't have are left
-        out. Says whether any budget was set."""
+        the person's budgets when the person has none yet, once per key. The TV's YouTube group goes to Home Assistant's
+        YouTube group, else Video; a group Home Assistant has nothing like is left out. Says whether any budget was set."""
         if key in self.data.imported:
             return False
         self.data.imported.append(key)
         taken = False
         if not any(m is not None for g in self.data.budgets.get(person, {}).values() for m in g.values()):
-            for group, kinds in budgets.items():
-                if group not in groups:
+            for tv_group, kinds in budgets.items():
+                # The TV's YouTube group is Home Assistant's own YouTube group when it has one, else Video (which
+                # holds YouTube and HearthTube); other groups match by id
+                group = next((g for g in TV_GROUP_ALIASES.get(tv_group, (tv_group,)) if g in groups), None)
+                if group is None or group in self.data.budgets.get(person, {}):
                     continue
                 for kind, minutes in kinds.items():
                     if kind in DAY_TYPES:

@@ -23,6 +23,7 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.util import dt as dt_util
 
+from .entry_tasks import async_wait_for_entry_tasks
 from .entry_tasks import entry_task
 from .api import async_register_views
 from .auth import register_service
@@ -868,6 +869,8 @@ async def _async_entry_updated(hass: HomeAssistant, entry: HearthConfigEntry) ->
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bool:
+    # Work under way (a Family Link write, a store write) finishes first, so the flush saves what it did
+    await async_wait_for_entry_tasks(hass, entry.entry_id)
     await entry.runtime_data.async_flush()
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 

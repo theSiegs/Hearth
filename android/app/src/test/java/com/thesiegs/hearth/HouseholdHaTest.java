@@ -19,19 +19,22 @@ public class HouseholdHaTest {
         assertEquals(HouseholdHa.PAIRED, HouseholdHa.stateOf(true, true));
         assertEquals(HouseholdHa.LEFT, HouseholdHa.stateOf(false, true));
         assertNull(HouseholdHa.stateOf(false, false));
+        // A refused ticket keeps the others from making another for a while
+        assertEquals(HouseholdHa.REFUSED, HouseholdHa.stateOf(false, false, true));
+        assertEquals(HouseholdHa.LEFT, HouseholdHa.stateOf(false, true, true));
     }
 
     @Test
     public void onlyTvsOnTheNetworkThatArentPairedOrLeftGetATicket() {
-        HouseholdLog den = new HouseholdLog("den");
+        HouseholdLog study = new HouseholdLog("study");
         HouseholdLog loft = new HouseholdLog("loft");
         long now = 10_000_000L;
         List<HouseholdEntry> entries = new ArrayList<>();
-        entries.add(den.put(HouseholdHa.STATE, "", "den", HouseholdHa.PAIRED, now));
+        entries.add(study.put(HouseholdHa.STATE, "", "study", HouseholdHa.PAIRED, now));
         entries.add(loft.put(HouseholdHa.STATE, "", "loft", HouseholdHa.LEFT, now));
-        List<String> online = List.of("den", "loft", "attic", "porch", "self");
+        List<String> online = List.of("study", "loft", "attic", "porch", "self");
         // The porch had a ticket a minute ago
-        entries.add(den.put(HouseholdHa.TICKET, "", "porch", HouseholdHa.ticketValue(URL, TICKET), now - 60_000));
+        entries.add(study.put(HouseholdHa.TICKET, "", "porch", HouseholdHa.ticketValue(URL, TICKET), now - 60_000));
         assertEquals(List.of("attic"), HouseholdHa.needTickets(entries, "self", online, now));
         // Once that one may have run out, the porch gets another
         assertEquals(List.of("attic", "porch"),
@@ -40,11 +43,11 @@ public class HouseholdHaTest {
 
     @Test
     public void aTvReadsTheTicketLeftForIt() {
-        HouseholdLog den = new HouseholdLog("den");
+        HouseholdLog study = new HouseholdLog("study");
         long now = 10_000_000L;
         List<HouseholdEntry> entries = List.of(
-                den.put(HouseholdHa.TICKET, "", "attic", HouseholdHa.ticketValue(URL, TICKET), now),
-                den.put(HouseholdHa.TICKET, "", "porch", HouseholdHa.ticketValue(URL, "not a ticket!"), now));
+                study.put(HouseholdHa.TICKET, "", "attic", HouseholdHa.ticketValue(URL, TICKET), now),
+                study.put(HouseholdHa.TICKET, "", "porch", HouseholdHa.ticketValue(URL, "not a ticket!"), now));
         assertArrayEquals(new String[]{URL, TICKET}, HouseholdHa.ticketFor(entries, "attic", now + 1_000));
         assertNull(HouseholdHa.ticketFor(entries, "attic", now + HouseholdHa.TICKET_MS));
         assertNull(HouseholdHa.ticketFor(entries, "porch", now));

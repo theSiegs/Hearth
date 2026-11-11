@@ -12,6 +12,7 @@ from __future__ import annotations
 from http import HTTPStatus
 from ipaddress import ip_address
 import json
+import math
 import re
 from typing import Any
 
@@ -317,6 +318,10 @@ class StatusView(HomeAssistantView):
         # What the device is told: each profile's (or the phone's person's) limits today
         state = hub.household.document_for(device_id)
         answer: dict[str, Any] = {"ok": True, "contract": CONTRACT, "state": state}
+        # The TV's own rules each profile had: which are taken (or passed over) for good, so it stops sending them
+        if status.get("local_rules"):
+            imported = hub.household.limits.data.imported
+            answer["local_rules_taken"] = [p for p in status["local_rules"] if f"{device_id}:{p}" in imported]
         if hub.kind(device_id) == KIND_MOBILE:
             # The phone has this version now: it isn't pinged for it; and where to listen for the next (or null)
             hub.push.delivered(device_id, state["version"])
@@ -487,9 +492,13 @@ class WaitView(HomeAssistantView):
         if version is not None and (not version or len(version) > 32):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
         try:
-            timeout = min(max(float(request.query.get("timeout", WAIT_MAX)), 1.0), float(WAIT_MAX))
+            asked = float(request.query.get("timeout", WAIT_MAX))
         except ValueError:
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        # nan (or inf) would pass the clamp below and put a timer with no deadline on the loop
+        if not math.isfinite(asked):
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        timeout = min(max(asked, 1.0), float(WAIT_MAX))
         return web.json_response({"changed": await hub.waits.wait(device_id, version, timeout)})
 
 

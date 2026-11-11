@@ -223,6 +223,7 @@ final class HaIntegration {
             String secret = answer.code == 200 && answer.body != null ? answer.body.optString("secret", "") : "";
             if (secret.isEmpty() || !setSecret(context, secret)) {
                 Log.i(TAG, "Pairing ticket refused: Home Assistant answered " + answer.code);
+                HaConfig.prefs(context).edit().putLong(TICKET_REFUSED_AT_KEY, System.currentTimeMillis()).apply();
                 return "refused";
             }
             HaConfig.prefs(context).edit().putString(HaConfig.URL_KEY, base).remove(LEFT_KEY).apply();
@@ -233,6 +234,17 @@ final class HaIntegration {
         } catch (JSONException e) {
             return "refused";
         }
+    }
+
+    /** When a ticket was last refused here (a lasting reason, such as Home Assistant not taking this TV as local). */
+    private static final String TICKET_REFUSED_AT_KEY = "ha_ticket_refused_at";
+    /** How long a TV whose ticket was refused waits before the household tries again. */
+    static final long TICKET_RETRY_MS = 60 * 60_000;
+
+    /** Whether a ticket was refused here in the last {@link #TICKET_RETRY_MS}. */
+    static boolean ticketRefusedLately(Context context, long now) {
+        long at = HaConfig.prefs(context).getLong(TICKET_REFUSED_AT_KEY, 0);
+        return at > 0 && now >= at && now - at < TICKET_RETRY_MS;
     }
 
     /** Someone unpaired this TV here: the household's other TVs don't pair it again by themselves. */

@@ -25,15 +25,21 @@ final class HouseholdHa {
     static final String PAIRED = "paired";
     /** Unpaired here, or deleted in Home Assistant: it isn't paired again by the household. */
     static final String LEFT = "left";
+    /** Its last ticket was refused: no other ticket is made for it for an hour (HaIntegration.TICKET_RETRY_MS). */
+    static final String REFUSED = "refused";
     /** A ticket lives five minutes in Home Assistant; another isn't asked for a TV while one may still work. */
     static final long TICKET_MS = 5 * 60_000;
 
     private HouseholdHa() {
     }
 
-    /** What this TV's state entry should say: {@link #PAIRED}, {@link #LEFT}, or null (no entry). */
+    /** What this TV's state entry should say: {@link #PAIRED}, {@link #LEFT}, {@link #REFUSED} or null (no entry). */
     static String stateOf(boolean paired, boolean left) {
-        return paired ? PAIRED : left ? LEFT : null;
+        return stateOf(paired, left, false);
+    }
+
+    static String stateOf(boolean paired, boolean left, boolean refusedLately) {
+        return paired ? PAIRED : left ? LEFT : refusedLately ? REFUSED : null;
     }
 
     /**

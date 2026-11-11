@@ -70,7 +70,15 @@ final class Allowance {
         int limit = HaIntegration.isPaired(context) ? 0 : dailyMinutes(context, profileKey);
         long playedMs = UsageToday.playingMs(context, profileKey, CompanionApps.HEARTHTUBE, now);
         HaAllowance.Values ha = HaAllowance.forProfile(context, profileKey, now);
-        return combine(limit, playedMs, ha.youtubeMinutesLeft, ha.scheduleLocked, ha.message, ha.checkedAt);
+        Values values = combine(limit, playedMs, ha.youtubeMinutesLeft, ha.scheduleLocked, ha.message, ha.checkedAt);
+        // Without Home Assistant those were Hearth's own rules, worked out just now
+        return LocalAllowance.homeAssistantDecides(context) ? values : ownRules(values, now);
+    }
+
+    /** {@code values} as Hearth's own: its source is Hearth, and it was checked at {@code now}. */
+    static Values ownRules(Values values, long now) {
+        String source = values.youtubeMinutesLeft != null || values.scheduleLocked ? SOURCE_HEARTH : values.source;
+        return new Values(values.youtubeMinutesLeft, values.scheduleLocked, values.message, now, source);
     }
 
     /**

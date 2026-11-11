@@ -50,9 +50,10 @@ final class ParentPinPolicy {
 
     /**
      * Checks a PIN (blocking: Home Assistant's are asked there) unless the pad waits: {"ok": bool} and, while it
-     * waits, "wait_seconds".
+     * waits, "wait_seconds". One check at a time: tries arriving together can't all pass the lockout before any of
+     * them is counted.
      */
-    static Bundle verify(Context context, String pin) {
+    static synchronized Bundle verify(Context context, String pin) {
         Bundle result = new Bundle();
         long now = System.currentTimeMillis();
         long until = lockedUntil(context, now);

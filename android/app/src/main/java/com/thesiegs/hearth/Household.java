@@ -382,7 +382,7 @@ final class Household {
         long now = System.currentTimeMillis();
         boolean paired = HaIntegration.isPaired(app);
         boolean left = HaIntegration.leftOnPurpose(app);
-        String want = HouseholdHa.stateOf(paired, left);
+        String want = HouseholdHa.stateOf(paired, left, HaIntegration.ticketRefusedLately(app, now));
         HouseholdEntry have = log.get(HouseholdHa.STATE, HouseholdBridge.SHARED, self);
         boolean hasState = have != null && !have.deleted;
         if (want == null ? hasState : !hasState || !want.equals(have.value)) {

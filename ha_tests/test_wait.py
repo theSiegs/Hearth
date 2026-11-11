@@ -76,3 +76,37 @@ async def test_a_reload_ends_the_wait(hass: HomeAssistant, hass_client_no_auth: 
     assert await hass.config_entries.async_reload(entry.entry_id)
     response = await asyncio.wait_for(held, 10)
     assert await response.json() == {"changed": False}
+
+
+async def test_minutes_counting_down_dont_wake_the_tv(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    from custom_components.hearth.wait import signature
+
+    a = {"version": "1", "profiles": {"user:10": {"groups": [{"id": "all", "minutes_left": 40}]}}}
+    b = {"version": "2", "profiles": {"user:10": {"groups": [{"id": "all", "minutes_left": 39}]}}}
+    c = {"version": "3", "profiles": {"user:10": {"groups": [{"id": "all", "minutes_left": 0}]}}}
+    assert signature(a) == signature(b)
+    # Running out does wake it
+    assert signature(b) != signature(c)
+
+
+async def test_a_timeout_that_is_not_a_number_is_refused(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    assert (await _wait(client, secret, timeout="nan")).status == 400
+    assert (await _wait(client, secret, timeout="inf")).status == 400
+
+
+async def test_a_command_wakes_the_tv(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    version = await _version(client, secret)
+    await hass.async_block_till_done()
+    held = asyncio.ensure_future(_wait(client, secret, version=version, timeout=30))
+    await asyncio.sleep(0.1)
+    hub = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
+    hub.commands.play(TV_ID, {"video_id": "dQw4w9WgXcQ"}, None)
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=2))
+    response = await asyncio.wait_for(held, 10)
+    assert await response.json() == {"changed": True}

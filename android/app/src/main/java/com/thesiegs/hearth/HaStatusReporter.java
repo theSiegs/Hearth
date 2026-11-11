@@ -418,8 +418,9 @@ final class HaStatusReporter {
         // Hearth's own rules for the kids profiles, from before this TV was paired: Home Assistant takes them as each
         // kid's first budgets, once (the integration's Household.import_local_rules)
         JSONObject localRules = new JSONObject();
+        java.util.Set<String> taken = LocalAllowance.takenByHomeAssistant(mContext);
         for (java.util.Map.Entry<String, JSONObject> rules : LocalAllowance.all(mContext).entrySet()) {
-            localRules.put(rules.getKey(), rules.getValue());
+            if (!taken.contains(rules.getKey())) localRules.put(rules.getKey(), rules.getValue());
         }
         if (localRules.length() > 0) status.put("local_rules", localRules);
 
@@ -562,6 +563,7 @@ final class HaStatusReporter {
             JSONObject state = answer.body.optJSONObject("state");
             mStateVersion = state != null ? state.optString("version", null) : null;
             HaAllowance.fromDocument(mContext, state);
+            LocalAllowance.noteTaken(mContext, answer.body.optJSONArray("local_rules_taken"));
             // A parent's YouTube blocks set in Home Assistant, for HearthTube in the kids profiles
             ParentBlocks.applyDocument(mContext, state);
             // The adults' parent PINs, which are this TV's while Home Assistant names them

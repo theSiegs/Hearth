@@ -14,13 +14,15 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
+import hashlib
+import json
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_call_later
 
-from .const import SIGNAL_PAIRINGS, SIGNAL_PEOPLE, SIGNAL_WATCH
+from .const import SIGNAL_COMMANDS, SIGNAL_PAIRINGS, SIGNAL_PEOPLE, SIGNAL_WATCH
 
 if TYPE_CHECKING:
     from .hub import HearthHub
@@ -31,12 +33,32 @@ WAIT_MAX = 55
 WAIT_DEBOUNCE = 1.0
 
 
+def _settled(value: Any) -> Any:
+    """[value] with every minutes_left reduced to whether it's none left, and the version left out."""
+    if isinstance(value, dict):
+        return {
+            k: (v == 0 if k == "minutes_left" and isinstance(v, (int, float)) else _settled(v))
+            for k, v in value.items()
+            if k != "version"
+        }
+    if isinstance(value, list):
+        return [_settled(v) for v in value]
+    return value
+
+
+def signature(document: dict[str, Any]) -> str:
+    """What in a device's document should wake its wait: everything but minutes counting down (a pause, a lock, an
+    answer, a command, a group running out)."""
+    return hashlib.sha256(json.dumps(_settled(document), sort_keys=True, default=str).encode()).hexdigest()[:16]
+
+
 class DeviceWaits:
     """The household's held waits, one per device (a new one ends the device's previous with "not changed")."""
 
     def __init__(self, hass: HomeAssistant, hub: HearthHub) -> None:
         self.hass = hass
         self.hub = hub
+        # device -> (what the document says that matters to it, the waiting future)
         self._waiting: dict[str, tuple[str | None, asyncio.Future[bool]]] = {}
         self._cancel: CALLBACK_TYPE | None = None
         self._unsubs: list[CALLBACK_TYPE] = []
@@ -45,7 +67,7 @@ class DeviceWaits:
     def start(self) -> None:
         self._unsubs = [
             async_dispatcher_connect(self.hass, signal, self.changed)
-            for signal in (SIGNAL_PEOPLE, SIGNAL_WATCH, SIGNAL_PAIRINGS)
+            for signal in (SIGNAL_PEOPLE, SIGNAL_WATCH, SIGNAL_PAIRINGS, SIGNAL_COMMANDS)
         ]
 
     @callback
@@ -72,13 +94,21 @@ class DeviceWaits:
     def _check(self, _now: datetime | None = None) -> None:
         self._cancel = None
         for device_id, (version, future) in list(self._waiting.items()):
-            if not future.done() and self._version(device_id) != version:
+            if not future.done() and self._signature(device_id) != version:
                 future.set_result(True)
 
-    def _version(self, device_id: str) -> str | None:
+    def _document(self, device_id: str) -> dict[str, Any] | None:
         if device_id not in self.hub.devices:
             return None
-        return self.hub.household.document_for(device_id)["version"]
+        return self.hub.household.document_for(device_id)
+
+    def _version(self, device_id: str) -> str | None:
+        document = self._document(device_id)
+        return document["version"] if document is not None else None
+
+    def _signature(self, device_id: str) -> str | None:
+        document = self._document(device_id)
+        return signature(document) if document is not None else None
 
     async def wait(self, device_id: str, version: str | None, timeout: float) -> bool:
         """True once the device's document is not [version]; False after [timeout] or when the household unloads."""
@@ -87,7 +117,8 @@ class DeviceWaits:
         previous = self._waiting.pop(device_id, None)
         if previous is not None and not previous[1].done():
             previous[1].set_result(False)
-        held = (version, self.hass.loop.create_future())
+        # From here a change is what the TV acts on: minutes counting down don't wake it, a group running out does
+        held = (self._signature(device_id), self.hass.loop.create_future())
         self._waiting[device_id] = held
         try:
             async with asyncio.timeout(timeout):
