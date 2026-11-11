@@ -507,7 +507,6 @@ async def test_a_day_off_raises_family_safety_s_limits_today_only_and_its_cancel
     fl_limit = async_mock_service(hass, "familylink", "set_daily_limit")
     limits, intervals, restores = _family_safety_services(hass)
     events = async_capture_events(hass, "hearth_schedule")
-    _family_safety_entities(hass, "sam", "123456", {"Windows": 120, "Xbox": 60})
     day_off = date(2026, 11, 26)
     household = await _with_family_safety(
         hass,
@@ -518,6 +517,7 @@ async def test_a_day_off_raises_family_safety_s_limits_today_only_and_its_cancel
         {"day_off_school_time_off": True, "day_off_bonus": 60},
         ["Windows", "Xbox"],
     )
+    _family_safety_entities(hass, "sam", "123456", {"Windows": 120, "Xbox": 60})
     await _tick(hass, household, freezer, _at(day_off, 0, 6))
     assert [c.data for c in fl_limit] == [{"child_id": "42", "daily_minutes": 180}]
     # Each platform: today's limit plus the extra hour, today only, the child's entity as target
@@ -558,13 +558,6 @@ async def test_a_half_day_s_extra_reaches_an_xbox_as_its_limit_only(
     limits, intervals, restores = _family_safety_services(hass)
     half = date(2026, 11, 25)
     # Today's limit was already moved for today only: the extra goes on what midnight puts back
-    _family_safety_entities(
-        hass,
-        "sam",
-        "123456",
-        {"Xbox": 30},
-        {"Xbox": {"date": half.isoformat(), "limit_minutes": 30, "restore_limit_minutes": 45}},
-    )
     household = await _with_family_safety(
         hass,
         hass_client_no_auth,
@@ -573,6 +566,13 @@ async def test_a_half_day_s_extra_reaches_an_xbox_as_its_limit_only(
         {**YEAR, "half_days": "2026-11-25"},
         {"half_day_hours_early": 3, "half_day_bonus": 90},
         ["Xbox"],
+    )
+    _family_safety_entities(
+        hass,
+        "sam",
+        "123456",
+        {"Xbox": 30},
+        {"Xbox": {"date": half.isoformat(), "limit_minutes": 30, "restore_limit_minutes": 45}},
     )
     await _tick(hass, household, freezer, _at(half, 0, 6))
     assert [c.data for c in limits] == [
@@ -592,7 +592,6 @@ async def test_an_older_family_safety_without_today_only_is_skipped_quietly(
     fl_limit = async_mock_service(hass, "familylink", "set_daily_limit")
     limits, _intervals, _restores = _family_safety_services(hass, OLD_LIMIT)
     events = async_capture_events(hass, "hearth_schedule")
-    _family_safety_entities(hass, "sam", "123456", {"Windows": 120, "Xbox": 60})
     day_off = date(2026, 11, 26)
     household = await _with_family_safety(
         hass,
@@ -603,6 +602,7 @@ async def test_an_older_family_safety_without_today_only_is_skipped_quietly(
         {"day_off_bonus": 60},
         ["Windows", "Xbox"],
     )
+    _family_safety_entities(hass, "sam", "123456", {"Windows": 120, "Xbox": 60})
     told: list[str] = []
     household.scheduler.tell = lambda title, message, _id: told.append(message)
     await _tick(hass, household, freezer, _at(day_off, 0, 6))
@@ -619,8 +619,6 @@ async def test_one_family_safety_failure_doesn_t_stop_family_link_or_another_kid
     limits, _intervals, _restores = _family_safety_services(
         hass, fail=lambda data: data.get("entity_id") == FAMILY_SAFETY and data["platform"] == "Windows"
     )
-    _family_safety_entities(hass, "sam", "123456", {"Windows": 120, "Xbox": 60})
-    _family_safety_entities(hass, "alex", "654321", {"Xbox": 90})
     day_off = date(2026, 11, 26)
     household = await _with_family_safety(
         hass,
@@ -631,6 +629,8 @@ async def test_one_family_safety_failure_doesn_t_stop_family_link_or_another_kid
         {"day_off_bonus": 30},
         ["Windows", "Xbox"],
     )
+    _family_safety_entities(hass, "sam", "123456", {"Windows": 120, "Xbox": 60})
+    _family_safety_entities(hass, "alex", "654321", {"Xbox": 90})
     await _add_enforcer(
         hass, {"kind": "family_safety", "person": "person.alex", "entity_id": ALEX_FS, "platforms": ["Xbox"]}
     )
@@ -652,3 +652,59 @@ async def test_one_family_safety_failure_doesn_t_stop_family_link_or_another_kid
     # Still failing at the morning check: the adults are told
     await _tick(hass, household, freezer, _at(day_off, 6))
     assert told == ["Sam's Windows extra time couldn't be set. Check Family Safety."]
+
+async def test_family_safety_s_limit_waits_for_its_first_read_after_midnight(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    async_mock_service(hass, "familylink", "set_daily_limit")
+    limits, _intervals, _restores = _family_safety_services(hass)
+    events = async_capture_events(hass, "hearth_schedule")
+    day_off = date(2026, 11, 26)
+    household = await _with_family_safety(
+        hass,
+        hass_client_no_auth,
+        freezer,
+        _at(day_off - timedelta(days=1), 23, 50),
+        {**YEAR, "days_off": "2026-11-26"},
+        {"day_off_bonus": 60},
+        ["Windows"],
+    )
+    # Last read yesterday, when yesterday's limit was 30
+    _family_safety_entities(hass, "sam", "123456", {"Windows": 30})
+    await _tick(hass, household, freezer, _at(day_off, 0, 6))
+    await _tick(hass, household, freezer, _at(day_off, 0, 7))
+    assert limits == []
+    assert not [e for e in events if e.data.get("via") == "family_safety"]
+    # Family Safety's first poll of the day says today's: then it applies, once
+    freezer.move_to(_at(day_off, 0, 8))
+    _family_safety_entities(hass, "sam", "123456", {"Windows": 120})
+    await _tick(hass, household, freezer, _at(day_off, 0, 8))
+    await _tick(hass, household, freezer, _at(day_off, 0, 9))
+    assert [c.data for c in limits] == [
+        {"entity_id": FAMILY_SAFETY, "platform": "Windows", "today_only": True, "hours": 3, "minutes": 0}
+    ]
+
+
+async def test_a_poll_that_changes_nothing_still_counts_as_today_s_read(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    async_mock_service(hass, "familylink", "set_daily_limit")
+    limits, _intervals, _restores = _family_safety_services(hass)
+    day_off = date(2026, 11, 26)
+    household = await _with_family_safety(
+        hass,
+        hass_client_no_auth,
+        freezer,
+        _at(day_off - timedelta(days=1), 23, 50),
+        {**YEAR, "days_off": "2026-11-26"},
+        {"day_off_bonus": 60},
+        ["Windows"],
+    )
+    _family_safety_entities(hass, "sam", "123456", {"Windows": 120})
+    await _tick(hass, household, freezer, _at(day_off, 0, 6))
+    assert limits == []
+    # The same state written again after midnight (last_reported moves, last_updated doesn't)
+    freezer.move_to(_at(day_off, 0, 8))
+    _family_safety_entities(hass, "sam", "123456", {"Windows": 120})
+    await _tick(hass, household, freezer, _at(day_off, 0, 8))
+    assert [(c.data["hours"], c.data["minutes"]) for c in limits] == [(3, 0)]

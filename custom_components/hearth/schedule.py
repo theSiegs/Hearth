@@ -560,6 +560,15 @@ class Scheduler:
                 return entry
         return None
 
+    def _written_today(self, entity_id: str | None, today: date) -> bool:
+        """Family Safety wrote the entity since local midnight (a poll writes it even when nothing changed:
+        last_reported; it says no date of its own)."""
+        state = self.hass.states.get(entity_id) if entity_id else None
+        if state is None:
+            return False
+        written = max(state.last_updated, getattr(state, "last_reported", None) or state.last_updated)
+        return dt_util.as_local(written).date() >= today
+
     def _fs_limit_wanted(self, enforcer: Enforcer, config: ScheduleConfig) -> bool:
         """Family Safety takes part: extra minutes go to the first-party apps' limits and it has today_only."""
         return config.bonus_family_link and self._fs_data(
@@ -595,7 +604,8 @@ class Scheduler:
         if base < 0:
             # Today's limit as Family Safety says it (its Allowed Now / Time Remaining attributes)
             state = fs_platform_state(self.hass, enforcer.entity_id, platform)
-            if state is None:
+            if state is None or not self._written_today(state.get("entity_id"), today):
+                # Not read since midnight yet: its allowance may still be yesterday's. Read again next minute
                 return None
             allowance = _number(state.get("allowance_minutes"), -1)
             if state.get("reason") == "no_limits" or allowance >= FULL_DAY:
