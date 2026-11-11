@@ -536,9 +536,13 @@ final class AgentHub {
      * key for the household, with what the household's other TVs had for it).
      */
     static List<Map<String, Object>> kidsContinueWatching(Context context, long serial) {
-        return WatchHistory.get(context).kidsContinueWatching(context, watchNext(serial),
-                ProfileUsers.profileKey(context, serial), hasReported(serial), ProfileUsers.approvedApps(context, serial),
-                System.currentTimeMillis());
+        String profile = ProfileUsers.profileKey(context, serial);
+        List<Map<String, Object>> rows = WatchHistory.get(context).kidsContinueWatching(context, watchNext(serial),
+                profile, hasReported(serial), ProfileUsers.approvedApps(context, serial), System.currentTimeMillis());
+        // Each row says whose it is: around a switch this can still be the profile switched away from, and its
+        // cards must not show for the one switched to (WatchNextService shows a profile's own rows to it alone)
+        if (profile != null) for (Map<String, Object> row : rows) row.putIfAbsent("watchedBy", profile);
+        return rows;
     }
 
     /** The profile's Watch Next as its agent last reported it (empty before it has). */

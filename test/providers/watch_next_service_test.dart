@@ -538,6 +538,25 @@ void main() {
       expect(titles(service), ['Show 1']);
     });
 
+    test("a kids profile's own entries never show for the profile switched to", () async {
+      // Around a switch the list read can still be the kid's (each row says whose it is)
+      when(mockChannel.getActiveProfileKey()).thenAnswer((_) async => 'user:10');
+      when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => [
+            entry(1, 'com.thesiegs.hearthtube')
+              ..['profileOwned'] = true
+              ..['watchedBy'] = 'user:10',
+          ]);
+      final service = await ready();
+      expect(titles(service), ['Show 1']);
+
+      // An adult signs in: the kid's cards go at once, and stay gone while the list read is still the kid's
+      service.profileChanged('user:0:sam');
+      expect(service.programs, isEmpty);
+      when(mockChannel.getActiveProfileKey()).thenAnswer((_) async => 'user:0:sam');
+      await service.refresh();
+      expect(service.programs, isEmpty);
+    });
+
     test("the adults sharing the owner's user each see what they watched", () async {
       when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => [
             entry(1, 'com.netflix.mediaclient')..['watchedBy'] = 'user:0',
