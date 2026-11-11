@@ -577,6 +577,18 @@ the people chosen):
   child's daily limit is on), and/or as Hearth bonus minutes on a group. Family Link's way is the default, as that is
   what a household's own "extra hour" automation did: it raises the phone's own limit. A Hearth bonus raises a Hearth
   budget instead.
+- **Family Safety (Windows, Xbox)** gets the same extra minutes, Family Link's way: for a kid with a Family Safety
+  enforcer (the chosen people, or everyone with Family Safety), each of its platforms gets today's daily limit plus the
+  extra, today only (`microsoft_family_safety.set_screentime_limit` with the kid's entity, `platform`,
+  `today_only: true`, `hours` and `minutes`; no `day_of_week`). Today's limit is the platform's Allowed Now
+  `allowance_minutes`, or, when today's limit was already changed for today only, the one midnight puts back (the
+  Screen time policy sensor's `today_only`). Family Safety puts it back at midnight itself and leaves a parent's own
+  change alone. A platform without a limit today is left alone. School time has no Family Safety equivalent, and
+  Hearth's day types don't change bedtime, so the allowed hours (`set_screentime_intervals`) aren't touched. A Family
+  Safety that doesn't take `today_only` yet is skipped quietly; a failed call is logged and tried again, and doesn't
+  hold up Family Link or another kid. When today's day off is cancelled (`hearth.school_time_off_cancel`), the
+  platforms Hearth raised go back at once (`microsoft_family_safety.restore_today_only`, per platform) and aren't
+  raised again that day (Family Link's extra minutes stay).
 - `hearth.school_time_off` (`people`; `date`, today by default; `from`, a time; `reason`) does the same for anyone,
   any day; `hearth.school_time_off_cancel` (`people`, `date`) drops one not started, or puts one already off back from
   today.
@@ -590,11 +602,13 @@ ended is left for the next school day. Switched on or pinned, it waits two minut
 Link is read once a minute).
 
 **Checks.** At 06:00 a School time that should be off and isn't is turned off again, and the adults are told what
-didn't apply (the extra time, too). At the watchdog time (10:00 by default) on a school day, they're told about anyone
-whose School time is still off, unless it was taken off for today. "Told" is a notification in Home Assistant and the
-schedule's phone (else the one that answers requests for more time). Each step fires `hearth_schedule` (action:
-`school_time_off`, `school_time_back`, `half_day`, `bonus`, `site_list`, `site_list_failed`; person; details; for
-the website list `via`: `family_link` or `family_safety`). Each action runs once a day; what's pending is kept across
+didn't apply (the extra time, too, Family Safety's by platform). At the watchdog time (10:00 by default) on a school
+day, they're told about anyone whose School time is still off, unless it was taken off for today. "Told" is a
+notification in Home Assistant and the schedule's phone (else the one that answers requests for more time). Each step
+fires `hearth_schedule` (action:
+`school_time_off`, `school_time_back`, `half_day`, `bonus`, `bonus_back`, `site_list`, `site_list_failed`; person;
+details; for the website list `via`: `family_link` or `family_safety`; Family Safety's `bonus` and `bonus_back` have
+`via: family_safety` and `platform`). Each action runs once a day; what's pending is kept across
 restarts.
 
 **Website block list** (Configure > Website block list): an https address, a time (07:30 by default) and the people

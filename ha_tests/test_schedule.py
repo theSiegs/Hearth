@@ -4,6 +4,7 @@ website list, chores and offering more time."""
 from datetime import date, datetime, timedelta
 
 import pytest
+import voluptuous as vol
 
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
@@ -400,3 +401,254 @@ async def test_an_adult_s_app_is_offered_no_school_time_today_until_it_ends(
     assert not [a for a in sam()["actions"] if a["id"] == "school_off"]
     freezer.move_to(_at(date(2026, 11, 14), 9))
     assert "school_time" not in sam()
+
+
+# Family Safety (Windows, Xbox): the day's extra minutes as a today-only daily limit
+
+FAMILY_SAFETY = "sensor.sam_family_safety"
+ALEX_FS = "sensor.alex_family_safety"
+_TARGET = {vol.Optional("entity_id"): str, vol.Optional("account_id"): str}
+_PLATFORM = {vol.Optional("platform", default="Windows"): vol.In(["Windows", "Xbox"])}
+# A newer Family Safety: today_only, and a child's entity as target
+NEW_LIMIT = vol.Schema(
+    {
+        **_TARGET,
+        **_PLATFORM,
+        vol.Optional("today_only", default=False): bool,
+        vol.Optional("day_of_week"): vol.All(int, vol.Range(min=0, max=6)),
+        vol.Required("hours"): vol.All(int, vol.Range(min=0, max=24)),
+        vol.Optional("minutes", default=0): vol.All(int, vol.Range(min=0, max=59)),
+    }
+)
+NEW_INTERVALS = vol.Schema(
+    {
+        **_TARGET,
+        **_PLATFORM,
+        vol.Optional("today_only", default=False): bool,
+        vol.Optional("day_of_week"): int,
+        vol.Required("start_hour"): int,
+        vol.Optional("start_minute", default=0): vol.In([0, 30]),
+        vol.Required("end_hour"): int,
+        vol.Optional("end_minute", default=0): vol.In([0, 30]),
+    }
+)
+RESTORE = vol.Schema({**_TARGET, vol.Optional("platform"): vol.In(["Windows", "Xbox"])})
+# An older one: a weekday's limit by account id only
+OLD_LIMIT = vol.Schema(
+    {
+        vol.Required("account_id"): str,
+        **_PLATFORM,
+        vol.Required("day_of_week"): int,
+        vol.Required("hours"): int,
+        vol.Optional("minutes", default=0): int,
+    }
+)
+
+
+def _family_safety_entities(
+    hass: HomeAssistant, name: str, account: str, limits: dict[str, int], pending: dict | None = None
+) -> None:
+    hass.states.async_set(f"sensor.{name}_family_safety", name.title(), {"user_id": account})
+    for platform, allowance in limits.items():
+        hass.states.async_set(
+            f"binary_sensor.{name}_{platform.lower()}_allowed_now",
+            "on",
+            {
+                "user_id": account,
+                "platform": platform,
+                "reason": "within_limits",
+                "allowance_minutes": allowance,
+                "used_minutes": 0,
+                "hold": "none",
+            },
+        )
+    hass.states.async_set(
+        f"sensor.{name}_screen_time_policy", "enabled", {"user_id": account, "today_only": pending or {}}
+    )
+
+
+def _family_safety_services(hass: HomeAssistant, limit_schema=NEW_LIMIT, fail=None):
+    """The limit calls (one that [fail] says yes to raises), the interval calls and the restore calls."""
+    limits: list[ServiceCall] = []
+
+    async def set_limit(call: ServiceCall) -> None:
+        limits.append(call)
+        if fail is not None and fail(call.data):
+            raise HomeAssistantError("Microsoft said no")
+
+    hass.services.async_register("microsoft_family_safety", "set_screentime_limit", set_limit, schema=limit_schema)
+    intervals = async_mock_service(hass, "microsoft_family_safety", "set_screentime_intervals", schema=NEW_INTERVALS)
+    restores = async_mock_service(hass, "microsoft_family_safety", "restore_today_only", schema=RESTORE)
+    return limits, intervals, restores
+
+
+async def _with_family_safety(hass, hass_client_no_auth, freezer, now, school, schedule, platforms):
+    household = await _set_up(hass, hass_client_no_auth, freezer, now, school, schedule)
+    await _option(
+        hass,
+        "enforce",
+        {
+            "person": "person.sam",
+            "family_link": FAMILY_LINK,
+            "school_time_apps": [],
+            "family_safety": FAMILY_SAFETY,
+            "platforms": platforms,
+        },
+    )
+    return hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+
+
+async def test_a_day_off_raises_family_safety_s_limits_today_only_and_its_cancel_puts_them_back(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    async_mock_service(hass, "switch", "turn_off")
+    async_mock_service(hass, "switch", "turn_on")
+    async_mock_service(hass, "familylink", "set_school_time")
+    fl_limit = async_mock_service(hass, "familylink", "set_daily_limit")
+    limits, intervals, restores = _family_safety_services(hass)
+    events = async_capture_events(hass, "hearth_schedule")
+    _family_safety_entities(hass, "sam", "123456", {"Windows": 120, "Xbox": 60})
+    day_off = date(2026, 11, 26)
+    household = await _with_family_safety(
+        hass,
+        hass_client_no_auth,
+        freezer,
+        _at(day_off, 0, 1),
+        {**YEAR, "days_off": "2026-11-26"},
+        {"day_off_school_time_off": True, "day_off_bonus": 60},
+        ["Windows", "Xbox"],
+    )
+    await _tick(hass, household, freezer, _at(day_off, 0, 6))
+    assert [c.data for c in fl_limit] == [{"child_id": "42", "daily_minutes": 180}]
+    # Each platform: today's limit plus the extra hour, today only, the child's entity as target
+    assert sorted((c.data["platform"], c.data["hours"], c.data["minutes"]) for c in limits) == [
+        ("Windows", 3, 0),
+        ("Xbox", 2, 0),
+    ]
+    assert all(c.data["entity_id"] == FAMILY_SAFETY and c.data["today_only"] for c in limits)
+    assert all("day_of_week" not in c.data for c in limits)
+    # A day off doesn't change Family Link's bedtime: nor the allowed hours
+    assert intervals == []
+    fs_events = [e.data for e in events if e.data.get("via") == "family_safety"]
+    assert sorted((e["action"], e["platform"], e["daily_minutes"]) for e in fs_events) == [
+        ("bonus", "Windows", 180),
+        ("bonus", "Xbox", 120),
+    ]
+    await _tick(hass, household, freezer, _at(day_off, 0, 7))
+    assert len(limits) == 2  # once a day
+
+    # The day off is called off: Family Safety's limits go back now, and aren't set again
+    await hass.services.async_call(DOMAIN, "school_time_off_cancel", {"people": ["person.sam"]}, blocking=True)
+    await hass.async_block_till_done()
+    await _tick(hass, household, freezer, _at(day_off, 9))
+    assert sorted((c.data["entity_id"], c.data["platform"]) for c in restores) == [
+        (FAMILY_SAFETY, "Windows"),
+        (FAMILY_SAFETY, "Xbox"),
+    ]
+    await _tick(hass, household, freezer, _at(day_off, 9, 1))
+    assert len(restores) == 2 and len(limits) == 2
+    assert [e.data["action"] for e in events].count("bonus_back") == 2
+
+
+async def test_a_half_day_s_extra_reaches_an_xbox_as_its_limit_only(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    async_mock_service(hass, "familylink", "set_school_time")
+    async_mock_service(hass, "familylink", "set_daily_limit")
+    limits, intervals, restores = _family_safety_services(hass)
+    half = date(2026, 11, 25)
+    # Today's limit was already moved for today only: the extra goes on what midnight puts back
+    _family_safety_entities(
+        hass,
+        "sam",
+        "123456",
+        {"Xbox": 30},
+        {"Xbox": {"date": half.isoformat(), "limit_minutes": 30, "restore_limit_minutes": 45}},
+    )
+    household = await _with_family_safety(
+        hass,
+        hass_client_no_auth,
+        freezer,
+        _at(half, 0, 1),
+        {**YEAR, "half_days": "2026-11-25"},
+        {"half_day_hours_early": 3, "half_day_bonus": 90},
+        ["Xbox"],
+    )
+    await _tick(hass, household, freezer, _at(half, 0, 6))
+    assert [c.data for c in limits] == [
+        {"entity_id": FAMILY_SAFETY, "platform": "Xbox", "today_only": True, "hours": 2, "minutes": 15}
+    ]
+    assert intervals == [] and restores == []
+    # A cancel on a half day has no day off to call off: the extra stays
+    await hass.services.async_call(DOMAIN, "school_time_off_cancel", {"people": ["person.sam"]}, blocking=True)
+    await _tick(hass, household, freezer, _at(half, 9))
+    assert restores == [] and len(limits) == 1
+
+
+async def test_an_older_family_safety_without_today_only_is_skipped_quietly(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    async_mock_service(hass, "switch", "turn_off")
+    fl_limit = async_mock_service(hass, "familylink", "set_daily_limit")
+    limits, _intervals, _restores = _family_safety_services(hass, OLD_LIMIT)
+    events = async_capture_events(hass, "hearth_schedule")
+    _family_safety_entities(hass, "sam", "123456", {"Windows": 120, "Xbox": 60})
+    day_off = date(2026, 11, 26)
+    household = await _with_family_safety(
+        hass,
+        hass_client_no_auth,
+        freezer,
+        _at(day_off, 0, 1),
+        {**YEAR, "days_off": "2026-11-26"},
+        {"day_off_bonus": 60},
+        ["Windows", "Xbox"],
+    )
+    told: list[str] = []
+    household.scheduler.tell = lambda title, message, _id: told.append(message)
+    await _tick(hass, household, freezer, _at(day_off, 0, 6))
+    await _tick(hass, household, freezer, _at(day_off, 6))
+    assert limits == [] and len(fl_limit) == 1
+    assert not [e for e in events if e.data.get("via") == "family_safety"]
+    assert told == []
+
+
+async def test_one_family_safety_failure_doesn_t_stop_family_link_or_another_kid(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    fl_limit = async_mock_service(hass, "familylink", "set_daily_limit")
+    limits, _intervals, _restores = _family_safety_services(
+        hass, fail=lambda data: data.get("entity_id") == FAMILY_SAFETY and data["platform"] == "Windows"
+    )
+    _family_safety_entities(hass, "sam", "123456", {"Windows": 120, "Xbox": 60})
+    _family_safety_entities(hass, "alex", "654321", {"Xbox": 90})
+    day_off = date(2026, 11, 26)
+    household = await _with_family_safety(
+        hass,
+        hass_client_no_auth,
+        freezer,
+        _at(day_off, 0, 1),
+        {**YEAR, "days_off": "2026-11-26"},
+        {"day_off_bonus": 30},
+        ["Windows", "Xbox"],
+    )
+    await _add_enforcer(
+        hass, {"kind": "family_safety", "person": "person.alex", "entity_id": ALEX_FS, "platforms": ["Xbox"]}
+    )
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    told: list[str] = []
+    household.scheduler.tell = lambda title, message, _id: told.append(message)
+    await _tick(hass, household, freezer, _at(day_off, 0, 6))
+    assert len(fl_limit) == 1
+    assert sorted((c.data["entity_id"], c.data["platform"], c.data["hours"], c.data["minutes"]) for c in limits) == [
+        (ALEX_FS, "Xbox", 2, 0),
+        (FAMILY_SAFETY, "Windows", 2, 30),
+        (FAMILY_SAFETY, "Xbox", 1, 30),
+    ]
+    # Tried again after a while, only the one that failed
+    await _tick(hass, household, freezer, _at(day_off, 0, 7))
+    assert len(limits) == 3
+    await _tick(hass, household, freezer, _at(day_off, 0, 12))
+    assert len(limits) == 4 and limits[-1].data["platform"] == "Windows"
+    # Still failing at the morning check: the adults are told
+    await _tick(hass, household, freezer, _at(day_off, 6))
+    assert told == ["Sam's Windows extra time couldn't be set. Check Family Safety."]

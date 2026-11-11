@@ -328,7 +328,7 @@
           "day_off_bonus": "Day off: extra minutes",
           "half_day_hours_early": "Half day: School time ends this many hours early",
           "half_day_bonus": "Half day: extra minutes",
-          "bonus_family_link": "Extra minutes as Family Link's daily limit today",
+          "bonus_family_link": "Extra minutes as Family Link's and Family Safety's daily limits today",
           "bonus_group": "Extra minutes also as a Hearth bonus on this group",
           "people": "Who (empty: everyone with Family Link in Enforce)",
           "notify": "Tell this phone (empty: the one that answers requests for more time)",
