@@ -681,3 +681,21 @@ async def test_a_reload_does_not_start_the_settle_again(hass: HomeAssistant, fre
     again = enforce.Enforcement(hass, "entry-1")
     assert again.started == first.started
     assert again._may_let_go()
+
+
+def test_two_switches_of_one_kid_are_two_holds() -> None:
+    a = enforce.Enforcer(enforce.NINTENDO, "person.sam", "number.switch_a_max_screentime_today")
+    b = enforce.Enforcer(enforce.NINTENDO, "person.sam", "number.switch_b_max_screentime_today")
+    assert a.key != b.key
+    assert enforce.key_parts(a.key) == ("nintendo", "person.sam")
+    # Other kinds keep their key
+    fl = enforce.Enforcer(enforce.FAMILY_LINK, "person.sam", "sensor.x")
+    assert fl.key == "family_link|person.sam" and enforce.key_parts(fl.key) == ("family_link", "person.sam")
+
+
+async def test_a_kid_on_two_switches_shows_one_nintendo_line(hass: HomeAssistant) -> None:
+    held = enforce.Enforcement(hass, "entry-2")
+    held.held["nintendo|person.sam|number.a"] = enforce.Held(items={"Switch"})
+    held.held["nintendo|person.sam|number.b"] = enforce.Held(items=set(), error="Nintendo said no")
+    assert held.held_for("person.sam") == {"nintendo": {"held": ["Switch"], "error": "Nintendo said no"}}
+    assert held.status_of("person.sam")["nintendo"]["held"] == ["Switch"]

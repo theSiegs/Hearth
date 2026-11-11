@@ -185,7 +185,16 @@ class Enforcer:
 
     @property
     def key(self) -> str:
+        # A person can be on two Switches: each is its own hold
+        if self.kind == NINTENDO:
+            return f"{self.kind}|{self.person}|{self.entity_id}"
         return f"{self.kind}|{self.person}"
+
+
+def key_parts(key: str) -> tuple[str, str]:
+    """(kind, person) of an enforcer's key (a Switch's key also names its entity)."""
+    parts = key.split("|")
+    return parts[0], parts[1] if len(parts) > 1 else ""
 
 
 def enforcers_from_options(options: dict[str, Any]) -> list[Enforcer]:
@@ -366,9 +375,10 @@ class Enforcement:
         """A person's held things and the last error, for their sensor."""
         found: dict[str, Any] = {}
         for key, held in self.held.items():
-            kind, who = key.split("|", 1)
+            kind, who = key_parts(key)
             if who == person and (held.items or held.error):
-                found[kind] = {"held": sorted(held.items), "error": held.error}
+                was = found.get(kind, {"held": [], "error": None})
+                found[kind] = {"held": sorted(set(was["held"]) | held.items), "error": was["error"] or held.error}
         return found
 
     @callback
@@ -384,16 +394,22 @@ class Enforcement:
         """Per parental control of the person's: what's held now, the last error and what Hearth last did."""
         found: dict[str, Any] = {}
         keys = {e.key for e in self.enforcers if e.person == person}
-        keys |= {k for k in self.held if k.split("|", 1)[1] == person}
-        keys |= {k for k in self.last if k.split("|", 1)[1] == person}
+        keys |= {k for k in self.held if key_parts(k)[1] == person}
+        keys |= {k for k in self.last if key_parts(k)[1] == person}
         for key in sorted(keys):
-            kind = key.split("|", 1)[0]
+            kind = key_parts(key)[0]
             held = self.held.get(key) or Held()
+            was = found.get(kind)
+            # Two Switches of one person show as one Nintendo line: what either holds, the first error, the latest
+            last = self.last.get(key)
+            if was is not None and was["last"] is not None and (last is None or was["last"]["at"] > last["at"]):
+                last = was["last"]
             found[kind] = {
-                "held": sorted(held.items),
-                "error": held.error,
-                "failed_at": held.failed_at.isoformat() if held.failed_at else None,
-                "last": self.last.get(key),
+                "held": sorted(set(was["held"] if was else []) | held.items),
+                "error": (was["error"] if was else None) or held.error,
+                "failed_at": (was["failed_at"] if was else None)
+                or (held.failed_at.isoformat() if held.failed_at else None),
+                "last": last,
             }
         return found
 
@@ -495,7 +511,7 @@ class Enforcement:
             if held.failed_at and now - held.failed_at < RETRY:
                 continue
             enforcer = by_key.get(key)
-            kind, person = key.split("|", 1)
+            kind, person = key_parts(key)
             entity_id = enforcer.entity_id if enforcer else held.entity_id
             hold = want - held.items
             let_go = _holding(held) - want if self._may_let_go() else set()
