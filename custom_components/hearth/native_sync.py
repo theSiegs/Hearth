@@ -24,7 +24,7 @@ from homeassistant.util import dt as dt_util
 from .entry_tasks import entry_task
 from . import grants as g
 from .counting import ALL
-from .enforce import FAMILY_LINK, FAMILY_SAFETY, fs_account_of
+from .enforce import FAMILY_LINK, FAMILY_SAFETY, FS_HOLD_BONUS_OURS, FS_HOLD_OURS, fs_account_of, fs_hold_state
 from .exceptions import end_of_day
 
 if TYPE_CHECKING:
@@ -334,13 +334,18 @@ class NativeSync:
         for platform in enforcer.platforms:
             if only is not None and platform != only:
                 continue
-            if platform not in ("Windows", "Xbox") or not self._fs_would_block(enforcer.entity_id, platform, minutes):
+            # Family Safety gives extra time on the Xbox only
+            if platform != "Xbox" or not self._fs_would_block(enforcer.entity_id, platform, minutes):
                 continue
             data = {
                 **_fs_target(enforcer.entity_id),
                 "platform": platform,
                 "until": dt_util.as_local(until).replace(tzinfo=None, microsecond=0).isoformat(),
             }
+            # Extra time replaces Hearth's own lock (Family Safety puts it back when the time ends), never a parent's
+            hold = fs_hold_state(self.hass, enforcer.entity_id, platform)
+            if hold and hold.get("hold") in (FS_HOLD_OURS, FS_HOLD_BONUS_OURS):
+                data["replace_lock"] = True
             try:
                 response = await self.hass.services.async_call(
                     FS_DOMAIN,

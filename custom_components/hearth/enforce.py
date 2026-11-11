@@ -80,7 +80,7 @@ DEFAULT_NINTENDO_GROUPS = ("games", ALL)
 NINTENDO_DOMAIN = "nintendo_parental_controls"
 FS_DOMAIN = "microsoft_family_safety"
 # What unlock_platform answers when Hearth's lock is gone without undoing anything: all fine
-UNLOCK_DONE = ("hold_expired", "left_parent_override", "not_locked")
+UNLOCK_DONE = ("hold_expired", "left_parent_override", "not_locked", "bonus_kept")
 # What a Nintendo enforcer holds: the person's Switch (its entity is the Switch's Max screentime today)
 SWITCH = "Switch"
 # What a Family Link enforcer holds for All screen time: the child's devices, locked by a daily limit of 0 (never a

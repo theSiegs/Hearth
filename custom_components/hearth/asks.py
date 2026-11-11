@@ -392,7 +392,8 @@ class Asks:
         service = "approve_request" if approve else "deny_request"
         data: dict[str, Any] = {"request_id": ask.external_id}
         if approve:
-            data["extension_minutes"] = ask.granted
+            # Family Safety takes 15 min to 8 h
+            data["extension_minutes"] = min(max(int(ask.granted or 0), 15), 480)
         try:
             if not self.hass.services.has_service(FS_DOMAIN, service):
                 raise ValueError(f"{FS_DOMAIN}.{service} isn't there")
