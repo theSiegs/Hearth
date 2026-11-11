@@ -68,7 +68,10 @@ class ScreenTimeRules {
       if (rule["weekday"] == null && rule["weekend"] == null) json.remove("all");
       return ScreenTimeRules._(json);
     }
-    final groups = [for (final g in (json["groups"] as List?) ?? []) Map<String, dynamic>.from(g as Map)];
+    final groups = [
+      for (final g in (json["groups"] as List?) ?? [])
+        if (g is Map) Map<String, dynamic>.from(g)
+    ];
     var rule = groups.where((g) => g["id"] == group).firstOrNull;
     if (rule == null) {
       rule = {"id": group, "name": name, "apps": group == youtube ? youtubeApps : <String>[]};

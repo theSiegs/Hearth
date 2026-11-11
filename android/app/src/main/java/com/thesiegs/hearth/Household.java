@@ -492,7 +492,11 @@ final class Household {
                     continue;
                 }
             }
-            if (LocalAllowance.setRules(sContext, key, rules)) changed++;
+            if (LocalAllowance.setRules(sContext, key, rules)) {
+                // The rules' YouTube group takes the place of an older YouTube limit set on this TV
+                Allowance.setDailyMinutes(sContext, key, 0);
+                changed++;
+            }
         }
         if (changed > 0) Log.i(TAG, "Screen time rules: took " + changed + " from the household");
     }

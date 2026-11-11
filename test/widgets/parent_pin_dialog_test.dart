@@ -258,6 +258,48 @@ void main() {
       expect(lock.lockedAt(t0), isFalse);
     });
 
+    testWidgets("a wait the TV's count started elsewhere holds here: the right PIN isn't taken", (tester) async {
+      final store = _FakeStore()..until = DateTime.now().add(const Duration(minutes: 5)).millisecondsSinceEpoch;
+      final lock = PinLockout()..store = store;
+      String? result;
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () async => result = await showDialog<String>(
+              context: context,
+              builder: (_) => ParentPinDialog(title: "PIN", verify: (pin) => pin == "2468", lockout: lock),
+            ),
+            child: const Text("open"),
+          ),
+        ),
+      ));
+      // The pad opened before the wait began elsewhere
+      final until = store.until;
+      store.until = 0;
+      await tester.tap(find.text("open"));
+      await tester.pumpAndSettle();
+      store.until = until;
+      for (final key in [
+        LogicalKeyboardKey.digit2,
+        LogicalKeyboardKey.digit4,
+        LogicalKeyboardKey.digit6,
+        LogicalKeyboardKey.digit8,
+      ]) {
+        await tester.sendKeyEvent(key);
+        await tester.pump();
+      }
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(result, isNull);
+      expect(store.cleared, isFalse);
+      expect(find.textContaining("TOO MANY TRIES"), findsOneWidget);
+      // Let the pad's countdown end before the test does
+      store.until = 0;
+      lock.clear();
+      await tester.pump(const Duration(seconds: 2));
+    });
+
     test("gives five tries, then waits 30 seconds and doubles up to an hour", () {
       final lock = PinLockout();
       for (var i = 0; i < 4; i++) {

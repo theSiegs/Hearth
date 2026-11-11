@@ -114,7 +114,8 @@ Future<bool> chooseNewParentPin(BuildContext context) async {
   if (first == null || !context.mounted) return false;
   final second = await showDialog<String>(
     context: context,
-    builder: (_) => ParentPinDialog(title: l.parentPinConfirm, verify: (pin) => pin == first),
+    // Typing the new PIN again isn't a guess at the Parent PIN: its own count, not the TV's
+    builder: (_) => ParentPinDialog(title: l.parentPinConfirm, verify: (pin) => pin == first, lockout: PinLockout()),
   );
   if (second == null) return false;
   final channel = context.mounted ? context.read<FLauncherChannel?>() : null;
@@ -330,6 +331,20 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
     var ok = true;
     if (widget.verify != null) {
       _checking = true;
+      // The TV's count first: a wait started on another pad (HearthTube's, another of Hearth's) holds here too,
+      // and this PIN isn't checked while it lasts
+      if (_lockout.store != null) {
+        try {
+          await _lockout.sync();
+        } catch (_) {}
+        if (!mounted) return;
+        if (_locked) {
+          _checking = false;
+          _lock();
+          setState(() => _entered = "");
+          return;
+        }
+      }
       try {
         ok = await widget.verify!(_entered);
       } catch (_) {
