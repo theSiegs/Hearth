@@ -1233,6 +1233,24 @@ def fs_account_of(hass: HomeAssistant, entity_id: str) -> str | None:
     return None
 
 
+def fs_day_limit_entity(hass: HomeAssistant, entity_id: str, platform: str, weekday: str) -> str | None:
+    """The Family Safety child's limit of a weekday ("monday"...) for Windows or the Xbox: the integration's per-day
+    limit number (unique id <entry>_<account>_limit_<weekday>, the Xbox's <entry>_<account>_xbox_limit_<weekday>; the
+    Xbox's exists once the child's Xbox schedule is on). None when there's none."""
+    account = fs_account_of(hass, entity_id)
+    if account is None:
+        return None
+    suffix = f"_{account}_xbox_limit_{weekday}" if platform == "Xbox" else f"_{account}_limit_{weekday}"
+    return next(
+        (
+            entry.entity_id
+            for entry in er.async_get(hass).entities.values()
+            if entry.domain == "number" and entry.platform == FS_DOMAIN and str(entry.unique_id).endswith(suffix)
+        ),
+        None,
+    )
+
+
 def hours_to_midnight(now: datetime | None = None) -> int:
     """Whole hours until the next local midnight (at least 1): a lock that lasts the day, and ends with it."""
     now = now or dt_util.now()

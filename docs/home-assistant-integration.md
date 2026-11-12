@@ -141,7 +141,7 @@ entities; it never signs in to those services itself.
 | Hearth TVs | this one | seconds today per profile and per app (`usage_today`), playing time per app | seconds |
 | Hearth Mobile | this one | seconds today and per app on that phone | seconds to minutes |
 | Phones, tablets, Google TV kids profiles | [HAFamilyLink, theSiegs fork](https://github.com/theSiegs/HAFamilyLink) (branch `ha/combined`) | per child: Daily Screen Time (with usage totals) and Screen Time Remaining; per device: Daily Screen Time (per-app seconds in `apps`) and per-app usage sensors | polled every 60 s, but Google's numbers lag: seconds to about 40 minutes, for a TV profile sometimes until it next starts |
-| Xbox, Windows | [Microsoft Family Safety](https://github.com/noiwid/HAFamilySafety) (HACS) | `sensor.<child>_screen_time` (minutes today, the whole account) and `sensor.<device>_screen_time` per device | polled, 5 minutes by default (30 s to an hour) |
+| Xbox, Windows | [Microsoft Family Safety](https://github.com/noiwid/HAFamilySafety) (HACS) | `sensor.<child>_screen_time` (minutes today, the whole account) and `sensor.<device>_screen_time` per device; per-app minutes from the child's Applications sensor (`applications`: each app's `app_id`, `app_name` and `usage_minutes`), which Hearth reads for the child's Screen Time (or Xbox Screen Time: Xbox apps only) as a source, each app by its Microsoft app id (`x:...` Xbox, `appx:...` or `win32:...` Windows, `a:...` a phone) as groups and pickers name them. A source with an `apps` attribute (Family Link's) uses that instead | polled, 5 minutes by default (30 s to an hour) |
 | Nintendo Switch | [Nintendo Switch parental controls](https://www.home-assistant.io/integrations/nintendo_parental_controls) (built in) | Used screen time and Screen time remaining per Switch (minutes; added as a source, its time is games unless chosen otherwise). Whole-console: on a shared Switch, use each player's playing-time sensor as the source instead. Per-app minutes (its usage report service) aren't read yet | polled every 60 s; the Switch must be online; its values aren't marked unavailable when an update fails |
 | Nintendo Switch, live | Switch friend presence: HACS [Nintendo-Switch-Presence](https://github.com/itsfatlum/Nintendo-Switch-Presence), fed by a self-hosted [nxapi](https://github.com/samuelthomas2774/nxapi) presence server and a watcher account | what each kid's Switch is playing now | 30-60 s |
 | Xbox, live | Home Assistant's Xbox integration | now playing per gamer | about a minute |
@@ -586,31 +586,39 @@ the people chosen):
 - **Family Safety (Windows, Xbox)** gets the same extra minutes, Family Link's way, when "Extra minutes as Family
   Safety's daily limits today" (`bonus_family_safety`) is on. It's off by default, apart from Family Link's, so a
   schedule set up before it existed doesn't start raising Windows and Xbox limits. For a kid with a Family Safety
-  enforcer (the chosen people, or everyone with Family Safety), each of its platforms gets today's daily limit plus the
-  extra, today only (`microsoft_family_safety.set_screentime_limit` with the kid's entity, `platform`,
-  `today_only: true`, `hours` and `minutes`; no `day_of_week`). Today's limit is the platform's Allowed Now
-  `allowance_minutes` once Family Safety has written it since midnight (till then, yesterday's may still show: it
-  waits and reads again each minute), or, when a parent already changed today's limit for today only, their value
-  (the Screen time policy sensor's `today_only` `limit_minutes`): the extra goes on top of their cut or raise instead of
-  replacing it. Hearth keeps the limit it set itself, so its own today-only change is never added to twice. Family Safety puts it back at midnight itself and leaves a parent's own
-  change alone. A platform without a limit today is left alone. School time has no Family Safety equivalent, and
-  Hearth's day types don't change bedtime, so the allowed hours (`set_screentime_intervals`) aren't touched. A Family
-  Safety that doesn't take `today_only` yet is skipped quietly; a failed call is logged and tried again, and doesn't
-  hold up Family Link or another kid. When today's day off is called off (`hearth.school_time_off_cancel` for today,
-  on a day off, for the people named or everyone; with or without School time taken off), or today's day type changes
-  away from a day off or half day, the platforms Hearth raised go back at once and aren't raised again that day
-  (Family Link's extra minutes stay): the limit Hearth added to is written again with `set_screentime_limit`,
-  `today_only: true` (the weekly value ends the today-only change; a parent's earlier today-only value stays theirs
-  till midnight), and only while the platform's today-only limit is still the one Hearth set. A limit a parent
-  changed since stays. `restore_today_only` isn't used: it would put back a parent's later today-only change too.
+  enforcer (the chosen people, or everyone with Family Safety), its Windows and Xbox platforms each get this weekday's
+  limit plus the extra (at most 24 hours), through upstream's `microsoft_family_safety.set_screentime_limit` with the
+  kid's entity (an older Family Safety: its account id), `day_of_week` (today's; Family Safety counts 0 as Sunday),
+  `platform`, `hours` and `minutes`. The limit read is the integration's per-day limit number of the platform (Windows'
+  "<name> Thursday Limit", unique id `<entry>_<account>_limit_thursday`; the Xbox's "<name> Xbox Thursday Limit",
+  `<entry>_<account>_xbox_limit_thursday`, there once the kid's Xbox schedule is on): a parent's change of the weekday
+  before Hearth's is what the extra goes on top of. A platform without a limit that day (24 hours) is left alone, as
+  is Mobile (it has no weekday limit). The weekday's limit is a setting, not today's alone, so it's a **temporary
+  limit** Hearth puts back itself, the same way as the Switch's (`temporary_limit.py`): before writing, it records the
+  limit it added to, the one it writes, the day and weekday, the platform and the kid, kept across a restart and
+  midnight (never added to twice). It puts the recorded weekday's limit back 2 minutes before midnight, at once when
+  today's day off is called off (`hearth.school_time_off_cancel` for today, on a day off, for the people named or
+  everyone; with or without School time taken off) or today's day type changes away from a day off or half day (then
+  it isn't raised again that day; Family Link's extra minutes stay), or on the next start when Home Assistant was off
+  then (the recorded weekday's, not the new day's). Only while the limit still reads Hearth's: a limit a parent changed
+  since stays. The Xbox's write goes through the Xbox Family Settings sign-in and fails without it: a failed call is
+  never taken as done (it's logged and tried again while it's still today, and nothing is put back for it), doesn't
+  hold up Family Link or another kid, and the 06:00 check tells the adults about a platform still not raised. A Family
+  Safety without `set_screentime_limit` is skipped quietly. School time has no Family Safety equivalent, and Hearth's
+  day types don't change bedtime, so the allowed hours (`set_screentime_intervals`) aren't touched. Hearth doesn't use
+  Family Safety's today-only changes (`today_only`, `restore_today_only`) at all. Nor does it use Family Safety's
+  account lock switch (`lock_account`), which saves the limits it finds as its restore point: switched on on a bonus
+  day, it would save (and later put back) the raised value. If a parent uses it then, Hearth's put-back still only
+  fires while the limit reads Hearth's value.
 - **Nintendo Switch** gets the same extra minutes when "Extra minutes on the Switch's limit today"
   (`bonus_nintendo`) is on (off by default, as Family Safety's). Each Switch of a chosen kid's Nintendo enforcer (its
   Max screentime today) gets today's limit plus the extra, at most 360 minutes (the Switch's own maximum), once a day:
   a Switch two kids share is raised once, for both. Nintendo has no today-only limit (the number is the Switch's
   setting of every day, or of this weekday), so Hearth puts it back itself, as the Nintendo enforcer does: 2 minutes
   before midnight, and only while the Switch still reads the limit Hearth set (a parent's change in the Nintendo app
-  since stays). It keeps the limit it added to (with the day, weekday, device and bedtime) across a restart, so it
-  never adds to its own value twice, and if Home Assistant was off over midnight a Switch with a limit per weekday
+  since stays). It's a temporary limit, as Family Safety's above: it keeps the limit it added to (with the day,
+  weekday, device and bedtime) across a restart, so it never adds to its own value twice, a failed write isn't taken
+  as done (tried again while it's still today), and if Home Assistant was off over midnight a Switch with a limit per weekday
   gets that weekday's limit and bedtime back through `nintendo_parental_controls.update_daily_restrictions`. A Switch
   with no limit (-1) is left alone, as is one at 360 already. While bonus time from the Nintendo app runs the Switch
   refuses a new limit, so Hearth waits. **While Hearth holds the Switch** (limit 0, for a budget or a pause) nothing is

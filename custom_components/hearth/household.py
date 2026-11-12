@@ -68,6 +68,7 @@ from .sources import (
     Source,
     Title,
     device_key,
+    fs_applications_of,
     now_playing,
     sources_from_options,
     title_key,
@@ -262,8 +263,14 @@ class Household:
         watched = list(self.options.get(CONF_APP_WATCH, []))
         # Who's playing a shared Switch: a change holds or lets it go
         playing = [e for enforcer in enforcers_from_options(self.options) for e in enforcer.playing]
+        sources = sources_from_options(self.options)
+        # A Family Safety Screen Time's breakdown is its child's Applications sensor's
+        applications = [
+            found[0] for s in sources if not s.live and (found := fs_applications_of(self.hass, s.entity_id))
+        ]
         return (
-            [s.entity_id for s in sources_from_options(self.options)]
+            [s.entity_id for s in sources]
+            + applications
             + locks
             + watched
             + playing
@@ -408,7 +415,8 @@ class Household:
 
     def _family_safety_apps(self) -> dict[str, str]:
         """App id -> "name (platform)" from the `apps` attribute of the Family Safety sensors of the people with a
-        Family Safety enforcer (their account's sensors), for the app pickers; only ids pause_app takes."""
+        Family Safety enforcer (their account's sensors), or the Applications sensor's `applications` ({app_id,
+        app_name}) without one, for the app pickers; only ids pause_app takes."""
         enforcers = [e for e in enforcers_from_options(self.options) if e.kind == FAMILY_SAFETY]
         found: dict[str, str] = {}
         if not enforcers:
@@ -421,7 +429,14 @@ class Household:
         for state in self.hass.states.async_all("sensor"):
             apps = state.attributes.get("apps")
             if not isinstance(apps, list):
-                continue
+                applications = state.attributes.get("applications")
+                if not isinstance(applications, list):
+                    continue
+                apps = [
+                    {"package": app.get("app_id"), "name": app.get("app_name")}
+                    for app in applications[:500]
+                    if isinstance(app, dict)
+                ]
             # Theirs: by the account (Screen Time has user_id) or the account's device (Applications doesn't)
             if str(state.attributes.get("user_id")) not in accounts:
                 entry = registry.async_get(state.entity_id)

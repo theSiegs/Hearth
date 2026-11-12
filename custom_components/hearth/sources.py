@@ -4,6 +4,10 @@ Two sorts:
 
 - **Totals**: a sensor of time today (Family Link's Daily Screen Time, Family Safety's Screen Time, Nintendo's Used
   screen time). Its state is the time; an `apps` attribute of `{"package", "minutes"}` (Family Link's) breaks it down.
+  Family Safety's Screen Time has no such attribute: its breakdown comes from the same child's Applications sensor
+  (its `applications` list of `{"app_id", "app_name", "usage_minutes", ...}`), each app under its Microsoft app id
+  (x:... Xbox, appx:... or win32:... Windows, a:... a phone), as a group's Family Safety apps name them. The Xbox
+  Screen Time sensor's takes only the Xbox's (x:...).
 - **Live**: a sensor whose state is what's being played now (Xbox's Now playing, a Switch presence Game sensor), or
   empty. The integration times it (live.py).
 
@@ -18,6 +22,7 @@ from typing import Any
 
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 
 from .counting import Reading
 
@@ -28,6 +33,8 @@ CONF_TITLES = "titles"
 NOT_PLAYING = {"", "none", "offline", "online", "idle", "home", "away", "not playing", STATE_UNKNOWN, STATE_UNAVAILABLE}
 
 _UNITS = {"s": 1, "sec": 1, "min": 60, "h": 3600, "hr": 3600, "d": 86400}
+FS_DOMAIN = "microsoft_family_safety"
+MAX_APPS = 200
 
 
 @dataclass(frozen=True)
@@ -98,7 +105,7 @@ def totals_reading(hass: HomeAssistant, source: Source) -> Reading | None:
     items: dict[str, float] = {}
     apps = state.attributes.get("apps")
     if isinstance(apps, list):
-        for app in apps[:200]:
+        for app in apps[:MAX_APPS]:
             if not isinstance(app, dict):
                 continue
             package = app.get("package") or app.get("name")
@@ -107,7 +114,50 @@ def totals_reading(hass: HomeAssistant, source: Source) -> Reading | None:
                 seconds = _seconds(app.get("seconds"), "s")
             if isinstance(package, str) and package and seconds is not None:
                 items[package[:128]] = max(items.get(package[:128], 0.0), seconds)
+    else:
+        items = family_safety_apps_today(hass, source.entity_id)
     return Reading(source.reading_source, min(total, 86400.0), items, source.group)
+
+
+def fs_applications_of(hass: HomeAssistant, entity_id: str) -> tuple[str, str | None] | None:
+    """A Family Safety child's Screen Time sensor (unique id <entry>_<account>_screentime) or Xbox Screen Time
+    (<entry>_<account>_xbox_screentime): the same child's Applications sensor (<entry>_<account>_app_count), with the
+    app id prefix its apps must have (x: for the Xbox's), else None."""
+    registry = er.async_get(hass)
+    entry = registry.async_get(entity_id)
+    if entry is None or entry.platform != FS_DOMAIN or entry.domain != "sensor":
+        return None
+    unique_id = str(entry.unique_id)
+    if unique_id.endswith("_xbox_screentime"):
+        stem, prefix = unique_id.removesuffix("_xbox_screentime"), "x:"
+    elif unique_id.endswith("_screentime"):
+        stem, prefix = unique_id.removesuffix("_screentime"), None
+    else:
+        return None
+    applications = registry.async_get_entity_id("sensor", FS_DOMAIN, f"{stem}_app_count")
+    return (applications, prefix) if applications else None
+
+
+def family_safety_apps_today(hass: HomeAssistant, entity_id: str) -> dict[str, float]:
+    """Microsoft app id -> seconds today, of the apps used today, from the Applications sensor of the Family Safety
+    child whose Screen Time [entity_id] is; empty for any other sensor."""
+    found = fs_applications_of(hass, entity_id)
+    state = hass.states.get(found[0]) if found else None
+    applications = state.attributes.get("applications") if state else None
+    if not found or not isinstance(applications, list):
+        return {}
+    prefix = found[1]
+    items: dict[str, float] = {}
+    for app in applications[:500]:
+        if not isinstance(app, dict) or not isinstance(app_id := app.get("app_id"), str) or not app_id:
+            continue
+        if prefix is not None and not app_id.startswith(prefix):
+            continue
+        seconds = _seconds(app.get("usage_minutes"), "min")
+        if seconds:
+            items[app_id[:128]] = max(items.get(app_id[:128], 0.0), seconds)
+    # The most used, as many as an apps attribute would give
+    return dict(sorted(items.items(), key=lambda item: -item[1])[:MAX_APPS])
 
 
 def now_playing(hass: HomeAssistant, source: Source) -> str | None:
