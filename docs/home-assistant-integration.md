@@ -431,7 +431,8 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
     time is out, say), which Google counts down; Hearth remembers it as its own, so it's no parent's grant, and
     ending it early resets it (unless a parent's bonus came on top).
   - a Family Safety platform: Hearth's lock of that platform is let go, and Microsoft's own allowance gets extra
-    time where it would stop it (`add_time_bonus`, until then); by the clock, from now. When it ends, Hearth locks
+    time where it would stop it (`add_time_bonus`, until then; on Windows only where Family Safety takes it); by the
+    clock, from now. When it ends, Hearth locks
     the platform again if the pool is still out.
   - a Switch: Hearth's hold of the Switch is let go (its own limit and Suspend software put back, which still
     apply); by the clock, from now.
@@ -502,12 +503,16 @@ attribute present), so an older Family Link or Family Safety keeps working as be
     would block within that time (Screen time remaining lower than the minutes needed; a device with no limit gets
     none), as much as is missing; once per allow.
   - Family Safety: extra time (its experimental `add_time_bonus`, `until` the allow's end or midnight) on the
-    enforcer's platforms whose allowance would block (allowance minus used lower than the minutes needed). It replaces
-    Hearth's own lock there (`released_hold`). When Microsoft doesn't apply it, the person's status says Family Safety
-    extra time is unavailable; nothing fails.
+    enforcer's platforms whose allowance would block (allowance minus used lower than the minutes needed): the Xbox,
+    and Windows where the installed Family Safety takes `platform: Windows` (its service schema says so; upstream's
+    is Xbox only, and Windows is then skipped quietly). It replaces Hearth's own lock there (`replace_lock` only when
+    the platform's `hold` is Hearth's, never over a parent's lock; `released_hold`). When Microsoft doesn't apply it,
+    the person's status says Family Safety extra time is unavailable and it counts as not given; nothing fails.
   - Ending the allow early (`hearth.allow_end`) resets the Family Link bonus Hearth added (only where no parent's bonus
     came on top: `reset_bonus` ends every bonus of the day; without `reset_bonus` or the button it lapses at
-    midnight) and cancels the Family Safety extra time (`cancel_time_bonus`).
+    midnight) and cancels the Family Safety extra time Hearth gave (`cancel_time_bonus`, on each platform it gave it
+    on), except where the platform's `hold` now reads `parent` (a parent's extra time or lock came since: kept,
+    `extra_time_kept` in the status).
 - **First-party limits in explain.** `hearth.explain` also lists `device_limit` (a Family Link device's own daily limit
   reached with no bonus left, by its switch, with its `device` name, until midnight; or a Family Safety platform that
   Microsoft's allowance or allowed hours stop, with its `platform`) when Hearth isn't the one holding it, and

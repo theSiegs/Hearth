@@ -594,6 +594,97 @@ async def test_family_safety_extra_time_unavailable_is_shown_not_raised(
     assert "unavailable" in status["last"]["error"] and status["last"]["ok"] is False
 
 
+
+def _fs_platform(hass: HomeAssistant, platform: str, hold: str = "none", **extra) -> None:
+    """Sam's Allowed Now sensor of a Family Safety platform, 10 of 60 minutes left."""
+    hass.states.async_set(
+        f"binary_sensor.sam_{platform.lower()}_allowed_now",
+        "on",
+        {"user_id": 123456, "platform": platform, "hold": hold, "allowance_minutes": 60, "used_minutes": 50,
+         "remaining_minutes": 10, **extra},
+    )
+
+
+async def _sam_on_xbox_and_windows(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
+    async_mock_service(hass, "microsoft_family_safety", "lock_platform")
+    async_mock_service(hass, "microsoft_family_safety", "unlock_platform")
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    _fs_platform(hass, "Xbox")
+    _fs_platform(hass, "Windows")
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(
+        hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY, "platforms": ["Xbox", "Windows"]}
+    )
+
+
+async def test_family_safety_extra_time_reaches_windows_too(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """A Family Safety with Windows extra time gets it there as on the Xbox; ending the allow cancels only Hearth's
+    own: a parent's extra time that came since on Windows is kept."""
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+    cancelled = async_mock_service(hass, "microsoft_family_safety", "cancel_time_bonus")
+    given: list[ServiceCall] = []
+
+    async def add_time_bonus(call: ServiceCall):
+        given.append(call)
+        return {"added": True, "until": call.data["until"], "applied_until": call.data["until"], "hold_kept": False}
+
+    hass.services.async_register(
+        "microsoft_family_safety", "add_time_bonus", add_time_bonus, supports_response=SupportsResponse.OPTIONAL
+    )
+    await _sam_on_xbox_and_windows(hass, hass_client_no_auth)
+
+    allow_id = await _allow_all(hass, dt_util.now().replace(hour=13, minute=0).isoformat())
+    assert sorted(c.data["platform"] for c in given) == ["Windows", "Xbox"]
+    assert all("replace_lock" not in c.data for c in given)
+
+    # A parent gives Windows extra time of their own in the Family Safety app
+    _fs_platform(hass, "Windows", hold="parent", override="allowUntil", allow_until="2026-11-12T20:00:00")
+    await hass.async_block_till_done()
+    await hass.services.async_call(DOMAIN, "allow_end", {"id": allow_id}, blocking=True)
+    await hass.async_block_till_done()
+    assert [c.data["platform"] for c in cancelled] == ["Xbox"]
+    status = _household(hass).enforcement.status_of("person.sam")["family_safety"]
+    assert status["last"]["extra_time_kept"] == ["Windows"]
+
+
+async def test_windows_extra_time_is_skipped_quietly_where_family_safety_has_none(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Upstream's Family Safety gives extra time on the Xbox only (its schema takes no other platform)."""
+    import voluptuous as vol
+
+    from homeassistant.helpers import config_validation as cv
+
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+    given: list[ServiceCall] = []
+
+    async def add_time_bonus(call: ServiceCall):
+        given.append(call)
+        return {"added": True, "until": call.data["until"]}
+
+    xbox_only = vol.Schema(
+        {
+            vol.Optional("entity_id"): cv.string,
+            vol.Optional("account_id"): cv.string,
+            vol.Optional("platform", default="Xbox"): vol.In(["Xbox"]),
+            vol.Optional("minutes"): int,
+            vol.Optional("until"): cv.datetime,
+            vol.Optional("replace_lock"): cv.boolean,
+        }
+    )
+    hass.services.async_register(
+        "microsoft_family_safety", "add_time_bonus", add_time_bonus, schema=xbox_only,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+    await _sam_on_xbox_and_windows(hass, hass_client_no_auth)
+
+    await _allow_all(hass, dt_util.now().replace(hour=13, minute=0).isoformat())
+    assert [c.data["platform"] for c in given] == ["Xbox"]
+    status = _household(hass).enforcement.status_of("person.sam")["family_safety"]
+    assert status["last"]["ok"] and "error" not in status["last"]
+
 # E. Explain says what the device does
 
 
