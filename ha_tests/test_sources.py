@@ -84,8 +84,10 @@ def _family_safety_child(hass: HomeAssistant, account: str = "123456") -> tuple[
 
 def _applications(racing_minutes: float) -> list[dict]:
     return [
-        {"app_id": "x:1111", "app_name": "Racing Game", "blocked": False, "icon": "https://example.com/r.png", "usage_minutes": racing_minutes},
+        {"app_id": "x:xboxplt:1111", "app_name": "Racing Game", "blocked": False, "icon": "https://example.com/r.png", "usage_minutes": racing_minutes},
         {"app_id": "appx:Example.Paint", "app_name": "Paint", "blocked": False, "icon": None, "usage_minutes": 5.0},
+        # A Windows Store app: x: but windowsplt, so never the Xbox's
+        {"app_id": "x:windowsplt:2222", "app_name": "Calculator", "blocked": False, "icon": None, "usage_minutes": 0},
         {"app_id": "win32:notepad.exe", "app_name": "Notepad", "blocked": True, "icon": None, "usage_minutes": 0},
     ]
 
@@ -99,7 +101,7 @@ async def test_a_family_safety_screen_time_takes_its_apps_from_the_applications_
     hass.states.async_set(screen, "30", {"unit_of_measurement": "min", "user_id": "123456"})
     hass.states.async_set(xbox, "25", {"unit_of_measurement": "min", "user_id": "123456"})
     entry = hass.config_entries.async_entries(DOMAIN)[0]
-    hass.config_entries.async_update_entry(entry, options={**entry.options, "app_groups": {"x:1111": "games"}})
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "app_groups": {"x:xboxplt:1111": "games"}})
     await hass.async_block_till_done()
     await _option(hass, "add_source", {"entity_id": screen, "person": "person.sam", "name": "Sam's PC and Xbox"})
 
@@ -107,9 +109,9 @@ async def test_a_family_safety_screen_time_takes_its_apps_from_the_applications_
     assert _state(hass, "sensor.hearth_sam_screen_time_today") == "45"
     assert _state(hass, "sensor.hearth_sam_games_today") == "30"
     reading = totals_reading(hass, Source("fs", screen, "person.sam", "Sam's PC and Xbox"))
-    assert reading.items == {"x:1111": 1500.0, "appx:Example.Paint": 300.0}
+    assert reading.items == {"x:xboxplt:1111": 1500.0, "appx:Example.Paint": 300.0}
     # The Xbox Screen Time sensor's: the Xbox's apps only
-    assert totals_reading(hass, Source("x", xbox, "person.sam", "Xbox")).items == {"x:1111": 1500.0}
+    assert totals_reading(hass, Source("x", xbox, "person.sam", "Xbox")).items == {"x:xboxplt:1111": 1500.0}
 
     # The Applications sensor's change counts at once
     hass.states.async_set(applications, "3", {"blocked_count": 1, "applications": _applications(28.0)})
@@ -118,10 +120,10 @@ async def test_a_family_safety_screen_time_takes_its_apps_from_the_applications_
 
     # An apps attribute (the fork's, Family Link's) still says it
     hass.states.async_set(
-        screen, "30", {"unit_of_measurement": "min", "user_id": "123456", "apps": [{"package": "x:1111", "minutes": 10}]}
+        screen, "30", {"unit_of_measurement": "min", "user_id": "123456", "apps": [{"package": "x:xboxplt:1111", "minutes": 10}]}
     )
     await hass.async_block_till_done()
-    assert totals_reading(hass, Source("fs", screen, "person.sam", "n")).items == {"x:1111": 600.0}
+    assert totals_reading(hass, Source("fs", screen, "person.sam", "n")).items == {"x:xboxplt:1111": 600.0}
     assert _state(hass, "sensor.hearth_sam_games_today") == "33"  # today's count never goes down
 
     # Another sensor without apps has no breakdown
@@ -142,7 +144,8 @@ async def test_the_app_pickers_offer_a_family_safety_child_s_applications(
         hass, {"kind": "family_safety", "person": "person.sam", "entity_id": screen, "platforms": ["Xbox", "Windows"]}
     )
     known = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household.known_apps()
-    assert known["x:1111"] == "Racing Game (Xbox)"
+    assert known["x:xboxplt:1111"] == "Racing Game (Xbox)"
+    assert known["x:windowsplt:2222"] == "Calculator (Windows)"
     assert known["win32:notepad.exe"] == "Notepad (Windows)"
 
 

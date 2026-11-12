@@ -122,14 +122,15 @@ def totals_reading(hass: HomeAssistant, source: Source) -> Reading | None:
 def fs_applications_of(hass: HomeAssistant, entity_id: str) -> tuple[str, str | None] | None:
     """A Family Safety child's Screen Time sensor (unique id <entry>_<account>_screentime) or Xbox Screen Time
     (<entry>_<account>_xbox_screentime): the same child's Applications sensor (<entry>_<account>_app_count), with the
-    app id prefix its apps must have (x: for the Xbox's), else None."""
+    app id prefix its apps must have (x:xboxplt: for the Xbox's; x:windowsplt: ids are Windows Store apps), else
+    None."""
     registry = er.async_get(hass)
     entry = registry.async_get(entity_id)
     if entry is None or entry.platform != FS_DOMAIN or entry.domain != "sensor":
         return None
     unique_id = str(entry.unique_id)
     if unique_id.endswith("_xbox_screentime"):
-        stem, prefix = unique_id.removesuffix("_xbox_screentime"), "x:"
+        stem, prefix = unique_id.removesuffix("_xbox_screentime"), "x:xboxplt:"
     elif unique_id.endswith("_screentime"):
         stem, prefix = unique_id.removesuffix("_screentime"), None
     else:

@@ -156,11 +156,13 @@ NEVER_PAUSED = frozenset(
 DEFAULT_SCHOOL_TIME_APPS = ("com.google.android.apps.messaging",)
 
 # Family Safety's app ids that pause_app takes, by platform (a: is a phone app: not paused, Family Link has the phone)
-FS_APP_PREFIXES = {"x:": "Xbox", "appx:": "Windows", "win32:": "Windows"}
+# First match wins: Microsoft Store apps are x:windowsplt:..., so that prefix comes before the Xbox's plain x:
+FS_APP_PREFIXES = {"x:windowsplt:": "Windows", "x:": "Xbox", "appx:": "Windows", "win32:": "Windows"}
 
 
 def fs_app_platform(item: str) -> str | None:
-    """The platform of a Family Safety app id (x:... Xbox, appx:... or win32:... Windows), None for anything else."""
+    """The platform of a Family Safety app id (x:windowsplt:..., appx:... or win32:... Windows; other x:... Xbox), None for
+    anything else."""
     return next((platform for prefix, platform in FS_APP_PREFIXES.items() if item.startswith(prefix)), None)
 
 
