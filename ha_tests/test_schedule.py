@@ -483,6 +483,8 @@ def _family_safety_services(hass: HomeAssistant, limit_schema=NEW_LIMIT, fail=No
 
 
 async def _with_family_safety(hass, hass_client_no_auth, freezer, now, school, schedule, platforms):
+    # Family Safety's extra time is off unless chosen
+    schedule = {"bonus_family_safety": True, **schedule}
     household = await _set_up(hass, hass_client_no_auth, freezer, now, school, schedule)
     await _option(
         hass,
@@ -727,6 +729,35 @@ async def test_a_parent_s_today_only_raise_gets_the_extra_on_top(
     await _tick(hass, household, freezer, _at(day_off, 0, 6))
     assert [(c.data["hours"], c.data["minutes"]) for c in limits] == [(3, 0)]
     assert household.scheduler.fs_limits["person.sam"]["Windows"] == {"target": 180, "base": 150}
+
+
+async def test_family_safety_s_extra_time_is_off_unless_chosen(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    fl_limit = async_mock_service(hass, "familylink", "set_daily_limit")
+    limits, _intervals, _restores = _family_safety_services(hass)
+    day_off = date(2026, 11, 26)
+    # Family Link's extra time is on (its default); Family Safety's isn't chosen
+    household = await _with_family_safety(
+        hass,
+        hass_client_no_auth,
+        freezer,
+        _at(day_off, 0, 1),
+        {**YEAR, "days_off": "2026-11-26"},
+        {"day_off_bonus": 60, "bonus_family_safety": False},
+        ["Windows", "Xbox"],
+    )
+    _family_safety_entities(hass, "sam", "123456", {"Windows": 120, "Xbox": 60})
+    told: list[str] = []
+    household.scheduler.tell = lambda title, message, _id: told.append(message)
+    await _tick(hass, household, freezer, _at(day_off, 0, 6))
+    await _tick(hass, household, freezer, _at(day_off, 6))
+    assert len(fl_limit) == 1 and limits == [] and told == []
+    # Upgrading: a schedule saved before the option existed leaves Family Safety alone
+    from custom_components.hearth.schedule import ScheduleConfig
+
+    assert ScheduleConfig.from_options({"schedule": {"day_off_bonus": 60}}).bonus_family_safety is False
+    assert ScheduleConfig.from_options({"schedule": {"day_off_bonus": 60}}).bonus_family_link is True
 
 
 async def test_an_older_family_safety_without_today_only_is_skipped_quietly(

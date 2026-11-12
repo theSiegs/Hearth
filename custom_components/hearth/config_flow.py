@@ -709,6 +709,9 @@ class HearthOptionsFlow(OptionsFlow):
                 ),
                 vol.Optional("half_day_bonus", description=suggested("half_day_bonus", 0)): minutes,
                 vol.Optional("bonus_family_link", default=current.get("bonus_family_link", True)): BooleanSelector(),
+                vol.Optional(
+                    "bonus_family_safety", default=current.get("bonus_family_safety", False)
+                ): BooleanSelector(),
                 vol.Optional("bonus_group", description=suggested("bonus_group")): self._group_selector(),
                 vol.Optional("people", description=suggested("people")): EntitySelector(
                     EntitySelectorConfig(domain="person", multiple=True)

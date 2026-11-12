@@ -322,15 +322,16 @@
       },
       "schedule": {
         "title": "Schedule",
-        "description": "What each kind of day does to the kids' Family Link (the day type comes from School days). On a day off, School time can be switched off for the day; Hearth puts it back at the start of the next school day, inside each kid's own window. On a half day, School time can end some hours early. Both can give extra time: as Family Link's daily limit for today only (the weekday's limit plus the extra), and/or as Hearth bonus minutes on a group. At the watchdog time on a school day, the adults are told if anyone's School time is still off.",
+        "description": "What each kind of day does to the kids' Family Link (the day type comes from School days). On a day off, School time can be switched off for the day; Hearth puts it back at the start of the next school day, inside each kid's own window. On a half day, School time can end some hours early. Both can give extra time: as Family Link's daily limit for today only (the weekday's limit plus the extra), as Family Safety's daily limits for today only (Windows, Xbox; off unless chosen), and/or as Hearth bonus minutes on a group. At the watchdog time on a school day, the adults are told if anyone's School time is still off.",
         "data": {
           "day_off_school_time_off": "Day off: School time off",
           "day_off_bonus": "Day off: extra minutes",
           "half_day_hours_early": "Half day: School time ends this many hours early",
           "half_day_bonus": "Half day: extra minutes",
-          "bonus_family_link": "Extra minutes as Family Link's and Family Safety's daily limits today",
+          "bonus_family_link": "Extra minutes as Family Link's daily limit today",
+          "bonus_family_safety": "Extra minutes as Family Safety's daily limits today (Windows, Xbox)",
           "bonus_group": "Extra minutes also as a Hearth bonus on this group",
-          "people": "Who (empty: everyone with Family Link in Enforce)",
+          "people": "Who (empty: everyone with Family Link or Family Safety in Enforce)",
           "notify": "Tell this phone (empty: the one that answers requests for more time)",
           "watchdog": "Watchdog time on school days"
         }
@@ -341,7 +342,7 @@
         "data": {
           "url": "The list's address (https)",
           "time": "Every day at",
-          "people": "Who (empty: everyone with Family Link in Enforce)"
+          "people": "Who (empty: everyone with Family Link or Family Safety in Enforce)"
         }
       },
       "chores": {

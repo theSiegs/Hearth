@@ -10,10 +10,11 @@ Today's day type comes from School days (schooldays.py): school, half_day, day_o
   School time is on; one whose School time is off gets the early end when it is put back.
 - Both: bonus minutes, as Family Link's today-only daily limit (the weekday's limit plus the bonus, set_daily_limit
   without a day: an override that ends by itself) and/or as Hearth bonus minutes on a group.
-- The same bonus reaches Family Safety (Windows, Xbox): for each platform of a kid's Family Safety enforcer, today's
-  daily limit plus the bonus, today only (microsoft_family_safety.set_screentime_limit with today_only; Family Safety
-  puts it back at midnight itself, and leaves a parent's own change alone). When a parent already changed today's
-  limit for today only, the bonus goes on top of their value; Hearth keeps its own target to tell the two apart. Only with a Family Safety that takes
+- When chosen (bonus_family_safety, off by default), the same bonus reaches Family Safety (Windows, Xbox): for each
+  platform of a kid's Family Safety enforcer, today's daily limit plus the bonus, today only
+  (microsoft_family_safety.set_screentime_limit with today_only; Family Safety puts it back at midnight itself, and
+  leaves a parent's own change alone). When a parent already changed today's limit for today only, the bonus goes on
+  top of their value; Hearth keeps its own target to tell the two apart. Only with a Family Safety that takes
   today_only; an older one is skipped quietly. School time has no Family Safety equivalent, so a day off and a half
   day change nothing else there. A day off called off the same day (hearth.school_time_off_cancel), or today's day
   type changing away from a day off or half day, puts Family Safety's limit back at once: the one Hearth added to is
@@ -111,8 +112,11 @@ class ScheduleConfig:
     half_day_hours_early: float = 0
     half_day_bonus: int = 0
     bonus_family_link: bool = True
+    # Off unless chosen: a household that set this up for Family Link doesn't get its Windows and Xbox raised too
+    bonus_family_safety: bool = False
     bonus_group: str | None = None
-    # Whose (empty: everyone with Family Link in Configure > Enforce)
+    # Whose (empty: everyone with Family Link, and for Family Safety's extra time everyone with Family Safety, in
+    # Configure > Enforce)
     people: tuple[str, ...] = ()
     notify: str | None = None
     watchdog: time | None = DEFAULT_WATCHDOG
@@ -129,6 +133,7 @@ class ScheduleConfig:
             half_day_hours_early=max(0.0, min(12.0, _number(raw.get("half_day_hours_early")))),
             half_day_bonus=max(0, min(720, int(_number(raw.get("half_day_bonus"))))),
             bonus_family_link=raw.get("bonus_family_link", True) is not False,
+            bonus_family_safety=raw.get("bonus_family_safety") is True,
             bonus_group=raw.get("bonus_group") or None,
             people=tuple(raw.get("people") or ()),
             notify=raw.get("notify") or None,
@@ -594,8 +599,8 @@ class Scheduler:
         return dt_util.as_local(written).date() >= today
 
     def _fs_limit_wanted(self, enforcer: Enforcer, config: ScheduleConfig) -> bool:
-        """Family Safety takes part: extra minutes go to the first-party apps' limits and it has today_only."""
-        return config.bonus_family_link and self._fs_data(
+        """Family Safety takes part: its extra minutes are chosen (Configure > Schedule) and it has today_only."""
+        return config.bonus_family_safety and self._fs_data(
             enforcer.entity_id, FS_LIMIT, {"platform": "Windows", "today_only": True, "hours": 1, "minutes": 0}
         ) is not None
 

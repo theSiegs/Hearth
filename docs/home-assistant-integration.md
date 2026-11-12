@@ -577,7 +577,9 @@ the people chosen):
   child's daily limit is on), and/or as Hearth bonus minutes on a group. Family Link's way is the default, as that is
   what a household's own "extra hour" automation did: it raises the phone's own limit. A Hearth bonus raises a Hearth
   budget instead.
-- **Family Safety (Windows, Xbox)** gets the same extra minutes, Family Link's way: for a kid with a Family Safety
+- **Family Safety (Windows, Xbox)** gets the same extra minutes, Family Link's way, when "Extra minutes as Family
+  Safety's daily limits today" (`bonus_family_safety`) is on. It's off by default, apart from Family Link's, so a
+  schedule set up before it existed doesn't start raising Windows and Xbox limits. For a kid with a Family Safety
   enforcer (the chosen people, or everyone with Family Safety), each of its platforms gets today's daily limit plus the
   extra, today only (`microsoft_family_safety.set_screentime_limit` with the kid's entity, `platform`,
   `today_only: true`, `hours` and `minutes`; no `day_of_week`). Today's limit is the platform's Allowed Now
