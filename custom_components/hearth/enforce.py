@@ -1233,6 +1233,22 @@ def fs_account_of(hass: HomeAssistant, entity_id: str) -> str | None:
     return None
 
 
+def fs_accepts(hass: HomeAssistant, service: str, data: dict[str, Any]) -> bool:
+    """The installed Family Safety's [service] takes [data] (its schema accepts it): how Hearth tells what this Family
+    Safety can do (upstream's add_time_bonus and cancel_time_bonus take the Xbox only, a newer one Windows too; the
+    schedule's set_screentime_limit with day_of_week, by entity or by account id). False when it has no [service]."""
+    found = hass.services.async_services_for_domain(FS_DOMAIN).get(service)
+    if found is None:
+        return False
+    if found.schema is None:
+        return True
+    try:
+        found.schema(dict(data))
+    except vol.Invalid:
+        return False
+    return True
+
+
 def fs_day_limit_entity(hass: HomeAssistant, entity_id: str, platform: str, weekday: str) -> str | None:
     """The Family Safety child's limit of a weekday ("monday"...) for Windows or the Xbox: the integration's per-day
     limit number (unique id <entry>_<account>_limit_<weekday>, the Xbox's <entry>_<account>_xbox_limit_<weekday>; the

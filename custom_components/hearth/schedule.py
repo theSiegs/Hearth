@@ -63,8 +63,6 @@ import logging
 import secrets
 from typing import TYPE_CHECKING, Any
 
-import voluptuous as vol
-
 from homeassistant.components import persistent_notification
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
@@ -79,6 +77,7 @@ from .enforce import (
     WEEKDAYS,
     Enforcer,
     enforcers_from_options,
+    fs_accepts,
     fs_account_of,
     fs_day_limit_entity,
     near_midnight,
@@ -590,23 +589,14 @@ class Scheduler:
     def _fs_data(self, entity_id: str, service: str, fields: dict[str, Any]) -> dict[str, Any] | None:
         """The call's data when this Family Safety takes it (its schema accepts it), targeting the child's entity, else
         its account id (an older Family Safety); None when it doesn't (skipped quietly)."""
-        services = self.hass.services.async_services_for_domain(FS_DOMAIN)
-        found = services.get(service)
-        if found is None:
-            return None
         targets = [{"entity_id": entity_id}] if "." in entity_id else []
         account = fs_account_of(self.hass, entity_id)
         if account is not None:
             targets.append({"account_id": account})
         for target in targets:
             data = {**target, **fields}
-            if found.schema is None:
+            if fs_accepts(self.hass, service, data):
                 return data
-            try:
-                found.schema(dict(data))
-            except vol.Invalid:
-                continue
-            return data
         return None
 
     def _fs_limit_wanted(self, enforcer: Enforcer, config: ScheduleConfig) -> bool:

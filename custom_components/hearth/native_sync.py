@@ -30,6 +30,7 @@ from .enforce import (
     FS_HOLD_BONUS_OURS,
     FS_HOLD_OURS,
     FS_HOLD_PARENT,
+    fs_accepts,
     fs_account_of,
     fs_hold_state,
 )
@@ -604,21 +605,6 @@ def fs_platform_state(hass: HomeAssistant, entity_id: str, platform: str) -> dic
                 found["remaining_minutes"] = _number(state.state)
             return found
     return None
-
-
-def fs_accepts(hass: HomeAssistant, service: str, data: dict[str, Any]) -> bool:
-    """The installed Family Safety's [service] takes [data] (its schema accepts it), as schedule.py tells a newer
-    Family Safety: upstream's add_time_bonus and cancel_time_bonus take the Xbox only, a newer one Windows too."""
-    found = hass.services.async_services_for_domain(FS_DOMAIN).get(service)
-    if found is None:
-        return False
-    if found.schema is None:
-        return True
-    try:
-        found.schema(dict(data))
-    except vol.Invalid:
-        return False
-    return True
 
 
 def fs_hold_released(response: Any) -> bool:
