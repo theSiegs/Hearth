@@ -678,7 +678,38 @@ async def test_a_request_answered_in_the_family_safety_app_closes_its_ask(
     await hass.async_block_till_done()
     assert hub.asks.pending() == []
     answered = hub.asks.answered_elsewhere("person.sam")
-    assert answered[0]["text"] == "answered in the Family Safety app" and answered[0]["status"] == "approved"
+    assert answered[0]["text"] == "approved in the Family Safety app" and answered[0]["status"] == "approved"
+
+
+async def test_a_request_gone_without_an_outcome_closes_as_handled_not_expired(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """Family Safety only sees a request answered in its app (or on the device) leave Microsoft's list: outcome
+    unknown. Someone dealt with it, so it closes as handled outside Hearth, not as expired."""
+    from custom_components.hearth.glance import person_glance
+
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY})
+    hub = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
+    answers = async_capture_events(hass, "hearth_more_time_answered")
+    hass.bus.async_fire(
+        "microsoft_family_safety_request", {"account_id": "123456", "request_id": "r1", "platform": "Windows"}
+    )
+    await hass.async_block_till_done()
+    hass.bus.async_fire(
+        "microsoft_family_safety_request_resolved",
+        {"account_id": "123456", "request_id": "r1", "outcome": "unknown", "minutes": None, "via": "app"},
+    )
+    await hass.async_block_till_done()
+    assert hub.asks.pending() == []
+    assert answers[-1].data["status"] == "handled" and answers[-1].data["answered_in"] == "family_safety"
+    answered = hub.asks.answered_elsewhere("person.sam")
+    assert answered[0]["status"] == "handled"
+    assert answered[0]["text"] == "handled outside Hearth (the Family Safety app or the device)"
+    glance = person_glance(_kid(), [], [], [], dt_util.now(), [], answered)
+    line = next(item for item in [glance["headline"], *glance["lines"]] if item["key"].startswith("answered:"))
+    assert line["text"] == "request handled outside Hearth (the Family Safety app or the device)"
 
 
 # Views: the household summary (contract 2), Hearth's page
@@ -725,7 +756,7 @@ def test_first_party_limits_status_and_answers_are_lines() -> None:
         },
         sync={"nintendo": {"held": [], "error": "bonus time is active", "last": None}},
     )
-    answered = [{"id": "a1", "text": "answered in the Family Safety app"}]
+    answered = [{"id": "a1", "text": "approved in the Family Safety app"}]
     glance = person_glance(person, [], [], [], now, [], answered)
     keys = [glance["headline"]["key"]] + [line["key"] for line in glance["lines"]]
     assert keys[:4] == [f"device_limit:{PHONE}", "parent_lock:xbox", "sync_error:nintendo", "answered:a1"]

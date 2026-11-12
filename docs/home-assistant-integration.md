@@ -514,8 +514,11 @@ attribute present), so an older Family Link or Family Safety keeps working as be
   `parent_lock` (a parent's own Family Safety lock, with its `platform`, until it ends), so explain says what the
   device does.
 - **Requests answered in the Family Safety app.** `microsoft_family_safety_request_resolved` with `via: app` closes the
-  matching ask as answered there (`answered_in: family_safety`; shown as "answered in the Family Safety app"); `via:
-  service` (Hearth's own answer) is left alone. Family Link has no kid requests, so there's nothing to close there.
+  matching ask as answered there (`answered_in: family_safety`): `outcome` `approved` or `denied` as such ("approved
+  in the Family Safety app", "denied in the Family Safety app"); `unknown` (the request left Microsoft's list without
+  Family Safety seeing how: answered in the Family Safety app or on the device) as status `handled`, shown as
+  "handled outside Hearth (the Family Safety app or the device)", never as expired. `hearth_more_time_answered` says
+  the same status. `via: service` (Hearth's own answer) is left alone. Family Link has no kid requests, so there's nothing to close there.
 
 ### Places
 
@@ -949,7 +952,7 @@ The **headline** is the first of these that holds (glance.py), in this order:
 | notice | Google's or Microsoft's own limit stops a device of theirs (Hearth isn't holding it) | `sam's phone · google's own limit`, `xbox · microsoft's own limit` | `device_limit:<entity or platform>` |
 | notice | a parent's own Family Safety lock | `xbox locked in family safety till 7:00` | `parent_lock:<platform>` |
 | notice | a parental control Hearth couldn't hold or let go through | `family link · didn't take` | `sync_error:<kind>` |
-| calm | a request answered in the Family Safety app | `answered in the Family Safety app` | `answered:<id>` |
+| calm | a request answered outside Hearth | `request approved in the Family Safety app`, `request handled outside Hearth (the Family Safety app or the device)` | `answered:<id>` |
 | calm | the most-used group with a limit (All screen time only when it's the only one) | `youtube · 25 left` | `left:<group>` |
 | calm | nothing else | `all clear` | `clear` |
 

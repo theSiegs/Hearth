@@ -345,7 +345,7 @@ def person_glance(
     news += _first_party_items(person.get("first_party") or {})
     news += _sync_items(person.get("sync") or {})
     for ask in answered or []:
-        news.append(_item(ask.get("text") or "answered in the app", CALM, "answered", ask["id"]))
+        news.append(_item(f"request {ask.get('text') or 'answered in the app'}", CALM, "answered", ask["id"]))
 
     if news:
         headline = news[0]
