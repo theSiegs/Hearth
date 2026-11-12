@@ -3,12 +3,12 @@ Pause and Locks).
 
 hearth.pause holds the chosen people (everyone in the household by default) for some minutes or until a time;
 hearth.pause_end lets them go. While paused a person is locked, so a Hearth TV holds their apps as for bedtime, and
-their state document says why ("pause": {until, reason}). Pauses are kept outside the entry (an options change reloads
-it), not across a restart.
+their state document says why ("pause": {until, reason}). Their Switch is held too, by the Nintendo enforcer's own
+hold (enforce.py). Pauses are kept outside the entry (an options change reloads it), not across a restart.
 
 hearth.pause with an app or a group pauses only that, for the chosen people (YouTube and HearthTube, say): its apps
-are held as a group out of time is (a Hearth TV and phone, Family Link, Family Safety's Xbox and Windows apps), and an
-allow doesn't lift it. A person may have several of these besides a family pause; pause_end with the same app or
+are held as a group out of time is (a Hearth TV and phone, Family Link, Family Safety's Xbox and Windows apps, the
+Switch when the Nintendo enforcer covers the group), and an allow doesn't lift it. A person may have several of these besides a family pause; pause_end with the same app or
 group ends that one, and pause_end without either ends only the family pause.
 
 A lock entity of Family Link's says when bedtime or school time starts and ends (bedtime_start / bedtime_end,

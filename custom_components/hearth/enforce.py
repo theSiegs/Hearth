@@ -23,6 +23,11 @@ add, per person, the parental controls of other integrations (Configure > Enforc
   the limit and the Suspend software setting it had (kept with what's held). The limit is a setting of the Switch's (of
   every day, or of this weekday), not of today only, so it's put back before midnight. As with Family Link, only while
   it still reads 0: a limit a parent set meanwhile in the Nintendo app stays, with the Switch's other settings.
+  An adult's pause holds the Switch the same way: a family pause of the person, or a pause of a group the enforcer
+  covers (Games, say), until the pause ends (a shared Switch only while the person is the one playing, let go before
+  midnight as above). A parent's grant from the Nintendo app lifts it; an allow doesn't, as for any pause.
+  The schedule's extra minutes on a day off or half day (schedule.py, bonus_nintendo) go into the limit a hold puts
+  back while it holds, and come out of it again when they're called off or the day ends.
 
 - School time (Family Link): the apps chosen per person ("During School time, pause these apps", Google Messages by
   default in the form) are paused while the child's School time is on (any of their devices says so), through the same
@@ -261,17 +266,13 @@ def wanted(
             apps = {p for p in apps if not lifted.app(p, groups_of_app(p) if groups_of_app else None)}
         return platforms | set(sorted(apps)[:MAX_PACKAGES])
     if enforcer.kind == NINTENDO:
-        now = now or dt_util.now()
-        late = dt_util.start_of_local_day(now + timedelta(days=1)) - now <= NINTENDO_LET_GO_BEFORE_MIDNIGHT
-        return {SWITCH} if closed and not late and playing is not False else set()
+        return {SWITCH} if closed and not near_midnight(now) and playing is not False else set()
     packages: set[str] = set()
     if enforcer.kind == FAMILY_LINK and ALL in closed:
         # All screen time out of time: the devices are locked (apps with unlimited time still work); let go just
         # before midnight, as the limit is the weekday's
-        now = now or dt_util.now()
-        late = dt_util.start_of_local_day(now + timedelta(days=1)) - now <= NINTENDO_LET_GO_BEFORE_MIDNIGHT
         closed = [g for g in closed if g != ALL]
-        held = {DEVICES} if not late else set()
+        held = {DEVICES} if not near_midnight(now) else set()
     else:
         held = set()
     for group_id in closed:
@@ -279,6 +280,25 @@ def wanted(
     if lifted:
         packages = {p for p in packages if not lifted.app(p, groups_of_app(p) if groups_of_app else None)}
     return held | set(sorted(packages)[:MAX_PACKAGES])
+
+
+def near_midnight(now: datetime | None = None) -> bool:
+    """Too close to midnight to hold a weekday's setting (a Switch's limit, Family Link's daily limit): let go now."""
+    now = now or dt_util.now()
+    return dt_util.start_of_local_day(now + timedelta(days=1)) - now <= NINTENDO_LET_GO_BEFORE_MIDNIGHT
+
+
+def paused_switch(
+    enforcer: Enforcer, groups: set[str], now: datetime | None = None, playing: bool | None = None
+) -> set[str]:
+    """The Switch, held for an adult's pause ([groups]: the person's paused groups, All screen time for a family
+    pause): a family pause holds it, a pause of a group holds it when the enforcer covers that group (Games, say).
+    As for a budget, a shared Switch only while the person is the one playing, and let go before midnight."""
+    if enforcer.kind != NINTENDO or not groups:
+        return set()
+    if ALL not in groups and not groups & set(enforcer.groups):
+        return set()
+    return {SWITCH} if not near_midnight(now) and playing is not False else set()
 
 
 def school_wanted(enforcer: Enforcer, school_time: bool, lifted: Lifted | None = None, groups_of_app=None) -> set[str]:
@@ -425,18 +445,21 @@ class Enforcement:
         granted_of=None,
         paused_of=None,
         device_lifted_of=None,
+        paused_groups_of=None,
     ) -> None:
         """[apps_of]: a group id's packages for a person (for All screen time, every app of theirs). [lifted_of]: what
         a person's allows lift (Lifted); [school_time_of]: whether an enforcer's child is in School time now;
         [groups_of_app]: an app's groups; [granted_of]: what a person's parent grants lift, by enforcer kind (the
         held items: grants.py); [paused_of]: the packages an adult paused for a person; [device_lifted_of]: what extra
-        time on one device lifts of an enforcer's holds (a Family Safety platform, a Switch: device_extra.py)."""
+        time on one device lifts of an enforcer's holds (a Family Safety platform, a Switch: device_extra.py);
+        [paused_groups_of]: the groups an adult paused for a person, All screen time for a family pause (a Switch)."""
         self.enforcers = enforcers
         now = dt_util.now()
         wanted_now: dict[str, set[str]] = {}
         for e in enforcers:
             lifted = lifted_of(e.person) if lifted_of else None
-            budget = wanted(e, days.get(e.person), apps_of, now, self._playing(e), lifted, groups_of_app)
+            playing = self._playing(e)
+            budget = wanted(e, days.get(e.person), apps_of, now, playing, lifted, groups_of_app)
             # An app a parent gave unlimited time in Family Link is never paused for a budget: it stays usable, as on
             # a locked device. The School-time apps are the parent's own choice, so they are paused all the same.
             if e.kind == FAMILY_LINK:
@@ -452,6 +475,9 @@ class Enforcement:
                 if paused_of
                 else set()
             )
+            if paused_groups_of:
+                # An adult's pause holds the Switch too (a family pause, or a group the enforcer covers)
+                paused |= paused_switch(e, set(paused_groups_of(e.person)), now, playing)
             device_lifted = device_lifted_of(e) if device_lifted_of else set()
             wanted_now[e.key] = (budget | school | paused) - granted - device_lifted
         # What an enforcer no longer configured held is let go
@@ -805,11 +831,7 @@ class Enforcement:
         """Max screentime today to 0 with Suspend software on: the game is suspended. What they were is kept first
         (once: a retry after a half-done hold mustn't keep the 0)."""
         # Bonus time given in the Nintendo app: the Switch refuses a new limit until it's over (said, not retried blind)
-        extended = self._switch_entity(entity_id, "sensor", "time_extended") or self._switch_entity(
-            entity_id, "binary_sensor", "time_extended"
-        )
-        extended_state = self.hass.states.get(extended) if extended else None
-        if extended_state is not None and extended_state.state not in ("0", "0.0", "off", "unknown", "unavailable", ""):
+        if self.switch_extended(entity_id):
             raise ValueError("bonus time is active on the Switch; held when it's over")
         if not held.restore:
             state = self.hass.states.get(entity_id)
@@ -818,21 +840,11 @@ class Enforcement:
                 raise ValueError(f"{entity_id} has no limit to keep")
             suspend = self._switch_entity(entity_id, "switch", "suspend_software")
             suspend_state = self.hass.states.get(suspend) if suspend else None
-            # The day's bedtime too: putting a weekday's limit back after midnight sets its bedtime with it
-            bedtime = {}
-            for key in ("bedtime_alarm", "bedtime_end_time"):
-                time_entity = self._switch_entity(entity_id, "time", key)
-                time_state = self.hass.states.get(time_entity) if time_entity else None
-                bedtime[key] = time_state.state if time_state else None
-            entry = er.async_get(self.hass).async_get(entity_id)
             held.restore = {
                 "max": int(limit),
                 "suspend": suspend,
                 "suspend_was": suspend_state.state if suspend_state else None,
-                "day": dt_util.now().date().isoformat(),
-                "weekday": WEEKDAYS[dt_util.now().weekday()],
-                "device_id": entry.device_id if entry else None,
-                **bedtime,
+                **self.switch_day(entity_id),
             }
             self._save()
         suspend = held.restore.get("suspend")
@@ -842,7 +854,60 @@ class Enforcement:
             "number", "set_value", {"entity_id": entity_id, "value": 0}, blocking=True
         )
 
-    async def _put_back_weekday(self, entity_id: str, restore: dict[str, Any], limit: int | None) -> None:
+    # A Switch's settings, for the schedule's extra minutes too (schedule.py)
+
+    def switch_extended(self, entity_id: str) -> bool:
+        """Bonus time given in the Nintendo app runs on the Switch (its time-extended sensor): it refuses a new limit."""
+        extended = self._switch_entity(entity_id, "sensor", "time_extended") or self._switch_entity(
+            entity_id, "binary_sensor", "time_extended"
+        )
+        state = self.hass.states.get(extended) if extended else None
+        return state is not None and state.state not in ("0", "0.0", "off", "unknown", "unavailable", "")
+
+    def switch_day(self, entity_id: str) -> dict[str, Any]:
+        """What putting today's limit back after midnight needs: the day and weekday, the Switch's device, and the
+        day's bedtime (putting a weekday's limit back sets its bedtime with it)."""
+        found: dict[str, Any] = {}
+        for key in ("bedtime_alarm", "bedtime_end_time"):
+            time_entity = self._switch_entity(entity_id, "time", key)
+            time_state = self.hass.states.get(time_entity) if time_entity else None
+            found[key] = time_state.state if time_state else None
+        entry = er.async_get(self.hass).async_get(entity_id)
+        now = dt_util.now()
+        return {
+            "day": now.date().isoformat(),
+            "weekday": WEEKDAYS[now.weekday()],
+            "device_id": entry.device_id if entry else None,
+            **found,
+        }
+
+    def switch_each_day(self, entity_id: str) -> bool:
+        """The Switch has a limit per weekday (its timer mode), so after midnight its limit is another day's."""
+        mode = self._switch_entity(entity_id, "select", "timer_mode")
+        mode_state = self.hass.states.get(mode) if mode else None
+        return mode_state is not None and mode_state.state == NINTENDO_EACH_DAY
+
+    def switch_hold(self, entity_id: str) -> Held | None:
+        """Hearth's hold of the Switch (the one that kept its limit), while there is one."""
+        return next(
+            (
+                held
+                for key, held in self.held.items()
+                if key.startswith(f"{NINTENDO}|") and held.entity_id == entity_id and "max" in held.restore
+            ),
+            None,
+        )
+
+    def switch_quiet(self, entity_id: str) -> bool:
+        """Hearth's hold of the Switch is being changed, or just was: its limit may not read what it is yet."""
+        keys = {e.key for e in self.enforcers if e.kind == NINTENDO and e.entity_id == entity_id}
+        keys |= {k for k, h in self.held.items() if k.startswith(f"{NINTENDO}|") and h.entity_id == entity_id}
+        return any(self._quiet(key) for key in keys)
+
+    def save(self) -> None:
+        self._save()
+
+    async def put_back_weekday(self, entity_id: str, restore: dict[str, Any], limit: int | None) -> None:
         data = _held_weekday_call(restore, limit)
         if data is None or not self.hass.services.has_service(NINTENDO_DOMAIN, "update_daily_restrictions"):
             _LOGGER.warning(
@@ -859,8 +924,6 @@ class Enforcement:
         now: that one is left alone, and said so. Says what it did (restored, kept_current)."""
         restore = held.restore
         limit = restore.get("max")
-        mode = self._switch_entity(entity_id, "select", "timer_mode")
-        mode_state = self.hass.states.get(mode) if mode else None
         state = self.hass.states.get(entity_id)
         current = _number(state.state if state else None)
         later_day = restore.get("day") not in (None, dt_util.now().date().isoformat())
@@ -870,10 +933,10 @@ class Enforcement:
             _LOGGER.info("%s changed to %s while Hearth held it: kept, %s not put back", entity_id, current, limit)
             held.restore = {}
             return KEPT_CURRENT
-        if later_day and mode_state is not None and mode_state.state == NINTENDO_EACH_DAY:
+        if later_day and self.switch_each_day(entity_id):
             # Held past midnight (Home Assistant was off): today's limit is another weekday's now, so the held
             # weekday's own is put back, with its bedtime
-            await self._put_back_weekday(entity_id, restore, limit)
+            await self.put_back_weekday(entity_id, restore, limit)
         elif limit is None:
             _LOGGER.warning("Hearth had no limit kept for %s: left as it is (check it in the Nintendo app)", entity_id)
         else:
