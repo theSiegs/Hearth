@@ -506,7 +506,11 @@ attribute present), so an older Family Link or Family Safety keeps working as be
     enforcer's platforms whose allowance would block (allowance minus used lower than the minutes needed): the Xbox,
     and Windows where the installed Family Safety takes `platform: Windows` (its service schema says so; upstream's
     is Xbox only, and Windows is then skipped quietly). It replaces Hearth's own lock there (`replace_lock` only when
-    the platform's `hold` is Hearth's, never over a parent's lock; `released_hold`). When Microsoft doesn't apply it,
+    the platform's `hold` is Hearth's, never over a parent's lock). Family Safety's answer says what became of that
+    lock: with `hold_kept: true` (a Family Safety that keeps holds puts the lock back after the extra time) Hearth
+    still holds the platform; with `hold_kept: false`, or upstream's `replaced_lock: true` without `hold_kept` (the
+    extra time ended the lock), Hearth no longer holds it and doesn't let go of it again later; an answer with
+    neither changes nothing. When Microsoft doesn't apply it,
     the person's status says Family Safety extra time is unavailable and it counts as not given; nothing fails.
   - Ending the allow early (`hearth.allow_end`) resets the Family Link bonus Hearth added (only where no parent's bonus
     came on top: `reset_bonus` ends every bonus of the day; without `reset_bonus` or the button it lapses at

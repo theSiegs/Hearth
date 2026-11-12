@@ -3,6 +3,8 @@ own app is an adult's decision, which Hearth adopts and never overwrites."""
 
 from datetime import timedelta
 
+import pytest
+
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util import dt as dt_util
@@ -516,7 +518,7 @@ async def test_allowing_all_screen_time_gives_family_safety_extra_time(
 
     async def add_time_bonus(call: ServiceCall):
         given.append(call)
-        return {"platform": call.data["platform"], "applied_until": call.data["until"], "released_hold": False}
+        return {"platform": call.data["platform"], "applied_until": call.data["until"], "hold_kept": False}
 
     hass.services.async_register(
         "microsoft_family_safety", "add_time_bonus", add_time_bonus, supports_response=SupportsResponse.OPTIONAL
@@ -570,6 +572,75 @@ async def test_family_safety_extra_time_replaces_hearth_s_own_lock(
 
     await _allow_all(hass, dt_util.now().replace(hour=13, minute=0).isoformat())
     assert [c.data.get("replace_lock") for c in given] == [True]
+
+
+@pytest.mark.parametrize(
+    ("answer", "still_held"),
+    [
+        # A Family Safety that keeps holds: kept, the lock comes back after the extra time
+        ({"added": True, "replaced_lock": True, "hold_kept": True}, True),
+        # ... or let go of for good
+        ({"added": True, "replaced_lock": True, "hold_kept": False}, False),
+        # Upstream's: extra time that replaced a lock ended it
+        ({"added": True, "replaced_lock": True}, False),
+        ({"added": True, "replaced_lock": False}, True),
+        # No fields (or no answer): as before, still held
+        ({}, True),
+        (None, True),
+    ],
+)
+async def test_family_safety_extra_time_over_hearth_s_lock_keeps_or_lets_go_of_the_hold(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer, monkeypatch, answer, still_held
+) -> None:
+    """What Family Safety answers says whether Hearth still holds the Xbox after extra time replaced its lock: given
+    in the minutes after a start (nothing is let go yet), a lock Family Safety ended isn't let go again later."""
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+    locked = async_mock_service(hass, "microsoft_family_safety", "lock_platform")
+    unlocked = async_mock_service(hass, "microsoft_family_safety", "unlock_platform")
+    async_mock_service(hass, "microsoft_family_safety", "cancel_time_bonus")
+    given: list[ServiceCall] = []
+
+    async def add_time_bonus(call: ServiceCall):
+        given.append(call)
+        return None if answer is None else {"until": call.data["until"], **answer}
+
+    hass.services.async_register(
+        "microsoft_family_safety", "add_time_bonus", add_time_bonus, supports_response=SupportsResponse.OPTIONAL
+    )
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    hass.states.async_set(
+        "binary_sensor.sam_xbox_allowed_now",
+        "on",
+        {"user_id": 123456, "platform": "Xbox", "hold": "none", "allowance_minutes": 60, "used_minutes": 60,
+         "remaining_minutes": 0},
+    )
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY})
+    await _budget(hass, "all", 15)
+    await hass.async_block_till_done()
+    assert [c.data["platform"] for c in locked] == ["Xbox"]
+    hass.states.async_set(
+        "binary_sensor.sam_xbox_allowed_now",
+        "off",
+        {"user_id": 123456, "platform": "Xbox", "hold": "ours", "override": "blockUntil",
+         "allowance_minutes": 60, "used_minutes": 60, "remaining_minutes": 0},
+    )
+    await hass.async_block_till_done()
+    # Home Assistant just started: Hearth lets nothing go for a few minutes
+    monkeypatch.setattr(enforce, "SETTLE", timedelta(minutes=5))
+    _household(hass).enforcement.started = dt_util.utcnow()
+
+    await _allow_all(hass, dt_util.now().replace(hour=13, minute=0).isoformat())
+    assert [c.data.get("replace_lock") for c in given] == [True]
+    assert unlocked == []
+    held = _household(hass).enforcement.held.get(f"{enforce.FAMILY_SAFETY}|person.sam")
+    assert ("Xbox" in held.items) is still_held
+
+    # Settled: a hold still Hearth's is let go (the allow lifts it), one Family Safety ended is not
+    freezer.move_to(dt_util.now() + timedelta(minutes=6))
+    _household(hass).recompute()
+    await hass.async_block_till_done()
+    assert [c.data["platform"] for c in unlocked] == (["Xbox"] if still_held else [])
 
 
 async def test_family_safety_extra_time_unavailable_is_shown_not_raised(

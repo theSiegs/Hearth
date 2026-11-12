@@ -179,7 +179,7 @@ async def test_extra_time_on_the_xbox_lets_go_of_hearth_s_lock_there_only(
 
     async def add_time_bonus(call: ServiceCall):
         given.append(call)
-        return {"platform": call.data["platform"], "applied_until": call.data["until"], "released_hold": False}
+        return {"platform": call.data["platform"], "applied_until": call.data["until"], "hold_kept": False}
 
     hass.services.async_register(
         "microsoft_family_safety", "add_time_bonus", add_time_bonus, supports_response=SupportsResponse.OPTIONAL

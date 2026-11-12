@@ -328,8 +328,9 @@ class NativeSync:
     ) -> None:
         """Family Safety extra time (its experimental add_time_bonus) on the enforcer's platforms (Xbox, and Windows
         where the installed Family Safety takes it) whose allowance would block within [minutes]. Extra time replaces
-        Hearth's own lock there (released_hold). A failure says Family Safety's extra time is unavailable, isn't
-        retried, and counts as not given."""
+        Hearth's own lock there; when Family Safety lets go of that lock for good (fs_hold_released), Hearth no longer
+        holds the platform. A failure says Family Safety's extra time is unavailable, isn't retried, and counts as not
+        given."""
         enforcer = self._enforcer(person, FAMILY_SAFETY)
         if enforcer is None or not self.hass.services.has_service(FS_DOMAIN, "add_time_bonus"):
             return
@@ -366,9 +367,11 @@ class NativeSync:
                 _LOGGER.info("Family Safety extra time on %s for %s unavailable: %s", platform, person, err)
                 error = f"Family Safety extra time unavailable: {err}"[:200]
                 continue
-            given[platform] = (response or {}).get("applied_until") if isinstance(response, dict) else None
+            given[platform] = (
+                response.get("applied_until") or response.get("until") if isinstance(response, dict) else None
+            )
             record["platforms"].append(platform)
-            if isinstance(response, dict) and response.get("released_hold"):
+            if fs_hold_released(response):
                 held = self.household.enforcement.held.get(f"{FAMILY_SAFETY}|{person}")
                 if held is not None:
                     held.items.discard(platform)
@@ -616,6 +619,18 @@ def fs_accepts(hass: HomeAssistant, service: str, data: dict[str, Any]) -> bool:
     except vol.Invalid:
         return False
     return True
+
+
+def fs_hold_released(response: Any) -> bool:
+    """Family Safety's add_time_bonus answer says the lock Hearth held there is gone for good (Hearth no longer holds
+    the platform). A Family Safety that keeps holds answers hold_kept: true when it keeps the lock to put back after
+    the extra time, false when it doesn't. Upstream's answers {added, until, replaced_lock}: extra time that replaced
+    a lock ended it. No answer, or neither field: as before, Hearth keeps holding the platform."""
+    if not isinstance(response, dict):
+        return False
+    if "hold_kept" in response:
+        return response["hold_kept"] is False
+    return response.get("replaced_lock") is True
 
 
 def _fs_target(entity_id: str) -> dict[str, Any]:
