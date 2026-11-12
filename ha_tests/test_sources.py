@@ -4,12 +4,17 @@ from datetime import timedelta
 
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.util import dt as dt_util
-from pytest_homeassistant_custom_component.common import async_capture_events, async_fire_time_changed
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    async_capture_events,
+    async_fire_time_changed,
+)
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
 from custom_components.hearth.const import DOMAIN
-from custom_components.hearth.sources import normalize
+from custom_components.hearth.sources import Source, normalize, totals_reading
 from test_init import TV_ID
 from test_people import _household_with_sam
 
@@ -52,6 +57,93 @@ async def test_a_totals_source_with_apps(hass: HomeAssistant, hass_client_no_aut
     hass.states.async_set(PHONE_SENSOR, "1.5", {"unit_of_measurement": "h"})
     await hass.async_block_till_done()
     assert _state(hass, "sensor.hearth_sam_screen_time_today") == "105"
+
+
+def _family_safety_child(hass: HomeAssistant, account: str = "123456") -> tuple[str, str, str]:
+    """A Family Safety child as upstream's integration has it: Screen Time, Xbox Screen Time and Applications sensors
+    on the child's account device (no `apps` attribute anywhere)."""
+    fs_entry = MockConfigEntry(domain="microsoft_family_safety")
+    fs_entry.add_to_hass(hass)
+    device = dr.async_get(hass).async_get_or_create(
+        config_entry_id=fs_entry.entry_id, identifiers={("microsoft_family_safety", account)}
+    )
+    registry = er.async_get(hass)
+    found = [
+        registry.async_get_or_create(
+            "sensor",
+            "microsoft_family_safety",
+            f"{fs_entry.entry_id}_{account}_{key}",
+            suggested_object_id=name,
+            config_entry=fs_entry,
+            device_id=device.id,
+        ).entity_id
+        for key, name in (("screentime", "sam_screen_time"), ("xbox_screentime", "sam_xbox_screen_time"), ("app_count", "sam_applications"))
+    ]
+    return found[0], found[1], found[2]
+
+
+def _applications(racing_minutes: float) -> list[dict]:
+    return [
+        {"app_id": "x:1111", "app_name": "Racing Game", "blocked": False, "icon": "https://example.com/r.png", "usage_minutes": racing_minutes},
+        {"app_id": "appx:Example.Paint", "app_name": "Paint", "blocked": False, "icon": None, "usage_minutes": 5.0},
+        {"app_id": "win32:notepad.exe", "app_name": "Notepad", "blocked": True, "icon": None, "usage_minutes": 0},
+    ]
+
+
+async def test_a_family_safety_screen_time_takes_its_apps_from_the_applications_sensor(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    await _household_with_sam(hass, hass_client_no_auth)
+    screen, xbox, applications = _family_safety_child(hass)
+    hass.states.async_set(applications, "3", {"blocked_count": 1, "applications": _applications(25.0)})
+    hass.states.async_set(screen, "30", {"unit_of_measurement": "min", "user_id": "123456"})
+    hass.states.async_set(xbox, "25", {"unit_of_measurement": "min", "user_id": "123456"})
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "app_groups": {"x:1111": "games"}})
+    await hass.async_block_till_done()
+    await _option(hass, "add_source", {"entity_id": screen, "person": "person.sam", "name": "Sam's PC and Xbox"})
+
+    # TV: 15 minutes (5 of them a game); Family Safety: 30, 25 of them the racing game, by its Microsoft app id
+    assert _state(hass, "sensor.hearth_sam_screen_time_today") == "45"
+    assert _state(hass, "sensor.hearth_sam_games_today") == "30"
+    reading = totals_reading(hass, Source("fs", screen, "person.sam", "Sam's PC and Xbox"))
+    assert reading.items == {"x:1111": 1500.0, "appx:Example.Paint": 300.0}
+    # The Xbox Screen Time sensor's: the Xbox's apps only
+    assert totals_reading(hass, Source("x", xbox, "person.sam", "Xbox")).items == {"x:1111": 1500.0}
+
+    # The Applications sensor's change counts at once
+    hass.states.async_set(applications, "3", {"blocked_count": 1, "applications": _applications(28.0)})
+    await hass.async_block_till_done()
+    assert _state(hass, "sensor.hearth_sam_games_today") == "33"
+
+    # An apps attribute (the fork's, Family Link's) still says it
+    hass.states.async_set(
+        screen, "30", {"unit_of_measurement": "min", "user_id": "123456", "apps": [{"package": "x:1111", "minutes": 10}]}
+    )
+    await hass.async_block_till_done()
+    assert totals_reading(hass, Source("fs", screen, "person.sam", "n")).items == {"x:1111": 600.0}
+    assert _state(hass, "sensor.hearth_sam_games_today") == "33"  # today's count never goes down
+
+    # Another sensor without apps has no breakdown
+    hass.states.async_set(SWITCH_SENSOR, "50", {"unit_of_measurement": "min"})
+    assert totals_reading(hass, Source("sw", SWITCH_SENSOR, "person.sam", "n")).items == {}
+
+
+async def test_the_app_pickers_offer_a_family_safety_child_s_applications(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    from test_enforce import _add_enforcer
+
+    await _household_with_sam(hass, hass_client_no_auth)
+    screen, _xbox, applications = _family_safety_child(hass)
+    hass.states.async_set(screen, "30", {"unit_of_measurement": "min", "user_id": "123456"})
+    hass.states.async_set(applications, "3", {"applications": _applications(25.0)})
+    await _add_enforcer(
+        hass, {"kind": "family_safety", "person": "person.sam", "entity_id": screen, "platforms": ["Xbox", "Windows"]}
+    )
+    known = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household.known_apps()
+    assert known["x:1111"] == "Racing Game (Xbox)"
+    assert known["win32:notepad.exe"] == "Notepad (Windows)"
 
 
 async def test_the_same_device_counts_once(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
