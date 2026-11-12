@@ -110,9 +110,10 @@ class WatchNextService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   // A profile's own rows (a kids profile's list) show to that profile alone: around a switch the list read can still
-  // be the profile switched away from, and its cards must not show for the one switched to.
+  // be the profile switched away from, and its cards must not show for the one switched to. While Hearth can't tell
+  // the active profile, they show (as the owner's do).
   bool _visibleToActiveProfile(WatchNextProgram p) => p.profileOwned
-      ? p.watchedBy == null || p.watchedBy == _activeProfile
+      ? p.watchedBy == null || _activeProfile == null || p.watchedBy == _activeProfile
       : _activeProfile == null || (p.watchedBy ?? _ownerProfile) == _activeProfile;
 
   /// One line in the TV's log per refresh (tag flutter, "HearthWatchNext"): how many entries there are, how many

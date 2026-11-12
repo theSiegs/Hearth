@@ -10,12 +10,15 @@ Today's day type comes from School days (schooldays.py): school, half_day, day_o
   School time is on; one whose School time is off gets the early end when it is put back.
 - Both: bonus minutes, as Family Link's today-only daily limit (the weekday's limit plus the bonus, set_daily_limit
   without a day: an override that ends by itself) and/or as Hearth bonus minutes on a group.
-- The same bonus reaches Family Safety (Windows, Xbox): for each platform of a kid's Family Safety enforcer, today's
-  daily limit plus the bonus, today only (microsoft_family_safety.set_screentime_limit with today_only; Family Safety
-  puts it back at midnight itself, and leaves a parent's own change alone). Only with a Family Safety that takes
+- When chosen (bonus_family_safety, off by default), the same bonus reaches Family Safety (Windows, Xbox): for each
+  platform of a kid's Family Safety enforcer, today's daily limit plus the bonus, today only
+  (microsoft_family_safety.set_screentime_limit with today_only; Family Safety puts it back at midnight itself, and
+  leaves a parent's own change alone). When a parent already changed today's limit for today only, the bonus goes on
+  top of their value; Hearth keeps its own target to tell the two apart. Only with a Family Safety that takes
   today_only; an older one is skipped quietly. School time has no Family Safety equivalent, so a day off and a half
-  day change nothing else there. A day off cancelled the same day (hearth.school_time_off_cancel) puts Family
-  Safety's back at once (restore_today_only).
+  day change nothing else there. A day off called off the same day (hearth.school_time_off_cancel), or today's day
+  type changing away from a day off or half day, puts Family Safety's limit back at once: the one Hearth added to is
+  written again, today only, and only while the platform still has Hearth's limit (a parent's change since stays).
 
 hearth.school_time_off takes School time off for some people on a date (today by default), from a time if given.
 
@@ -73,11 +76,10 @@ RETRY = timedelta(minutes=5)
 SETTLE_CALL = timedelta(minutes=2)
 MAX_REASON = 120
 EVENT_SCHEDULE = "hearth_schedule"
-# The reason of the School time off a day off takes (its cancel puts Family Safety's today-only limit back too)
+# The reason of the School time off a day off takes
 DAY_OFF_REASON = "Day off"
 # Family Safety's today-only interface (a newer Family Safety)
 FS_LIMIT = "set_screentime_limit"
-FS_RESTORE = "restore_today_only"
 FULL_DAY = 1440
 # What a Family Safety platform's limit came to today: set (by Hearth), skip (nothing to add to: no limit)
 FS_SET, FS_SKIP = "set", "skip"
@@ -110,8 +112,11 @@ class ScheduleConfig:
     half_day_hours_early: float = 0
     half_day_bonus: int = 0
     bonus_family_link: bool = True
+    # Off unless chosen: a household that set this up for Family Link doesn't get its Windows and Xbox raised too
+    bonus_family_safety: bool = False
     bonus_group: str | None = None
-    # Whose (empty: everyone with Family Link in Configure > Enforce)
+    # Whose (empty: everyone with Family Link, and for Family Safety's extra time everyone with Family Safety, in
+    # Configure > Enforce)
     people: tuple[str, ...] = ()
     notify: str | None = None
     watchdog: time | None = DEFAULT_WATCHDOG
@@ -128,6 +133,7 @@ class ScheduleConfig:
             half_day_hours_early=max(0.0, min(12.0, _number(raw.get("half_day_hours_early")))),
             half_day_bonus=max(0, min(720, int(_number(raw.get("half_day_bonus"))))),
             bonus_family_link=raw.get("bonus_family_link", True) is not False,
+            bonus_family_safety=raw.get("bonus_family_safety") is True,
             bonus_group=raw.get("bonus_group") or None,
             people=tuple(raw.get("people") or ()),
             notify=raw.get("notify") or None,
@@ -198,6 +204,9 @@ class Scheduler:
         self.marks: dict[str, list[str]] = {}
         # person -> the Family Link daily limit set for today (checked at CHECK_AT)
         self.limits_set: dict[str, int] = {}
+        # person -> platform -> the today-only Family Safety limit Hearth set today ("target") and the limit it added
+        # to ("base"): tells Hearth's own today-only change from a parent's, and what a cancel goes back to
+        self.fs_limits: dict[str, dict[str, dict[str, int]]] = {}
         self._lock = asyncio.Lock()
         self._failed: dict[str, datetime] = {}
         self._done_at: dict[str, datetime] = {}
@@ -209,6 +218,14 @@ class Scheduler:
         self.day = stored.get("day")
         self.marks = {k: list(v) for k, v in (stored.get("marks") or {}).items()}
         self.limits_set = {k: int(v) for k, v in (stored.get("limits_set") or {}).items()}
+        self.fs_limits = {}
+        for person, platforms in (stored.get("fs_limits") or {}).items():
+            for platform, held in (platforms or {}).items() if isinstance(platforms, dict) else ():
+                try:
+                    kept = {"target": int(held["target"]), "base": int(held["base"])}
+                except (KeyError, TypeError, ValueError):
+                    continue
+                self.fs_limits.setdefault(person, {})[platform] = kept
         for raw in stored.get("offs", []):
             try:
                 off = Off(
@@ -231,6 +248,7 @@ class Scheduler:
             "day": self.day,
             "marks": self.marks,
             "limits_set": self.limits_set,
+            "fs_limits": self.fs_limits,
             "offs": [
                 {
                     "id": o.id,
@@ -337,25 +355,36 @@ class Scheduler:
         return ids
 
     def cancel(self, people: list[str] | None, day: date | None) -> list[str]:
-        """Not taken off yet: dropped. Taken off: put back from today (inside the window, as always)."""
+        """Not taken off yet: dropped. Taken off: put back from today (inside the window, as always).
+
+        On a day off, a cancel for today also calls off the day's Family Safety extra time (put back as the tick gets
+        to it, and not set again today) for each person with Family Safety it names (everyone without people), whether
+        or not School time was taken off: Family Safety has no School time, and a day off only takes School time off
+        when the schedule says so. A cancel that only drops a later School time off (from a time, or another day)
+        leaves it."""
         today = dt_util.now().date()
         changed: list[str] = []
+        touched: dict[str, list[Off]] = {}
         for off in list(self.offs.values()):
             if people is not None and off.person not in people:
                 continue
             if day is not None and off.day != day:
                 continue
-            same_day = self.day == today.isoformat() and off.day == today
-            if same_day and off.start is None and off.reason == DAY_OFF_REASON:
-                # Today's day off is called off: Family Safety's extra time for it goes back too (as the tick gets to
-                # it), and isn't set again today
-                if not self._marked(off.person, "fs_cancel"):
-                    self._mark(off.person, "fs_cancel")
+            touched.setdefault(off.person, []).append(off)
             if off.applied:
                 off.restore_from = today
             else:
                 del self.offs[off.id]
             changed.append(off.id)
+        if (day is None or day == today) and self.day == today.isoformat() and self.day_type(today) == DAY_OFF:
+            for person in self.family_safety_people():
+                if people is not None and person not in people:
+                    continue
+                offs = touched.get(person)
+                if offs and all(o.day != today or o.start is not None for o in offs):
+                    continue
+                if not self._marked(person, "fs_cancel"):
+                    self._mark(person, "fs_cancel")
         self._save()
         return changed
 
@@ -393,7 +422,7 @@ class Scheduler:
     async def _tick(self, now: datetime) -> None:
         today = now.date()
         if self.day != today.isoformat():
-            self.day, self.marks, self.limits_set = today.isoformat(), {}, {}
+            self.day, self.marks, self.limits_set, self.fs_limits = today.isoformat(), {}, {}, {}
             self._save()
         kind = self.day_type(today)
         config = self.config
@@ -570,8 +599,8 @@ class Scheduler:
         return dt_util.as_local(written).date() >= today
 
     def _fs_limit_wanted(self, enforcer: Enforcer, config: ScheduleConfig) -> bool:
-        """Family Safety takes part: extra minutes go to the first-party apps' limits and it has today_only."""
-        return config.bonus_family_link and self._fs_data(
+        """Family Safety takes part: its extra minutes are chosen (Configure > Schedule) and it has today_only."""
+        return config.bonus_family_safety and self._fs_data(
             enforcer.entity_id, FS_LIMIT, {"platform": "Windows", "today_only": True, "hours": 1, "minutes": 0}
         ) is not None
 
@@ -579,8 +608,15 @@ class Scheduler:
         enforcer = self.family_safety_enforcer(person)
         if enforcer is None:
             return
+        if (
+            kind not in (DAY_OFF, HALF_DAY)
+            and not self._marked(person, "fs_cancel")
+            and any(self._marked(person, f"fs_set:{p}") for p in enforcer.platforms)
+        ):
+            # Today isn't a day off or a half day any more (School days changed): its extra time goes back
+            self._mark(person, "fs_cancel")
         if self._marked(person, "fs_cancel"):
-            await self._family_safety_restore(person, enforcer)
+            await self._family_safety_restore(person, enforcer, today)
             return
         minutes = config.day_off_bonus if kind == DAY_OFF else config.half_day_bonus if kind == HALF_DAY else 0
         if not minutes or not self._fs_limit_wanted(enforcer, config):
@@ -598,9 +634,19 @@ class Scheduler:
         self, person: str, enforcer: Enforcer, platform: str, today: date, minutes: int
     ) -> str | None:
         """Today's daily limit of the platform = today's limit + [minutes], today only. FS_SET, FS_SKIP (no limit
-        today: nothing to add to), or None when not done (not read yet, or the call failed: tried again)."""
+        today: nothing to add to), or None when not done (not read yet, or the call failed: tried again).
+
+        Today's limit is a today-only one already set for today by someone else (a parent in the Family Safety app or
+        an automation: the extra goes on top of theirs, so their cut or raise stays), else the platform's allowance.
+        Hearth's own today-only limit (kept in fs_limits) is never added to again."""
         pending = self._fs_pending(enforcer.entity_id, platform, today)
-        base = _number(pending.get("restore_limit_minutes"), -1) if pending else -1
+        pending_limit = int(_number(pending.get("limit_minutes"), -1)) if pending else -1
+        mine = self.fs_limits.get(person, {}).get(platform)
+        if mine is not None and pending_limit == mine["target"]:
+            return FS_SET  # already (a restart before it was marked)
+        base: float = pending_limit
+        if base >= FULL_DAY:
+            return FS_SKIP
         if base < 0:
             # Today's limit as Family Safety says it (its Allowed Now / Time Remaining attributes)
             state = fs_platform_state(self.hass, enforcer.entity_id, platform)
@@ -614,8 +660,6 @@ class Scheduler:
                 return None  # locked or extra time now: the allowance isn't said; read again next minute
             base = allowance
         target = min(FULL_DAY, int(base) + minutes)
-        if pending and int(_number(pending.get("limit_minutes"), -1)) == target:
-            return FS_SET  # already (a restart before it was marked)
         hours, rest = divmod(target, 60)
         data = self._fs_data(
             enforcer.entity_id,
@@ -624,24 +668,48 @@ class Scheduler:
         )
         if data is None:
             return FS_SKIP
+        # Kept before the call: one that reached Family Safety but whose answer was lost is still known as Hearth's
+        self.fs_limits.setdefault(person, {})[platform] = {"target": target, "base": int(base)}
+        await self.async_flush()
         if not await self._call(f"{person}|fs_limit:{platform}", FS_DOMAIN, FS_LIMIT, data):
             return None
         self._event("bonus", person, via="family_safety", platform=platform, minutes=minutes, daily_minutes=target)
         return FS_SET
 
-    async def _family_safety_restore(self, person: str, enforcer: Enforcer) -> None:
-        """The day off was called off: each platform Hearth set today goes back now (restore_today_only), once."""
+    async def _family_safety_restore(self, person: str, enforcer: Enforcer, today: date) -> None:
+        """Today's extra was called off: each platform Hearth set today goes back now, once, to the limit Hearth added
+        to (set_screentime_limit, today only: the weekly value ends Family Safety's today-only change, a parent's
+        today-only value stays theirs till midnight). Never restore_today_only: it puts back every today-only change of
+        the platform, a parent's later one too. Only while the platform still has Hearth's limit: when a parent changed
+        it since, or it's back already, theirs stays."""
         for platform in enforcer.platforms:
             if not self._marked(person, f"fs_set:{platform}") or self._marked(person, f"fs_back:{platform}"):
                 continue
-            data = self._fs_data(enforcer.entity_id, FS_RESTORE, {"platform": platform})
+            mine = self.fs_limits.get(person, {}).get(platform)
+            pending = self._fs_pending(enforcer.entity_id, platform, today)
+            if (
+                mine is None
+                or pending is None
+                or int(_number(pending.get("limit_minutes"), -1)) != mine["target"]
+            ):
+                # Not Hearth's limit any more (or not known as Hearth's): left alone; midnight puts Hearth's back
+                self._mark(person, f"fs_back:{platform}")
+                continue
+            hours, rest = divmod(mine["base"], 60)
+            data = self._fs_data(
+                enforcer.entity_id,
+                FS_LIMIT,
+                {"platform": platform, "today_only": True, "hours": hours, "minutes": rest},
+            )
             if data is None:
                 # Family Safety can't put it back early: it does at midnight
                 self._mark(person, f"fs_back:{platform}")
                 continue
-            if await self._call(f"{person}|fs_back:{platform}", FS_DOMAIN, FS_RESTORE, data):
+            if await self._call(f"{person}|fs_back:{platform}", FS_DOMAIN, FS_LIMIT, data):
                 self._mark(person, f"fs_back:{platform}")
-                self._event("bonus_back", person, via="family_safety", platform=platform)
+                self._event(
+                    "bonus_back", person, via="family_safety", platform=platform, daily_minutes=mine["base"]
+                )
 
     async def _take_off_due(self, now: datetime) -> None:
         today = now.date()

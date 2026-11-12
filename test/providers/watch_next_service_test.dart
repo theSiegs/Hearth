@@ -557,6 +557,18 @@ void main() {
       expect(service.programs, isEmpty);
     });
 
+    test("a profile's own entries show while Hearth can't tell the active profile", () async {
+      when(mockChannel.getActiveProfileKey()).thenAnswer((_) async => null);
+      when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => [
+            entry(1, 'com.thesiegs.hearthtube')
+              ..['profileOwned'] = true
+              ..['watchedBy'] = 'user:10',
+            entry(2, 'com.netflix.mediaclient'),
+          ]);
+      final service = await ready();
+      expect(titles(service), unorderedEquals(['Show 1', 'Show 2']));
+    });
+
     test("the adults sharing the owner's user each see what they watched", () async {
       when(mockChannel.getWatchNextPrograms()).thenAnswer((_) async => [
             entry(1, 'com.netflix.mediaclient')..['watchedBy'] = 'user:0',

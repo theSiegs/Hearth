@@ -577,19 +577,26 @@ the people chosen):
   child's daily limit is on), and/or as Hearth bonus minutes on a group. Family Link's way is the default, as that is
   what a household's own "extra hour" automation did: it raises the phone's own limit. A Hearth bonus raises a Hearth
   budget instead.
-- **Family Safety (Windows, Xbox)** gets the same extra minutes, Family Link's way: for a kid with a Family Safety
+- **Family Safety (Windows, Xbox)** gets the same extra minutes, Family Link's way, when "Extra minutes as Family
+  Safety's daily limits today" (`bonus_family_safety`) is on. It's off by default, apart from Family Link's, so a
+  schedule set up before it existed doesn't start raising Windows and Xbox limits. For a kid with a Family Safety
   enforcer (the chosen people, or everyone with Family Safety), each of its platforms gets today's daily limit plus the
   extra, today only (`microsoft_family_safety.set_screentime_limit` with the kid's entity, `platform`,
   `today_only: true`, `hours` and `minutes`; no `day_of_week`). Today's limit is the platform's Allowed Now
   `allowance_minutes` once Family Safety has written it since midnight (till then, yesterday's may still show: it
-  waits and reads again each minute), or, when today's limit was already changed for today only, the one midnight puts
-  back (the Screen time policy sensor's `today_only`). Family Safety puts it back at midnight itself and leaves a parent's own
+  waits and reads again each minute), or, when a parent already changed today's limit for today only, their value
+  (the Screen time policy sensor's `today_only` `limit_minutes`): the extra goes on top of their cut or raise instead of
+  replacing it. Hearth keeps the limit it set itself, so its own today-only change is never added to twice. Family Safety puts it back at midnight itself and leaves a parent's own
   change alone. A platform without a limit today is left alone. School time has no Family Safety equivalent, and
   Hearth's day types don't change bedtime, so the allowed hours (`set_screentime_intervals`) aren't touched. A Family
   Safety that doesn't take `today_only` yet is skipped quietly; a failed call is logged and tried again, and doesn't
-  hold up Family Link or another kid. When today's day off is cancelled (`hearth.school_time_off_cancel`), the
-  platforms Hearth raised go back at once (`microsoft_family_safety.restore_today_only`, per platform) and aren't
-  raised again that day (Family Link's extra minutes stay).
+  hold up Family Link or another kid. When today's day off is called off (`hearth.school_time_off_cancel` for today,
+  on a day off, for the people named or everyone; with or without School time taken off), or today's day type changes
+  away from a day off or half day, the platforms Hearth raised go back at once and aren't raised again that day
+  (Family Link's extra minutes stay): the limit Hearth added to is written again with `set_screentime_limit`,
+  `today_only: true` (the weekly value ends the today-only change; a parent's earlier today-only value stays theirs
+  till midnight), and only while the platform's today-only limit is still the one Hearth set. A limit a parent
+  changed since stays. `restore_today_only` isn't used: it would put back a parent's later today-only change too.
 - `hearth.school_time_off` (`people`; `date`, today by default; `from`, a time; `reason`) does the same for anyone,
   any day; `hearth.school_time_off_cancel` (`people`, `date`) drops one not started, or puts one already off back from
   today.
