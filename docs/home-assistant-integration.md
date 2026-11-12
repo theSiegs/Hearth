@@ -384,6 +384,12 @@ until the group has time again (a bonus, a higher budget, a new day):
     playing sensor, or friend presence) and the Switch is held only while it's on, so a brother or sister with time left
     can play. Nintendo reports play about every 10 minutes, so with its sensor the hold can start and end that late;
     friend presence is about a minute. Two kids held on one Switch share the hold: it's put back only when neither is.
+
+    An adult's **pause** holds the Switch the same way, through the same hold: a family pause of the person
+    (`hearth.pause` without an app or group), or a pause of a group the enforcer covers (`group: games` with the
+    defaults; a pause of Video doesn't touch it). It's let go when the pause ends (or 2 minutes before midnight, as
+    above), and on a shared Switch it's held only while the person is the one playing. A parent's grant in the Nintendo
+    app (a changed limit, bonus time) lifts it as it lifts a budget's hold; an allow doesn't, as for any pause.
 - What's held is kept across restarts, so only what Hearth held is let go. For a few minutes after Home Assistant
   starts nothing is let go (the sources report in first). A failed call shows on the person's **Held by parental
   controls** sensor and is tried again 5 minutes later. Each change fires `hearth_enforced` (person, by, held, let go).
@@ -854,7 +860,8 @@ while on), a phone at its next post.
 **One app or group.** `hearth.pause` with `app` (a package) or `group` (an id or name; `all` is the family pause) pauses
 only that, for the people (everyone by default), for `minutes` or `until` a time (no `ends_on`). Nobody is locked:
 the app or group's apps are held as a group out of time is, on every Hearth TV and phone (HearthTube too, in a group
-that lists it), by Family Link and by Family Safety's Xbox and Windows apps. The person's document has it as a group
+that lists it), by Family Link and by Family Safety's Xbox and Windows apps, and the person's Switch when their
+Nintendo enforcer covers the group (Games, say). A family pause holds the Switch too (see Enforce, Nintendo). The person's document has it as a group
 `{id: "pause:group:<id>" or "pause:app:<package>", name: "<name> (paused: <reason>)", minutes_left: 0, apps,
 paused: {until, reason, name}}`, so devices that know only groups hold it; Hearth TV's time's up card then says
 "<name> is paused" with no ask for more. **No device should offer to ask for more time for a `paused` group**: more

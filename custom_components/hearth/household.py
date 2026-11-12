@@ -613,6 +613,7 @@ class Household:
             granted_of=self.grants.lifted,
             paused_of=lambda person: self.paused_packages(person, membership, with_fs=True),
             device_lifted_of=self._device_lifted,
+            paused_groups_of=lambda person: self.paused_groups(person, now),
         )
         # An adult's allow of All screen time opens Google's and Microsoft's own limits too
         self.sync.mirror_allows()
@@ -763,6 +764,15 @@ class Household:
                 found.add(pause["app"])
             elif (group := self.group(pause["group"])) is not None:
                 found |= set(self._group_apps(group, membership, with_fs=with_fs))
+        return found
+
+    def paused_groups(self, person: str, now: datetime | None = None) -> set[str]:
+        """The groups an adult paused for the person while those pauses last, All screen time for a family pause (a
+        Switch is held for them: enforce.py)."""
+        found = {ALL} if pause_of(self.hass, person, now) else set()
+        for pause in app_pauses_of(self.hass, person, now):
+            if pause["group"] is not None and (group := self.group(pause["group"])) is not None:
+                found.add(group.id)
         return found
 
     def _paused_groups_document(self, person: str, membership) -> list[dict[str, Any]]:

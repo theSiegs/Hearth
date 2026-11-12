@@ -571,6 +571,115 @@ async def test_a_failed_nintendo_hold_keeps_the_limit_it_found_first(
     assert [c.data["value"] for c in set_value] == [120]
 
 
+async def _pause(hass: HomeAssistant, **data) -> None:
+    await hass.services.async_call(DOMAIN, "pause", {"people": ["person.sam"], **data}, blocking=True)
+    await hass.async_block_till_done()
+
+
+async def _pause_end(hass: HomeAssistant, **data) -> None:
+    await hass.services.async_call(DOMAIN, "pause_end", {"people": ["person.sam"], **data}, blocking=True)
+    await hass.async_block_till_done()
+
+
+async def test_a_family_pause_holds_the_switch_until_it_ends(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=18, minute=0))
+    _nintendo_switch(hass, limit="90")
+    await _household_with_sam(hass, hass_client_no_auth)
+    set_value, turned_on, turned_off = _nintendo_services(hass)
+    await _option(hass, "enforce", {"person": "person.sam", "nintendo": NINTENDO_LIMIT})
+    assert set_value == []
+
+    # Time left in every group, but a family pause: the Switch is held as for a budget
+    await _pause(hass, minutes=45, reason="Dinner")
+    assert [c.data for c in turned_on] == [{"entity_id": NINTENDO_SUSPEND}]
+    assert [c.data for c in set_value] == [{"entity_id": NINTENDO_LIMIT, "value": 0}]
+    held = hass.states.get("sensor.hearth_sam_held_by_parental_controls")
+    assert held.attributes["nintendo"]["held"] == ["Switch"]
+
+    # The pause ends: the limit and Suspend software go back as they were
+    hass.states.async_set(NINTENDO_LIMIT, "0")
+    hass.states.async_set(NINTENDO_SUSPEND, "on")
+    await _pause_end(hass)
+    assert set_value[-1].data == {"entity_id": NINTENDO_LIMIT, "value": 90}
+    assert [c.data for c in turned_off] == [{"entity_id": NINTENDO_SUSPEND}]
+
+    # On its own, it ends when its time is up (the minute's recompute)
+    hass.states.async_set(NINTENDO_LIMIT, "90")
+    hass.states.async_set(NINTENDO_SUSPEND, "off")
+    await _pause(hass, minutes=10)
+    assert set_value[-1].data["value"] == 0
+    hass.states.async_set(NINTENDO_LIMIT, "0")
+    freezer.tick(timedelta(minutes=11))
+    await _bonus(hass, "games", 0)  # a recompute
+    assert set_value[-1].data == {"entity_id": NINTENDO_LIMIT, "value": 90}
+
+
+async def test_a_pause_of_games_holds_the_switch_and_a_pause_of_video_doesn_t(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=16, minute=0))
+    _nintendo_switch(hass)
+    await _household_with_sam(hass, hass_client_no_auth)
+    set_value, _turned_on, _turned_off = _nintendo_services(hass)
+    await _option(hass, "enforce", {"person": "person.sam", "nintendo": NINTENDO_LIMIT})
+
+    await _pause(hass, group="video", minutes=30, reason="Homework")
+    assert set_value == []
+    await _pause(hass, group="games", minutes=30, reason="Homework")
+    assert [c.data["value"] for c in set_value] == [0]
+    # An allow doesn't lift a pause
+    await hass.services.async_call(
+        DOMAIN, "allow", {"people": ["person.sam"], "group": "games"}, blocking=True, return_response=True
+    )
+    await hass.async_block_till_done()
+    assert [c.data["value"] for c in set_value] == [0]
+
+    hass.states.async_set(NINTENDO_LIMIT, "0")
+    await _pause_end(hass, group="video")
+    assert [c.data["value"] for c in set_value] == [0]
+    await _pause_end(hass, group="games")
+    assert [c.data["value"] for c in set_value] == [0, 120]
+
+
+async def test_a_paused_kid_s_shared_switch_is_held_only_while_they_are_playing(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=18, minute=0))
+    _nintendo_switch(hass)
+    playing = "binary_sensor.sam_s_switch_sam_playing"
+    hass.states.async_set(playing, "off")
+    await _household_with_sam(hass, hass_client_no_auth)
+    set_value, _turned_on, _turned_off = _nintendo_services(hass)
+    await _option(
+        hass, "enforce", {"person": "person.sam", "nintendo": NINTENDO_LIMIT, "nintendo_playing": [playing]}
+    )
+    await _pause(hass, minutes=60)
+    # Someone else is playing: the Switch is theirs
+    assert set_value == []
+    hass.states.async_set(playing, "on")
+    await hass.async_block_till_done()
+    assert [c.data["value"] for c in set_value] == [0]
+
+
+async def test_a_pause_lets_go_of_the_switch_just_before_midnight(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """A pause past midnight: the Switch's limit is the weekday's setting, so it goes back while it's still today's."""
+    freezer.move_to(dt_util.now().replace(hour=23, minute=40))
+    _nintendo_switch(hass, mode="each_day_of_the_week")
+    await _household_with_sam(hass, hass_client_no_auth)
+    set_value, _turned_on, _turned_off = _nintendo_services(hass)
+    await _option(hass, "enforce", {"person": "person.sam", "nintendo": NINTENDO_LIMIT})
+    await _pause(hass, minutes=60)
+    assert [c.data["value"] for c in set_value] == [0]
+    hass.states.async_set(NINTENDO_LIMIT, "0")
+    freezer.move_to(dt_util.now().replace(hour=23, minute=59))
+    await _bonus(hass, "games", 0)  # a recompute
+    assert [c.data["value"] for c in set_value] == [0, 120]
+
+
 async def test_a_switch_s_used_screen_time_is_games_by_itself(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
