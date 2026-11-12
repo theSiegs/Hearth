@@ -909,7 +909,7 @@ class HearthPanel extends HTMLElement {
       }</span>`);
     }
     for (const a of s.answered_elsewhere || [])
-      chips.push(`<span class="chip"><ha-icon icon="mdi:message-reply-text-outline"></ha-icon>Request ${esc(a.status)}: ${esc(a.text)}</span>`);
+      chips.push(`<span class="chip"><ha-icon icon="mdi:message-reply-text-outline"></ha-icon>Request ${esc(a.text)}</span>`);
     const rows = [];
     for (const d of s.first_party?.family_link || []) {
       const limit = d.daily_limit === null || d.daily_limit === undefined ? "no daily limit" : `limit ${fmtMinutes(d.daily_limit)}`;

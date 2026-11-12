@@ -437,7 +437,8 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
     time is out, say), which Google counts down; Hearth remembers it as its own, so it's no parent's grant, and
     ending it early resets it (unless a parent's bonus came on top).
   - a Family Safety platform: Hearth's lock of that platform is let go, and Microsoft's own allowance gets extra
-    time where it would stop it (`add_time_bonus`, until then); by the clock, from now. When it ends, Hearth locks
+    time where it would stop it (`add_time_bonus`, until then; on Windows only where Family Safety takes it); by the
+    clock, from now. When it ends, Hearth locks
     the platform again if the pool is still out.
   - a Switch: Hearth's hold of the Switch is let go (its own limit and Suspend software put back, which still
     apply); by the clock, from now.
@@ -508,20 +509,31 @@ attribute present), so an older Family Link or Family Safety keeps working as be
     would block within that time (Screen time remaining lower than the minutes needed; a device with no limit gets
     none), as much as is missing; once per allow.
   - Family Safety: extra time (its experimental `add_time_bonus`, `until` the allow's end or midnight) on the
-    enforcer's platforms whose allowance would block (allowance minus used lower than the minutes needed). It replaces
-    Hearth's own lock there (`released_hold`). When Microsoft doesn't apply it, the person's status says Family Safety
-    extra time is unavailable; nothing fails.
+    enforcer's platforms whose allowance would block (allowance minus used lower than the minutes needed): the Xbox,
+    and Windows where the installed Family Safety takes `platform: Windows` (its service schema says so; upstream's
+    is Xbox only, and Windows is then skipped quietly). It replaces Hearth's own lock there (`replace_lock` only when
+    the platform's `hold` is Hearth's, never over a parent's lock). Family Safety's answer says what became of that
+    lock: with `hold_kept: true` (a Family Safety that keeps holds puts the lock back after the extra time) Hearth
+    still holds the platform; with `hold_kept: false`, or upstream's `replaced_lock: true` without `hold_kept` (the
+    extra time ended the lock), Hearth no longer holds it and doesn't let go of it again later; an answer with
+    neither changes nothing. When Microsoft doesn't apply it,
+    the person's status says Family Safety extra time is unavailable and it counts as not given; nothing fails.
   - Ending the allow early (`hearth.allow_end`) resets the Family Link bonus Hearth added (only where no parent's bonus
     came on top: `reset_bonus` ends every bonus of the day; without `reset_bonus` or the button it lapses at
-    midnight) and cancels the Family Safety extra time (`cancel_time_bonus`).
+    midnight) and cancels the Family Safety extra time Hearth gave (`cancel_time_bonus`, on each platform it gave it
+    on), except where the platform's `hold` now reads `parent` (a parent's extra time or lock came since: kept,
+    `extra_time_kept` in the status).
 - **First-party limits in explain.** `hearth.explain` also lists `device_limit` (a Family Link device's own daily limit
   reached with no bonus left, by its switch, with its `device` name, until midnight; or a Family Safety platform that
   Microsoft's allowance or allowed hours stop, with its `platform`) when Hearth isn't the one holding it, and
   `parent_lock` (a parent's own Family Safety lock, with its `platform`, until it ends), so explain says what the
   device does.
 - **Requests answered in the Family Safety app.** `microsoft_family_safety_request_resolved` with `via: app` closes the
-  matching ask as answered there (`answered_in: family_safety`; shown as "answered in the Family Safety app"); `via:
-  service` (Hearth's own answer) is left alone. Family Link has no kid requests, so there's nothing to close there.
+  matching ask as answered there (`answered_in: family_safety`): `outcome` `approved` or `denied` as such ("approved
+  in the Family Safety app", "denied in the Family Safety app"); `unknown` (the request left Microsoft's list without
+  Family Safety seeing how: answered in the Family Safety app or on the device) as status `handled`, shown as
+  "handled outside Hearth (the Family Safety app or the device)", never as expired. `hearth_more_time_answered` says
+  the same status. `via: service` (Hearth's own answer) is left alone. Family Link has no kid requests, so there's nothing to close there.
 
 ### Places
 
@@ -979,7 +991,7 @@ The **headline** is the first of these that holds (glance.py), in this order:
 | notice | Google's or Microsoft's own limit stops a device of theirs (Hearth isn't holding it) | `sam's phone · google's own limit`, `xbox · microsoft's own limit` | `device_limit:<entity or platform>` |
 | notice | a parent's own Family Safety lock | `xbox locked in family safety till 7:00` | `parent_lock:<platform>` |
 | notice | a parental control Hearth couldn't hold or let go through | `family link · didn't take` | `sync_error:<kind>` |
-| calm | a request answered in the Family Safety app | `answered in the Family Safety app` | `answered:<id>` |
+| calm | a request answered outside Hearth | `request approved in the Family Safety app`, `request handled outside Hearth (the Family Safety app or the device)` | `answered:<id>` |
 | calm | the most-used group with a limit (All screen time only when it's the only one) | `youtube · 25 left` | `left:<group>` |
 | calm | nothing else | `all clear` | `clear` |
 

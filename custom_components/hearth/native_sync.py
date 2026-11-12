@@ -24,7 +24,15 @@ from homeassistant.util import dt as dt_util
 from .entry_tasks import entry_task
 from . import grants as g
 from .counting import ALL
-from .enforce import FAMILY_LINK, FAMILY_SAFETY, FS_HOLD_BONUS_OURS, FS_HOLD_OURS, fs_account_of, fs_hold_state
+from .enforce import (
+    FAMILY_LINK,
+    FAMILY_SAFETY,
+    FS_HOLD_BONUS_OURS,
+    FS_HOLD_OURS,
+    FS_HOLD_PARENT,
+    fs_account_of,
+    fs_hold_state,
+)
 from .exceptions import end_of_day
 
 if TYPE_CHECKING:
@@ -35,6 +43,8 @@ _LOGGER = logging.getLogger(__name__)
 
 FL_DOMAIN = "familylink"
 FS_DOMAIN = "microsoft_family_safety"
+# The platforms Family Safety can give extra time on (Windows only where the installed one takes it: fs_accepts)
+FS_BONUS_PLATFORMS = ("Xbox", "Windows")
 # A parent's change became a grant (its view)
 EVENT_PARENT_GRANT = "hearth_parent_grant"
 
@@ -158,14 +168,7 @@ class NativeSync:
                 pressed = await self._reset_family_link_bonus(grant.person)
                 self.household.enforcement.note(key, ended_grant=grant.id, bonus_reset=pressed)
             elif grant.end_with == g.END_CANCEL_BONUS and enforcer is not None:
-                if not self.hass.services.has_service(FS_DOMAIN, "cancel_time_bonus"):
-                    raise ValueError("Family Safety can't cancel extra time (update it)")
-                await self.hass.services.async_call(
-                    FS_DOMAIN,
-                    "cancel_time_bonus",
-                    {**_fs_target(enforcer.entity_id), "platform": grant.value},
-                    blocking=True,
-                )
+                await self.cancel_family_safety_bonus(enforcer.entity_id, grant.value)
                 self.household.enforcement.note(key, ended_grant=grant.id, cancelled_bonus=grant.value)
         except Exception as err:  # noqa: BLE001 - told on Hearth's page; Hearth's hold comes back regardless
             _LOGGER.warning("Hearth couldn't end %s's grant in the first-party app: %s", grant.person, err)
@@ -323,9 +326,11 @@ class NativeSync:
     async def _give_family_safety(
         self, person: str, until, minutes: int, why: str, record: dict[str, Any], only: str | None = None
     ) -> None:
-        """Family Safety extra time (its experimental add_time_bonus) on the enforcer's platforms whose allowance
-        would block within [minutes]. Extra time replaces Hearth's own lock there (released_hold). A failure says
-        Family Safety's extra time is unavailable, and isn't retried."""
+        """Family Safety extra time (its experimental add_time_bonus) on the enforcer's platforms (Xbox, and Windows
+        where the installed Family Safety takes it) whose allowance would block within [minutes]. Extra time replaces
+        Hearth's own lock there; when Family Safety lets go of that lock for good (fs_hold_released), Hearth no longer
+        holds the platform. A failure says Family Safety's extra time is unavailable, isn't retried, and counts as not
+        given."""
         enforcer = self._enforcer(person, FAMILY_SAFETY)
         if enforcer is None or not self.hass.services.has_service(FS_DOMAIN, "add_time_bonus"):
             return
@@ -334,8 +339,8 @@ class NativeSync:
         for platform in enforcer.platforms:
             if only is not None and platform != only:
                 continue
-            # Family Safety gives extra time on the Xbox only
-            if platform != "Xbox" or not self._fs_would_block(enforcer.entity_id, platform, minutes):
+            # Family Safety gives extra time on the Xbox and (a newer one) on Windows, never on Mobile
+            if platform not in FS_BONUS_PLATFORMS or not self._fs_would_block(enforcer.entity_id, platform, minutes):
                 continue
             data = {
                 **_fs_target(enforcer.entity_id),
@@ -346,6 +351,10 @@ class NativeSync:
             hold = fs_hold_state(self.hass, enforcer.entity_id, platform)
             if hold and hold.get("hold") in (FS_HOLD_OURS, FS_HOLD_BONUS_OURS):
                 data["replace_lock"] = True
+            if platform != "Xbox" and not fs_accepts(self.hass, "add_time_bonus", data):
+                # A Family Safety without Windows extra time (upstream's is Xbox only): skipped quietly
+                _LOGGER.debug("Family Safety gives no extra time on %s; skipped for %s", platform, person)
+                continue
             try:
                 response = await self.hass.services.async_call(
                     FS_DOMAIN,
@@ -358,9 +367,11 @@ class NativeSync:
                 _LOGGER.info("Family Safety extra time on %s for %s unavailable: %s", platform, person, err)
                 error = f"Family Safety extra time unavailable: {err}"[:200]
                 continue
-            given[platform] = (response or {}).get("applied_until") if isinstance(response, dict) else None
+            given[platform] = (
+                response.get("applied_until") or response.get("until") if isinstance(response, dict) else None
+            )
             record["platforms"].append(platform)
-            if isinstance(response, dict) and response.get("released_hold"):
+            if fs_hold_released(response):
                 held = self.household.enforcement.held.get(f"{FAMILY_SAFETY}|{person}")
                 if held is not None:
                     held.items.discard(platform)
@@ -425,19 +436,33 @@ class NativeSync:
         if enforcer is None or not record["platforms"]:
             return
         cancelled: list[str] = []
+        kept: list[str] = []
         error = None
         for platform in record["platforms"]:
+            # Only Hearth's own extra time is cancelled: a parent's extra time or lock that came since (the hold
+            # reads parent) is theirs, and a cancel would end it
+            hold = fs_hold_state(self.hass, enforcer.entity_id, platform)
+            if hold and hold.get("hold") == FS_HOLD_PARENT:
+                kept.append(platform)
+                continue
             try:
-                if not self.hass.services.has_service(FS_DOMAIN, "cancel_time_bonus"):
-                    raise ValueError("Family Safety can't cancel extra time (update it)")
-                await self.hass.services.async_call(
-                    FS_DOMAIN, "cancel_time_bonus", {**_fs_target(enforcer.entity_id), "platform": platform},
-                    blocking=True,
-                )
+                await self.cancel_family_safety_bonus(enforcer.entity_id, platform)
                 cancelled.append(platform)
             except Exception as err:  # noqa: BLE001 - shown; it ends when it was set to
                 error = str(err)[:200]
-        self.household.enforcement.note(f"{FAMILY_SAFETY}|{person}", extra_time_cancelled=cancelled, error=error)
+        self.household.enforcement.note(
+            f"{FAMILY_SAFETY}|{person}", extra_time_cancelled=cancelled, extra_time_kept=kept, error=error
+        )
+
+    async def cancel_family_safety_bonus(self, entity_id: str, platform: str) -> None:
+        """Family Safety's cancel_time_bonus on one platform; raises when this Family Safety can't (none, or none for
+        that platform: upstream's cancels Xbox extra time only)."""
+        data = {**_fs_target(entity_id), "platform": platform}
+        if not self.hass.services.has_service(FS_DOMAIN, "cancel_time_bonus"):
+            raise ValueError("Family Safety can't cancel extra time (update it)")
+        if not fs_accepts(self.hass, "cancel_time_bonus", data):
+            raise ValueError(f"Family Safety can't cancel extra time on {platform} (update it)")
+        await self.hass.services.async_call(FS_DOMAIN, "cancel_time_bonus", data, blocking=True)
 
     # What the first-party apps say now (Hearth's page, the household summary, explain)
 
@@ -579,6 +604,33 @@ def fs_platform_state(hass: HomeAssistant, entity_id: str, platform: str) -> dic
                 found["remaining_minutes"] = _number(state.state)
             return found
     return None
+
+
+def fs_accepts(hass: HomeAssistant, service: str, data: dict[str, Any]) -> bool:
+    """The installed Family Safety's [service] takes [data] (its schema accepts it), as schedule.py tells a newer
+    Family Safety: upstream's add_time_bonus and cancel_time_bonus take the Xbox only, a newer one Windows too."""
+    found = hass.services.async_services_for_domain(FS_DOMAIN).get(service)
+    if found is None:
+        return False
+    if found.schema is None:
+        return True
+    try:
+        found.schema(dict(data))
+    except vol.Invalid:
+        return False
+    return True
+
+
+def fs_hold_released(response: Any) -> bool:
+    """Family Safety's add_time_bonus answer says the lock Hearth held there is gone for good (Hearth no longer holds
+    the platform). A Family Safety that keeps holds answers hold_kept: true when it keeps the lock to put back after
+    the extra time, false when it doesn't. Upstream's answers {added, until, replaced_lock}: extra time that replaced
+    a lock ended it. No answer, or neither field: as before, Hearth keeps holding the platform."""
+    if not isinstance(response, dict):
+        return False
+    if "hold_kept" in response:
+        return response["hold_kept"] is False
+    return response.get("replaced_lock") is True
 
 
 def _fs_target(entity_id: str) -> dict[str, Any]:

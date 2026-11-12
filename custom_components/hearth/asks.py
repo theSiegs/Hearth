@@ -69,6 +69,15 @@ PENDING = "pending"
 APPROVED = "approved"
 DENIED = "denied"
 EXPIRED = "expired"
+# A Family Safety request settled outside Hearth without saying how (it left Microsoft's list: answered in the Family
+# Safety app, or on the device), never "expired": someone dealt with it
+HANDLED = "handled"
+# What the adults are shown for a request settled outside Hearth, by status
+ELSEWHERE_TEXT = {
+    APPROVED: "approved in the Family Safety app",
+    DENIED: "denied in the Family Safety app",
+    HANDLED: "handled outside Hearth (the Family Safety app or the device)",
+}
 
 
 @dataclass
@@ -337,7 +346,8 @@ class Asks:
     @callback
     def resolved_elsewhere(self, request_id: str, outcome: str | None, minutes: Any = None) -> Ask | None:
         """A Family Safety request answered in the Family Safety app (microsoft_family_safety_request_resolved, via
-        app): its open ask closes as answered there. None when no open ask has that request id."""
+        app): its open ask closes as answered there, approved or denied when [outcome] says so, else handled (Family
+        Safety only saw it leave Microsoft's list: unknown). None when no open ask has that request id."""
         self._tidy()
         ask = next(
             (
@@ -351,7 +361,7 @@ class Asks:
             return None
         ask.answered = dt_util.utcnow()
         ask.answered_in = FAMILY_SAFETY
-        ask.status = {"approved": APPROVED, "denied": DENIED}.get(str(outcome or "").lower(), EXPIRED)
+        ask.status = {"approved": APPROVED, "denied": DENIED}.get(str(outcome or "").lower(), HANDLED)
         if ask.status == APPROVED and isinstance(minutes, (int, float)) and minutes > 0:
             ask.granted = int(minutes)
         self.hass.bus.async_fire(
@@ -378,7 +388,7 @@ class Asks:
                 "id": a.id,
                 "status": a.status,
                 "answered_in": a.answered_in,
-                "text": "answered in the Family Safety app",
+                "text": ELSEWHERE_TEXT.get(a.status, ELSEWHERE_TEXT[HANDLED]),
                 "platform": a.platform,
                 "answered": a.answered.isoformat() if a.answered else None,
             }
