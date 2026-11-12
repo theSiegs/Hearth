@@ -883,3 +883,220 @@ async def test_a_poll_that_changes_nothing_still_counts_as_today_s_read(
     _family_safety_entities(hass, "sam", "123456", {"Windows": 120})
     await _tick(hass, household, freezer, _at(day_off, 0, 8))
     assert [(c.data["hours"], c.data["minutes"]) for c in limits] == [(3, 0)]
+
+
+# Nintendo Switch: the day's extra minutes on its limit, put back by Hearth
+
+SW_LIMIT = "number.sam_s_switch_max_screentime_today"
+
+
+async def _with_switch(hass, hass_client_no_auth, freezer, now, school, schedule, limit="120", mode="daily"):
+    """Sam with Family Link and a Switch (the Nintendo enforcer), the Switch's extra minutes chosen; the calls."""
+    from test_enforce import _nintendo_switch
+
+    schedule = {"bonus_nintendo": True, **schedule}
+    async_mock_service(hass, "familylink", "set_daily_limit")
+    _nintendo_switch(hass, limit=limit, mode=mode)
+    await _set_up(hass, hass_client_no_auth, freezer, now, school, schedule)
+    set_value = async_mock_service(hass, "number", "set_value")
+    weekdays = async_mock_service(hass, "nintendo_parental_controls", "update_daily_restrictions")
+    async_mock_service(hass, "switch", "turn_on")
+    async_mock_service(hass, "switch", "turn_off")
+    await _option(
+        hass,
+        "enforce",
+        {"person": "person.sam", "family_link": FAMILY_LINK, "school_time_apps": [], "nintendo": SW_LIMIT},
+    )
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    return household, set_value, weekdays
+
+
+async def test_a_day_off_raises_the_switch_s_limit_and_its_cancel_puts_it_back(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    events = async_capture_events(hass, "hearth_schedule")
+    day_off = date(2026, 11, 26)
+    household, set_value, weekdays = await _with_switch(
+        hass, hass_client_no_auth, freezer, _at(day_off, 0, 1), {**YEAR, "days_off": "2026-11-26"}, {"day_off_bonus": 60}
+    )
+    await _tick(hass, household, freezer, _at(day_off, 0, 6))
+    assert [c.data for c in set_value] == [{"entity_id": SW_LIMIT, "value": 180}]
+    kept = household.scheduler.sw_limits[SW_LIMIT]
+    assert (kept["target"], kept["base"], kept["people"], kept["weekday"]) == (180, 120, ["person.sam"], "thursday")
+    assert [(e.data["action"], e.data["daily_minutes"]) for e in events if e.data.get("via") == "nintendo"] == [
+        ("bonus", 180)
+    ]
+    hass.states.async_set(SW_LIMIT, "180")
+    await _tick(hass, household, freezer, _at(day_off, 0, 7))
+    assert len(set_value) == 1  # once a day
+
+    # The day off is called off: the limit Hearth added to goes back at once, and isn't raised again
+    await hass.services.async_call(DOMAIN, "school_time_off_cancel", {"people": ["person.sam"]}, blocking=True)
+    await hass.async_block_till_done()
+    await _tick(hass, household, freezer, _at(day_off, 9))
+    assert [c.data for c in set_value[1:]] == [{"entity_id": SW_LIMIT, "value": 120}]
+    assert household.scheduler.sw_limits == {}
+    hass.states.async_set(SW_LIMIT, "120")
+    await _tick(hass, household, freezer, _at(day_off, 9, 1))
+    assert len(set_value) == 2 and weekdays == []
+    assert [e.data["action"] for e in events if e.data.get("via") == "nintendo"] == ["bonus", "bonus_back"]
+
+
+async def test_the_switch_s_extra_goes_back_just_before_midnight_unless_a_parent_changed_it(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    half_day = date(2026, 11, 25)
+    household, set_value, _weekdays = await _with_switch(
+        hass,
+        hass_client_no_auth,
+        freezer,
+        _at(half_day, 0, 1),
+        {**YEAR, "half_days": "2026-11-25,2026-12-02"},
+        {"half_day_bonus": 30},
+    )
+    await _tick(hass, household, freezer, _at(half_day, 0, 6))
+    assert [c.data["value"] for c in set_value] == [150]
+    hass.states.async_set(SW_LIMIT, "150")
+    await _tick(hass, household, freezer, _at(half_day, 23, 50))
+    assert len(set_value) == 1
+    # Two minutes before midnight, while it's still today's: back to the weekday's own
+    await _tick(hass, household, freezer, _at(half_day, 23, 58))
+    assert [c.data["value"] for c in set_value] == [150, 120]
+    assert household.scheduler.sw_limits == {}
+
+    # Another half day: a parent changes the limit in the Nintendo app meanwhile; theirs stays
+    next_half = date(2026, 12, 2)
+    hass.states.async_set(SW_LIMIT, "120")
+    await _tick(hass, household, freezer, _at(next_half, 0, 6))
+    assert [c.data["value"] for c in set_value][2:] == [150]
+    hass.states.async_set(SW_LIMIT, "200")
+    await _tick(hass, household, freezer, _at(next_half, 23, 58))
+    assert [c.data["value"] for c in set_value][2:] == [150]
+    assert household.scheduler.sw_limits == {}
+
+
+async def test_the_switch_s_extra_isn_t_added_twice_after_a_restart_and_goes_back_after_midnight(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    day_off = date(2026, 11, 26)
+    household, set_value, weekdays = await _with_switch(
+        hass,
+        hass_client_no_auth,
+        freezer,
+        _at(day_off, 0, 1),
+        {**YEAR, "days_off": "2026-11-26"},
+        {"day_off_bonus": 60},
+        mode="each_day_of_the_week",
+    )
+    await _tick(hass, household, freezer, _at(day_off, 0, 6))
+    assert [c.data["value"] for c in set_value] == [180]
+    hass.states.async_set(SW_LIMIT, "180")
+
+    # A restart before the mark was saved: what Hearth set is known, so it isn't raised to 240
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    household.scheduler.marks.clear()
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    household = entry.runtime_data.household
+    household.scheduler.marks.clear()
+    assert household.scheduler.sw_limits[SW_LIMIT]["target"] == 180
+    await _tick(hass, household, freezer, _at(day_off, 0, 8))
+    assert [c.data["value"] for c in set_value] == [180]
+
+    # Home Assistant was off over midnight: the Switch shows Friday's limit now, so Thursday's own goes back
+    hass.states.async_set(SW_LIMIT, "90")
+    await _tick(hass, household, freezer, _at(day_off + timedelta(days=1), 0, 10))
+    assert [c.data["value"] for c in set_value] == [180]
+    assert [c.data for c in weekdays] == [
+        {"device_id": weekdays[0].data["device_id"], "day_of_week": "thursday", "max_play_time": 120}
+    ]
+    assert household.scheduler.sw_limits == {}
+
+
+async def test_a_held_switch_s_extra_goes_into_what_letting_go_puts_back(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Held for a budget (limit 0): nothing is written to the Switch; the extra goes into what letting go puts back,
+    and comes out again when the day off is called off."""
+    day_off = date(2026, 11, 26)
+    household, set_value, _weekdays = await _with_switch(
+        hass, hass_client_no_auth, freezer, _at(day_off, 0, 1), {**YEAR, "days_off": "2026-11-26"}, {"day_off_bonus": 30}
+    )
+    await hass.services.async_call(
+        DOMAIN, "set_budget", {"person": "person.sam", "group": "games", "minutes": 0}, blocking=True
+    )
+    await hass.async_block_till_done()
+    assert [c.data["value"] for c in set_value] == [0]
+    hass.states.async_set(SW_LIMIT, "0")
+    await _tick(hass, household, freezer, _at(day_off, 0, 6))
+    assert [c.data["value"] for c in set_value] == [0]
+    assert household.enforcement.switch_hold(SW_LIMIT).restore["max"] == 150
+
+    await hass.services.async_call(DOMAIN, "school_time_off_cancel", {}, blocking=True)
+    await hass.async_block_till_done()
+    await _tick(hass, household, freezer, _at(day_off, 9))
+    assert household.enforcement.switch_hold(SW_LIMIT).restore["max"] == 120
+    assert [c.data["value"] for c in set_value] == [0]
+    assert household.scheduler.sw_limits == {}
+
+
+async def test_a_paused_switch_lets_go_with_the_extra(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    day_off = date(2026, 11, 26)
+    household, set_value, _weekdays = await _with_switch(
+        hass, hass_client_no_auth, freezer, _at(day_off, 0, 1), {**YEAR, "days_off": "2026-11-26"}, {"day_off_bonus": 30}
+    )
+    await hass.services.async_call(DOMAIN, "pause", {"people": ["person.sam"], "minutes": 60}, blocking=True)
+    await hass.async_block_till_done()
+    assert [c.data["value"] for c in set_value] == [0]
+    hass.states.async_set(SW_LIMIT, "0")
+    await _tick(hass, household, freezer, _at(day_off, 0, 6))
+    await hass.services.async_call(DOMAIN, "pause_end", {}, blocking=True)
+    await hass.async_block_till_done()
+    assert [c.data["value"] for c in set_value] == [0, 150]
+    # Just before midnight the weekday's own goes back, as for an extra written straight to the Switch
+    hass.states.async_set(SW_LIMIT, "150")
+    await _tick(hass, household, freezer, _at(day_off, 23, 58))
+    assert [c.data["value"] for c in set_value] == [0, 150, 120]
+
+
+async def test_a_switch_with_no_limit_is_left_alone_and_the_extra_is_off_unless_chosen(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    day_off = date(2026, 11, 26)
+    household, set_value, _weekdays = await _with_switch(
+        hass,
+        hass_client_no_auth,
+        freezer,
+        _at(day_off, 0, 1),
+        {**YEAR, "days_off": "2026-11-26"},
+        {"day_off_bonus": 60},
+        limit="-1",
+    )
+    told: list[str] = []
+    household.scheduler.tell = lambda title, message, _id: told.append(message)
+    await _tick(hass, household, freezer, _at(day_off, 0, 6))
+    await _tick(hass, household, freezer, _at(day_off, 6))
+    assert set_value == [] and household.scheduler.sw_limits == {} and told == []
+
+    from custom_components.hearth.schedule import ScheduleConfig
+
+    assert ScheduleConfig.from_options({"schedule": {"day_off_bonus": 60}}).bonus_nintendo is False
+    assert ScheduleConfig.from_options({"schedule": {"bonus_nintendo": "yes"}}).bonus_nintendo is False
+
+
+async def test_a_day_type_changed_away_from_a_day_off_puts_the_switch_back(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    day_off = date(2026, 11, 26)
+    household, set_value, _weekdays = await _with_switch(
+        hass, hass_client_no_auth, freezer, _at(day_off, 0, 1), {**YEAR, "days_off": "2026-11-26"}, {"day_off_bonus": 30}
+    )
+    await _tick(hass, household, freezer, _at(day_off, 0, 6))
+    hass.states.async_set(SW_LIMIT, "150")
+    household.school.day, household.school.day_type = day_off, "school"
+    await _tick(hass, household, freezer, _at(day_off, 7))
+    assert [c.data["value"] for c in set_value] == [150, 120]
+    await _tick(hass, household, freezer, _at(day_off, 7, 1))
+    assert len(set_value) == 2

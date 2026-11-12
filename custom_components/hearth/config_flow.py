@@ -687,7 +687,7 @@ class HearthOptionsFlow(OptionsFlow):
 
     async def async_step_schedule(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """What each day type does to the kids' Family Link (schedule.py): School time off on days off, School time
-        ending early on half days, extra time on both."""
+        ending early on half days, extra time on both (Family Link, and when chosen Family Safety and the Switch)."""
         options = self._options()
         current: dict[str, Any] = dict(options.get(CONF_SCHEDULE) or {})
         if user_input is not None:
@@ -712,6 +712,7 @@ class HearthOptionsFlow(OptionsFlow):
                 vol.Optional(
                     "bonus_family_safety", default=current.get("bonus_family_safety", False)
                 ): BooleanSelector(),
+                vol.Optional("bonus_nintendo", default=current.get("bonus_nintendo", False)): BooleanSelector(),
                 vol.Optional("bonus_group", description=suggested("bonus_group")): self._group_selector(),
                 vol.Optional("people", description=suggested("people")): EntitySelector(
                     EntitySelectorConfig(domain="person", multiple=True)

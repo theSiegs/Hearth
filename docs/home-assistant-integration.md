@@ -603,6 +603,21 @@ the people chosen):
   `today_only: true` (the weekly value ends the today-only change; a parent's earlier today-only value stays theirs
   till midnight), and only while the platform's today-only limit is still the one Hearth set. A limit a parent
   changed since stays. `restore_today_only` isn't used: it would put back a parent's later today-only change too.
+- **Nintendo Switch** gets the same extra minutes when "Extra minutes on the Switch's limit today"
+  (`bonus_nintendo`) is on (off by default, as Family Safety's). Each Switch of a chosen kid's Nintendo enforcer (its
+  Max screentime today) gets today's limit plus the extra, at most 360 minutes (the Switch's own maximum), once a day:
+  a Switch two kids share is raised once, for both. Nintendo has no today-only limit (the number is the Switch's
+  setting of every day, or of this weekday), so Hearth puts it back itself, as the Nintendo enforcer does: 2 minutes
+  before midnight, and only while the Switch still reads the limit Hearth set (a parent's change in the Nintendo app
+  since stays). It keeps the limit it added to (with the day, weekday, device and bedtime) across a restart, so it
+  never adds to its own value twice, and if Home Assistant was off over midnight a Switch with a limit per weekday
+  gets that weekday's limit and bedtime back through `nintendo_parental_controls.update_daily_restrictions`. A Switch
+  with no limit (-1) is left alone, as is one at 360 already. While bonus time from the Nintendo app runs the Switch
+  refuses a new limit, so Hearth waits. **While Hearth holds the Switch** (limit 0, for a budget or a pause) nothing is
+  written to it: the extra goes into the limit the hold puts back, so letting go gives the raised limit, and a cancel
+  or midnight takes it out again. A cancel (`hearth.school_time_off_cancel` for today on a day off, when it names all
+  the Switch's kids) or today's day type changing away from a day off or half day puts the limit back at once, under
+  the same rules, and it isn't raised again that day.
 - `hearth.school_time_off` (`people`; `date`, today by default; `from`, a time; `reason`) does the same for anyone,
   any day; `hearth.school_time_off_cancel` (`people`, `date`) drops one not started, or puts one already off back from
   today.
