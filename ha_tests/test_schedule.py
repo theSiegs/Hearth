@@ -557,7 +557,8 @@ async def test_a_half_day_s_extra_reaches_an_xbox_as_its_limit_only(
     async_mock_service(hass, "familylink", "set_daily_limit")
     limits, intervals, restores = _family_safety_services(hass)
     half = date(2026, 11, 25)
-    # Today's limit was already moved for today only: the extra goes on what midnight puts back
+    # A parent already cut today's limit for today only: the extra goes on top of their cut, not on what midnight
+    # puts back
     household = await _with_family_safety(
         hass,
         hass_client_no_auth,
@@ -576,13 +577,72 @@ async def test_a_half_day_s_extra_reaches_an_xbox_as_its_limit_only(
     )
     await _tick(hass, household, freezer, _at(half, 0, 6))
     assert [c.data for c in limits] == [
-        {"entity_id": FAMILY_SAFETY, "platform": "Xbox", "today_only": True, "hours": 2, "minutes": 15}
+        {"entity_id": FAMILY_SAFETY, "platform": "Xbox", "today_only": True, "hours": 2, "minutes": 0}
     ]
     assert intervals == [] and restores == []
     # A cancel on a half day has no day off to call off: the extra stays
     await hass.services.async_call(DOMAIN, "school_time_off_cancel", {"people": ["person.sam"]}, blocking=True)
     await _tick(hass, household, freezer, _at(half, 9))
     assert restores == [] and len(limits) == 1
+
+
+async def test_hearth_s_own_today_only_limit_isn_t_added_to_again_after_a_restart(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    async_mock_service(hass, "familylink", "set_daily_limit")
+    limits, _intervals, _restores = _family_safety_services(hass)
+    day_off = date(2026, 11, 26)
+    household = await _with_family_safety(
+        hass,
+        hass_client_no_auth,
+        freezer,
+        _at(day_off, 0, 1),
+        {**YEAR, "days_off": "2026-11-26"},
+        {"day_off_bonus": 60},
+        ["Windows"],
+    )
+    _family_safety_entities(hass, "sam", "123456", {"Windows": 120})
+    await _tick(hass, household, freezer, _at(day_off, 0, 6))
+    assert [(c.data["hours"], c.data["minutes"]) for c in limits] == [(3, 0)]
+    assert household.scheduler.fs_limits == {"person.sam": {"Windows": {"target": 180, "base": 120}}}
+    # Family Safety now says Hearth's own today-only change; the marks were lost (a restart before they were saved)
+    _family_safety_entities(
+        hass,
+        "sam",
+        "123456",
+        {"Windows": 180},
+        {"Windows": {"date": day_off.isoformat(), "limit_minutes": 180, "restore_limit_minutes": 120}},
+    )
+    household.scheduler.marks.pop("person.sam", None)
+    await _tick(hass, household, freezer, _at(day_off, 0, 7))
+    assert len(limits) == 1
+
+
+async def test_a_parent_s_today_only_raise_gets_the_extra_on_top(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    async_mock_service(hass, "familylink", "set_daily_limit")
+    limits, _intervals, _restores = _family_safety_services(hass)
+    day_off = date(2026, 11, 26)
+    household = await _with_family_safety(
+        hass,
+        hass_client_no_auth,
+        freezer,
+        _at(day_off, 0, 1),
+        {**YEAR, "days_off": "2026-11-26"},
+        {"day_off_bonus": 30},
+        ["Windows"],
+    )
+    _family_safety_entities(
+        hass,
+        "sam",
+        "123456",
+        {"Windows": 150},
+        {"Windows": {"date": day_off.isoformat(), "limit_minutes": 150, "restore_limit_minutes": 120}},
+    )
+    await _tick(hass, household, freezer, _at(day_off, 0, 6))
+    assert [(c.data["hours"], c.data["minutes"]) for c in limits] == [(3, 0)]
+    assert household.scheduler.fs_limits["person.sam"]["Windows"] == {"target": 180, "base": 150}
 
 
 async def test_an_older_family_safety_without_today_only_is_skipped_quietly(
