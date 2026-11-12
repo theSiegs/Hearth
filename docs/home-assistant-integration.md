@@ -588,9 +588,13 @@ the people chosen):
   change alone. A platform without a limit today is left alone. School time has no Family Safety equivalent, and
   Hearth's day types don't change bedtime, so the allowed hours (`set_screentime_intervals`) aren't touched. A Family
   Safety that doesn't take `today_only` yet is skipped quietly; a failed call is logged and tried again, and doesn't
-  hold up Family Link or another kid. When today's day off is cancelled (`hearth.school_time_off_cancel`), the
-  platforms Hearth raised go back at once (`microsoft_family_safety.restore_today_only`, per platform) and aren't
-  raised again that day (Family Link's extra minutes stay).
+  hold up Family Link or another kid. When today's day off is called off (`hearth.school_time_off_cancel` for today,
+  on a day off, for the people named or everyone; with or without School time taken off), or today's day type changes
+  away from a day off or half day, the platforms Hearth raised go back at once and aren't raised again that day
+  (Family Link's extra minutes stay): the limit Hearth added to is written again with `set_screentime_limit`,
+  `today_only: true` (the weekly value ends the today-only change; a parent's earlier today-only value stays theirs
+  till midnight), and only while the platform's today-only limit is still the one Hearth set. A limit a parent
+  changed since stays. `restore_today_only` isn't used: it would put back a parent's later today-only change too.
 - `hearth.school_time_off` (`people`; `date`, today by default; `from`, a time; `reason`) does the same for anyone,
   any day; `hearth.school_time_off_cancel` (`people`, `date`) drops one not started, or puts one already off back from
   today.
