@@ -55,6 +55,7 @@ import 'package:mockito/mockito.dart';
 import 'package:provider/provider.dart';
 import 'package:transparent_image/transparent_image.dart';
 
+import 'package:flauncher/actions.dart';
 import 'helpers.dart';
 import 'mocks.dart';
 import 'mocks.mocks.dart';
@@ -1011,6 +1012,62 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(HaPanel), findsNothing);
     expect(calls, contains("openHaPanel"));
+  });
+
+  testWidgets("A kids profile never gets the Home Assistant panel, and a kid coming on closes an open one",
+      (tester) async {
+    final calls = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('me.efesser.flauncher/method'), (call) async {
+      calls.add(call.method);
+      return call.method.startsWith("check") ? false : null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('me.efesser.flauncher/method'), null));
+    final appsService = mkAppService();
+    final favorites = fakeCategory(name: "Favorites", order: 0, type: CategoryType.row);
+    favorites.applications.add(fakeApp(packageName: "me.efesser.flauncher.1", name: "FLauncher 1"));
+    favorites.applications.add(fakeApp(packageName: "me.efesser.flauncher.2", name: "FLauncher 2"));
+    when(appsService.launcherSections).thenReturn([favorites]);
+    final settingsService = mkSettingsService();
+    // The kid's profile has the panel switched on, even the full dashboard: it still never opens
+    when(settingsService.haPanelEnabled).thenReturn(true);
+    when(settingsService.haPanelFullDashboard).thenReturn(true);
+    when(settingsService.haPanelDashboard).thenReturn("");
+    final profiles = FakeProfileService(activeKey: "user:11", activeName: "Sam")..setKids(true);
+    await _pumpWidgetWithProviders(tester, mkWallpaperService(), appsService, settingsService,
+        profileService: profiles);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(find.byType(HaPanel), findsNothing);
+    expect(calls, isNot(contains("openHaPanel")));
+    expect(calls, isNot(contains("getHaConnection")));
+    expect(isAppCardFocused(tester, "me.efesser.flauncher.2"), isTrue);
+
+    // Anything else asking for it in a kids profile gets "ask an adult"
+    Actions.maybeInvoke(FocusManager.instance.primaryFocus!.context!, const OpenHaPanelIntent());
+    await tester.pump();
+    expect(find.byType(HaPanel), findsNothing);
+    expect(find.text("The dashboard is for adults. Ask an adult."), findsOneWidget);
+    expect(calls, isNot(contains("openHaPanel")));
+
+    // An adult's profile opens Hearth's own panel...
+    when(settingsService.haPanelFullDashboard).thenReturn(false);
+    profiles.setKids(false);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(find.byType(HaPanel), findsOneWidget);
+
+    // ...and a kids profile coming on closes it, and Home Assistant's own page with it
+    calls.clear();
+    profiles.setKids(true);
+    await tester.pumpAndSettle();
+    expect(find.byType(HaPanel), findsNothing);
+    expect(calls, contains("closeHaPanel"));
   });
 
   testWidgets("Pressing select on app opens ApplicationInfoPanel", (tester) async {

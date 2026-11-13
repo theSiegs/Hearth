@@ -1,3 +1,4 @@
+import 'package:flauncher/widgets/ha_panel/ha_panel_gate.dart';
 import 'package:flauncher/actions.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/widgets/settings/settings_panel.dart';
@@ -111,7 +112,7 @@ class FocusAwareAppBarState extends State<FocusAwareAppBar>
           if (event.logicalKey != LogicalKeyboardKey.arrowRight || event is KeyUpEvent) return KeyEventResult.ignored;
           final focused = FocusManager.instance.primaryFocus;
           if (focused == null || focused.focusInDirection(TraversalDirection.right)) return KeyEventResult.handled;
-          if (event is KeyDownEvent && context.read<SettingsService>().haPanelEnabled) {
+          if (event is KeyDownEvent && haPanelAvailable(context)) {
             Actions.maybeInvoke(context, const OpenHaPanelIntent());
           }
           return KeyEventResult.handled;

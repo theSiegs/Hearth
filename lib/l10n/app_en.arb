@@ -711,6 +711,10 @@
     "@haPanelTitle": {
         "description": "Settings page title, also its row in the page that opens it"
     },
+    "haPanelKidsAskAdult": "The dashboard is for adults. Ask an adult.",
+    "@haPanelKidsAskAdult": {
+        "description": "Short message when something tries to open the Home Assistant dashboard panel in a kids profile, where it never opens"
+    },
     "lookTitle": "Look",
     "@lookTitle": {
         "description": "Settings page title, also its row in the page that opens it"
@@ -1455,6 +1459,34 @@
     "parentPinPhoneAsked": "Asked a parent's phone. Allow it there, or enter the PIN here.",
     "@parentPinPhoneAsked": {
         "description": "PIN screen: a parent's phone was sent a request to allow this instead of the PIN"
+    },
+    "noticeSentToPhone": "Sent to your phone. Answer there, or enter the PIN here.",
+    "@noticeSentToPhone": {
+        "description": "PIN screen for a Hearth notice's button: the adults' phones were asked too"
+    },
+    "noticeDone": "Done",
+    "@noticeDone": {
+        "description": "Brief message: a Hearth notice's button ran after the Parent PIN"
+    },
+    "noticeSent": "Sent to your phone",
+    "@noticeSent": {
+        "description": "Brief message: a Hearth notice's button waits for an adult's answer on their phone"
+    },
+    "noticeGone": "That's already been answered",
+    "@noticeGone": {
+        "description": "Brief message: the Hearth notice whose button was pressed no longer exists"
+    },
+    "noticeUsePhone": "Answer this on your phone",
+    "@noticeUsePhone": {
+        "description": "Brief message: this Home Assistant can't take a notice's button from the TV"
+    },
+    "noticeTooMany": "Too many tries. Try again later.",
+    "@noticeTooMany": {
+        "description": "Brief message: Home Assistant refused a notice's button because of too many tries"
+    },
+    "noticeFailed": "That didn't work. Try again.",
+    "@noticeFailed": {
+        "description": "Brief message: a notice's button didn't get through, or Home Assistant couldn't run it"
     },
     "parentPinPhoneDenied": "Not allowed from the phone. Enter the PIN here.",
     "@parentPinPhoneDenied": {

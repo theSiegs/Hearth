@@ -291,6 +291,8 @@ final class HaNotificationOverlay {
     }
 
     private void run(JSONObject action) {
+        // A Hearth integration notice's button has no service: its card always has onAction
+        if (!action.optString("service").contains(".")) return;
         String[] service = action.optString("service").split("\\.", 2);
         JSONObject data = action.optJSONObject("data");
         HaApi.EXECUTOR.execute(() -> HaApi.callService(mService, service[0], service[1], data));

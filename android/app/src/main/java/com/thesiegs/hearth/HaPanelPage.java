@@ -98,14 +98,25 @@ final class HaPanelPage {
 
     /** Loads the dashboard in the background if the panel is on and it isn't loaded yet; lets it go if it's off. */
     static void preload(Context context) {
-        if (!FlutterPrefs.getBoolean(context, PANEL_ENABLED_KEY, false)
-                || !FlutterPrefs.getBoolean(context, FULL_DASHBOARD_KEY, false) || url(context) == null) {
+        boolean enabled = FlutterPrefs.getBoolean(context, PANEL_ENABLED_KEY, false);
+        boolean fullDashboard = FlutterPrefs.getBoolean(context, FULL_DASHBOARD_KEY, false);
+        // Whether it's a kids profile is only asked when the page would load otherwise
+        if (!shouldPreload(enabled, fullDashboard, enabled && fullDashboard && url(context) != null,
+                enabled && fullDashboard && ProfileUsers.isKids(context))) {
             if (sHost == null) release();
             return;
         }
         if (sHost != null || upToDate(context)) return;
         load(context.getApplicationContext());
         Log.i(TAG, "Loading the dashboard in the background");
+    }
+
+    /**
+     * Whether the dashboard's page should be loaded in the background: the panel is on, shows Home Assistant's own
+     * page, has an address, and the profile isn't a kids profile (the panel is for adults: never in a kids profile).
+     */
+    static boolean shouldPreload(boolean enabled, boolean fullDashboard, boolean hasUrl, boolean kids) {
+        return enabled && fullDashboard && hasUrl && !kids;
     }
 
     /** The page for the panel to show: the one kept loaded, or a new one loading now. */

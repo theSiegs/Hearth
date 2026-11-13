@@ -1504,6 +1504,12 @@ abstract class AppLocalizations {
   /// **'Dashboard panel'**
   String get haPanelTitle;
 
+  /// Short message when something tries to open the Home Assistant dashboard panel in a kids profile, where it never opens
+  ///
+  /// In en, this message translates to:
+  /// **'The dashboard is for adults. Ask an adult.'**
+  String get haPanelKidsAskAdult;
+
   /// Settings page title, also its row in the page that opens it
   ///
   /// In en, this message translates to:
@@ -2334,6 +2340,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Asked a parent\'s phone. Allow it there, or enter the PIN here.'**
   String get parentPinPhoneAsked;
+
+  /// PIN screen for a Hearth notice's button: the adults' phones were asked too
+  ///
+  /// In en, this message translates to:
+  /// **'Sent to your phone. Answer there, or enter the PIN here.'**
+  String get noticeSentToPhone;
+
+  /// Brief message: a Hearth notice's button ran after the Parent PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get noticeDone;
+
+  /// Brief message: a Hearth notice's button waits for an adult's answer on their phone
+  ///
+  /// In en, this message translates to:
+  /// **'Sent to your phone'**
+  String get noticeSent;
+
+  /// Brief message: the Hearth notice whose button was pressed no longer exists
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s already been answered'**
+  String get noticeGone;
+
+  /// Brief message: this Home Assistant can't take a notice's button from the TV
+  ///
+  /// In en, this message translates to:
+  /// **'Answer this on your phone'**
+  String get noticeUsePhone;
+
+  /// Brief message: Home Assistant refused a notice's button because of too many tries
+  ///
+  /// In en, this message translates to:
+  /// **'Too many tries. Try again later.'**
+  String get noticeTooMany;
+
+  /// Brief message: a notice's button didn't get through, or Home Assistant couldn't run it
+  ///
+  /// In en, this message translates to:
+  /// **'That didn\'t work. Try again.'**
+  String get noticeFailed;
 
   /// PIN screen: the parent's phone answered Deny
   ///

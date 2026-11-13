@@ -259,6 +259,28 @@ class FLauncherChannel {
 
   static void Function(String packageName)? _onOpenProfilePins;
 
+  /// A Hearth integration notice's button pressed while Hearth wasn't running yet: {person, item, index, title, button,
+  /// phone}, or null.
+  Future<Map<dynamic, dynamic>?> takePendingNoticePress() async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("takePendingNoticePress");
+
+  /// Calls [onPress] when one of the Hearth integration's notice buttons is pressed (in the Bell or its pop-up): the
+  /// Parent PIN pad opens for it.
+  static void listenForNoticePress(void Function(Map<dynamic, dynamic> press) onPress) {
+    _onNoticePress = onPress;
+    _listen();
+  }
+
+  static void Function(Map<dynamic, dynamic> press)? _onNoticePress;
+
+  /// Asks the Hearth integration to run a notice's button: with the Parent PIN, or (no [pin]) by the adults' phones.
+  /// {"result": "done" | "pending" | "gone" | "wrong_pin" | "too_many" | "bad_request" | "unsupported" |
+  /// "unreachable" | "failed", "retryAfter": seconds}.
+  Future<Map<dynamic, dynamic>> pressIntegrationNotice(String person, String item, int index, {String? pin}) async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>(
+          "pressIntegrationNotice", {"person": person, "item": item, "index": index, "pin": pin}) ??
+      {"result": "failed"};
+
   /// Whether Hearth can type profile PINs in the app yet (it has a recipe for the app's PIN screen).
   Future<bool> profilePinEntrySupported(String packageName) async =>
       await _methodChannel.invokeMethod<bool>("profilePinEntrySupported", packageName) ?? false;
@@ -439,6 +461,7 @@ class FLauncherChannel {
       if (call.method == "profileSwitching") _onProfileSwitching?.call(call.arguments as String);
       if (call.method == "profileSwitchCancelled") _onProfileSwitchCancelled?.call();
       if (call.method == "openProfilePins") _onOpenProfilePins?.call(call.arguments as String);
+      if (call.method == "openNoticePress") _onNoticePress?.call(call.arguments as Map<dynamic, dynamic>);
       if (call.method == "resumeSetup") _onResumeSetup?.call(call.arguments as String? ?? "");
       if (call.method == "homePressed") _onHomePressed?.call();
       if (call.method == "timeUp") _onTimeUp?.call(call.arguments as String?);
@@ -736,6 +759,9 @@ class FLauncherChannel {
       await _methodChannel.invokeMethod("setHaPanelConfig", {"token": token, "dashboard": dashboard});
 
   Future<void> openHaPanel() async => await _methodChannel.invokeMethod("openHaPanel");
+
+  /// Closes Home Assistant's web page panel if it's open (a kids profile came on).
+  Future<void> closeHaPanel() async => await _methodChannel.invokeMethod("closeHaPanel");
 
   /// An adult is at the remote: their profile came on (or they entered the parent PIN) and the remote hasn't gone
   /// untouched for five minutes since. False when Hearth can't tell.

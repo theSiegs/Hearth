@@ -413,6 +413,22 @@ final class HaIntegration {
         return HaParentPins.Verdict.UNKNOWN;
     }
 
+    /**
+     * Presses button {@code actionId} of the integration's notice {@code key} (blocking): with a Parent PIN, which
+     * the integration checks (its lockout included) and runs the button as that adult; or with {@code pin} null, asking
+     * the adults' phones. See HaNotices.outcome for the answers.
+     */
+    static HaNotices.Result pressNotice(Context context, String key, String actionId, String pin) {
+        String base = HaConfig.baseUrl(context);
+        String secret = secret(context);
+        if (base == null || secret == null) return new HaNotices.Result(HaNotices.Outcome.UNSUPPORTED, 0);
+        Answer answer = request(base + "/api/hearth/device/" + deviceId(context) + "/notice", "POST",
+                HaNotices.pressBody(key, actionId, pin), null, secret, 3_000, 8_000);
+        HaNotices.Result result = HaNotices.outcome(answer.code, answer.body);
+        Log.i(TAG, "A notice's button" + (pin != null ? " (PIN)" : " (phone)") + ": " + result.outcome);
+        return result;
+    }
+
     /** The amounts of more time a kid can ask for, in minutes (the integration's asks.AMOUNTS). */
     static final int[] ASK_MINUTES = {15, 30, 45, 60};
 

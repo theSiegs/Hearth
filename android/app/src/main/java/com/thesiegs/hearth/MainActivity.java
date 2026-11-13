@@ -87,6 +87,8 @@ public class MainActivity extends FlutterActivity {
     static final String EXTRA_OPEN_SEARCH = "hearth_open_search";
     /** Opens Settings on an app's profile PINs (the "Change PIN" button when a saved PIN wasn't taken). */
     static final String EXTRA_OPEN_PROFILE_PINS = "hearth_open_profile_pins";
+    /** Opens the Parent PIN pad for a Hearth integration notice's button (the press itself is kept here, not in it). */
+    static final String EXTRA_NOTICE_PRESS = "hearth_notice_press";
     private static final String TAG = "HearthMain";
     private static final String METHOD_CHANNEL = "me.efesser.flauncher/method";
     private static final String APPS_EVENT_CHANNEL = "me.efesser.flauncher/event_apps";
@@ -115,6 +117,9 @@ public class MainActivity extends FlutterActivity {
     /** A search request from the remote ("voice" or "text") not yet picked up by Flutter. */
     private String mPendingSearch;
     private String mPendingProfilePins;
+    /** A Hearth integration notice's button pressed (Household.openIntegrationPress), for Flutter's Parent PIN pad. */
+    private static Map<String, Object> sNoticePress;
+    private Map<String, Object> mPendingNoticePress;
 
     @Override
     public void configureFlutterEngine(@NonNull FlutterEngine flutterEngine) {
@@ -127,6 +132,7 @@ public class MainActivity extends FlutterActivity {
         // picks the search up with takePendingSearch rather than hearing openSearch.
         handleSearchIntent(getIntent());
         handleProfilePinsIntent(getIntent());
+        handleNoticePressIntent(getIntent());
         mMethodChannel = new MethodChannel(messenger, METHOD_CHANNEL);
         sMethodChannel = new WeakReference<>(mMethodChannel);
         mMethodChannel.setMethodCallHandler(this::onMethodCall);
@@ -240,6 +246,20 @@ public class MainActivity extends FlutterActivity {
             case "getAppLastProfiles" -> {
                 Map<String, Object> users = new HashMap<>(LauncherAccessibilityService.getAppLastProfiles(this));
                 result.success(users);
+            }
+            case "takePendingNoticePress" -> {
+                Map<String, Object> pending = mPendingNoticePress;
+                mPendingNoticePress = null;
+                result.success(pending);
+            }
+            // A Hearth integration notice's button: the Parent PIN (or null: the adults' phones) goes to the integration
+            case "pressIntegrationNotice" -> {
+                String person = call.argument("person");
+                String item = call.argument("item");
+                Integer index = call.argument("index");
+                String pin = call.argument("pin");
+                answerFrom(sIoExecutor, result, () -> Household.pressIntegrationNotice(this, person, item,
+                        index == null ? -1 : index, pin));
             }
             case "takePendingProfilePins" -> {
                 String pending = mPendingProfilePins;
@@ -572,7 +592,12 @@ public class MainActivity extends FlutterActivity {
                 }
             }
             case "openHaPanel" -> {
-                startActivity(new Intent(this, HaPanelActivity.class));
+                // The panel is for adults: never in a kids profile
+                if (!ProfileUsers.isKids(this)) startActivity(new Intent(this, HaPanelActivity.class));
+                result.success(null);
+            }
+            case "closeHaPanel" -> {
+                HaPanelActivity.closeIfOpen();
                 result.success(null);
             }
             // The Hearth integration for Home Assistant: pairing this TV (see HaIntegration)
@@ -1907,6 +1932,7 @@ public class MainActivity extends FlutterActivity {
         super.onNewIntent(intent);
         handleSearchIntent(intent);
         handleProfilePinsIntent(intent);
+        handleNoticePressIntent(intent);
         handleResumeSetupIntent(intent);
     }
 
@@ -1929,6 +1955,38 @@ public class MainActivity extends FlutterActivity {
         intent.removeExtra(EXTRA_OPEN_PROFILE_PINS);
         mPendingProfilePins = pkg;
         if (mMethodChannel != null) mMethodChannel.invokeMethod("openProfilePins", pkg);
+    }
+
+    /**
+     * A Hearth integration notice's button was pressed (in the Bell or its pop-up): Hearth comes to the front and Flutter
+     * opens the Parent PIN pad for it ({@code press}: person, item, index, title, button, phone).
+     */
+    static void openNoticePress(Context context, Map<String, Object> press) {
+        synchronized (MainActivity.class) {
+            sNoticePress = press;
+        }
+        Intent open = new Intent(context, MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                .putExtra(EXTRA_NOTICE_PRESS, true);
+        try {
+            context.startActivity(open);
+        } catch (Exception e) {
+            Log.w(TAG, "Couldn't open Hearth for a notice's button", e);
+        }
+    }
+
+    /** Flutter opens the Parent PIN pad for the notice's button (now, or with takePendingNoticePress). */
+    private void handleNoticePressIntent(Intent intent) {
+        if (intent == null || !intent.getBooleanExtra(EXTRA_NOTICE_PRESS, false)) return;
+        intent.removeExtra(EXTRA_NOTICE_PRESS);
+        Map<String, Object> press;
+        synchronized (MainActivity.class) {
+            press = sNoticePress;
+            sNoticePress = null;
+        }
+        if (press == null) return;
+        mPendingNoticePress = press;
+        if (mMethodChannel != null) mMethodChannel.invokeMethod("openNoticePress", press);
     }
 
     /**

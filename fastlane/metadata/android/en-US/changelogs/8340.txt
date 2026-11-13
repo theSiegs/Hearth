@@ -1,0 +1,1 @@
+Notices from Hearth in the Bell (adults' profiles), answered with the Parent PIN; the TV's status says where playback is; the Home Assistant dashboard panel never opens in a kids profile.

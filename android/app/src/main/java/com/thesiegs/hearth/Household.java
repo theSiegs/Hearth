@@ -1637,7 +1637,11 @@ final class Household {
         synchronized (sPopped) {
             if (sPopped.size() > 1000) sPopped.clear();
             for (HouseholdNotices.Notice n : visible) {
-                if (!sPopped.add(n.item + "@" + n.at) || !sNoticesRead || n.writer.equals(ownTv)) continue;
+                boolean fresh = sPopped.add(n.item + "@" + n.at);
+                // The integration's: each TV of the household reads it too, so it pops up once whoever wrote it
+                if (n.fromIntegration() && !sPopped.add(poppedMark(n))) fresh = false;
+                if (!fresh || !sNoticesRead || n.writer.equals(ownTv)) continue;
+                if (n.fromIntegration() && !HaNotices.popsUp(n.urgency)) continue;
                 if (n.isJoin() || now - n.at < HouseholdNotices.POP_UP_MS) popUp.add(n);
             }
             sNoticesRead = true;
@@ -1703,6 +1707,12 @@ final class Household {
             HouseholdLog log = noticeLog(app);
             HouseholdNotices.Notice n = HouseholdNotices.parse(log.get(HouseholdNotices.KIND, person, item));
             if (n == null || n.at != at || index < 0 || index >= n.actions.size()) return;
+            if (n.fromIntegration()) {
+                // The Hearth integration's: a Parent PIN or a parent's phone, asked of the integration. Only one the
+                // profile on screen sees (never in a kids profile)
+                if (listedIntegrationNotice(app, person, item) != null) openIntegrationPress(app, n, index);
+                return;
+            }
             long now = System.currentTimeMillis();
             boolean mine = log == LOCAL_NOTICES || n.writer.equals(store(app).tvId());
             if (mine || HaConfig.isConfigured(app)) {
@@ -1742,12 +1752,176 @@ final class Household {
 
     /** Calls a notification button's service with this TV's Home Assistant token, off the household thread. */
     private static void callAction(Context context, HouseholdNotices.Action action) {
+        if (action.service == null) return;
         String[] service = action.service.split("\\.", 2);
         org.json.JSONObject data = action.dataObject();
         HaApi.EXECUTOR.execute(() -> {
             boolean ok = HaApi.callService(context, service[0], service[1], data);
             Log.i(TAG, "A notification's button ran " + service[0] + (ok ? "" : ": Home Assistant refused or is away"));
         });
+    }
+
+    // ---- The Hearth integration's notices (HaNotices) ----
+
+    private static final String INTEGRATION_NOTICES_PREFS = "hearth_ha_notices";
+    /** The notices filed from the last state document (HaNotices.filed), to clear the ones the next one drops. */
+    private static final String FILED_KEY = "filed";
+    /**
+     * Notices answered here (done, or gone), by key, and when: not filed again from a document read meanwhile, which
+     * may still hold them. Household thread.
+     */
+    private static final Map<String, Long> sAnsweredNotices = new HashMap<>();
+    private static final long ANSWERED_MS = 10 * 60_000;
+
+    /** A notice popped up once, whichever TV of the household wrote it. */
+    private static String poppedMark(HouseholdNotices.Notice n) {
+        return "k|" + n.item + "|" + n.key + "|" + n.title + "|" + n.text;
+    }
+
+    /**
+     * The integration's state document came with these notices (none: it has none now). Each is filed in the Bell like a
+     * Home Assistant notification (a tag replaces, {@code for} names the person, none is every adult), never for a kids
+     * profile; an unchanged one isn't written again; and one an earlier document had and this one doesn't is cleared,
+     * on every TV of the household.
+     */
+    static void onIntegrationNotices(Context context, List<HaNotices.Item> items) {
+        Context app = context.getApplicationContext();
+        sContext = app;
+        EXEC.execute(() -> fileIntegrationNotices(app, items));
+    }
+
+    private static void fileIntegrationNotices(Context app, List<HaNotices.Item> items) {
+        HouseholdLog log = noticeLog(app);
+        long now = System.currentTimeMillis();
+        SharedPreferences prefs = app.getSharedPreferences(INTEGRATION_NOTICES_PREFS, Context.MODE_PRIVATE);
+        Set<String> before = HaNotices.fromJson(prefs.getString(FILED_KEY, null));
+        Set<String> filed = new LinkedHashSet<>();
+        List<HouseholdNotices.Notice> popUp = new ArrayList<>();
+        sAnsweredNotices.values().removeIf(at -> now - at > ANSWERED_MS || at > now);
+        String onScreen = personOnScreen(app);
+        boolean kidsOnScreen = ProfileUsers.isKids(app);
+        String writer = log == LOCAL_NOTICES ? LOCAL_NOTICES_TV : store(app).tvId();
+        List<HouseholdNotices.Person> people = null;
+        boolean changed = false;
+        for (HaNotices.Item n : items) {
+            if (sAnsweredNotices.containsKey(n.key)) continue;
+            String person = HouseholdNotices.ALL_ADULTS;
+            if (n.target != null) {
+                if (people == null) people = people(app);
+                person = HouseholdNotices.target(n.target, people,
+                        HaIntegration.isPaired(app) ? HaIntegration.deviceId(app) : null);
+                // No one here, or a kid: not this TV's to show
+                if (person == null || kidsPerson(app, people, person)) continue;
+            }
+            String item = HaNotices.item(person, n);
+            String value = HaNotices.value(n, now);
+            if (value == null) continue;
+            String mark = HaNotices.filed(person, item);
+            filed.add(mark);
+            HouseholdEntry held = log.get(HouseholdNotices.KIND, person, item);
+            if (held != null && HaNotices.same(held.value, value)) continue;
+            if (!HouseholdNotices.roomFor(log.all(), writer, item)) continue;
+            HouseholdEntry entry = log.put(HouseholdNotices.KIND, person, item, value, now);
+            if (entry == null) continue;
+            changed = true;
+            HouseholdNotices.Notice kept = HouseholdNotices.parse(entry);
+            if (kept == null) continue;
+            boolean first;
+            synchronized (sPopped) {
+                sPopped.add(entry.item + "@" + HouseholdLog.millisOf(entry));
+                first = sPopped.add(poppedMark(kept));
+            }
+            boolean forOnScreen = HouseholdNotices.ALL_ADULTS.equals(person) || person.equals(onScreen);
+            if (first && !before.contains(mark) && forOnScreen && !kidsOnScreen && HaNotices.popsUp(kept.urgency)) {
+                popUp.add(kept);
+            }
+        }
+        for (String gone : HaNotices.gone(before, filed)) {
+            String person = HaNotices.personOf(gone);
+            String item = HaNotices.itemOf(gone);
+            HouseholdNotices.Notice held = HouseholdNotices.parse(log.get(HouseholdNotices.KIND, person, item));
+            if (held == null || !held.fromIntegration()) continue;
+            log.delete(HouseholdNotices.KIND, person, item, now);
+            changed = true;
+        }
+        if (!filed.equals(before)) prefs.edit().putString(FILED_KEY, HaNotices.toJson(filed).toString()).apply();
+        if (changed) noticesChanged(app, log);
+        for (HouseholdNotices.Notice n : popUp) HearthBellItems.popUp(app, n);
+    }
+
+    /** Whether the person id is a kids profile's on this TV. */
+    private static boolean kidsPerson(Context context, List<HouseholdNotices.Person> people, String person) {
+        for (HouseholdNotices.Person p : people) {
+            if (person.equals(p.id) && ProfilePairing.isKids(context, p.key)) return true;
+        }
+        return false;
+    }
+
+    /** The integration's notice {@code item} for {@code person} as the profile on screen sees it in the Bell, or null. */
+    private static HouseholdNotices.Notice listedIntegrationNotice(Context context, String person, String item) {
+        for (HouseholdNotices.Notice n : notices(context)) {
+            if (n.fromIntegration() && n.item.equals(item) && n.person.equals(person)) return n;
+        }
+        return null;
+    }
+
+    /**
+     * One of the integration's notice buttons pressed (Bell or pop-up): Hearth opens the Parent PIN pad for it, which
+     * asks the integration (pressIntegrationNotice). A TV not paired with the integration can't ask it: the adult
+     * answers on their phone.
+     */
+    private static void openIntegrationPress(Context context, HouseholdNotices.Notice n, int index) {
+        if (!HaIntegration.isPaired(context)) {
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> android.widget.Toast.makeText(context,
+                    R.string.ha_notice_use_phone, android.widget.Toast.LENGTH_LONG).show());
+            return;
+        }
+        Map<String, Object> press = new HashMap<>();
+        press.put("person", n.person);
+        press.put("item", n.item);
+        press.put("index", index);
+        press.put("title", n.title.isEmpty() ? n.text : n.title);
+        press.put("button", n.actions.get(index).title);
+        // The Parent PIN pad's "ask a parent's phone", as on its other uses: when an adult has phone approval on (the
+        // integration picks the phones)
+        press.put("phone", !ParentApproval.parentPhones(context).isEmpty());
+        MainActivity.openNoticePress(context, press);
+    }
+
+    /**
+     * Asks the integration to run button {@code index} of the notice the profile on screen sees (blocking; not on the
+     * main thread): with {@code pin}, or (null) by the adults' phones. Answers {"result": an HaNotices.Outcome in lower
+     * case, "retryAfter": seconds}. Done or gone clears it here and on every TV; a wrong PIN that locks the pad
+     * there locks it here too (ParentPinPolicy).
+     */
+    static Map<String, Object> pressIntegrationNotice(Context context, String person, String item, int index,
+            String pin) {
+        Map<String, Object> out = new HashMap<>();
+        HouseholdNotices.Notice n = person == null || item == null ? null
+                : listedIntegrationNotice(context, person, item);
+        HaNotices.Result result;
+        if (n == null) {
+            result = new HaNotices.Result(HaNotices.Outcome.GONE, 0);
+        } else if (index < 0 || index >= n.actions.size() || (pin != null && !pin.matches("[0-9]{4,12}"))) {
+            result = new HaNotices.Result(HaNotices.Outcome.BAD_REQUEST, 0);
+        } else {
+            result = HaIntegration.pressNotice(context, n.key, n.actions.get(index).id, pin);
+        }
+        if (n != null && (result.outcome == HaNotices.Outcome.DONE || result.outcome == HaNotices.Outcome.GONE)) {
+            String key = n.key;
+            EXEC.execute(() -> sAnsweredNotices.put(key, System.currentTimeMillis()));
+            clearNotice(context, person, item);
+        }
+        // As for a refused status: the bridge checks the pairing (HaIntegration unpairs after lasting refusals)
+        if (result.outcome == HaNotices.Outcome.NOT_PAIRED) HaBridgeService.sync(context);
+        if (result.outcome == HaNotices.Outcome.WRONG_PIN && result.retryAfterS > 0) {
+            ParentPinPolicy.holdUntil(context, System.currentTimeMillis() + result.retryAfterS * 1000L);
+        }
+        out.put("result", result.outcome.name().toLowerCase(java.util.Locale.ROOT));
+        out.put("retryAfter", result.retryAfterS);
+        // Home Assistant names no Parent PIN (its last document): every PIN is wrong there, only a phone answers
+        if (result.outcome == HaNotices.Outcome.WRONG_PIN) out.put("noParentPin", !HaParentPins.managed(context));
+        return out;
     }
 
     /**

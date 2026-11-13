@@ -54,11 +54,25 @@ final class HouseholdNotices {
         final String service;
         /** The service's data as JSON ("{}" for none). */
         final String data;
+        /**
+         * A Hearth integration notice's button: its id there ("0".."2"), and {@link #service} is null. Pressing it asks
+         * the integration (HaNotices), never a service with the panel's token.
+         */
+        final String id;
 
         Action(String title, String service, String data) {
             this.title = title;
             this.service = service;
             this.data = data;
+            this.id = null;
+        }
+
+        /** A Hearth integration notice's button. */
+        Action(String id, String title) {
+            this.title = title;
+            this.service = null;
+            this.data = "{}";
+            this.id = id;
         }
 
         JSONObject dataObject() {
@@ -72,6 +86,7 @@ final class HouseholdNotices {
         /** As HaNotificationServer.Notification holds a button: {"title", "service", "data"}. */
         JSONObject asSent() {
             try {
+                if (service == null) return new JSONObject().put("title", title);
                 return new JSONObject().put("title", title).put("service", service).put("data", dataObject());
             } catch (JSONException e) {
                 throw new IllegalStateException(e);
@@ -115,6 +130,13 @@ final class HouseholdNotices {
          */
         final String code;
         final boolean offersHa;
+        /**
+         * A Hearth integration notice (HaNotices): its key there, and its buttons ({@link Action#id}) are pressed by
+         * asking the integration with a Parent PIN or a parent's phone; null for any other.
+         */
+        final String key;
+        /** A Hearth integration notice's urgency ("info", "notice", "urgent"); "" for any other. */
+        final String urgency;
 
         Notice(String item, String person, String from, String title, String text, long at, long until, String writer,
                 String joiner, String askedTv, String askedName) {
@@ -135,6 +157,15 @@ final class HouseholdNotices {
 
         Notice(String item, String person, String from, String title, String text, long at, long until, String writer,
                 String joiner, String askedTv, String askedName, String code, boolean offersHa, List<Action> actions) {
+            this(item, person, from, title, text, at, until, writer, joiner, askedTv, askedName, code, offersHa, actions,
+                    null, "");
+        }
+
+        Notice(String item, String person, String from, String title, String text, long at, long until, String writer,
+                String joiner, String askedTv, String askedName, String code, boolean offersHa, List<Action> actions,
+                String key, String urgency) {
+            this.key = key;
+            this.urgency = urgency == null ? "" : urgency;
             this.code = code == null ? "" : code;
             this.offersHa = offersHa;
             this.item = item;
@@ -153,6 +184,11 @@ final class HouseholdNotices {
 
         boolean isJoin() {
             return FROM_JOIN.equals(from);
+        }
+
+        /** Whether this is a Hearth integration notice (its buttons ask the integration). */
+        boolean fromIntegration() {
+            return key != null;
         }
     }
 
@@ -327,7 +363,8 @@ final class HouseholdNotices {
         for (HouseholdEntry e : entries) {
             if (!e.tv.equals(ownTv)) continue;
             Notice n = parse(e);
-            if (n == null || n.actions.isEmpty() || nowMs >= n.until) continue;
+            // A Hearth integration notice's buttons are never run for another TV: they ask the integration
+            if (n == null || n.actions.isEmpty() || n.fromIntegration() || nowMs >= n.until) continue;
             HouseholdEntry press = presses.get(n.person + "|" + n.item);
             if (press == null) continue;
             int index = pressIndex(press, n);
@@ -498,6 +535,12 @@ final class HouseholdNotices {
                 String title = clip(o.optString("ti", ""), MAX_TITLE);
                 String text = clip(o.optString("tx", ""), MAX_TEXT);
                 if (title.isEmpty() && text.isEmpty()) return null;
+                String key = o.optString(HaNotices.KEY, "");
+                if (HaNotices.validKey(key)) {
+                    // The Hearth integration's: its buttons are only ever pressed by asking it, never a service
+                    return new Notice(e.item, e.profile, from, title, text, at, until, e.tv, null, null, null, "",
+                            false, HaNotices.actionsIn(o), key, HaNotices.urgencyIn(o));
+                }
                 return new Notice(e.item, e.profile, from, title, text, at, until, e.tv, null, null, null,
                         actionsIn(o));
             }
@@ -527,6 +570,8 @@ final class HouseholdNotices {
         for (HouseholdEntry e : entries) {
             Notice n = parse(e);
             if (n == null || nowMs >= n.until) continue;
+            // The Hearth integration's are for adults only, whoever they name
+            if (kids && n.fromIntegration()) continue;
             if (ALL_ADULTS.equals(n.person)) {
                 if (kids) continue;
             } else if (person == null || person.isEmpty() || !n.person.equals(person)) {

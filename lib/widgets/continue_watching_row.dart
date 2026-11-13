@@ -1,3 +1,4 @@
+import 'package:flauncher/widgets/ha_panel/ha_panel_gate.dart';
 import 'package:flauncher/models/watch_next_program.dart';
 import 'package:flauncher/widgets/parent_pin_dialog.dart';
 import 'package:flauncher/providers/apps_service.dart';
@@ -182,7 +183,7 @@ class _ContinueWatchingRowState extends State<ContinueWatchingRow> {
                               // All the way right still opens the Home Assistant panel when it's on
                               if (event is KeyDownEvent &&
                                   event.logicalKey == LogicalKeyboardKey.arrowRight &&
-                                  context.read<SettingsService>().haPanelEnabled) {
+                                  haPanelAvailable(context)) {
                                 Actions.maybeInvoke(context, const OpenHaPanelIntent());
                                 return KeyEventResult.handled;
                               }

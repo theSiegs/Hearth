@@ -48,13 +48,19 @@ class HaPanel extends StatefulWidget {
 
   const HaPanel({super.key, required this.service, this.now = DateTime.now});
 
-  /// Slides the panel in over [context]'s home.
-  static Future<void> open(BuildContext context, HaPanelService service) =>
-      showDialog(
-        context: context,
-        barrierColor: Colors.transparent,
-        builder: (_) => HaPanel(service: service),
-      );
+  /// Slides the panel in over [context]'s home. Its route, for closing it from outside (a switch to a kids profile).
+  static Route<void> open(BuildContext context, HaPanelService service) {
+    // As showDialog would: on the root navigator, with the home's themes
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final route = DialogRoute<void>(
+      context: context,
+      barrierColor: Colors.transparent,
+      themes: InheritedTheme.capture(from: context, to: navigator.context),
+      builder: (_) => HaPanel(service: service),
+    );
+    navigator.push(route);
+    return route;
+  }
 
   @override
   State<HaPanel> createState() => _HaPanelState();

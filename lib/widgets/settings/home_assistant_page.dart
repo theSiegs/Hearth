@@ -22,6 +22,7 @@ import 'package:provider/provider.dart';
 
 import '../../flauncher_channel.dart';
 import '../../providers/ha_dashboards.dart';
+import '../../providers/profile_service.dart';
 import '../../providers/settings_service.dart';
 import '../rounded_switch_list_tile.dart';
 import 'focusable_settings_tile.dart';
@@ -86,6 +87,8 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
     final l = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
     final panel = context.select<SettingsService, bool>((s) => s.haPanelEnabled);
+    // The dashboard panel is for adults: a kids profile has no panel to set up (see haPanelAllowed)
+    final kids = context.select<ProfileService?, bool>((p) => p?.isKidsProfile ?? false);
     return SettingsPage(
       title: "Home Assistant",
       children: [
@@ -102,7 +105,7 @@ class _HomeAssistantPageState extends State<HomeAssistantPage> {
           trailing: Text(_onOff(l, _notifications), style: textTheme.bodySmall),
           onPressed: () => _open(HaNotificationsPage.routeName),
         ),
-        FocusableSettingsTile(
+        if (!kids) FocusableSettingsTile(
           leading: const Icon(Icons.dashboard_outlined),
           title: Text(l.haPanelTitle, style: textTheme.bodyMedium),
           trailing: Text(_onOff(l, panel), style: textTheme.bodySmall),

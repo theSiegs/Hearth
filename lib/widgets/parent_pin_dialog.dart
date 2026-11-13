@@ -20,6 +20,7 @@ import 'dart:math';
 
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/quiet_failure.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -214,6 +215,14 @@ class PinLockout {
   }
 }
 
+/// Thrown by a [ParentPinDialog]'s verify or askPhone that settled things another way (the PIN wasn't judged, so it
+/// isn't counted as wrong): the pad closes with [value].
+class PinPadClose implements Exception {
+  final String? value;
+
+  const PinPadClose([this.value]);
+}
+
 class ParentPinDialog extends StatefulWidget {
   final String title;
   final String? subtitle;
@@ -234,6 +243,14 @@ class ParentPinDialog extends StatefulWidget {
   /// PIN had been entered (see ParentApproval). Left null for every other pad (new PINs, streaming apps' PINs).
   final FLauncherChannel? phone;
 
+  /// Set where a parent's phone is asked another way (a Hearth integration notice asks the integration): called as
+  /// the pad opens, in place of [phone]; what it returns shows under the title (null: nothing). It may throw
+  /// [PinPadClose].
+  final Future<String?> Function()? askPhone;
+
+  /// A line under the title its caller may set while the pad is open (null: none), such as the phones asked later.
+  final ValueListenable<String?>? note;
+
   const ParentPinDialog(
       {super.key,
       required this.title,
@@ -242,6 +259,8 @@ class ParentPinDialog extends StatefulWidget {
       this.random,
       this.lockout,
       this.phone,
+      this.askPhone,
+      this.note,
       this.length = digitCount});
 
   @override
@@ -256,6 +275,8 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
   // Whether a parent's phone was asked, and whether it said no
   bool _phoneAsked = false;
   bool _phoneDenied = false;
+  // What [ParentPinDialog.askPhone] said
+  String? _phoneNote;
 
   PinLockout get _lockout => widget.lockout ?? PinLockout.shared;
 
@@ -265,7 +286,11 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
   void initState() {
     super.initState();
     final phone = widget.phone;
-    if (phone != null && widget.verify != null) _askPhone(phone);
+    if (widget.askPhone != null && widget.verify != null) {
+      _askOtherPhone(widget.askPhone!);
+    } else if (phone != null && widget.verify != null) {
+      _askPhone(phone);
+    }
     // The TV's count: a wait from before (another pad, HearthTube, Hearth restarted) holds here too
     if (widget.verify != null && _lockout.store != null) {
       _lockout.sync().then((_) {
@@ -309,6 +334,17 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
     });
   }
 
+  Future<void> _askOtherPhone(Future<String?> Function() ask) async {
+    try {
+      final note = await ask();
+      if (mounted && note != null) setState(() => _phoneNote = note);
+    } on PinPadClose catch (close) {
+      if (mounted) Navigator.of(context).pop(close.value);
+    } catch (_) {
+      // The PIN still works
+    }
+  }
+
   void _lock() {
     _tick?.cancel();
     _tick = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -347,6 +383,9 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
       }
       try {
         ok = await widget.verify!(_entered);
+      } on PinPadClose catch (close) {
+        if (mounted) Navigator.of(context).pop(close.value);
+        return;
       } catch (_) {
         ok = false;
       } finally {
@@ -408,11 +447,21 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
                       const SizedBox(height: 16),
                       Text(widget.subtitle!, style: const TextStyle(color: _textDim, fontSize: 15)),
                     ],
-                    if (_phoneAsked || _phoneDenied) ...[
+                    if (_phoneAsked || _phoneDenied || _phoneNote != null) ...[
                       const SizedBox(height: 16),
-                      Text(_phoneDenied ? l.parentPinPhoneDenied : l.parentPinPhoneAsked,
+                      Text(_phoneNote ?? (_phoneDenied ? l.parentPinPhoneDenied : l.parentPinPhoneAsked),
                           style: const TextStyle(color: _textDim, fontSize: 15)),
                     ],
+                    if (widget.note != null)
+                      ValueListenableBuilder<String?>(
+                        valueListenable: widget.note!,
+                        builder: (_, said, _) => said == null || said == _phoneNote
+                            ? const SizedBox.shrink()
+                            : Padding(
+                                padding: const EdgeInsets.only(top: 16),
+                                child: Text(said, style: const TextStyle(color: _textDim, fontSize: 15)),
+                              ),
+                      ),
                   ],
                 ),
               ),
