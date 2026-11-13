@@ -29,11 +29,13 @@ from .const import CONF_KIND, CONF_MEDIA_PLAYERS, CONF_PERSON, CONF_ROLES, CONTR
 from .counting import ALL
 from . import parent_pin
 from .asks import AMOUNTS, VIA_HOME_ASSISTANT, AskError
-from .limits import OTHER
+from .limits import GAMES, OTHER
 from .media import media_rooms
 from .auth import is_adult_user
-from .glance import household_glance, person_glance
+from .glance import duration, household_glance, person_glance
+from .grants import APP
 from .places import SIGNAL_PLACES
+from .targets import kind_of_target, target_of_counted, targets_of
 
 SEND_EVERY = timedelta(seconds=2)
 
@@ -52,6 +54,7 @@ def summary(hub) -> dict[str, Any]:
     today = now.date().isoformat()
     asks = [ask.approval_view(household.person_name) for ask in hub.asks.pending()]
     people = []
+    groups_of_item = household.membership()
     for person in sorted(set(household.people()) | adults | set(roles)):
         day = household.days.get(person)
         groups = []
@@ -97,7 +100,11 @@ def summary(hub) -> dict[str, Any]:
                 "allows": household.allow_views(person),
                 # An adult's pauses of one app or group (hearth.pause with app or group), apart from the family pause
                 "pauses": household.app_pause_views(person),
-                "grants": [g.view() for g in household.grants.of(person)],
+                # Their devices by id, for extra time on one device; and that extra time now
+                "targets": targets_of(household, person),
+                "device_extras": household.device_extra_views(person),
+                # An app's grant carries the app's name when Hearth knows it
+                "grants": _grant_views(household, person),
                 # Google's own daily limit per Family Link device, Microsoft's allowance per platform
                 "first_party": household.sync.first_party(person),
                 # Per parental control: what's held, the last error and what Hearth last did
@@ -106,27 +113,40 @@ def summary(hub) -> dict[str, Any]:
                 "answered_elsewhere": hub.asks.answered_elsewhere(person),
                 # pause, lock {by, until}, next_lock {at, by, kind}: as in the person's state document
                 **household._locks_document(person, day),
-                "playing": [
-                    {"app": p.app, "package": p.package, "device": p.device, "state": p.state}
-                    for p in (day.playing if day else [])
-                ],
+                "playing": [_playing_view(p, now, groups_of_item) for p in (day.playing if day else [])],
             }
         )
+        # Today's minutes per counted device and per app or title (each device's time once, as counted)
+        if day is not None:
+            people[-1]["devices_today"], people[-1]["apps_today"] = _today_by_device_and_app(household, person, day)
+        # The last 7 local days, newest first: minutes per group (today's live; {} for a day not recorded), what ran
+        # out, bonus minutes, asks and the day's budget per group (history.py)
+        people[-1]["week"] = household.history.week(
+            person, household.day_minutes(day) if day else {}, now, lambda d, p=person: household.budget_on(p, d)
+        )
+        # Today's School time window, on a school or half day ({start, end}, local), for "no school time today"
+        if (window := household.scheduler.window_today(person, now)) is not None:
+            people[-1]["school_time"] = {"start": window[0].isoformat(), "end": window[1].isoformat()}
         # Where a kid is, by name only (no coordinates): every reader of the summary is an adult (_may_read)
         if (place := household.places.summary(person)) is not None:
             people[-1]["place"] = place
         if people[-1].get("pause") and (ends_on := household.pause_view(person)):
             people[-1]["pause"] = {**people[-1]["pause"], "ends_on": ends_on}
+        # School time taken off for them today (hearth.school_time_off), for the page's "School time is back"
+        offs_today = [o for o in household.off_views(person) if o["date"] == today]
+        if offs_today:
+            people[-1]["school_time_off"] = offs_today
         # Contract 2: what an adult's app shows of them, by Hearth's rules (glance.py)
         people[-1].update(
             person_glance(
                 people[-1],
                 [a for a in asks if a["person"] == person],
                 people[-1]["allows"],
-                [o for o in household.off_views(person) if o["date"] == today],
+                offs_today,
                 now,
                 people[-1]["grants"],
                 people[-1]["answered_elsewhere"],
+                _suggest_hints(hub, person, people[-1], now),
             )
         )
     devices = []
@@ -173,11 +193,115 @@ def summary(hub) -> dict[str, Any]:
         ],
         # The house's media players by room, twins put together (media.py)
         "media_rooms": media_rooms(household.hass),
+        # Who's playing what now, everyone together, for a dashboard: oldest play first
+        "playing": sorted(
+            (
+                {
+                    "person": p["id"],
+                    "name": p["name"],
+                    "item": play["title"] or play["app"] or play["package"],
+                    **{
+                        k: play[k]
+                        for k in ("kind", "app", "title", "series", "artist", "episode", "device", "target", "since",
+                                  "minutes", "remaining", "progress", "text")
+                    },
+                }
+                for p in people
+                for play in p["playing"]
+            ),
+            key=lambda row: (row["since"] or "", row["person"]),
+        ),
         # Contract 2: the household's headline and actions (glance.py)
         "household": household_glance(people, approvals),
     }
     body["version"] = hashlib.sha256(json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()[:16]
     return body
+
+
+def _playing_view(play, now, groups_of_item) -> dict[str, Any]:
+    """A play now, with its time at this summary: `remaining` (whole minutes) and `progress` (0 to 1) when the player
+    gives its length and position (the position runs on while it plays, stands while paused); `minutes` since it
+    started for anything but music; and a short `text` ("bluey · s2e4 · 8 min left", "minecraft · 25 min", "artist ·
+    track"). An app in the Games group is a game."""
+    view = play.view()
+    if view["kind"] == "app" and play.key and GAMES in groups_of_item(play.key):
+        view["kind"] = "game"
+    music = view["kind"] == "music"
+    started = dt_util.parse_datetime(play.since or "")
+    minutes = None if music or started is None else max(0, int((now - started).total_seconds() // 60))
+    remaining = progress = None
+    if not music and play.duration_s and play.position_s is not None and play.position_at is not None:
+        position = play.position_s
+        if not play.paused:
+            position += max(0.0, (now - play.position_at).total_seconds())
+        position = min(position, play.duration_s)
+        remaining = int(round((play.duration_s - position) / 60))
+        progress = round(position / play.duration_s, 3)
+    if music:
+        text = " · ".join(x for x in (play.artist, play.title) if x)
+    elif play.series:
+        text = " · ".join(x for x in (play.series, play.episode or play.title) if x)
+    else:
+        text = play.title or play.app or play.package or "something"
+    text = text.lower()
+    if remaining is not None:
+        text = f"{text} · {duration(remaining)} left"
+    elif minutes is not None:
+        text = f"{text} · {duration(minutes)}"
+    return {**view, "minutes": minutes, "remaining": remaining, "progress": progress, "text": text}
+
+
+def _suggest_hints(hub, person: str, view: dict[str, Any], now) -> dict[str, Any]:
+    """What sizes and silences a person's suggestions (glance.suggestions): what an adult put off today, the amounts
+    the household chose for the ones pushed to phones (suggest_push.py), and what's usually given (history.py)."""
+    from .suggest_push import chosen_minutes
+
+    history = hub.household.history
+    chosen = chosen_minutes(hub.entry.options, person)
+    usual = {}
+    for group in view.get("groups") or []:
+        if group.get("minutes_left") is not None and group["minutes_left"] <= 0:
+            if (minutes := history.usual_bonus(person, group["id"], now)) is not None:
+                usual[group["id"]] = minutes
+    return {"dismissed": history.dismissed(person, dt_util.as_local(now).date()), "minutes": chosen, "usual": usual}
+
+
+def _grant_views(household, person: str) -> list[dict[str, Any]]:
+    grants = household.grants.of(person)
+    names = household.app_names({g.value for g in grants if g.kind == APP}, person)
+    return [{**g.view(), **({"name": names[g.value]} if g.kind == APP and g.value in names else {})} for g in grants]
+
+
+def _today_by_device_and_app(household, person: str, day) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    devices: dict[str, dict[str, Any]] = {}
+    apps: dict[str, float] = {}
+    for key, usage in day.devices.items():
+        target, name = target_of_counted(household, person, key)
+        row = devices.setdefault(
+            target, {"target": target, "name": name, "kind": kind_of_target(household, target), "seconds": 0.0}
+        )
+        row["seconds"] += usage.total_s
+        for item, seconds in usage.items.items():
+            apps[item] = apps.get(item, 0.0) + seconds
+    by_device = [
+        {"target": r["target"], "name": r["name"], "kind": r["kind"], "minutes": _minutes(r["seconds"])}
+        for r in sorted(devices.values(), key=lambda r: -r["seconds"])
+        if _minutes(r["seconds"]) > 0
+    ]
+    by_app = []
+    # The groups each counts in (All screen time left out), in the household's order
+    groups_of_item = household.membership()
+    order = [g.id for g in household.groups if g.id != ALL]
+    for item, seconds in sorted(apps.items(), key=lambda kv: -kv[1])[:50]:
+        if _minutes(seconds) <= 0:
+            continue
+        known = household.apps.apps.get(item)
+        name = household._label(item, known.name if known else None)
+        found = groups_of_item(item)
+        by_app.append(
+            {"package": item, "name": name, "minutes": _minutes(seconds), "groups": [g for g in order if g in found]}
+        )
+    return by_device, by_app
 
 
 def _hub(hass: HomeAssistant):

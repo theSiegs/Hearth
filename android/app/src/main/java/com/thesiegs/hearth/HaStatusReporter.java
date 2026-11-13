@@ -11,6 +11,7 @@ import android.media.session.MediaSessionManager;
 import android.media.session.PlaybackState;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -27,13 +28,15 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Objects;
 
 /**
  * Pushes what the TV is doing to Home Assistant: foreground app, now playing (from any app's media session, which
  * needs notification access), Google TV profile, kids profile, screen time lock, screen on/off, usage today and each
  * app's Android category. Sent on change (debounced) and as a heartbeat. Paired with the Hearth integration
  * ({@link HaIntegration}), it goes there with the TV's secret, and the answer is each profile's limits (kept as the
- * allowance HearthTube enforces); otherwise to a webhook, which needs no credentials for the TV.
+ * allowance HearthTube enforces). Without a pairing it sends nothing (the older webhook way is retired).
  */
 final class HaStatusReporter {
     // HaConfig's keys, under the names the activity and the accessibility service use
@@ -42,13 +45,15 @@ final class HaStatusReporter {
     private static final long HEARTBEAT_MS = 10 * 60_000;
     /**
      * Today's usage keeps growing while something is in front or playing: then a post this often (only when the counts
-     * changed). Every post runs Home Assistant's webhook automation (a logbook line, a trace), so not every minute;
+     * changed). Every post recomputes the household's limits in Home Assistant, so not every minute;
      * what matters at once (another app, play or pause, the profile, the screen, screen time) is posted as it happens.
      */
     private static final long USAGE_TICK_MS = 2 * 60_000;
     private static final String STATE_PREFS = "ltv_ha_status";
     private static final String EVENT_KEY = "screen_time_event";
     private static final String EVENT_AT_KEY = "screen_time_event_at";
+    /** The features this TV declares in its status (the integration's const.CAPS). */
+    static final List<String> CAPS = java.util.Arrays.asList("commands.play", "events", "notices");
 
     private final Context mContext;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
@@ -63,6 +68,22 @@ final class HaStatusReporter {
     private long mScreenTimeSeenAt;
     /** The last body sent; used on the sender thread (a new one after a restart, hence volatile). */
     private volatile String mLastSent;
+    /** The media position last put in a status; used on the sender thread. */
+    private volatile MediaPosition mLastPosition;
+    /**
+     * Paired and the screen on, a thread holds the integration's long-poll so a pause, a lock or an answered request
+     * arrives in seconds rather than at the next two-minute post. Seconds each wait is held (the integration keeps
+     * it under a minute), and how long to wait after a failure before asking again.
+     */
+    private static final int WAIT_S = 50;
+    private static final long WAIT_RETRY_MS = 30_000;
+    /** After a 404 (an older integration, or Home Assistant still loading), the long-poll waits this long to try again. */
+    private static final long WAIT_UNSUPPORTED_RETRY_MS = 10 * 60_000;
+    /** The version of the last state document the integration answered with: what the wait compares against. */
+    private volatile String mStateVersion;
+    /** Bumped to end the waiting thread: a thread whose generation isn't current stops after its wait. */
+    private final AtomicInteger mWaitGeneration = new AtomicInteger();
+    private boolean mWaiting;
 
     /** What the reporter knows, copied on the main thread so the status can be built on the sender thread. */
     private static final class Snapshot {
@@ -132,20 +153,13 @@ final class HaStatusReporter {
     }
 
     static boolean isConfigured(Context context) {
-        return HaIntegration.isPaired(context) || webhookUrl(context) != null;
-    }
-
-    static String webhookUrl(Context context) {
-        String base = HaConfig.baseUrl(context);
-        String id = HaConfig.prefs(context).getString(HaConfig.WEBHOOK_KEY, null);
-        if (base == null || id == null || id.trim().isEmpty()) return null;
-        return base + "/api/webhook/" + id.trim();
+        return HaIntegration.isPaired(context);
     }
 
     void start() {
         stop();
         if (!isConfigured(mContext)) {
-            Log.i(TAG, "Status reporting off (no Home Assistant address/webhook)");
+            Log.i(TAG, "Status reporting off (not paired with the Hearth integration)");
             return;
         }
         Log.i(TAG, "Status reporting to Home Assistant started");
@@ -160,9 +174,11 @@ final class HaStatusReporter {
         }
         mHandler.post(mHeartbeat);
         mHandler.postDelayed(mUsageTick, USAGE_TICK_MS);
+        startWaiting();
     }
 
     void stop() {
+        stopWaiting();
         mHandler.removeCallbacks(mHeartbeat);
         mHandler.removeCallbacks(mUsageTick);
         if (mSessionManager != null) {
@@ -193,6 +209,64 @@ final class HaStatusReporter {
         mScreenOn = on;
         scheduleSend();
         if (on) BedtimeHeadsUp.schedule(mContext);
+        // Only while someone could be watching: asleep, the two-minute post is soon enough
+        if (on) startWaiting();
+        else stopWaiting();
+    }
+
+    /** Main thread. Starts holding the long-poll, unless it's already held, unpaired, the screen is off or unsupported. */
+    private void startWaiting() {
+        if (mWaiting || !mScreenOn || !HaIntegration.isPaired(mContext)) return;
+        mWaiting = true;
+        int generation = mWaitGeneration.incrementAndGet();
+        Thread thread = new Thread(() -> waitLoop(generation), "HearthHaWait");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    /** Main thread. The waiting thread stops after the wait it holds (at most WAIT_S seconds later). */
+    private void stopWaiting() {
+        mWaiting = false;
+        mWaitGeneration.incrementAndGet();
+    }
+
+    /** The waiting thread: hold, refresh on a change, hold again; quits once its generation is old. */
+    private void waitLoop(int generation) {
+        while (generation == mWaitGeneration.get()) {
+            String held = mStateVersion;
+            HaIntegration.WaitResult result = HaIntegration.waitForChange(mContext, held, WAIT_S);
+            if (generation != mWaitGeneration.get()) return;
+            switch (result) {
+                case CHANGED:
+                    mHandler.post(this::refreshNow);
+                    // Until the refreshed answer brings the new version (else the next wait answers at once)
+                    for (int i = 0; i < 20 && Objects.equals(held, mStateVersion); i++) {
+                        if (!pause(500) || generation != mWaitGeneration.get()) return;
+                    }
+                    break;
+                case NOT_CHANGED:
+                    break;
+                case UNSUPPORTED:
+                    // An older integration, or one restarting (its views register as it loads): the two-minute
+                    // post carries on meanwhile, and the long-poll is tried again later rather than given up for good
+                    Log.i(TAG, "Home Assistant has no long-poll right now; trying again in a while");
+                    if (!pause(WAIT_UNSUPPORTED_RETRY_MS)) return;
+                    break;
+                case FAILED:
+                    if (!pause(WAIT_RETRY_MS)) return;
+                    break;
+            }
+        }
+    }
+
+    private static boolean pause(long ms) {
+        try {
+            Thread.sleep(ms);
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
     }
 
     /** Posts the status now, changed or not, for a fresh answer (a request for more time waiting for its answer). */
@@ -264,9 +338,7 @@ final class HaStatusReporter {
 
     /** Sends the status unless it's the same as the last one sent; a forced send goes out anyway. */
     private void send(boolean force) {
-        boolean paired = HaIntegration.isPaired(mContext);
-        String url = paired ? null : webhookUrl(mContext);
-        if (!paired && url == null) return;
+        if (!HaIntegration.isPaired(mContext)) return;
         Snapshot snapshot = new Snapshot(this, primaryController());
         // Labels, the profile and the allowed apps take PackageManager and UserManager calls: off the main thread
         sender().execute(() -> {
@@ -279,11 +351,7 @@ final class HaStatusReporter {
             }
             if (!force && body.equals(mLastSent)) return;
             mLastSent = body;
-            if (paired) {
-                postToIntegration(body);
-            } else {
-                post(url, body);
-            }
+            postToIntegration(body);
         });
     }
 
@@ -348,6 +416,14 @@ final class HaStatusReporter {
         status.put("usage_today", usage);
         status.put("allowed_apps", kids ? allowedApps(mContext, pm) : JSONObject.NULL);
         status.put("app_categories", categories(pm, usage, s.foregroundPackage));
+        // Hearth's own rules for the kids profiles, from before this TV was paired: Home Assistant takes them as each
+        // kid's first budgets, once (the integration's Household.import_local_rules)
+        JSONObject localRules = new JSONObject();
+        java.util.Set<String> taken = LocalAllowance.takenByHomeAssistant(mContext);
+        for (java.util.Map.Entry<String, JSONObject> rules : LocalAllowance.all(mContext).entrySet()) {
+            if (!taken.contains(rules.getKey())) localRules.put(rules.getKey(), rules.getValue());
+        }
+        if (localRules.length() > 0) status.put("local_rules", localRules);
 
         String state = "idle";
         if (s.playback != null) {
@@ -373,11 +449,62 @@ final class HaStatusReporter {
         status.put("media_album", nullable(text(metadata, MediaMetadata.METADATA_KEY_ALBUM)));
         status.put("media_duration_s", metadata == null ? JSONObject.NULL
                 : Math.max(0, metadata.getLong(MediaMetadata.METADATA_KEY_DURATION) / 1000));
+        // Where the same session is, as of when: the integration works out the time left from these, so they needn't
+        // be sent more often (a session that only refreshes its position keeps the last one, see MediaPosition)
+        MediaPosition position = s.playback == null ? null : MediaPosition.of(mLastPosition, s.mediaPackage,
+                s.playback.getState(), s.playback.getPosition(), s.playback.getPlaybackSpeed(),
+                s.playback.getLastPositionUpdateTime(), SystemClock.elapsedRealtime(), now);
+        mLastPosition = position;
+        status.put("media_position_s", position == null ? JSONObject.NULL : position.positionMs / 1000);
+        status.put("media_position_at", position == null ? JSONObject.NULL : position.at);
         status.put("now_playing_available", s.nowPlayingAvailable);
         status.put("pin_lockouts", HaParentPins.lockouts(mContext));
         // The parent PINs' hashes come in the answer only when they changed since these
         status.put("parent_pins_version", HaParentPins.version(mContext));
+        // What this TV does beyond what every TV did before caps: its state document carries notices
+        status.put("caps", new JSONArray(CAPS));
         return status;
+    }
+
+    /**
+     * Where a media session's playback was (ms) and when that was true (epoch ms), from its PlaybackState: any app's
+     * session, HearthTube's too. The integration moves it on while the state says playing.
+     */
+    static final class MediaPosition {
+        /** A report this close to where the last one says playback should be is the same play going on. */
+        static final long SLACK_MS = 2000;
+
+        final String packageName;
+        final int state;
+        final float speed;
+        final long positionMs;
+        final long at;
+
+        private MediaPosition(String packageName, int state, float speed, long positionMs, long at) {
+            this.packageName = packageName;
+            this.state = state;
+            this.speed = speed;
+            this.positionMs = positionMs;
+            this.at = at;
+        }
+
+        /**
+         * The position as of the session's last update ([updatedElapsed], elapsedRealtime; 0 when it doesn't say,
+         * then as of now); null when the session doesn't know it ([positionMs] PLAYBACK_POSITION_UNKNOWN). The
+         * [last] one comes back when this agrees with it, so the status stays the same and isn't sent again.
+         */
+        static MediaPosition of(MediaPosition last, String packageName, int state, long positionMs, float speed,
+                long updatedElapsed, long elapsedNow, long wallNow) {
+            if (positionMs < 0) return null;
+            long at = updatedElapsed > 0 ? wallNow - Math.max(0, elapsedNow - updatedElapsed) : wallNow;
+            if (last != null && last.state == state && last.speed == speed
+                    && Objects.equals(last.packageName, packageName)) {
+                long expected = last.positionMs + (state == PlaybackState.STATE_PLAYING
+                        ? (long) ((at - last.at) * (double) speed) : 0);
+                if (Math.abs(expected - positionMs) <= SLACK_MS) return last;
+            }
+            return new MediaPosition(packageName, state, speed, positionMs, at);
+        }
     }
 
     private MediaController primaryController() {
@@ -486,11 +613,15 @@ final class HaStatusReporter {
         Log.d(TAG, "Status sent, the Hearth integration answered " + answer.code);
         if (answer.code == 200 && answer.body != null) {
             JSONObject state = answer.body.optJSONObject("state");
+            mStateVersion = state != null ? state.optString("version", null) : null;
             HaAllowance.fromDocument(mContext, state);
+            LocalAllowance.noteTaken(mContext, answer.body.optJSONArray("local_rules_taken"));
             // A parent's YouTube blocks set in Home Assistant, for HearthTube in the kids profiles
             ParentBlocks.applyDocument(mContext, state);
             // The adults' parent PINs, which are this TV's while Home Assistant names them
             HaParentPins.applyDocument(mContext, state);
+            // The integration's notices for the adults, in the Bell (none in the document: none left)
+            if (state != null) Household.onIntegrationNotices(mContext, HaNotices.fromDocument(state));
             mHandler.post(() -> {
                 ProfileProvider.notifyChanged(mContext);
                 // A pause, a lock, the next bedtime or a request's answer may have changed
@@ -506,35 +637,4 @@ final class HaStatusReporter {
         if (answer.code == 401) mHandler.post(() -> HaBridgeService.sync(mContext));
     }
 
-    private void post(String url, String body) {
-        HttpURLConnection connection = null;
-        try {
-            URL target = new URL(url);
-            if (!LocalNet.allows(target)) {
-                Log.w(TAG, "Refusing plain HTTP to a non-local address; use https");
-                return;
-            }
-            connection = (HttpURLConnection) target.openConnection();
-            connection.setConnectTimeout(5_000);
-            connection.setReadTimeout(5_000);
-            connection.setRequestMethod("POST");
-            connection.setDoOutput(true);
-            connection.setRequestProperty("Content-Type", "application/json");
-            try (OutputStream out = connection.getOutputStream()) {
-                out.write(body.getBytes(StandardCharsets.UTF_8));
-            }
-            int code = connection.getResponseCode();
-            Log.d(TAG, "Status sent, Home Assistant answered " + code);
-            if (code >= 300) {
-                Log.w(TAG, "Home Assistant webhook returned " + code);
-                mLastSent = null;
-            }
-        } catch (Exception e) {
-            Log.w(TAG, "Couldn't reach Home Assistant: " + e.getMessage());
-            // Retry with the next change or heartbeat
-            mLastSent = null;
-        } finally {
-            if (connection != null) connection.disconnect();
-        }
-    }
 }

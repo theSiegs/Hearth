@@ -991,31 +991,21 @@ extension _CardScreens on _SetupFlowPageState {
     );
   }
 
-  /// TV status: the webhook id comes from the same phone page.
+  /// TV status: pairing with the Hearth integration, which is how the TV tells Home Assistant what's on.
   Widget _haStatusScreen(AppLocalizations l) {
     if (_state == SetupStepState.done) return _doneBody(l, l.setupFlowHaStatusDone);
     return SetupScreenBody(
       icon: Icons.sensors,
       title: l.setupFlowHaStatusTitle,
       body: l.setupFlowHaStatusBody,
-      content: [
-        if (_haCreateNote != null) Text(_haCreateNote!, style: const TextStyle(color: Colors.amber, fontSize: 13))
-        else if (_state == SetupStepState.notYet)
-          Text(l.setupFlowHaStatusNoWebhook, style: const TextStyle(color: Colors.amber, fontSize: 13)),
-      ],
       buttons: [
         SetupButton(label: l.setupFlowSkip, onPressed: _next),
         SetupButton(
-          label: l.haSetUpFromPhone,
-          icon: Icons.qr_code_2,
-          onPressed: () => _haFromPhone(SetupScreen.haStatus),
-        ),
-        SetupButton(
-          label: l.haStatusCreate,
-          icon: Icons.auto_fix_high,
+          label: l.haPairTitle,
+          icon: Icons.link,
           focusNode: _primary,
           autofocus: true,
-          onPressed: _haCreateStatus,
+          onPressed: _haPair,
         ),
       ],
     );
@@ -1049,33 +1039,16 @@ extension _CardScreens on _SetupFlowPageState {
     );
   }
 
-  /// Has Hearth make TV status in Home Assistant for this TV; done when it worked, else says why.
-  Future<void> _haCreateStatus() async {
-    final l = AppLocalizations.of(context)!;
-    String? note;
-    try {
-      final result = await _channel.setUpHaStatus();
-      switch (result["state"]) {
-        case "done":
-          await _refresh();
-          if (!mounted) return;
-          _update(() => _haCreateNote = null);
-          _showDone(SetupScreen.haStatus, const Duration(seconds: 2));
-          return;
-        case "not_admin":
-          note = l.haStatusNotAdmin;
-        case "not_set_up":
-          note = l.haStatusNotSetUp;
-        default:
-          note = l.haStatusCreateFailed;
-      }
-    } catch (err) {
-      noteFailure('setup_flow_cards', err);
-      note = l.haStatusCreateFailed;
-    }
+  /// Pairs with the Hearth integration (its own page); done once the TV is paired.
+  Future<void> _haPair() async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const Scaffold(body: HaPairPage())));
+    await _refresh();
     if (!mounted) return;
-    _update(() => _haCreateNote = note);
-    _focusPrimary();
+    if (_snap?.haStatus ?? false) {
+      _showDone(SetupScreen.haStatus, const Duration(seconds: 2));
+    } else {
+      _focusPrimary();
+    }
   }
 
   /// The phone page's QR code; once the phone has sent, what it set up shows as done.
@@ -1094,8 +1067,6 @@ extension _CardScreens on _SetupFlowPageState {
       // The panel is each profile's own: on for this one, as the owner just set it up
       await settings?.setHaPanelEnabled(true);
       _showDone(screen, null);
-    } else if (screen == SetupScreen.haStatus && (snap?.haStatus ?? false)) {
-      _showDone(screen, const Duration(seconds: 2));
     } else {
       _update(() => _state = SetupStepState.notYet);
       _focusPrimary();

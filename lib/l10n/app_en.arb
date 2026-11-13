@@ -533,7 +533,7 @@
     "@kidsProfilesFix": {
         "description": "Kids profiles page: the button that puts Hearth back on the profiles that need it"
     },
-    "kidsProfilesFixBody": "Puts Hearth and HearthTube back where they're missing. Each kid they're added for gets one Family Link notice.",
+    "kidsProfilesFixBody": "Puts Hearth and HearthTube back where they're missing.",
     "@kidsProfilesFixBody": {
         "description": "Kids profiles page: under the Fix button"
     },
@@ -791,6 +791,10 @@
         "placeholders": {
             "time": {"type": "String"}
         }
+    },
+    "haPanelKidsAskAdult": "The dashboard is for adults. Ask an adult.",
+    "@haPanelKidsAskAdult": {
+        "description": "Short message when something tries to open the Home Assistant dashboard panel in a kids profile, where it never opens"
     },
     "lookTitle": "Look",
     "@lookTitle": {
@@ -1536,6 +1540,34 @@
     "parentPinPhoneAsked": "Asked a parent's phone. Allow it there, or enter the PIN here.",
     "@parentPinPhoneAsked": {
         "description": "PIN screen: a parent's phone was sent a request to allow this instead of the PIN"
+    },
+    "noticeSentToPhone": "Sent to your phone. Answer there, or enter the PIN here.",
+    "@noticeSentToPhone": {
+        "description": "PIN screen for a Hearth notice's button: the adults' phones were asked too"
+    },
+    "noticeDone": "Done",
+    "@noticeDone": {
+        "description": "Brief message: a Hearth notice's button ran after the Parent PIN"
+    },
+    "noticeSent": "Sent to your phone",
+    "@noticeSent": {
+        "description": "Brief message: a Hearth notice's button waits for an adult's answer on their phone"
+    },
+    "noticeGone": "That's already been answered",
+    "@noticeGone": {
+        "description": "Brief message: the Hearth notice whose button was pressed no longer exists"
+    },
+    "noticeUsePhone": "Answer this on your phone",
+    "@noticeUsePhone": {
+        "description": "Brief message: this Home Assistant can't take a notice's button from the TV"
+    },
+    "noticeTooMany": "Too many tries. Try again later.",
+    "@noticeTooMany": {
+        "description": "Brief message: Home Assistant refused a notice's button because of too many tries"
+    },
+    "noticeFailed": "That didn't work. Try again.",
+    "@noticeFailed": {
+        "description": "Brief message: a notice's button didn't get through, or Home Assistant couldn't run it"
     },
     "parentPinPhoneDenied": "Not allowed from the phone. Enter the PIN here.",
     "@parentPinPhoneDenied": {
@@ -2514,13 +2546,17 @@
     "@cwPlaybackProgressBar": {
         "description": "Switch on the Continue Watching page"
     },
-    "cwPlaybackPercentage": "Playback Percentage",
-    "@cwPlaybackPercentage": {
-        "description": "Switch on the Continue Watching page"
-    },
     "cwEpisodeDetails": "Episode & Video Details",
     "@cwEpisodeDetails": {
         "description": "Switch on the Continue Watching page"
+    },
+    "cwShareWatchHistory": "Share What I Watch With Our Other TVs",
+    "@cwShareWatchHistory": {
+        "description": "Switch on the Continue Watching page: this profile's Continue Watching goes to the household's other TVs"
+    },
+    "cwShareWatchHistoryDescription": "What you watch shows in Continue Watching on your other TVs. Off: it stays on the TV you watched it on.",
+    "@cwShareWatchHistoryDescription": {
+        "description": "Subtitle of the share switch on the Continue Watching page"
     },
     "cwBlockedCount": "{count, plural, =1{1 blocked} other{{count} blocked}}",
     "@cwBlockedCount": {
@@ -3919,7 +3955,7 @@
     "@setupFlowHaStatusTitle": {
         "description": "Setup flow: Home Assistant TV status step's title"
     },
-    "setupFlowHaStatusBody": "The TV can send what's playing and the active profile to Home Assistant. On the same phone page, add the ID of a webhook automation from Home Assistant.",
+    "setupFlowHaStatusBody": "Pair the TV with Hearth in Home Assistant: it tells Home Assistant what's playing and the active profile, and takes each kid's limits from there. Pairing one TV pairs the others in your household too.",
     "@setupFlowHaStatusBody": {
         "description": "Setup flow: Home Assistant TV status step"
     },
@@ -4850,5 +4886,85 @@
     "glanceTodoFailed": "Couldn't mark that done. Try again in a moment.",
     "@glanceTodoFailed": {
         "description": "Glance page's to-do view: Home Assistant didn't mark the thing done"
+    },
+    "screenTimeTitle": "Screen time",
+    "@screenTimeTitle": {
+        "description": "A kid's own screen-time rules (a TV without Home Assistant): the tile and page title"
+    },
+    "screenTimeNone": "No limits",
+    "@screenTimeNone": {
+        "description": "Screen time tile: the kid has no rules"
+    },
+    "screenTimeSet": "Limits set",
+    "@screenTimeSet": {
+        "description": "Screen time tile: the kid has rules"
+    },
+    "screenTimeInHomeAssistant": "Set in Home Assistant",
+    "@screenTimeInHomeAssistant": {
+        "description": "Screen time tile when Home Assistant decides the kid's limits"
+    },
+    "screenTimeHint": "For this kid on every TV in your household. Time in any app counts, except Hearth itself.",
+    "@screenTimeHint": {
+        "description": "Screen time page: what the limits cover"
+    },
+    "screenTimeAll": "All screen time",
+    "@screenTimeAll": {
+        "description": "Screen time: the group of every app"
+    },
+    "screenTimeGames": "Games",
+    "@screenTimeGames": {
+        "description": "Screen time: the group of games"
+    },
+    "screenTimeYouTube": "YouTube",
+    "@screenTimeYouTube": {
+        "description": "Screen time: the group of YouTube and HearthTube"
+    },
+    "screenTimeWeekdays": "Weekdays",
+    "@screenTimeWeekdays": {
+        "description": "Screen time: minutes on Monday to Friday"
+    },
+    "screenTimeWeekends": "Weekends",
+    "@screenTimeWeekends": {
+        "description": "Screen time: minutes on Saturday and Sunday"
+    },
+    "screenTimeNoneAllowed": "None",
+    "@screenTimeNoneAllowed": {
+        "description": "Screen time: a limit of 0 minutes"
+    },
+    "bedtimeTitle": "Bedtime",
+    "@bedtimeTitle": {
+        "description": "Screen time page: the bedtime section and its start"
+    },
+    "bedtimeOff": "Off",
+    "@bedtimeOff": {
+        "description": "Bedtime: none"
+    },
+    "bedtimeUntil": "Until",
+    "@bedtimeUntil": {
+        "description": "Bedtime: when it ends in the morning"
+    },
+    "bedtimeNights": "Nights",
+    "@bedtimeNights": {
+        "description": "Bedtime: which nights it holds"
+    },
+    "bedtimeNightsAll": "Every night",
+    "@bedtimeNightsAll": {
+        "description": "Bedtime nights: all"
+    },
+    "bedtimeNightsWeekdays": "School nights (Sunday to Thursday)",
+    "@bedtimeNightsWeekdays": {
+        "description": "Bedtime nights: before a weekday"
+    },
+    "bedtimeNightsWeekends": "Friday and Saturday",
+    "@bedtimeNightsWeekends": {
+        "description": "Bedtime nights: before a weekend day"
+    },
+    "adbAllowTitle": "Allow a computer to connect",
+    "@adbAllowTitle": {
+        "description": "Settings > Family: let a computer on the network debug the TV for two minutes (Hearth answers others Cancel)"
+    },
+    "adbAllowBody": "For the next 2 minutes, when the TV asks \"Allow debugging?\", it's yours to answer. After that, Hearth says no to any computer but its own again.",
+    "@adbAllowBody": {
+        "description": "After the Parent PIN: what allowing a computer does; quotes Android's debugging prompt"
     }
 }

@@ -21,6 +21,7 @@ import 'package:flauncher/widgets/settings/setup_checklist_page.dart';
 import 'package:flauncher/models/kids_profiles.dart';
 import 'package:flauncher/widgets/settings/kid_parent_pages.dart';
 import 'package:flauncher/widgets/settings/kid_profile_page.dart';
+import 'package:flauncher/widgets/settings/screen_time_rules_page.dart';
 import 'package:flauncher/widgets/settings/kids_profiles_page.dart';
 import 'package:flauncher/widgets/settings/profile_pairing_page.dart';
 import 'package:flauncher/widgets/settings/remote_phones_page.dart';
@@ -194,6 +195,8 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     return _FastPageRoute(builder: (_) => KidProfilePage(state: state, kid: kid));
                   case KidWatchLogPage.routeName:
                     return _FastPageRoute(builder: (_) => KidWatchLogPage(profileKey: settings.arguments as String));
+                  case ScreenTimeRulesPage.routeName:
+                    return _FastPageRoute(builder: (_) => ScreenTimeRulesPage(profileKey: settings.arguments as String));
                   case KidBlocksPage.routeName:
                     return _FastPageRoute(builder: (_) => KidBlocksPage(profileKey: settings.arguments as String));
                   case StreamingPinsPage.routeName:
@@ -222,8 +225,6 @@ class _SettingsPanelState extends State<SettingsPanel> {
                     return _FastPageRoute(builder: (_) => const HaNotificationsPage());
                   case HaPanelPage.routeName:
                     return _FastPageRoute(builder: (_) => const HaPanelPage());
-                  case HaStatusPage.routeName:
-                    return _FastPageRoute(builder: (_) => const HaStatusPage());
                   case HaPairPage.routeName:
                     return _FastPageRoute(builder: (_) => const HaPairPage());
                   case CalendarsPage.routeName:

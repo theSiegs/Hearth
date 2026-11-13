@@ -272,6 +272,28 @@ class FLauncherChannel {
 
   static void Function(String packageName)? _onOpenProfilePins;
 
+  /// A Hearth integration notice's button pressed while Hearth wasn't running yet: {person, item, index, title, button,
+  /// phone}, or null.
+  Future<Map<dynamic, dynamic>?> takePendingNoticePress() async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("takePendingNoticePress");
+
+  /// Calls [onPress] when one of the Hearth integration's notice buttons is pressed (in the Bell or its pop-up): the
+  /// Parent PIN pad opens for it.
+  static void listenForNoticePress(void Function(Map<dynamic, dynamic> press) onPress) {
+    _onNoticePress = onPress;
+    _listen();
+  }
+
+  static void Function(Map<dynamic, dynamic> press)? _onNoticePress;
+
+  /// Asks the Hearth integration to run a notice's button: with the Parent PIN, or (no [pin]) by the adults' phones.
+  /// {"result": "done" | "pending" | "gone" | "wrong_pin" | "too_many" | "bad_request" | "unsupported" |
+  /// "unreachable" | "failed", "retryAfter": seconds}.
+  Future<Map<dynamic, dynamic>> pressIntegrationNotice(String person, String item, int index, {String? pin}) async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>(
+          "pressIntegrationNotice", {"person": person, "item": item, "index": index, "pin": pin}) ??
+      {"result": "failed"};
+
   /// Whether Hearth can type profile PINs in the app yet (it has a recipe for the app's PIN screen).
   Future<bool> profilePinEntrySupported(String packageName) async =>
       await _methodChannel.invokeMethod<bool>("profilePinEntrySupported", packageName) ?? false;
@@ -390,6 +412,21 @@ class FLauncherChannel {
 
   /// A profile's daily YouTube limit in HearthTube, in minutes; 0 for none. [profileKey]: a kids profile's
   /// ("user:11", from [getKidsProfilesState]); without it, the profile on now.
+  /// A kid's own screen-time rules ([ScreenTimeRules] JSON, null: none), whether Home Assistant decides instead
+  /// (then they aren't used), and the kid's older YouTube limit in minutes (0: none), to start the rules from.
+  Future<({String? rules, bool homeAssistant, int youtubeMinutes})> getLocalRules(String profileKey) async {
+    final map = await _methodChannel.invokeMapMethod<String, dynamic>("getLocalRules", profileKey) ?? {};
+    return (
+      rules: map["rules"] as String?,
+      homeAssistant: map["homeAssistant"] as bool? ?? false,
+      youtubeMinutes: map["youtubeMinutes"] as int? ?? 0,
+    );
+  }
+
+  /// Sets a kid's own rules (null: none); they take the place of the older YouTube limit, and reach the household.
+  Future<void> setLocalRules(String profileKey, String? rules) async =>
+      await _methodChannel.invokeMethod("setLocalRules", {"profileKey": profileKey, "rules": rules});
+
   Future<int> getYouTubeDailyMinutes({String? profileKey}) async =>
       await _methodChannel.invokeMethod<int>("getYouTubeDailyMinutes", profileKey) ?? 0;
 
@@ -437,6 +474,7 @@ class FLauncherChannel {
       if (call.method == "profileSwitching") _onProfileSwitching?.call(call.arguments as String);
       if (call.method == "profileSwitchCancelled") _onProfileSwitchCancelled?.call();
       if (call.method == "openProfilePins") _onOpenProfilePins?.call(call.arguments as String);
+      if (call.method == "openNoticePress") _onNoticePress?.call(call.arguments as Map<dynamic, dynamic>);
       if (call.method == "resumeSetup") _onResumeSetup?.call(call.arguments as String? ?? "");
       if (call.method == "homePressed") _onHomePressed?.call();
       if (call.method == "timeUp") _onTimeUp?.call(call.arguments as String?);
@@ -463,11 +501,6 @@ class FLauncherChannel {
   /// The streaming apps Profile Pairing handles: [{packageName, label, installed, seenProfiles, enabled}].
   Future<List<Map<dynamic, dynamic>>> getProfilePairingApps() async =>
       await _methodChannel.invokeListMethod<Map<dynamic, dynamic>>("getProfilePairingApps") ?? [];
-
-  /// Makes TV status in Home Assistant for this TV with its own token (helpers, an automation, a new webhook id) and
-  /// turns reporting on: {state: done | not_admin | not_set_up | failed, helpers?, webhook?, automation?}.
-  Future<Map<dynamic, dynamic>> setUpHaStatus() async =>
-      (await _methodChannel.invokeMapMethod<dynamic, dynamic>("setUpHaStatus")) ?? {"state": "failed"};
 
   /// Where this TV stands in its household: {joined, lost, removed, enabled, tvId, peers: [{tvId}], lastSyncAt,
   /// lastResult, members: [{tvId, name, self, online, lastSeen}], nearby: [[name, …], …],
@@ -545,6 +578,20 @@ class FLauncherChannel {
 
   /// A Parent PIN of this TV's own was set: the kept Home Assistant ones go.
   Future<void> forgetHaParentPins() async => await _methodChannel.invokeMethod("forgetHaParentPins");
+
+  /// The TV's one count of wrong Parent PINs (ParentPinPolicy): when a pad opens again (ms since the epoch, 0: open),
+  /// a wrong PIN (answers the same), a right one.
+  Future<int> parentPinLockedUntil() async => await _methodChannel.invokeMethod<int>("parentPinLockedUntil") ?? 0;
+
+  Future<int> parentPinMiss() async => await _methodChannel.invokeMethod<int>("parentPinMiss") ?? 0;
+
+  Future<void> parentPinClear() async => await _methodChannel.invokeMethod("parentPinClear");
+
+  /// A parent let a computer connect for two minutes (AdbPromptGuard): until when (ms since the epoch).
+  Future<int> allowAdbComputer() async => await _methodChannel.invokeMethod<int>("allowAdbComputer") ?? 0;
+
+  Future<int> adbComputerAllowedUntil() async =>
+      await _methodChannel.invokeMethod<int>("adbComputerAllowedUntil") ?? 0;
 
   /// A Parent PIN pad here locked out wrong guesses (counted for the integration).
   Future<void> noteParentPinLockout() async => await _methodChannel.invokeMethod("noteParentPinLockout");
@@ -726,6 +773,9 @@ class FLauncherChannel {
 
   Future<void> openHaPanel() async => await _methodChannel.invokeMethod("openHaPanel");
 
+  /// Closes Home Assistant's web page panel if it's open (a kids profile came on).
+  Future<void> closeHaPanel() async => await _methodChannel.invokeMethod("closeHaPanel");
+
   /// An adult is at the remote: their profile came on (or they entered the parent PIN) and the remote hasn't gone
   /// untouched for five minutes since. False when Hearth can't tell.
   Future<bool> isParentPresent() async {
@@ -809,12 +859,6 @@ class FLauncherChannel {
 
   /// True once a phone has sent the address and token through the setup page.
   Future<bool> getHaSetupReceived() async => await _methodChannel.invokeMethod<bool>("getHaSetupReceived") ?? false;
-
-  Future<Map<dynamic, dynamic>> getHaStatusConfig() async =>
-      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getHaStatusConfig") ?? {};
-
-  Future<void> setHaStatusConfig(String? url, String? webhookId) async =>
-      await _methodChannel.invokeMethod("setHaStatusConfig", {"url": url, "webhookId": webhookId});
 
   /// The Hearth integration for Home Assistant: {paired: bool, url: the address or null}.
   Future<Map<dynamic, dynamic>> getHaIntegration() async =>

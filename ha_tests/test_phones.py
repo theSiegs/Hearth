@@ -1,7 +1,7 @@
 """Requests for more time reach every adult's own phones, open the request when tapped, and leave every phone when
 answered."""
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import Context, HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
@@ -75,7 +75,7 @@ async def test_every_adult_s_phone_gets_the_request_and_loses_it_once_answered(
 
 
 async def test_an_adult_can_switch_requests_off_or_open_them_in_their_own_app(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_admin_user
 ) -> None:
     client, secret, alex, jordan = await _two_adults(hass, hass_client_no_auth)
     other = async_mock_service(hass, "notify", "mobile_app_kitchen_tablet")
@@ -95,7 +95,7 @@ async def test_an_adult_can_switch_requests_off_or_open_them_in_their_own_app(
     assert other[0].data["data"]["url"] == page_link(request["id"])
 
     # A button on the phone answers it: every phone told still loses it
-    hass.bus.async_fire("mobile_app_notification_action", {"action": f"HEARTH_MORE|{request['id']}|0"})
+    hass.bus.async_fire("mobile_app_notification_action", {"action": f"HEARTH_MORE|{request['id']}|0"}, context=Context(user_id=hass_admin_user.id))
     await hass.async_block_till_done()
     assert alex[-1].data["message"] == "clear_notification"
     assert other[-1].data["message"] == "clear_notification"

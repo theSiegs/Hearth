@@ -703,7 +703,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get kidsProfilesFixBody =>
-      'Puts Hearth and HearthTube back where they\'re missing. Each kid they\'re added for gets one Family Link notice.';
+      'Puts Hearth and HearthTube back where they\'re missing.';
 
   @override
   String get kidsProfilesNone => 'There are no kids profiles on this TV.';
@@ -907,6 +907,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String glintSchoolTimeAt(String time) {
     return 'School time at $time';
   }
+
+  @override
+  String get haPanelKidsAskAdult =>
+      'The dashboard is for adults. Ask an adult.';
 
   @override
   String get lookTitle => 'Look';
@@ -1436,6 +1440,28 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get parentPinPhoneAsked =>
       'Asked a parent\'s phone. Allow it there, or enter the PIN here.';
+
+  @override
+  String get noticeSentToPhone =>
+      'Sent to your phone. Answer there, or enter the PIN here.';
+
+  @override
+  String get noticeDone => 'Done';
+
+  @override
+  String get noticeSent => 'Sent to your phone';
+
+  @override
+  String get noticeGone => 'That\'s already been answered';
+
+  @override
+  String get noticeUsePhone => 'Answer this on your phone';
+
+  @override
+  String get noticeTooMany => 'Too many tries. Try again later.';
+
+  @override
+  String get noticeFailed => 'That didn\'t work. Try again.';
 
   @override
   String get parentPinPhoneDenied =>
@@ -2147,10 +2173,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cwPlaybackProgressBar => 'Playback Progress Bar';
 
   @override
-  String get cwPlaybackPercentage => 'Playback Percentage';
+  String get cwEpisodeDetails => 'Episode & Video Details';
 
   @override
-  String get cwEpisodeDetails => 'Episode & Video Details';
+  String get cwShareWatchHistory => 'Share What I Watch With Our Other TVs';
+
+  @override
+  String get cwShareWatchHistoryDescription =>
+      'What you watch shows in Continue Watching on your other TVs. Off: it stays on the TV you watched it on.';
 
   @override
   String cwBlockedCount(int count) {
@@ -3218,7 +3248,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get setupFlowHaStatusBody =>
-      'The TV can send what\'s playing and the active profile to Home Assistant. On the same phone page, add the ID of a webhook automation from Home Assistant.';
+      'Pair the TV with Hearth in Home Assistant: it tells Home Assistant what\'s playing and the active profile, and takes each kid\'s limits from there. Pairing one TV pairs the others in your household too.';
 
   @override
   String get setupFlowHaStatusNoWebhook =>
@@ -3914,4 +3944,66 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get glanceTodoFailed =>
       'Couldn\'t mark that done. Try again in a moment.';
+
+  @override
+  String get screenTimeTitle => 'Screen time';
+
+  @override
+  String get screenTimeNone => 'No limits';
+
+  @override
+  String get screenTimeSet => 'Limits set';
+
+  @override
+  String get screenTimeInHomeAssistant => 'Set in Home Assistant';
+
+  @override
+  String get screenTimeHint =>
+      'For this kid on every TV in your household. Time in any app counts, except Hearth itself.';
+
+  @override
+  String get screenTimeAll => 'All screen time';
+
+  @override
+  String get screenTimeGames => 'Games';
+
+  @override
+  String get screenTimeYouTube => 'YouTube';
+
+  @override
+  String get screenTimeWeekdays => 'Weekdays';
+
+  @override
+  String get screenTimeWeekends => 'Weekends';
+
+  @override
+  String get screenTimeNoneAllowed => 'None';
+
+  @override
+  String get bedtimeTitle => 'Bedtime';
+
+  @override
+  String get bedtimeOff => 'Off';
+
+  @override
+  String get bedtimeUntil => 'Until';
+
+  @override
+  String get bedtimeNights => 'Nights';
+
+  @override
+  String get bedtimeNightsAll => 'Every night';
+
+  @override
+  String get bedtimeNightsWeekdays => 'School nights (Sunday to Thursday)';
+
+  @override
+  String get bedtimeNightsWeekends => 'Friday and Saturday';
+
+  @override
+  String get adbAllowTitle => 'Allow a computer to connect';
+
+  @override
+  String get adbAllowBody =>
+      'For the next 2 minutes, when the TV asks \"Allow debugging?\", it\'s yours to answer. After that, Hearth says no to any computer but its own again.';
 }

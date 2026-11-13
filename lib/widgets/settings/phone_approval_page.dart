@@ -183,7 +183,9 @@ class _PhoneApprovalPageState extends State<PhoneApprovalPage> {
     if (first == null || !mounted) return;
     final second = await showDialog<String>(
       context: context,
-      builder: (_) => ParentPinDialog(title: l.parentPinConfirm, verify: (pin) => pin == first, length: 4),
+      // Confirming the Google TV PIN isn't a guess at the Parent PIN
+      builder: (_) =>
+          ParentPinDialog(title: l.parentPinConfirm, verify: (pin) => pin == first, lockout: PinLockout(), length: 4),
     );
     if (second == null || !mounted) return;
     final ok = await _channel.saveGoogleTvPin(first);

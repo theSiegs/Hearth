@@ -4,8 +4,17 @@ Two sorts:
 
 - **Totals**: a sensor of time today (Family Link's Daily Screen Time, Family Safety's Screen Time, Nintendo's Used
   screen time). Its state is the time; an `apps` attribute of `{"package", "minutes"}` (Family Link's) breaks it down.
+  Family Safety's Screen Time has no such attribute: its breakdown comes from the same child's Applications sensor
+  (its `applications` list of `{"app_id", "app_name", "usage_minutes", ...}`), each app under its Microsoft app id
+  (x:... Xbox, appx:... or win32:... Windows, a:... a phone), as a group's Family Safety apps name them. The Xbox
+  Screen Time sensor's takes only the Xbox's (x:...).
 - **Live**: a sensor whose state is what's being played now (Xbox's Now playing, a Switch presence Game sensor), or
   empty. The integration times it (live.py).
+- **Phone app** (`phone_app: true`, live): a phone's last used app, from the Home Assistant companion app
+  (`sensor.<device>_last_used_app`, Android). It's now playing only while the phone's screen is on and interactive
+  (`screen`: a binary sensor, by default the same device's `binary_sensor.<device>_interactive`), never a launcher, and
+  it isn't timed (the phone's own parental controls, or nothing, count its time). For phones without Hearth's app:
+  a kid's Family Link phone, an adult's.
 
 A source can be "the same device" as a Hearth device or another source, so their minutes are counted once.
 """
@@ -18,6 +27,7 @@ from typing import Any
 
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 
 from .counting import Reading
 
@@ -28,6 +38,8 @@ CONF_TITLES = "titles"
 NOT_PLAYING = {"", "none", "offline", "online", "idle", "home", "away", "not playing", STATE_UNKNOWN, STATE_UNAVAILABLE}
 
 _UNITS = {"s": 1, "sec": 1, "min": 60, "h": 3600, "hr": 3600, "d": 86400}
+FS_DOMAIN = "microsoft_family_safety"
+MAX_APPS = 200
 
 
 @dataclass(frozen=True)
@@ -41,6 +53,9 @@ class Source:
     same_as: str | None = None
     # The group its time is in when it can't say which app (games, for a Switch or Xbox)
     group: str | None = None
+    # A companion app's last used app: playing only while [screen] (else the phone's Interactive sensor) is on; untimed
+    phone_app: bool = False
+    screen: str | None = None
 
     @property
     def reading_source(self) -> str:
@@ -57,9 +72,49 @@ def sources_from_options(options: dict[str, Any]) -> list[Source]:
             live=bool(s.get("live")),
             same_as=s.get("same_as") or None,
             group=s.get("group") or None,
+            phone_app=bool(s.get("phone_app")),
+            screen=s.get("screen") or None,
         )
         for s in options.get(CONF_SOURCES, [])
     ]
+
+
+LAST_USED_APP = "_last_used_app"
+INTERACTIVE = "_interactive"
+# What a phone shows between apps: its home screen and the system's own screens
+_NOT_APPS = ("launcher", "com.android.systemui", "com.google.android.permissioncontroller", "com.android.settings")
+
+
+def is_phone_app(entity_id: str) -> bool:
+    """A companion app's Last used app sensor, by its entity id."""
+    return entity_id.startswith("sensor.") and entity_id.endswith(LAST_USED_APP)
+
+
+def screen_entity(hass: HomeAssistant, source: Source) -> str | None:
+    """A phone app source's screen sensor: its own, else an Interactive binary sensor of the same device, else the
+    one named after the sensor (binary_sensor.<device>_interactive)."""
+    if source.screen:
+        return source.screen
+    registry = er.async_get(hass)
+    entry = registry.async_get(source.entity_id)
+    if entry is not None and entry.device_id:
+        for other in er.async_entries_for_device(registry, entry.device_id):
+            if other.domain == "binary_sensor" and other.entity_id.endswith(INTERACTIVE):
+                return other.entity_id
+    stem = source.entity_id.removeprefix("sensor.").removesuffix(LAST_USED_APP)
+    return f"binary_sensor.{stem}{INTERACTIVE}"
+
+
+def phone_app_playing(hass: HomeAssistant, source: Source) -> str | None:
+    """The app a phone app source says is in use now (a package), or None: the screen isn't on and interactive (or
+    can't be told), or it's the home screen."""
+    screen = hass.states.get(screen_entity(hass, source) or "")
+    if screen is None or screen.state != "on":
+        return None
+    package = now_playing(hass, source)
+    if package is None or any(part in package.lower() for part in _NOT_APPS):
+        return None
+    return package
 
 
 def device_key(source: Source, sources: dict[str, Source]) -> str:
@@ -98,7 +153,7 @@ def totals_reading(hass: HomeAssistant, source: Source) -> Reading | None:
     items: dict[str, float] = {}
     apps = state.attributes.get("apps")
     if isinstance(apps, list):
-        for app in apps[:200]:
+        for app in apps[:MAX_APPS]:
             if not isinstance(app, dict):
                 continue
             package = app.get("package") or app.get("name")
@@ -107,7 +162,51 @@ def totals_reading(hass: HomeAssistant, source: Source) -> Reading | None:
                 seconds = _seconds(app.get("seconds"), "s")
             if isinstance(package, str) and package and seconds is not None:
                 items[package[:128]] = max(items.get(package[:128], 0.0), seconds)
+    else:
+        items = family_safety_apps_today(hass, source.entity_id)
     return Reading(source.reading_source, min(total, 86400.0), items, source.group)
+
+
+def fs_applications_of(hass: HomeAssistant, entity_id: str) -> tuple[str, str | None] | None:
+    """A Family Safety child's Screen Time sensor (unique id <entry>_<account>_screentime) or Xbox Screen Time
+    (<entry>_<account>_xbox_screentime): the same child's Applications sensor (<entry>_<account>_app_count), with the
+    app id prefix its apps must have (x:xboxplt: for the Xbox's; x:windowsplt: ids are Windows Store apps), else
+    None."""
+    registry = er.async_get(hass)
+    entry = registry.async_get(entity_id)
+    if entry is None or entry.platform != FS_DOMAIN or entry.domain != "sensor":
+        return None
+    unique_id = str(entry.unique_id)
+    if unique_id.endswith("_xbox_screentime"):
+        stem, prefix = unique_id.removesuffix("_xbox_screentime"), "x:xboxplt:"
+    elif unique_id.endswith("_screentime"):
+        stem, prefix = unique_id.removesuffix("_screentime"), None
+    else:
+        return None
+    applications = registry.async_get_entity_id("sensor", FS_DOMAIN, f"{stem}_app_count")
+    return (applications, prefix) if applications else None
+
+
+def family_safety_apps_today(hass: HomeAssistant, entity_id: str) -> dict[str, float]:
+    """Microsoft app id -> seconds today, of the apps used today, from the Applications sensor of the Family Safety
+    child whose Screen Time [entity_id] is; empty for any other sensor."""
+    found = fs_applications_of(hass, entity_id)
+    state = hass.states.get(found[0]) if found else None
+    applications = state.attributes.get("applications") if state else None
+    if not found or not isinstance(applications, list):
+        return {}
+    prefix = found[1]
+    items: dict[str, float] = {}
+    for app in applications[:500]:
+        if not isinstance(app, dict) or not isinstance(app_id := app.get("app_id"), str) or not app_id:
+            continue
+        if prefix is not None and not app_id.startswith(prefix):
+            continue
+        seconds = _seconds(app.get("usage_minutes"), "min")
+        if seconds:
+            items[app_id[:128]] = max(items.get(app_id[:128], 0.0), seconds)
+    # The most used, as many as an apps attribute would give
+    return dict(sorted(items.items(), key=lambda item: -item[1])[:MAX_APPS])
 
 
 def now_playing(hass: HomeAssistant, source: Source) -> str | None:

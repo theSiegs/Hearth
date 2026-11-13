@@ -1,3 +1,4 @@
+import 'package:flauncher/widgets/settings/ha_pair_page.dart';
 import 'package:flauncher/providers/home_looks.dart';
 import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/setup_flow_service.dart';
@@ -882,16 +883,6 @@ void main() {
       await press(tester, "Next");
 
       expect(find.text("Tell Home Assistant what's on"), findsOneWidget);
-      // Sent without a webhook ID: says what's missing
-      await press(tester, "Set up from your phone");
-      await tester.pump(const Duration(seconds: 1));
-      await tester.pumpAndSettle();
-      expect(find.textContaining("didn't send a webhook ID"), findsOneWidget);
-      channel.haWebhook = "hearth_tv";
-      await press(tester, "Set up from your phone");
-      await tester.pump(const Duration(seconds: 1));
-      await tester.pumpAndSettle();
-      expect(find.text("The TV tells Home Assistant what's on"), findsOneWidget);
     });
   });
 
@@ -940,29 +931,24 @@ void main() {
     });
   });
 
-  group("TV status made by Hearth", () {
-    testWidgets("says why it didn't work, then is done once Home Assistant made it", (tester) async {
+  group("TV status is the pairing", () {
+    testWidgets("not paired: the step pairs the TV with the Hearth integration", (tester) async {
       await open(tester, startAt: "smartHome");
       await press(tester, "I use Home Assistant");
       await press(tester, "Skip");
       await press(tester, "Skip");
       expect(find.text("Tell Home Assistant what's on"), findsOneWidget);
+      await press(tester, "Pair with Home Assistant");
+      expect(find.byType(HaPairPage), findsOneWidget);
+    });
 
-      channel.haCreateState = "not_admin";
-      await press(tester, "Create it in Home Assistant for me");
-      await tester.pumpAndSettle();
-      expect(find.textContaining("administrator's token"), findsOneWidget);
-
-      channel.haCreateState = "failed";
-      await press(tester, "Create it in Home Assistant for me");
-      await tester.pumpAndSettle();
-      expect(find.textContaining("Couldn't set it up in Home Assistant"), findsOneWidget);
-
-      channel.haCreateState = "done";
-      await press(tester, "Create it in Home Assistant for me");
-      await tester.pump(const Duration(seconds: 1));
-      await tester.pumpAndSettle();
-      expect(find.text("The TV tells Home Assistant what's on"), findsOneWidget);
+    testWidgets("already paired: no step to do", (tester) async {
+      channel.haPaired = true;
+      await open(tester, startAt: "smartHome");
+      await press(tester, "I use Home Assistant");
+      await press(tester, "Skip");
+      await press(tester, "Skip");
+      expect(find.text("Tell Home Assistant what's on"), findsNothing);
     });
   });
 

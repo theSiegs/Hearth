@@ -28,11 +28,10 @@ from homeassistant.helpers.event import async_call_later
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    CONF_KIND,
+    CAP_PUSH,
     CONF_PUSH_SERVER,
     CONF_PUSH_TOPIC,
     DOMAIN,
-    KIND_MOBILE,
     SIGNAL_PAIRINGS,
     SIGNAL_PEOPLE,
     SIGNAL_WATCH,
@@ -112,7 +111,7 @@ class PushChannel:
     def answer_for(self, device_id: str) -> dict[str, str] | None:
         """What a phone is told: {"server", "topic"}, or None while there's no server (or it's a TV)."""
         device = self.hub.devices.get(device_id, {})
-        if device.get(CONF_KIND) != KIND_MOBILE:
+        if not self.hub.has_cap(device_id, CAP_PUSH):
             return None
         return push_answer(self.server, device.get(CONF_PUSH_TOPIC))
 
@@ -156,7 +155,7 @@ class PushChannel:
         topics: list[str] = []
         for device_id, device in self.hub.devices.items():
             topic = device.get(CONF_PUSH_TOPIC)
-            if device.get(CONF_KIND) != KIND_MOBILE or not topic:
+            if not self.hub.has_cap(device_id, CAP_PUSH) or not topic:
                 continue
             version = self.hub.household.document_for(device_id)["version"]
             if shared["known"].get(device_id) == version:

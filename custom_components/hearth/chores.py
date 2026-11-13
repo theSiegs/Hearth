@@ -103,21 +103,25 @@ class ChoreWatcher:
                     EVENT_CHORE_DONE,
                     {"person": chores.person, "chore": summary, "group": chores.group, "minutes": minutes},
                 )
-                self._tell(chores, summary, minutes)
+                self._tell(chores, uid, summary, minutes)
         except Exception as err:  # noqa: BLE001 - a list that can't be read is tried with its next change
             _LOGGER.warning("Hearth couldn't collect the chores of %s: %s", chores.todo, err)
         finally:
             self._busy.discard(chores.todo)
 
-    def _tell(self, chores: Chores, summary: str, minutes: int) -> None:
-        """The adults' phones hear of it, as they hear of requests for more time (phones.py)."""
-        from . import phones
+    def _tell(self, chores: Chores, uid: str, summary: str, minutes: int) -> None:
+        """The adults' phones hear of it, as they hear of requests for more time (phones.py). Tagged by the to-do
+        item, so each chore done is a notification of its own."""
+        from .attention import ADULTS, Item
 
         group = self.household.group(chores.group)
         who = self.household.person_name(chores.person)
-        phones.send(
-            self.hass,
-            self.household.options,
-            f"{who} finished a chore",
-            f"{summary}: +{minutes} min of {group.name if group else chores.group} today",
+        self.household.hub.attention.notify(
+            Item(
+                f"hearth_chore_{uid}",
+                f"{summary}: +{minutes} min of {group.name if group else chores.group} today",
+                title=f"{who} finished a chore",
+                audience=ADULTS,
+                about={"person": chores.person, "group": chores.group},
+            )
         )

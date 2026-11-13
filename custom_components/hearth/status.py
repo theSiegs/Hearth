@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from .const import APP_CATEGORIES, TV_STATES
+from .const import APP_CATEGORIES, CAPS, MAX_CAPS, TV_STATES
 from .profiles import is_local_key, is_ref
 
 _CONTROL = re.compile(r"[\x00-\x1f\x7f-\x9f]")
@@ -43,6 +43,9 @@ _TEXT_FIELDS = (
 _BOOL_FIELDS = ("now_playing_available", "kids_profile", "screen_time_up", "google_time_up")
 _INT_FIELDS = {
     "media_duration_s": (0, 7 * MAX_SECONDS_PER_DAY),
+    # Where the media session is (seconds) as of media_position_at (epoch milliseconds), for "8 min left"
+    "media_position_s": (0, 7 * MAX_SECONDS_PER_DAY),
+    "media_position_at": (0, 2**53),
     "screen_time_minutes_left": (0, 24 * 60),
     "screen_time_seen_at": (0, 2**53),
     "screen_time_event_at": (0, 2**53),
@@ -158,7 +161,60 @@ def clean_status(raw: Any) -> dict[str, Any] | None:
     status["catalog_categories"] = _categories(raw.get("catalog_categories"))
     # The one-shot commands (commands.py) the TV ran, or couldn't, since its last post
     status["commands_done"] = _commands_done(raw.get("commands_done"))
+    # A TV's own screen-time rules for its kids profiles, from before it was paired: Hearth takes them as a kid's
+    # first budgets (Household.import_local_rules)
+    status["local_rules"] = local_rules(raw.get("local_rules"))
+    # What the device says it can do (const.CAPS); None when it didn't say, and its kind's apply (hub.has_cap)
+    status["caps"] = caps(raw.get("caps"))
     return status
+
+
+def caps(value: Any) -> list[str] | None:
+    """The known capabilities in a list of at most MAX_CAPS strings, each once (unknown ones dropped: a newer device
+    may know more); None for anything but a list."""
+    if not isinstance(value, list):
+        return None
+    return list(dict.fromkeys(c for c in value[:MAX_CAPS] if isinstance(c, str) and c in CAPS))
+
+
+MAX_RULES_PROFILES = 20
+MAX_RULES_GROUPS = 20
+_GROUP_ID = re.compile(r"^[a-z0-9_]{1,32}$")
+
+
+def _minutes_pair(value: Any) -> dict[str, int]:
+    """{"weekday": minutes, "weekend": minutes}, each left out when there is no limit."""
+    if not isinstance(value, dict):
+        return {}
+    out: dict[str, int] = {}
+    for kind in ("weekday", "weekend"):
+        minutes = number(value.get(kind), 0, 24 * 60)
+        if minutes is not None:
+            out[kind] = int(minutes)
+    return out
+
+
+def local_rules(value: Any) -> dict[str, dict[str, dict[str, int]]] | None:
+    """{profile_id: {group id: {"weekday": minutes, "weekend": minutes}}} from a TV's own rules
+    ({profile_id: {"all": {weekday, weekend}, "groups": [{id, weekday, weekend}]}}); None when it sent none."""
+    if not isinstance(value, dict):
+        return None
+    out: dict[str, dict[str, dict[str, int]]] = {}
+    for profile_id, rules in list(value.items())[:MAX_RULES_PROFILES]:
+        if not isinstance(profile_id, str) or not is_local_key(text(profile_id, 128)) or not isinstance(rules, dict):
+            continue
+        groups: dict[str, dict[str, int]] = {}
+        if minutes := _minutes_pair(rules.get("all")):
+            groups["all"] = minutes
+        listed = rules.get("groups")
+        for group in listed[:MAX_RULES_GROUPS] if isinstance(listed, list) else []:
+            if not isinstance(group, dict) or not isinstance(group.get("id"), str) or not _GROUP_ID.match(group["id"]):
+                continue
+            if minutes := _minutes_pair(group):
+                groups.setdefault(group["id"], minutes)
+        if groups:
+            out[profile_id] = groups
+    return out
 
 
 # What a TV says it did with a command; anything else it says counts as "failed"

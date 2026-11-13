@@ -186,6 +186,22 @@ final class HouseholdWatch {
     }
 
     /** Of a person's own entries (newest first), those to send: recent, a kept one with its row, at most {@link #SENT_PER_PERSON}. */
+    /** The profile setting (in its look) that keeps what a person watches on the TV they watched it on. */
+    static final String SHARE_KEY = "share_watch_history";
+
+    /**
+     * Whether a person's titles go to the household, from their look as the household has it: on unless they turned
+     * "Share what I watch with our other TVs" off. The look syncs, so every TV gives the same answer.
+     */
+    static boolean shares(String lookJson) {
+        if (lookJson == null || lookJson.isEmpty()) return true;
+        try {
+            return new JSONObject(lookJson).optBoolean(SHARE_KEY, true);
+        } catch (JSONException e) {
+            return true;
+        }
+    }
+
     static List<WatchHistory.Entry> toSend(List<WatchHistory.Entry> own, long now) {
         List<WatchHistory.Entry> out = new ArrayList<>();
         for (WatchHistory.Entry e : own) {

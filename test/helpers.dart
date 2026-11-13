@@ -57,6 +57,17 @@ class FakeProfileService extends ChangeNotifier implements ProfileService {
     return transition;
   }
 
+  bool _kids = false;
+
+  /// A kids profile is on (or an adult's, with false).
+  void setKids(bool kids) {
+    _kids = kids;
+    notifyListeners();
+  }
+
+  @override
+  bool get isKidsProfile => _kids;
+
   /// The active profile's layout is in.
   void layoutReady() {
     _layoutReadyKey = _activeKey;

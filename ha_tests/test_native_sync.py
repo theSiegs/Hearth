@@ -3,6 +3,8 @@ own app is an adult's decision, which Hearth adopts and never overwrites."""
 
 from datetime import timedelta
 
+import pytest
+
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util import dt as dt_util
@@ -328,6 +330,22 @@ async def test_an_app_a_parent_changed_in_family_link_is_a_grant(
     assert grants[0].data["target"] == {"kind": "app", "value": "com.thesiegs.hearthtube"}
     assert resumed[-1].data["packages"] == ["com.thesiegs.hearthtube"]
 
+    # The summary names the app (from Sam's Family Link sensors when Hearth's catalog has no name), never the package
+    from custom_components.hearth.websocket import _grant_views
+
+    household = _household(hass)
+    hass.states.async_set(
+        "sensor.sam_family_link_screen_time_by_app",
+        "1",
+        {"child_id": CHILD, "apps": [{"package": "com.thesiegs.hearthtube", "name": "Video Club", "minutes": 4}]},
+    )
+    household.apps.apps.pop("com.thesiegs.hearthtube", None)
+    assert household.app_names({"com.thesiegs.hearthtube", "com.example.unknown"}, "person.sam") == {
+        "com.thesiegs.hearthtube": "Video Club"
+    }
+    [view] = _grant_views(household, "person.sam")
+    assert view["name"] == "Video Club" and view["target"]["value"] == "com.thesiegs.hearthtube"
+
 
 async def test_extra_time_from_family_safety_is_a_grant_until_it_ends(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
@@ -500,7 +518,7 @@ async def test_allowing_all_screen_time_gives_family_safety_extra_time(
 
     async def add_time_bonus(call: ServiceCall):
         given.append(call)
-        return {"platform": call.data["platform"], "applied_until": call.data["until"], "released_hold": False}
+        return {"platform": call.data["platform"], "applied_until": call.data["until"], "hold_kept": False}
 
     hass.services.async_register(
         "microsoft_family_safety", "add_time_bonus", add_time_bonus, supports_response=SupportsResponse.OPTIONAL
@@ -525,6 +543,106 @@ async def test_allowing_all_screen_time_gives_family_safety_extra_time(
     assert [c.data["platform"] for c in cancelled] == ["Xbox"]
 
 
+async def test_family_safety_extra_time_replaces_hearth_s_own_lock(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Family Safety refuses extra time over a lock unless asked to replace it; Hearth asks when the lock is its own."""
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+    async_mock_service(hass, "microsoft_family_safety", "lock_platform")
+    async_mock_service(hass, "microsoft_family_safety", "unlock_platform")
+    async_mock_service(hass, "microsoft_family_safety", "cancel_time_bonus")
+    given: list[ServiceCall] = []
+
+    async def add_time_bonus(call: ServiceCall):
+        given.append(call)
+        return {"platform": call.data["platform"], "applied_until": call.data["until"], "hold_kept": True}
+
+    hass.services.async_register(
+        "microsoft_family_safety", "add_time_bonus", add_time_bonus, supports_response=SupportsResponse.OPTIONAL
+    )
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    hass.states.async_set(
+        "binary_sensor.sam_xbox_allowed_now",
+        "off",
+        {"user_id": "123456", "platform": "Xbox", "hold": "ours", "override": "blockUntil",
+         "allowance_minutes": 60, "used_minutes": 60, "remaining_minutes": 0},
+    )
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY})
+
+    await _allow_all(hass, dt_util.now().replace(hour=13, minute=0).isoformat())
+    assert [c.data.get("replace_lock") for c in given] == [True]
+
+
+@pytest.mark.parametrize(
+    ("answer", "still_held"),
+    [
+        # A Family Safety that keeps holds: kept, the lock comes back after the extra time
+        ({"added": True, "replaced_lock": True, "hold_kept": True}, True),
+        # ... or let go of for good
+        ({"added": True, "replaced_lock": True, "hold_kept": False}, False),
+        # Upstream's: extra time that replaced a lock ended it
+        ({"added": True, "replaced_lock": True}, False),
+        ({"added": True, "replaced_lock": False}, True),
+        # No fields (or no answer): as before, still held
+        ({}, True),
+        (None, True),
+    ],
+)
+async def test_family_safety_extra_time_over_hearth_s_lock_keeps_or_lets_go_of_the_hold(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer, monkeypatch, answer, still_held
+) -> None:
+    """What Family Safety answers says whether Hearth still holds the Xbox after extra time replaced its lock: given
+    in the minutes after a start (nothing is let go yet), a lock Family Safety ended isn't let go again later."""
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+    locked = async_mock_service(hass, "microsoft_family_safety", "lock_platform")
+    unlocked = async_mock_service(hass, "microsoft_family_safety", "unlock_platform")
+    async_mock_service(hass, "microsoft_family_safety", "cancel_time_bonus")
+    given: list[ServiceCall] = []
+
+    async def add_time_bonus(call: ServiceCall):
+        given.append(call)
+        return None if answer is None else {"until": call.data["until"], **answer}
+
+    hass.services.async_register(
+        "microsoft_family_safety", "add_time_bonus", add_time_bonus, supports_response=SupportsResponse.OPTIONAL
+    )
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    hass.states.async_set(
+        "binary_sensor.sam_xbox_allowed_now",
+        "on",
+        {"user_id": 123456, "platform": "Xbox", "hold": "none", "allowance_minutes": 60, "used_minutes": 60,
+         "remaining_minutes": 0},
+    )
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY})
+    await _budget(hass, "all", 15)
+    await hass.async_block_till_done()
+    assert [c.data["platform"] for c in locked] == ["Xbox"]
+    hass.states.async_set(
+        "binary_sensor.sam_xbox_allowed_now",
+        "off",
+        {"user_id": 123456, "platform": "Xbox", "hold": "ours", "override": "blockUntil",
+         "allowance_minutes": 60, "used_minutes": 60, "remaining_minutes": 0},
+    )
+    await hass.async_block_till_done()
+    # Home Assistant just started: Hearth lets nothing go for a few minutes
+    monkeypatch.setattr(enforce, "SETTLE", timedelta(minutes=5))
+    _household(hass).enforcement.started = dt_util.utcnow()
+
+    await _allow_all(hass, dt_util.now().replace(hour=13, minute=0).isoformat())
+    assert [c.data.get("replace_lock") for c in given] == [True]
+    assert unlocked == []
+    held = _household(hass).enforcement.held.get(f"{enforce.FAMILY_SAFETY}|person.sam")
+    assert ("Xbox" in held.items) is still_held
+
+    # Settled: a hold still Hearth's is let go (the allow lifts it), one Family Safety ended is not
+    freezer.move_to(dt_util.now() + timedelta(minutes=6))
+    _household(hass).recompute()
+    await hass.async_block_till_done()
+    assert [c.data["platform"] for c in unlocked] == (["Xbox"] if still_held else [])
+
+
 async def test_family_safety_extra_time_unavailable_is_shown_not_raised(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:
@@ -546,6 +664,97 @@ async def test_family_safety_extra_time_unavailable_is_shown_not_raised(
     status = _household(hass).enforcement.status_of("person.sam")["family_safety"]
     assert "unavailable" in status["last"]["error"] and status["last"]["ok"] is False
 
+
+
+def _fs_platform(hass: HomeAssistant, platform: str, hold: str = "none", **extra) -> None:
+    """Sam's Allowed Now sensor of a Family Safety platform, 10 of 60 minutes left."""
+    hass.states.async_set(
+        f"binary_sensor.sam_{platform.lower()}_allowed_now",
+        "on",
+        {"user_id": 123456, "platform": platform, "hold": hold, "allowance_minutes": 60, "used_minutes": 50,
+         "remaining_minutes": 10, **extra},
+    )
+
+
+async def _sam_on_xbox_and_windows(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
+    async_mock_service(hass, "microsoft_family_safety", "lock_platform")
+    async_mock_service(hass, "microsoft_family_safety", "unlock_platform")
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    _fs_platform(hass, "Xbox")
+    _fs_platform(hass, "Windows")
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(
+        hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY, "platforms": ["Xbox", "Windows"]}
+    )
+
+
+async def test_family_safety_extra_time_reaches_windows_too(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """A Family Safety with Windows extra time gets it there as on the Xbox; ending the allow cancels only Hearth's
+    own: a parent's extra time that came since on Windows is kept."""
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+    cancelled = async_mock_service(hass, "microsoft_family_safety", "cancel_time_bonus")
+    given: list[ServiceCall] = []
+
+    async def add_time_bonus(call: ServiceCall):
+        given.append(call)
+        return {"added": True, "until": call.data["until"], "applied_until": call.data["until"], "hold_kept": False}
+
+    hass.services.async_register(
+        "microsoft_family_safety", "add_time_bonus", add_time_bonus, supports_response=SupportsResponse.OPTIONAL
+    )
+    await _sam_on_xbox_and_windows(hass, hass_client_no_auth)
+
+    allow_id = await _allow_all(hass, dt_util.now().replace(hour=13, minute=0).isoformat())
+    assert sorted(c.data["platform"] for c in given) == ["Windows", "Xbox"]
+    assert all("replace_lock" not in c.data for c in given)
+
+    # A parent gives Windows extra time of their own in the Family Safety app
+    _fs_platform(hass, "Windows", hold="parent", override="allowUntil", allow_until="2026-11-12T20:00:00")
+    await hass.async_block_till_done()
+    await hass.services.async_call(DOMAIN, "allow_end", {"id": allow_id}, blocking=True)
+    await hass.async_block_till_done()
+    assert [c.data["platform"] for c in cancelled] == ["Xbox"]
+    status = _household(hass).enforcement.status_of("person.sam")["family_safety"]
+    assert status["last"]["extra_time_kept"] == ["Windows"]
+
+
+async def test_windows_extra_time_is_skipped_quietly_where_family_safety_has_none(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Upstream's Family Safety gives extra time on the Xbox only (its schema takes no other platform)."""
+    import voluptuous as vol
+
+    from homeassistant.helpers import config_validation as cv
+
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+    given: list[ServiceCall] = []
+
+    async def add_time_bonus(call: ServiceCall):
+        given.append(call)
+        return {"added": True, "until": call.data["until"]}
+
+    xbox_only = vol.Schema(
+        {
+            vol.Optional("entity_id"): cv.string,
+            vol.Optional("account_id"): cv.string,
+            vol.Optional("platform", default="Xbox"): vol.In(["Xbox"]),
+            vol.Optional("minutes"): int,
+            vol.Optional("until"): cv.datetime,
+            vol.Optional("replace_lock"): cv.boolean,
+        }
+    )
+    hass.services.async_register(
+        "microsoft_family_safety", "add_time_bonus", add_time_bonus, schema=xbox_only,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+    await _sam_on_xbox_and_windows(hass, hass_client_no_auth)
+
+    await _allow_all(hass, dt_util.now().replace(hour=13, minute=0).isoformat())
+    assert [c.data["platform"] for c in given] == ["Xbox"]
+    status = _household(hass).enforcement.status_of("person.sam")["family_safety"]
+    assert status["last"]["ok"] and "error" not in status["last"]
 
 # E. Explain says what the device does
 
@@ -631,7 +840,38 @@ async def test_a_request_answered_in_the_family_safety_app_closes_its_ask(
     await hass.async_block_till_done()
     assert hub.asks.pending() == []
     answered = hub.asks.answered_elsewhere("person.sam")
-    assert answered[0]["text"] == "answered in the Family Safety app" and answered[0]["status"] == "approved"
+    assert answered[0]["text"] == "approved in the Family Safety app" and answered[0]["status"] == "approved"
+
+
+async def test_a_request_gone_without_an_outcome_closes_as_handled_not_expired(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """Family Safety only sees a request answered in its app (or on the device) leave Microsoft's list: outcome
+    unknown. Someone dealt with it, so it closes as handled outside Hearth, not as expired."""
+    from custom_components.hearth.glance import person_glance
+
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY})
+    hub = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
+    answers = async_capture_events(hass, "hearth_more_time_answered")
+    hass.bus.async_fire(
+        "microsoft_family_safety_request", {"account_id": "123456", "request_id": "r1", "platform": "Windows"}
+    )
+    await hass.async_block_till_done()
+    hass.bus.async_fire(
+        "microsoft_family_safety_request_resolved",
+        {"account_id": "123456", "request_id": "r1", "outcome": "unknown", "minutes": None, "via": "app"},
+    )
+    await hass.async_block_till_done()
+    assert hub.asks.pending() == []
+    assert answers[-1].data["status"] == "handled" and answers[-1].data["answered_in"] == "family_safety"
+    answered = hub.asks.answered_elsewhere("person.sam")
+    assert answered[0]["status"] == "handled"
+    assert answered[0]["text"] == "handled outside Hearth (the Family Safety app or the device)"
+    glance = person_glance(_kid(), [], [], [], dt_util.now(), [], answered)
+    line = next(item for item in [glance["headline"], *glance["lines"]] if item["key"].startswith("answered:"))
+    assert line["text"] == "request handled outside Hearth (the Family Safety app or the device)"
 
 
 # Views: the household summary (contract 2), Hearth's page
@@ -678,7 +918,7 @@ def test_first_party_limits_status_and_answers_are_lines() -> None:
         },
         sync={"nintendo": {"held": [], "error": "bonus time is active", "last": None}},
     )
-    answered = [{"id": "a1", "text": "answered in the Family Safety app"}]
+    answered = [{"id": "a1", "text": "approved in the Family Safety app"}]
     glance = person_glance(person, [], [], [], now, [], answered)
     keys = [glance["headline"]["key"]] + [line["key"] for line in glance["lines"]]
     assert keys[:4] == [f"device_limit:{PHONE}", "parent_lock:xbox", "sync_error:nintendo", "answered:a1"]

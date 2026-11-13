@@ -180,6 +180,8 @@ Future<bool> _editPin(
     builder: (_) => ParentPinDialog(
       title: l.parentPinConfirm,
       verify: (pin) => pin == first,
+      // Confirming a streaming app's PIN isn't a guess at the Parent PIN
+      lockout: PinLockout(),
       length: ProfilePairingAppPage.pinLength,
     ),
   );

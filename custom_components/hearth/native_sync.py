@@ -21,9 +21,20 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
+from .entry_tasks import entry_task
 from . import grants as g
 from .counting import ALL
-from .enforce import FAMILY_LINK, FAMILY_SAFETY, fs_account_of
+from .enforce import (
+    FAMILY_LINK,
+    FAMILY_SAFETY,
+    FS_HOLD_BONUS_OURS,
+    FS_HOLD_OURS,
+    FS_HOLD_PARENT,
+    NINTENDO,
+    fs_accepts,
+    fs_account_of,
+    fs_hold_state,
+)
 from .exceptions import end_of_day
 
 if TYPE_CHECKING:
@@ -34,6 +45,9 @@ _LOGGER = logging.getLogger(__name__)
 
 FL_DOMAIN = "familylink"
 FS_DOMAIN = "microsoft_family_safety"
+# The platforms Family Safety can give extra time on (Windows only where the installed one takes it: fs_accepts)
+FS_BONUS_PLATFORMS = ("Xbox", "Windows")
+MINUTES_A_DAY = 24 * 60
 # A parent's change became a grant (its view)
 EVENT_PARENT_GRANT = "hearth_parent_grant"
 
@@ -147,7 +161,7 @@ class NativeSync:
     def end_grant(self, grant: Grant) -> None:
         """The first-party write that ends a grant early, where there is one."""
         if grant.end_with in (g.END_RESET_BONUS, g.END_CANCEL_BONUS):
-            self.hass.async_create_task(self._end_write(grant), "hearth grant end")
+            entry_task(self.hass, self.household.hub.entry.entry_id, self._end_write(grant), "hearth grant end")
 
     async def _end_write(self, grant: Grant) -> None:
         enforcer = self._enforcer(grant.person, grant.via)
@@ -157,14 +171,7 @@ class NativeSync:
                 pressed = await self._reset_family_link_bonus(grant.person)
                 self.household.enforcement.note(key, ended_grant=grant.id, bonus_reset=pressed)
             elif grant.end_with == g.END_CANCEL_BONUS and enforcer is not None:
-                if not self.hass.services.has_service(FS_DOMAIN, "cancel_time_bonus"):
-                    raise ValueError("Family Safety can't cancel extra time (update it)")
-                await self.hass.services.async_call(
-                    FS_DOMAIN,
-                    "cancel_time_bonus",
-                    {**_fs_target(enforcer.entity_id), "platform": grant.value},
-                    blocking=True,
-                )
+                await self.cancel_family_safety_bonus(enforcer.entity_id, grant.value)
                 self.household.enforcement.note(key, ended_grant=grant.id, cancelled_bonus=grant.value)
         except Exception as err:  # noqa: BLE001 - told on Hearth's page; Hearth's hold comes back regardless
             _LOGGER.warning("Hearth couldn't end %s's grant in the first-party app: %s", grant.person, err)
@@ -218,8 +225,9 @@ class NativeSync:
                     continue
                 self._given[key] = {"day": today, "devices": {}, "platforms": []}
                 self._save()
-                self.hass.async_create_task(
-                    self._give_time(person, min(until, end_of_day(now)), key), "hearth first-party extra time"
+                entry_task(
+                    self.hass, self.household.hub.entry.entry_id,
+                    self._give_time(person, min(until, end_of_day(now)), key), "hearth first-party extra time",
                 )
 
     @callback
@@ -236,26 +244,54 @@ class NativeSync:
         self._given[key] = {"day": now.date().isoformat(), "devices": {}, "platforms": []}
         self._save()
         until = min(now + timedelta(minutes=left), end_of_day(now))
-        self.hass.async_create_task(self._give_time(person, until, key), "hearth first-party extra time")
+        entry_task(self.hass, self.household.hub.entry.entry_id, self._give_time(person, until, key), "hearth first-party extra time")
 
     def _mirrors(self, person: str) -> bool:
         return any(
             e.person == person and e.kind in (FAMILY_LINK, FAMILY_SAFETY) for e in self.household.enforcement.enforcers
         )
 
-    async def _give_time(self, person: str, until, key: tuple[str, str]) -> None:
+    async def _give_time(
+        self, person: str, until, key: tuple[str, str], fl_device: str | None = None, platform: str | None = None
+    ) -> None:
+        """[fl_device] or [platform]: only that Family Link device or Family Safety platform (extra time on one
+        device, device_extra.py); neither: every one that would block."""
         now = dt_util.now()
         minutes = math.ceil((until - now).total_seconds() / 60)
         if minutes <= 0:
             return
         record = self._given[key]
         try:
-            await self._give_family_link(person, minutes, key[1], record)
-            await self._give_family_safety(person, until, minutes, key[1], record)
+            if platform is None:
+                await self._give_family_link(person, minutes, key[1], record, only=fl_device)
+            if fl_device is None:
+                await self._give_family_safety(person, until, minutes, key[1], record, only=platform)
         finally:
             self._save()
 
-    async def _give_family_link(self, person: str, minutes: int, why: str, record: dict[str, Any]) -> None:
+    @callback
+    def give_device(self, person: str, extra_id: str, until, fl_device: str | None, platform: str | None) -> None:
+        """Extra time on one Family Link device or Family Safety platform (hearth.add_bonus or hearth.allow with a
+        device), until [until]."""
+        key = (person, f"device:{extra_id}")
+        self._given[key] = {"day": dt_util.now().date().isoformat(), "devices": {}, "platforms": []}
+        self._save()
+        entry_task(
+            self.hass, self.household.hub.entry.entry_id,
+            self._give_time(person, until, key, fl_device, platform), "hearth extra time on one device",
+        )
+
+    @callback
+    def device_ended(self, person: str, extra_id: str) -> None:
+        """Extra time on one device ended early: what Hearth gave for it in Family Link or Family Safety goes."""
+        record = self._given.pop((person, f"device:{extra_id}"), None)
+        self._save()
+        if record and (record["devices"] or record["platforms"] or record.get("cutoffs")):
+            entry_task(self.hass, self.household.hub.entry.entry_id, self._take_back(person, record), "hearth extra time on one device back")
+
+    async def _give_family_link(
+        self, person: str, minutes: int, why: str, record: dict[str, Any], only: str | None = None
+    ) -> None:
         """A today-only Family Link bonus on each of the child's devices whose own daily limit would block within
         [minutes] (a device with no limit gets none)."""
         from . import family_link as fl
@@ -267,6 +303,8 @@ class NativeSync:
         error = None
         for device in fl.devices(self.hass, child):
             info = fl.device_limit(self.hass, child, device)
+            if only is not None and info["device_id"] != only:
+                continue
             left = info["minutes_left"]
             if left is None or left >= minutes:
                 continue
@@ -288,23 +326,47 @@ class NativeSync:
         if added or error:
             self.household.enforcement.note(f"{FAMILY_LINK}|{person}", bonus_added=added, reason=why, error=error)
 
-    async def _give_family_safety(self, person: str, until, minutes: int, why: str, record: dict[str, Any]) -> None:
-        """Family Safety extra time (its experimental add_time_bonus) on the enforcer's platforms whose allowance
-        would block within [minutes]. Extra time replaces Hearth's own lock there (released_hold). A failure says
-        Family Safety's extra time is unavailable, and isn't retried."""
+    async def _give_family_safety(
+        self, person: str, until, minutes: int, why: str, record: dict[str, Any], only: str | None = None
+    ) -> None:
+        """Family Safety extra time (its experimental add_time_bonus) on the enforcer's platforms (Xbox, and Windows
+        where the installed Family Safety takes it) whose allowance would block within [minutes]; [only]: that one
+        platform, held by Hearth or not. Extra time replaces Hearth's own lock there; when Family Safety lets go of
+        that lock for good (fs_hold_released), Hearth no longer holds the platform. A failure says Family Safety's
+        extra time is unavailable, isn't retried, and counts as not given. Extra time that runs past the platform's
+        allowed hours today moves today's end of them too (_fs_move_cutoff): Microsoft's extra time doesn't lift them."""
         enforcer = self._enforcer(person, FAMILY_SAFETY)
-        if enforcer is None or not self.hass.services.has_service(FS_DOMAIN, "add_time_bonus"):
+        if enforcer is None:
             return
         given: dict[str, Any] = {}
+        moved: dict[str, str] = {}
         error = None
-        for platform in enforcer.platforms:
-            if platform not in ("Windows", "Xbox") or not self._fs_would_block(enforcer.entity_id, platform, minutes):
+        bonus = self.hass.services.has_service(FS_DOMAIN, "add_time_bonus")
+        for platform in (only,) if only is not None else enforcer.platforms:
+            # Family Safety gives extra time on the Xbox and (a newer one) on Windows, never on Mobile
+            if platform not in FS_BONUS_PLATFORMS:
+                continue
+            try:
+                if end := await self._fs_move_cutoff(person, enforcer.entity_id, platform, until, record):
+                    moved[platform] = end
+            except (HomeAssistantError, vol.Invalid) as err:
+                _LOGGER.info("Family Safety's allowed hours on %s for %s not moved: %s", platform, person, err)
+                error = f"Family Safety's allowed hours not moved: {err}"[:200]
+            if not bonus or not self._fs_would_block(enforcer.entity_id, platform, minutes):
                 continue
             data = {
                 **_fs_target(enforcer.entity_id),
                 "platform": platform,
                 "until": dt_util.as_local(until).replace(tzinfo=None, microsecond=0).isoformat(),
             }
+            # Extra time replaces Hearth's own lock (Family Safety puts it back when the time ends), never a parent's
+            hold = fs_hold_state(self.hass, enforcer.entity_id, platform)
+            if hold and hold.get("hold") in (FS_HOLD_OURS, FS_HOLD_BONUS_OURS):
+                data["replace_lock"] = True
+            if platform != "Xbox" and not fs_accepts(self.hass, "add_time_bonus", data):
+                # A Family Safety without Windows extra time (upstream's is Xbox only): skipped quietly
+                _LOGGER.debug("Family Safety gives no extra time on %s; skipped for %s", platform, person)
+                continue
             try:
                 response = await self.hass.services.async_call(
                     FS_DOMAIN,
@@ -317,14 +379,86 @@ class NativeSync:
                 _LOGGER.info("Family Safety extra time on %s for %s unavailable: %s", platform, person, err)
                 error = f"Family Safety extra time unavailable: {err}"[:200]
                 continue
-            given[platform] = (response or {}).get("applied_until") if isinstance(response, dict) else None
+            given[platform] = (
+                response.get("applied_until") or response.get("until") if isinstance(response, dict) else None
+            )
             record["platforms"].append(platform)
-            if isinstance(response, dict) and response.get("released_hold"):
+            if fs_hold_released(response):
                 held = self.household.enforcement.held.get(f"{FAMILY_SAFETY}|{person}")
                 if held is not None:
                     held.items.discard(platform)
-        if given or error:
-            self.household.enforcement.note(f"{FAMILY_SAFETY}|{person}", extra_time=given, reason=why, error=error)
+        if given or moved or error:
+            self.household.enforcement.note(
+                f"{FAMILY_SAFETY}|{person}", extra_time=given, allowed_until=moved, reason=why, error=error
+            )
+
+    def _cutoff_elsewhere(self, person: str, platform: str, record: dict[str, Any]) -> dict[str, Any] | None:
+        """Another extra time of the person's today that moved the platform's allowed hours (its kept window)."""
+        return next(
+            (
+                r["cutoffs"][platform]
+                for (p, _), r in self._given.items()
+                if p == person and r is not record and platform in (r.get("cutoffs") or {})
+            ),
+            None,
+        )
+
+    async def _fs_move_cutoff(
+        self, person: str, entity_id: str, platform: str, until, record: dict[str, Any]
+    ) -> str | None:
+        """Extra time that runs past the end of the platform's allowed hours today moves that end to cover it (Family
+        Safety's set_screentime_intervals with today_only: Family Safety puts the day back at midnight). Allowed
+        hours go by half hours, so the end is rounded up to the next one. Only a day with one allowed window (two
+        would be merged into one), and only where the installed Family Safety takes today_only (the Xbox's goes
+        through the Xbox Family Settings sign-in). The window from before any extra time moved it is kept in [record]
+        to be put back when the extra time ends early (_put_back_cutoffs). The new end ("HH:MM"), or None."""
+        window = fs_allowed_window(self.hass, entity_id, platform)
+        if window is None:
+            return None
+        begin, end = window
+        local = dt_util.as_local(until)
+        if local.date() != dt_util.now().date():
+            wanted = MINUTES_A_DAY  # until midnight
+        else:
+            wanted = local.hour * 60 + local.minute + (1 if local.second or local.microsecond else 0)
+        wanted = min(MINUTES_A_DAY, math.ceil(wanted / 30) * 30)
+        if wanted <= end:
+            return None
+        data = _fs_window_data(entity_id, platform, begin, wanted)
+        if not fs_accepts(self.hass, "set_screentime_intervals", data):
+            _LOGGER.debug("Family Safety can't move today's allowed hours on %s; skipped for %s", platform, person)
+            return None
+        before = self._cutoff_elsewhere(person, platform, record) or {"begin": begin, "end": end}
+        await self.hass.services.async_call(FS_DOMAIN, "set_screentime_intervals", data, blocking=True)
+        record.setdefault("cutoffs", {})[platform] = {"begin": before["begin"], "end": before["end"], "set": wanted}
+        self._save()
+        return _hhmm(wanted)
+
+    async def _put_back_cutoffs(
+        self, person: str, entity_id: str, record: dict[str, Any]
+    ) -> tuple[list[str], str | None]:
+        """Extra time that moved a platform's allowed hours today ended early: the window from before is put back,
+        while the end still reads Hearth's (a parent's change since stays) and no other extra time of the person's
+        still moves it. ([platforms put back], error)."""
+        back: list[str] = []
+        error = None
+        for platform, cut in (record.get("cutoffs") or {}).items():
+            if self._cutoff_elsewhere(person, platform, record) is not None:
+                continue
+            window = fs_allowed_window(self.hass, entity_id, platform)
+            if window is None or window[1] != cut["set"]:
+                continue
+            try:
+                await self.hass.services.async_call(
+                    FS_DOMAIN,
+                    "set_screentime_intervals",
+                    _fs_window_data(entity_id, platform, cut["begin"], cut["end"]),
+                    blocking=True,
+                )
+                back.append(platform)
+            except (HomeAssistantError, vol.Invalid) as err:  # Family Safety puts the day back at midnight anyway
+                error = f"Family Safety's allowed hours left until midnight: {err}"[:200]
+        return back, error
 
     def _fs_would_block(self, entity_id: str, platform: str, minutes: int) -> bool:
         """Microsoft's own allowance would stop the platform within [minutes] (not a lock of Hearth's)."""
@@ -351,8 +485,8 @@ class NativeSync:
                 continue
             del self._given[key]
             self._save()
-            if record["devices"] or record["platforms"]:
-                self.hass.async_create_task(self._take_back(person, record), "hearth first-party extra time back")
+            if record["devices"] or record["platforms"] or record.get("cutoffs"):
+                entry_task(self.hass, self.household.hub.entry.entry_id, self._take_back(person, record), "hearth first-party extra time back")
 
     async def _take_back(self, person: str, record: dict[str, Any]) -> None:
         from . import family_link as fl
@@ -381,28 +515,48 @@ class NativeSync:
         if reset or kept or error:
             self.household.enforcement.note(f"{FAMILY_LINK}|{person}", bonus_reset=reset, bonus_kept=kept, error=error)
         enforcer = self._enforcer(person, FAMILY_SAFETY)
-        if enforcer is None or not record["platforms"]:
+        if enforcer is None:
+            return
+        if record.get("cutoffs"):
+            back, error = await self._put_back_cutoffs(person, enforcer.entity_id, record)
+            if back or error:
+                self.household.enforcement.note(f"{FAMILY_SAFETY}|{person}", allowed_hours_back=back, error=error)
+        if not record["platforms"]:
             return
         cancelled: list[str] = []
+        kept: list[str] = []
         error = None
         for platform in record["platforms"]:
+            # Only Hearth's own extra time is cancelled: a parent's extra time or lock that came since (the hold
+            # reads parent) is theirs, and a cancel would end it
+            hold = fs_hold_state(self.hass, enforcer.entity_id, platform)
+            if hold and hold.get("hold") == FS_HOLD_PARENT:
+                kept.append(platform)
+                continue
             try:
-                if not self.hass.services.has_service(FS_DOMAIN, "cancel_time_bonus"):
-                    raise ValueError("Family Safety can't cancel extra time (update it)")
-                await self.hass.services.async_call(
-                    FS_DOMAIN, "cancel_time_bonus", {**_fs_target(enforcer.entity_id), "platform": platform},
-                    blocking=True,
-                )
+                await self.cancel_family_safety_bonus(enforcer.entity_id, platform)
                 cancelled.append(platform)
             except Exception as err:  # noqa: BLE001 - shown; it ends when it was set to
                 error = str(err)[:200]
-        self.household.enforcement.note(f"{FAMILY_SAFETY}|{person}", extra_time_cancelled=cancelled, error=error)
+        self.household.enforcement.note(
+            f"{FAMILY_SAFETY}|{person}", extra_time_cancelled=cancelled, extra_time_kept=kept, error=error
+        )
+
+    async def cancel_family_safety_bonus(self, entity_id: str, platform: str) -> None:
+        """Family Safety's cancel_time_bonus on one platform; raises when this Family Safety can't (none, or none for
+        that platform: upstream's cancels Xbox extra time only)."""
+        data = {**_fs_target(entity_id), "platform": platform}
+        if not self.hass.services.has_service(FS_DOMAIN, "cancel_time_bonus"):
+            raise ValueError("Family Safety can't cancel extra time (update it)")
+        if not fs_accepts(self.hass, "cancel_time_bonus", data):
+            raise ValueError(f"Family Safety can't cancel extra time on {platform} (update it)")
+        await self.hass.services.async_call(FS_DOMAIN, "cancel_time_bonus", data, blocking=True)
 
     # What the first-party apps say now (Hearth's page, the household summary, explain)
 
     def first_party(self, person: str) -> dict[str, Any]:
-        """Google's own daily limit per Family Link device, and Microsoft's allowance per Family Safety platform,
-        as their entities say now (only those there). blocking: the device's or platform's own limit stops it now,
+        """Google's own daily limit per Family Link device, Microsoft's allowance per Family Safety platform and each
+        Switch's own limit and play today (nintendo.py), as their entities say now (only those there). blocking: the device's or platform's own limit stops it now,
         not a hold of Hearth's; parent_lock: a parent's own Family Safety lock."""
         from . import family_link as fl
         from .enforce import DEVICES, FS_BLOCK_UNTIL, FS_HOLD_PARENT
@@ -454,6 +608,10 @@ class NativeSync:
                 )
             if rows:
                 found[FAMILY_SAFETY] = rows
+        from .nintendo import switches
+
+        if rows := switches(self.household, person):
+            found[NINTENDO] = rows
         return found
 
     def app_limits_reached(self, person: str, packages: set[str], midnight: str) -> list[dict[str, Any]]:
@@ -538,6 +696,68 @@ def fs_platform_state(hass: HomeAssistant, entity_id: str, platform: str) -> dic
                 found["remaining_minutes"] = _number(state.state)
             return found
     return None
+
+
+def fs_allowed_window(hass: HomeAssistant, entity_id: str, platform: str) -> tuple[int, int] | None:
+    """Today's allowed hours of a Family Safety platform as (begin, end) in minutes from midnight (an end of 1440 is
+    midnight), from its Time Remaining sensor's allowed_ranges; None unless there's exactly one window."""
+    account = fs_account_of(hass, entity_id)
+    if account is None:
+        return None
+    for state in hass.states.async_all("sensor"):
+        attrs = state.attributes
+        if str(attrs.get("user_id")) != account or not state.entity_id.endswith("_time_remaining"):
+            continue
+        named = attrs.get("platform") or ("Xbox" if "xbox" in state.entity_id else "Windows")
+        if str(named).lower() != platform.lower():
+            continue
+        ranges = attrs.get("allowed_ranges")
+        if not isinstance(ranges, list) or len(ranges) != 1 or not isinstance(ranges[0], dict):
+            return None
+        begin, end = _clock(ranges[0].get("begin")), _clock(ranges[0].get("end"))
+        if begin is None or end is None:
+            return None
+        if end <= begin:
+            end = MINUTES_A_DAY  # an end of 00:00 is midnight
+        return begin, end
+    return None
+
+
+def _fs_window_data(entity_id: str, platform: str, begin: int, end: int) -> dict[str, Any]:
+    return {
+        **_fs_target(entity_id),
+        "platform": platform,
+        "today_only": True,
+        "start_hour": begin // 60,
+        "start_minute": begin % 60,
+        "end_hour": end // 60,
+        "end_minute": end % 60,
+    }
+
+
+def _clock(value: Any) -> int | None:
+    """ "22:00:00" or "22:00" as minutes from midnight."""
+    try:
+        hours, minutes = str(value).split(":")[:2]
+        return int(hours) * 60 + int(minutes)
+    except (TypeError, ValueError):
+        return None
+
+
+def _hhmm(minutes: int) -> str:
+    return f"{minutes // 60:02d}:{minutes % 60:02d}"
+
+
+def fs_hold_released(response: Any) -> bool:
+    """Family Safety's add_time_bonus answer says the lock Hearth held there is gone for good (Hearth no longer holds
+    the platform). A Family Safety that keeps holds answers hold_kept: true when it keeps the lock to put back after
+    the extra time, false when it doesn't. Upstream's answers {added, until, replaced_lock}: extra time that replaced
+    a lock ended it. No answer, or neither field: as before, Hearth keeps holding the platform."""
+    if not isinstance(response, dict):
+        return False
+    if "hold_kept" in response:
+        return response["hold_kept"] is False
+    return response.get("replaced_lock") is True
 
 
 def _fs_target(entity_id: str) -> dict[str, Any]:

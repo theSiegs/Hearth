@@ -6,6 +6,9 @@
     <string name="ha_notification_test_message">Test notification from Hearth TV</string>
     <!-- The name Home Assistant's notifications show under in the notification Bell (HearthBellItems) -->
     <string name="ha_notification_bell_app">Home Assistant</string>
+    <!-- The Hearth integration's notices in the Bell (HaNotices), and on a TV not paired with it when a button is pressed -->
+    <string name="ha_notice_bell_app">Hearth</string>
+    <string name="ha_notice_use_phone">Answer this on your phone</string>
 
     <!-- The Home Assistant dashboard panel (HaPanelActivity) -->
     <string name="ha_panel_unreachable">Can\'t reach Home Assistant</string>
@@ -66,11 +69,15 @@
     <string name="pin_change">Change PIN</string>
     <string name="pin_close">Close</string>
     <string name="youtube_in_hearthtube">YouTube is in HearthTube here</string>
+    <!-- AdbPromptGuard answered another computer's "Allow debugging?" -->
+    <string name="adb_prompt_blocked">Another computer asked to control this TV. Hearth said no. A parent can allow it in Hearth’s Settings, Family.</string>
     <string name="time_up_for_group">Time\'s up for %1$s today. An adult can add more time.</string>
     <!-- A family pause (Home Assistant's hearth.pause) holds the apps: its reason, and until when -->
     <string name="paused_reason_until">Paused: %1$s, until %2$s</string>
     <string name="paused_reason">Paused: %1$s</string>
     <string name="paused_no_reason">a family pause</string>
+    <!-- Hearth's own bedtime (a TV without Home Assistant) holds the apps until the morning -->
+    <string name="bedtime_until">Bedtime until %1$s</string>
     <!-- A quiet heads-up before bedtime or school time (Home Assistant's next_lock) -->
     <string name="heads_up_bedtime">Bedtime in %1$d min</string>
     <string name="heads_up_school_time">School time in %1$d min</string>

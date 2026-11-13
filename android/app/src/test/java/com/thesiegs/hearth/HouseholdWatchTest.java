@@ -39,6 +39,17 @@ public class HouseholdWatchTest {
     }
 
     @Test
+    public void aPersonWhoKeepsWhatTheyWatchHereSendsNothing() {
+        // On unless their look says otherwise; a look without the setting had it at its default
+        assertTrue(HouseholdWatch.shares(null));
+        assertTrue(HouseholdWatch.shares("{\"accent_color\":\"blue\"}"));
+        assertTrue(HouseholdWatch.shares("{\"share_watch_history\":true}"));
+        assertFalse(HouseholdWatch.shares("{\"share_watch_history\":false,\"~at\":{\"share_watch_history\":1}}"));
+        // A look that can't be read never stops sharing on its own
+        assertTrue(HouseholdWatch.shares("not json"));
+    }
+
+    @Test
     public void aPlayedTitleGoesOutAndComesBackTheSame() {
         WatchHistory.Entry e = played("Dark", "S1:E4", 50 * 60_000, 20 * 60_000, NOW - HOUR, false);
         HouseholdWatch.Card card = HouseholdWatch.cardOf(fromOtherTv(e));

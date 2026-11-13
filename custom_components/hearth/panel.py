@@ -4,6 +4,9 @@ The page shows the household (websocket.py's summary) and sets everything the Co
 a kid and who's an adult, devices waiting to pair, TV profiles, screen time sources, groups, budgets, locks, other
 parental controls, school days and parent PINs. Administrators only. Settings go to the entry's options as the
 Configure menu writes them (the entry reloads); budgets and extra time go to the day's limits, as the services do.
+The integration also serves hearth-family-card.js, a Lovelace card for a TV's dashboard (any adult's), and adds it to
+every dashboard as noiwid's integrations add theirs. A kid's Switch has commands of its own (Nintendo's extra playing time, its cancel and the allow list), offered as the
+installed Nintendo integration allows (nintendo.py), and the page shows how each parental control integration is doing.
 """
 
 from __future__ import annotations
@@ -13,13 +16,16 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import frontend, panel_custom, persistent_notification, websocket_api
+from homeassistant.components import frontend, panel_custom, websocket_api
+from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant, SupportsResponse, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 
 from .apps import CONF_APP_WATCH, CONF_ASK_NOTIFY
+from .asks import AMOUNTS, CONF_OFFER_MORE
 from .const import (
     CONF_GROUP_APPS,
     CONF_GROUPS,
@@ -32,6 +38,7 @@ from .const import (
     CONF_PUSH_SERVER,
     CONF_ROLES,
     CONF_TILE_EXCHANGE,
+    CONF_VOICE_ASSISTANTS,
     DOMAIN,
     KIND_MOBILE,
 )
@@ -47,21 +54,29 @@ from .limits import (
     SCHOOL_DAY,
     slug,
 )
-from .notifications import pairing_notification_id
+from .notifications import clear_pairing
 from .places import CONF_PLACES, FAVORITES, MAX_FAVORITES, MAX_NAME, RESERVED, SCHOOLS, TRACKERS
 from .schooldays import CONF_SCHOOL_DAYS
 from .sources import CONF_SOURCES, CONF_TITLES
+from .suggest_push import CONF_SUGGEST_PUSH, pairs as suggest_pairs
 from .profiles import OPTION_KEY
-from . import parent_pin, phones
+from . import nintendo, parent_pin, phones
 from .push import clean_server
 
 URL_PATH = "hearth"
 STATIC_URL = "/hearth_static"
 FRONTEND = Path(__file__).parent / "frontend"
+CARD = "hearth-family-card.js"
 ROLES = ("kid", "adult")
 
 # Integrations whose entities Hearth knows how to read or hold, offered first on the page
 SCREEN_TIME_PLATFORMS = ("familylink", "microsoft_family_safety", NINTENDO_DOMAIN, "xbox")
+# The parental controls Hearth works through, as the page names them
+PARENTAL_CONTROLS = (
+    ("familylink", "Family Link"),
+    ("microsoft_family_safety", "Microsoft Family Safety"),
+    (NINTENDO_DOMAIN, "Nintendo Switch"),
+)
 
 
 def _hub(hass: HomeAssistant):
@@ -79,6 +94,7 @@ async def async_register_panel(hass: HomeAssistant) -> None:
     if not hass.data.get(f"{DOMAIN}_static"):
         await hass.http.async_register_static_paths([StaticPathConfig(STATIC_URL, str(FRONTEND), False)])
         hass.data[f"{DOMAIN}_static"] = True
+    async_register_card(hass)
     await panel_custom.async_register_panel(
         hass,
         frontend_url_path=URL_PATH,
@@ -90,6 +106,18 @@ async def async_register_panel(hass: HomeAssistant) -> None:
         config={},
     )
     hass.data[f"{DOMAIN}_panel"] = True
+
+
+@callback
+def async_register_card(hass: HomeAssistant) -> None:
+    """The family card (frontend/hearth-family-card.js) on every dashboard, once per run (it stays through a reload,
+    like the static path): its file date in the URL, so a changed card is fetched after the next restart."""
+    if hass.data.get(f"{DOMAIN}_card"):
+        return
+    card = FRONTEND / CARD
+    version = int(card.stat().st_mtime) if card.exists() else 0
+    add_extra_js_url(hass, f"{STATIC_URL}/{CARD}?v={version}")
+    hass.data[f"{DOMAIN}_card"] = True
 
 
 @callback
@@ -143,6 +171,53 @@ def _entity_choices(hass: HomeAssistant) -> dict[str, list[dict[str, Any]]]:
     for found in out.values():
         found.sort(key=lambda i: i["name"].lower())
     return out
+
+
+def _parental_controls(hass: HomeAssistant) -> list[dict[str, Any]]:
+    """Each parental control integration that's installed, and whether it works now: its entries' states (loaded, a
+    failed setup, waiting to retry) and, for Family Safety, its Connection sensor (connected, degraded, disconnected).
+    The page tells a parent when one needs them, as the integrations' own dashboards do."""
+    registry = er.async_get(hass)
+    found = []
+    for domain, name in PARENTAL_CONTROLS:
+        entries = hass.config_entries.async_entries(domain)
+        if not entries:
+            continue
+        row: dict[str, Any] = {
+            "domain": domain,
+            "name": name,
+            "entries": [
+                {"entry_id": e.entry_id, "title": e.title, "state": e.state.value, "reason": e.reason}
+                for e in entries
+            ],
+        }
+        connection = next(
+            (
+                e.entity_id
+                for e in registry.entities.values()
+                if e.platform == domain and e.domain == "sensor" and e.entity_id.endswith("_connection")
+            ),
+            None,
+        )
+        if connection is not None and (state := hass.states.get(connection)) is not None:
+            row["connection"] = {
+                "entity_id": connection,
+                "state": state.state,
+                "reauth_required": bool(state.attributes.get("reauth_required")),
+            }
+        found.append(row)
+    return found
+
+
+def _screen_time_sensors(hass: HomeAssistant, hub) -> dict[str, str]:
+    """{person: entity id} of each person's Screen time today sensor (sensor.py's PersonScreenTime), by unique id."""
+    registry = er.async_get(hass)
+    found = {}
+    for person in hub.household.people():
+        entity_id = registry.async_get_entity_id("sensor", DOMAIN, f"{hub.entry.entry_id}_{person}_screen_time_today")
+        if entity_id is not None:
+            found[person] = entity_id
+    return found
 
 
 def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
@@ -213,6 +288,8 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
         "media_players": dict(options.get(CONF_MEDIA_PLAYERS, {})),
         **household.apps_overview(),
         "tile_exchange": list(options.get(CONF_TILE_EXCHANGE, [])),
+        # Voice assistants may use Hearth (llm_api.py): off unless chosen
+        "voice_assistants": bool(options.get(CONF_VOICE_ASSISTANTS)),
         "push_server": options.get(CONF_PUSH_SERVER),
         "parent_pins": sorted(parent_pin.stored_pins(options)),
         "school_days": dict(options.get(CONF_SCHOOL_DAYS) or {}),
@@ -220,6 +297,8 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
         "ask_notify": options.get(CONF_ASK_NOTIFY),
         # Each adult's phones, and whether they get requests (and open hearth://ask/<id> on Android)
         "ask_phones": phones.page_view(hass, options),
+        # Which kids' suggestions also go to the adults' phones, and the amount each offers (suggest_push.py)
+        "suggest_push": suggest_pairs(options),
         "notify_services": sorted(
             f"notify.{name}" for name in hass.services.async_services().get("notify", {}) if name.startswith("mobile_app_")
         ),
@@ -232,6 +311,11 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
             key=lambda z: z["name"].lower(),
         ),
         "places_now": {person: household.places.page(person) for person in household.places.people()},
+        # Each person's Screen time today sensor, whose hourly statistics draw Today's hour-by-hour chart
+        "screen_time_sensors": _screen_time_sensors(hass, hub),
+        # What the installed integrations can do, found now: the page offers only those (nintendo.py)
+        "capabilities": {"nintendo": nintendo.capabilities(hass)},
+        "parental_controls": _parental_controls(hass),
     }
 
 
@@ -240,6 +324,32 @@ def _unique_keys(favorites: list[dict[str, Any]]) -> list[dict[str, Any]]:
     if len(set(keys)) != len(keys):
         raise vol.Invalid("Each favorite place needs its own key")
     return favorites
+
+
+def _raise(message: str):
+    raise vol.Invalid(message)
+
+
+def _one_pair_each(found: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """A suggest_push list: each kid and group (or device) once."""
+    keys = [(p["person"], p.get("device") or p.get("group")) for p in found]
+    if len(set(keys)) != len(keys):
+        raise vol.Invalid("Each kid and group is listed once")
+    return found
+
+
+# A pushed pair: a kid's group or one device of theirs (a target id), and maybe the amount it offers
+_SUGGEST_PAIR = vol.All(
+    vol.Schema(
+        {
+            vol.Required("person"): cv.entity_domain("person"),
+            vol.Exclusive("group", "what"): vol.All(cv.string, vol.Match(r"^[a-z0-9_]{1,64}$")),
+            vol.Exclusive("device", "what"): vol.All(cv.string, vol.Length(min=1, max=200)),
+            vol.Optional("minutes"): vol.In(AMOUNTS),
+        }
+    ),
+    lambda pair: pair if ("group" in pair) != ("device" in pair) else _raise("A group or a device"),
+)
 
 
 # What the page may write to the options, each checked as the Configure menu would leave it
@@ -252,6 +362,7 @@ OPTION_SCHEMAS: dict[str, Any] = {
     CONF_GROUP_APPS: vol.Schema({_ID: [cv.string]}),
     CONF_OUTSIDE_ALL: [_ID],
     CONF_TILE_EXCHANGE: [_PERSON],
+    CONF_VOICE_ASSISTANTS: bool,
     CONF_SOURCES: [
         vol.Schema(
             {
@@ -262,6 +373,9 @@ OPTION_SCHEMAS: dict[str, Any] = {
                 vol.Optional("live"): bool,
                 vol.Optional("same_as"): vol.Any(None, cv.string),
                 vol.Optional("group"): vol.Any(None, _ID),
+                # A companion app's Last used app: now playing only while [screen] (its Interactive sensor) is on
+                vol.Optional("phone_app"): bool,
+                vol.Optional("screen"): vol.Any(None, cv.entity_domain("binary_sensor")),
             }
         )
     ],
@@ -289,6 +403,7 @@ OPTION_SCHEMAS: dict[str, Any] = {
     phones.CONF_ASK_NOTIFY_OFF: [_PERSON],
     phones.CONF_ASK_DEEP_LINK: [_PERSON],
     CONF_PUSH_SERVER: clean_server,
+    CONF_SUGGEST_PUSH: vol.All([_SUGGEST_PAIR], vol.Length(max=200), _one_pair_each),
     CONF_PLACES: vol.Schema(
         {
             vol.Optional(SCHOOLS): vol.Schema({_PERSON: cv.entity_domain("zone")}),
@@ -340,7 +455,11 @@ def ws_config_set(hass: HomeAssistant, connection: websocket_api.ActiveConnectio
     except vol.Invalid as err:
         connection.send_error(msg["id"], "invalid", str(err))
         return
-    hass.config_entries.async_update_entry(hub.entry, options={**hub.entry.options, key: value})
+    options = {**hub.entry.options, key: value}
+    if key == CONF_SUGGEST_PUSH:
+        # The older offer_more (moved into suggest_push when the household loads) mustn't come back with it
+        options.pop(CONF_OFFER_MORE, None)
+    hass.config_entries.async_update_entry(hub.entry, options=options)
     connection.send_result(msg["id"])
 
 
@@ -389,7 +508,7 @@ async def ws_pairing(hass: HomeAssistant, connection: websocket_api.ActiveConnec
     elif not await hub.async_approve(msg["pairing_id"], msg.get("person") if pairing.kind == KIND_MOBILE else None):
         connection.send_error(msg["id"], "expired", "That request has expired")
         return
-    persistent_notification.async_dismiss(hass, pairing_notification_id(msg["pairing_id"]))
+    clear_pairing(hass, msg["pairing_id"])
     # The discovered device in Settings > Devices & services goes too
     for flow in hass.config_entries.flow.async_progress_by_handler(DOMAIN):
         if flow.get("context", {}).get("unique_id") == pairing.device_id or (
@@ -432,6 +551,136 @@ async def ws_parent_pin(hass: HomeAssistant, connection: websocket_api.ActiveCon
     connection.send_result(msg["id"])
 
 
+def _switch_or_error(hass: HomeAssistant, connection, msg: dict[str, Any], service: str) -> dict[str, Any] | None:
+    """The kid's Switch the message names, when the Nintendo integration has [service]; else an error is sent."""
+    hub = _hub(hass)
+    if hub is None:
+        connection.send_error(msg["id"], "not_set_up", "Hearth isn't set up")
+        return None
+    if not hass.services.has_service(NINTENDO_DOMAIN, service):
+        connection.send_error(msg["id"], "not_supported", "The installed Nintendo integration can't do that")
+        return None
+    switch = nintendo.switch_of(hub.household, msg["person"], msg["device_id"])
+    if switch is None:
+        connection.send_error(msg["id"], "not_found", "That isn't one of their Switches")
+        return None
+    return switch
+
+
+async def _call_nintendo(hass: HomeAssistant, service: str, data: dict[str, Any]) -> dict[str, Any] | None:
+    responds = hass.services.supports_response(NINTENDO_DOMAIN, service) != SupportsResponse.NONE
+    return await hass.services.async_call(NINTENDO_DOMAIN, service, data, blocking=True, return_response=responds)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hearth/nintendo/bonus",
+        vol.Required("person"): _PERSON,
+        vol.Required("device_id"): cv.string,
+        vol.Required("minutes"): vol.All(
+            int, vol.Any(nintendo.UNLIMITED, vol.All(int, vol.Range(min=nintendo.BONUS_MIN, max=1440)))
+        ),
+    }
+)
+@websocket_api.async_response
+async def ws_nintendo_bonus(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Nintendo's own extra playing time on a kid's Switch (add_bonus_time), past the Switch's own limit. Not while
+    Hearth holds the Switch: Hearth's extra time on it (hearth.add_bonus with its device) lets the hold go instead, and
+    Nintendo's extra on a held Switch would read as a parent's change in the Nintendo app."""
+    switch = _switch_or_error(hass, connection, msg, nintendo.ADD_BONUS)
+    if switch is None:
+        return
+    if switch["held_by_hearth"]:
+        connection.send_error(msg["id"], "held", "Hearth holds this Switch: give Hearth's extra time on it instead")
+        return
+    data = {"device_id": msg["device_id"], "bonus_time": msg["minutes"]}
+    if not nintendo.accepts(hass, nintendo.ADD_BONUS, data):
+        connection.send_error(
+            msg["id"], "not_supported", "The installed Nintendo integration doesn't take that many minutes"
+        )
+        return
+    try:
+        response = await _call_nintendo(hass, nintendo.ADD_BONUS, data)
+    except (HomeAssistantError, vol.Invalid) as err:
+        connection.send_error(msg["id"], "failed", str(err))
+        return
+    connection.send_result(msg["id"], response or {})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hearth/nintendo/bonus_cancel",
+        vol.Required("person"): _PERSON,
+        vol.Required("device_id"): cv.string,
+    }
+)
+@websocket_api.async_response
+async def ws_nintendo_bonus_cancel(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Cancels today's extra playing time on a kid's Switch (cancel_bonus_time, a patched Nintendo integration's)."""
+    if _switch_or_error(hass, connection, msg, nintendo.CANCEL_BONUS) is None:
+        return
+    try:
+        response = await _call_nintendo(hass, nintendo.CANCEL_BONUS, {"device_id": msg["device_id"]})
+    except HomeAssistantError as err:
+        connection.send_error(msg["id"], "failed", str(err))
+        return
+    connection.send_result(msg["id"], response or {})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {vol.Required("type"): "hearth/nintendo/apps", vol.Required("person"): _PERSON, vol.Required("device_id"): cv.string}
+)
+@websocket_api.async_response
+async def ws_nintendo_apps(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """The games on a kid's Switch and whether each is on its allow list (list_applications), by name."""
+    if _switch_or_error(hass, connection, msg, nintendo.LIST_APPS) is None:
+        return
+    try:
+        response = await _call_nintendo(hass, nintendo.LIST_APPS, {"device_id": msg["device_id"]})
+    except HomeAssistantError as err:
+        connection.send_error(msg["id"], "failed", str(err))
+        return
+    apps = [
+        {"application_id": a.get("application_id"), "name": a.get("name"), "allowed": bool(a.get("allowed"))}
+        for a in (response or {}).get("applications") or []
+        if isinstance(a, dict) and a.get("application_id")
+    ]
+    apps.sort(key=lambda a: str(a["name"] or a["application_id"]).casefold())
+    connection.send_result(msg["id"], {"applications": apps})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hearth/nintendo/app_allowed",
+        vol.Required("person"): _PERSON,
+        vol.Required("device_id"): cv.string,
+        vol.Required("application_id"): cv.string,
+        vol.Required("allowed"): bool,
+    }
+)
+@websocket_api.async_response
+async def ws_nintendo_app_allowed(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Puts a game on a kid's Switch's allow list, or takes it off (set_app_allowed): an allowed game starts past the
+    Switch's age rating restriction."""
+    if _switch_or_error(hass, connection, msg, nintendo.SET_APP_ALLOWED) is None:
+        return
+    data = {"device_id": msg["device_id"], "application_id": msg["application_id"], "allowed": msg["allowed"]}
+    try:
+        response = await _call_nintendo(hass, nintendo.SET_APP_ALLOWED, data)
+    except HomeAssistantError as err:
+        connection.send_error(msg["id"], "failed", str(err))
+        return
+    connection.send_result(msg["id"], response or {})
+
+
 @callback
 def new_group_id(name: str, taken: set[str]) -> str:
     base = slug(name) or "group"
@@ -443,5 +692,15 @@ def new_group_id(name: str, taken: set[str]) -> str:
 
 @callback
 def async_register_commands(hass: HomeAssistant) -> None:
-    for command in (ws_config, ws_config_set, ws_budget, ws_pairing, ws_parent_pin):
+    for command in (
+        ws_config,
+        ws_config_set,
+        ws_budget,
+        ws_pairing,
+        ws_parent_pin,
+        ws_nintendo_bonus,
+        ws_nintendo_bonus_cancel,
+        ws_nintendo_apps,
+        ws_nintendo_app_allowed,
+    ):
         websocket_api.async_register_command(hass, command)

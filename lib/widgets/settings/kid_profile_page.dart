@@ -29,13 +29,13 @@ import 'focusable_settings_tile.dart';
 import 'kid_parent_pages.dart';
 import 'kids_profiles_page.dart';
 import 'message_dialog.dart';
-import 'profiles_settings_page.dart';
+import 'screen_time_rules_page.dart';
 import 'settings_page.dart';
 import 'updates_page.dart';
 
 /// One kid, from Settings > Family > Kids profiles: everything that's that child's own in one place, set by the
 /// parent without switching to their profile (Settings is past the parent PIN to get here in a kids profile). How
-/// Hearth stands on the profile (needing a fix: back to the list's Fix), their YouTube time per day, and HearthTube:
+/// Hearth stands on the profile (needing a fix: back to the list's Fix), their screen time, and HearthTube:
 /// getting it onto the TV and this profile, its version and updates, and its settings while this profile is on.
 class KidProfilePage extends StatefulWidget {
   static const String routeName = "kid_profile";
@@ -205,7 +205,7 @@ class _KidProfilePageState extends State<KidProfilePage> {
           trailing: Text(ready ? status : l.kidsProfilesFix, style: textTheme.bodySmall?.copyWith(color: color)),
           onPressed: ready || busy ? null : () => Navigator.of(context).pop(KidProfilePage.fix),
         ),
-        if (kid.profileKey != null) YouTubeLimitTile(profileKey: kid.profileKey, autofocus: ready),
+        if (kid.profileKey != null) ScreenTimeTile(profileKey: kid.profileKey!, autofocus: ready),
         // What the kid's HearthTube tells a parent (contract 8): what they started, and what is blocked for them
         if (kid.profileKey != null) ...[
           FocusableSettingsTile(

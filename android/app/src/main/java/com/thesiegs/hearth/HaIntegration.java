@@ -93,9 +93,25 @@ final class HaIntegration {
         return HaConfig.prefs(context).getString(SECRET_SEALED_KEY, null);
     }
 
+    /**
+     * Whether this TV is paired with the Hearth integration. Asked several times per window change on the accessibility
+     * path, so whether the sealed secret opens is worked out once per pairing (its sealed form, new with every pairing)
+     * rather than with the Keystore every time.
+     */
     static boolean isPaired(Context context) {
-        return HaConfig.baseUrl(context) != null && secret(context) != null;
+        if (HaConfig.baseUrl(context) == null) return false;
+        String stamp = pairingStamp(context);
+        if (stamp == null) return false;
+        if (stamp.equals(sPairedStamp)) return sPairedOpens;
+        boolean opens = secret(context) != null;
+        sPairedOpens = opens;
+        sPairedStamp = stamp;
+        return opens;
     }
+
+    /** The sealed secret {@link #isPaired} last opened (or failed to), and whether it did. */
+    private static volatile String sPairedStamp;
+    private static volatile boolean sPairedOpens;
 
     static String statusUrl(Context context) {
         String base = HaConfig.baseUrl(context);
@@ -165,19 +181,102 @@ final class HaIntegration {
                 return "ended";
             }
             // The address that answered is Home Assistant's now (only now: a mistyped one never replaces the panel's)
-            HaConfig.prefs(context).edit().putString(HaConfig.URL_KEY, base).apply();
+            HaConfig.prefs(context).edit().putString(HaConfig.URL_KEY, base).remove(LEFT_KEY).apply();
             Log.i(TAG, "Paired with Home Assistant");
             HaBridgeService.sync(context);
+            // The household's other TVs pair through this one
+            Household.onHaChanged(context);
             return "paired";
         }
         return "denied".equals(status) ? "denied" : "pending";
     }
 
+    /**
+     * Asks Home Assistant for a single-use pairing ticket (blocking; this TV must be paired): kind "tv" for another TV
+     * of the household, or "mobile" with an adult's {@code person} for that adult's phone. The ticket, or null.
+     */
+    static String requestTicket(Context context, String kind, String person) {
+        String base = HaConfig.baseUrl(context);
+        String secret = secret(context);
+        if (base == null || secret == null) return null;
+        try {
+            JSONObject body = new JSONObject().put("kind", kind);
+            if (person != null) body.put("person", person);
+            Answer answer = request(base + "/api/hearth/device/" + deviceId(context) + "/ticket", "POST", body, null,
+                    secret);
+            if (answer.code != 200 || answer.body == null) {
+                Log.i(TAG, "No pairing ticket: Home Assistant answered " + answer.code + " " + answer.error());
+                return null;
+            }
+            String ticket = answer.body.optString("ticket", "");
+            return ticketShaped(ticket) ? ticket : null;
+        } catch (JSONException e) {
+            return null;
+        }
+    }
+
+    /** A ticket as Home Assistant makes them (URL-safe base64), never anything that could be more than that. */
+    static boolean ticketShaped(String ticket) {
+        return ticket != null && ticket.matches("[A-Za-z0-9_-]{16,128}");
+    }
+
+    /**
+     * Pairs with the ticket another TV of the household got for this one (blocking): "paired", "refused" (the ticket
+     * was used, expired or wrong: another TV can get a new one), or "unreachable".
+     */
+    static String redeemTicket(Context context, String base, String ticket) {
+        if (base == null || !ticketShaped(ticket)) return "refused";
+        try {
+            JSONObject body = new JSONObject()
+                    .put("ticket", ticket)
+                    .put("device_id", deviceId(context))
+                    .put("kind", "tv")
+                    .put("name", ShareDiscovery.deviceName(context))
+                    .put("model", Build.MODEL)
+                    .put("version", versionName(context));
+            Answer answer = request(base + "/api/hearth/pair/redeem", "POST", body, null);
+            if (answer.code == 0) return "unreachable";
+            String secret = answer.code == 200 && answer.body != null ? answer.body.optString("secret", "") : "";
+            if (secret.isEmpty() || !setSecret(context, secret)) {
+                Log.i(TAG, "Pairing ticket refused: Home Assistant answered " + answer.code);
+                HaConfig.prefs(context).edit().putLong(TICKET_REFUSED_AT_KEY, System.currentTimeMillis()).apply();
+                return "refused";
+            }
+            HaConfig.prefs(context).edit().putString(HaConfig.URL_KEY, base).remove(LEFT_KEY).apply();
+            Log.i(TAG, "Paired with Home Assistant through another TV of the household");
+            HaBridgeService.sync(context);
+            Household.onHaChanged(context);
+            return "paired";
+        } catch (JSONException e) {
+            return "refused";
+        }
+    }
+
+    /** When a ticket was last refused here (a lasting reason, such as Home Assistant not taking this TV as local). */
+    private static final String TICKET_REFUSED_AT_KEY = "ha_ticket_refused_at";
+    /** How long a TV whose ticket was refused waits before the household tries again. */
+    static final long TICKET_RETRY_MS = 60 * 60_000;
+
+    /** Whether a ticket was refused here in the last {@link #TICKET_RETRY_MS}. */
+    static boolean ticketRefusedLately(Context context, long now) {
+        long at = HaConfig.prefs(context).getLong(TICKET_REFUSED_AT_KEY, 0);
+        return at > 0 && now >= at && now - at < TICKET_RETRY_MS;
+    }
+
+    /** Someone unpaired this TV here: the household's other TVs don't pair it again by themselves. */
+    private static final String LEFT_KEY = "ha_integration_left";
+
+    static boolean leftOnPurpose(Context context) {
+        return HaConfig.prefs(context).getBoolean(LEFT_KEY, false);
+    }
+
     /** Forgets the pairing on this TV (Home Assistant keeps the device until it's deleted there). */
     static void unpair(Context context) {
+        HaConfig.prefs(context).edit().putBoolean(LEFT_KEY, true).apply();
         setSecret(context, null);
         forgetHomeAssistantBlocks(context);
         HaBridgeService.sync(context);
+        Household.onHaChanged(context);
     }
 
     /** A TV that left Home Assistant no longer holds kids to the YouTube blocks set there (Hearth's own stay). */
@@ -245,7 +344,8 @@ final class HaIntegration {
             long since = refusalsSince(prefs.getLong(REFUSED_SINCE_KEY, 0), prefs.getLong(REFUSED_LAST_KEY, 0), now);
             if (refusedLongEnough(since, now)) {
                 Log.w(TAG, "Home Assistant no longer knows this TV: unpaired");
-                prefs.edit().remove(REFUSED_SINCE_KEY).remove(REFUSED_LAST_KEY).apply();
+                // Deleted in Home Assistant: the household's other TVs don't pair it again by themselves
+                prefs.edit().remove(REFUSED_SINCE_KEY).remove(REFUSED_LAST_KEY).putBoolean(LEFT_KEY, true).apply();
                 setSecret(context, null);
                 forgetHomeAssistantBlocks(context);
             } else {
@@ -255,6 +355,39 @@ final class HaIntegration {
             prefs.edit().remove(REFUSED_SINCE_KEY).remove(REFUSED_LAST_KEY).apply();
         }
         return answer;
+    }
+
+    /** How a held wait ended (see {@link #waitForChange}). */
+    enum WaitResult { CHANGED, NOT_CHANGED, UNSUPPORTED, FAILED }
+
+    /**
+     * Holds the integration's long-poll (blocking, up to {@code timeoutS} seconds): CHANGED as soon as this TV's state
+     * document isn't {@code version} any more (a pause, a lock, an answered request), NOT_CHANGED at the timeout,
+     * UNSUPPORTED from an older integration without it (404), FAILED otherwise. It never carries the document: on
+     * CHANGED the status is posted and the answer read as usual. See the integration's wait.py.
+     */
+    static WaitResult waitForChange(Context context, String version, int timeoutS) {
+        String base = HaConfig.baseUrl(context);
+        String secret = secret(context);
+        if (base == null || secret == null) return WaitResult.FAILED;
+        Answer answer = request(waitUrl(base, deviceId(context), version, timeoutS), "GET", null, null, secret,
+                5_000, (timeoutS + 10) * 1_000);
+        return waitResult(answer.code, answer.body);
+    }
+
+    static String waitUrl(String base, String deviceId, String version, int timeoutS) {
+        StringBuilder url = new StringBuilder(base).append("/api/hearth/device/").append(deviceId)
+                .append("/wait?timeout=").append(timeoutS);
+        // The version is the document's short hex hash; anything else is left out (the integration then says changed)
+        if (version != null && version.matches("[0-9a-f]{1,32}")) url.append("&version=").append(version);
+        return url.toString();
+    }
+
+    static WaitResult waitResult(int code, JSONObject body) {
+        if (code == 200 && body != null) {
+            return body.optBoolean("changed", false) ? WaitResult.CHANGED : WaitResult.NOT_CHANGED;
+        }
+        return code == 404 ? WaitResult.UNSUPPORTED : WaitResult.FAILED;
     }
 
     /**
@@ -278,6 +411,22 @@ final class HaIntegration {
         // Locked out there: no, even for the right PIN, as on a phone
         if (answer.code == 429) return HaParentPins.Verdict.NO;
         return HaParentPins.Verdict.UNKNOWN;
+    }
+
+    /**
+     * Presses button {@code actionId} of the integration's notice {@code key} (blocking): with a Parent PIN, which
+     * the integration checks (its lockout included) and runs the button as that adult; or with {@code pin} null, asking
+     * the adults' phones. See HaNotices.outcome for the answers.
+     */
+    static HaNotices.Result pressNotice(Context context, String key, String actionId, String pin) {
+        String base = HaConfig.baseUrl(context);
+        String secret = secret(context);
+        if (base == null || secret == null) return new HaNotices.Result(HaNotices.Outcome.UNSUPPORTED, 0);
+        Answer answer = request(base + "/api/hearth/device/" + deviceId(context) + "/notice", "POST",
+                HaNotices.pressBody(key, actionId, pin), null, secret, 3_000, 8_000);
+        HaNotices.Result result = HaNotices.outcome(answer.code, answer.body);
+        Log.i(TAG, "A notice's button" + (pin != null ? " (PIN)" : " (phone)") + ": " + result.outcome);
+        return result;
     }
 
     /** The amounts of more time a kid can ask for, in minutes (the integration's asks.AMOUNTS). */

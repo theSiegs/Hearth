@@ -9,6 +9,7 @@ import android.content.SharedPreferences;
  */
 final class HaConfig {
     static final String URL_KEY = "ha_base_url";
+    /** The retired webhook id for TV status; cleared when the bridge next syncs (HaBridgeService). */
     static final String WEBHOOK_KEY = "ha_webhook_id";
     /** The token before it was kept encrypted: read once, moved to {@link #TOKEN_SEALED_KEY}, and removed. */
     private static final String TOKEN_KEY = "ha_panel_token";

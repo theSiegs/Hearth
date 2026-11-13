@@ -28,10 +28,16 @@ from .const import (
     CONNECTED_WITHIN,
     KIND_MOBILE,
     MAX_EVENT_POSTS,
+    MAX_NOTICE_POSTS,
     MAX_PENDING_PAIRINGS,
     MAX_STATUS_POSTS,
     PAIRING_EXPIRES,
     PAIRING_INTERVAL_PER_ADDRESS,
+    EVENT_DEVICE_PAIRED,
+    KIND_TV,
+    MAX_TICKETS,
+    TICKET_EXPIRES,
+    default_caps,
     SIGNAL_DEVICE_ADDED,
     SIGNAL_PAIRINGS,
     SIGNAL_STATUS,
@@ -40,8 +46,11 @@ from .const import (
     STORAGE_VERSION,
 )
 from .asks import Asks
+from .attention import ADMINS, Attention, Item
 from .commands import Commands
 from .push import PushChannel, new_topic
+from .suggest_push import SuggestPush
+from .wait import DeviceWaits
 from .household import Household
 from .parent_pin import EVENT_PARENT_PIN_LOCKED_OUT
 
@@ -72,10 +81,39 @@ class Pairing:
     denied: bool = False
 
 
+@dataclass
+class Ticket:
+    """A single-use pairing ticket a paired TV asked for: the device that redeems it pairs with no code to check."""
+
+    kind: str
+    # A phone's person (an adult's); None for a TV
+    person: str | None
+    # The paired TV that asked for it
+    minted_by: str
+    expires: datetime
+
+
 def _shared(hass: HomeAssistant) -> dict[str, dict]:
     """Pairings kept outside the entry: approving one saves the device, which reloads the entry, and the device
-    asking for its secret meanwhile must still find it."""
-    return hass.data.setdefault(f"{DOMAIN}_pairing", {"pairings": {}, "asked_at": {}})
+    asking for its secret meanwhile must still find it. Tickets too, so an options change doesn't void one."""
+    shared = hass.data.setdefault(f"{DOMAIN}_pairing", {"pairings": {}, "asked_at": {}})
+    shared.setdefault("tickets", {})
+    return shared
+
+
+@dataclass
+class PinLockout:
+    """Wrong parent PINs in a row from one device, and the lockout they earned."""
+
+    failures: int = 0
+    locked_until: datetime | None = None
+
+
+def pin_lockout(hass: HomeAssistant, device_id: str) -> PinLockout:
+    """A device's parent-PIN lockout, kept outside the entry like the pairings: changing an option reloads the
+    entry, and that must not hand someone guessing the PIN a fresh set of tries. A restart still clears it."""
+    lockouts: dict[str, PinLockout] = hass.data.setdefault(f"{DOMAIN}_pin_lockout", {})
+    return lockouts.setdefault(device_id, PinLockout())
 
 
 def find_pairing(hass: HomeAssistant, pairing_id: str, nonce: str | None) -> Pairing | None:
@@ -104,9 +142,7 @@ class DeviceState:
     seen: datetime | None = None
     posts: list[datetime] = field(default_factory=list)
     event_posts: list[datetime] = field(default_factory=list)
-    # Wrong parent PINs in a row, and the lockout they earned (kept until a restart)
-    pin_failures: int = 0
-    pin_locked_until: datetime | None = None
+    notice_posts: list[datetime] = field(default_factory=list)
 
 
 class HearthHub:
@@ -123,12 +159,19 @@ class HearthHub:
         shared = _shared(hass)
         self._pairings: dict[str, Pairing] = shared["pairings"]
         self._asked_at: dict[str, datetime] = shared["asked_at"]
+        # Pairing tickets by their hash (the ticket itself is never kept)
+        self._tickets: dict[str, Ticket] = shared["tickets"]
+        # Telling people (the companion app, the bell): first, so everything after can
+        self.attention = Attention(hass, self)
         self.household = Household(hass, self)
         self.asks = Asks(hass, self)
         # One-shot commands for the TVs (hearth.play_on_tv), handed over in their state documents
         self.commands = Commands(hass)
         # "Something changed" pings to the phones, when the household has a push server
         self.push = PushChannel(hass, self)
+        # The suggestions the household chose, on the adults' phones
+        self.suggest_push = SuggestPush(hass, self)
+        self.waits = DeviceWaits(hass, self)
 
     # The devices
 
@@ -139,6 +182,14 @@ class HearthHub:
     def kind(self, device_id: str) -> str | None:
         device = self.devices.get(device_id)
         return device.get(CONF_KIND) if device else None
+
+    def has_cap(self, device_id: str, cap: str) -> bool:
+        """Whether the device can be sent [cap] (const.CAPS): what it said in its status, once it has said; until
+        then its kind's (default_caps), so a device from before caps keeps what it had."""
+        declared = (self.state(device_id).status or {}).get("caps")
+        if declared is not None:
+            return cap in declared
+        return cap in default_caps(self.kind(device_id))
 
     def state(self, device_id: str) -> DeviceState:
         return self._states.setdefault(device_id, DeviceState())
@@ -185,6 +236,16 @@ class HearthHub:
         state.event_posts.append(now)
         return False
 
+    def too_many_notice_presses(self, device_id: str) -> bool:
+        """The same for its notices' button presses, counted on their own."""
+        now = dt_util.utcnow()
+        state = self.state(device_id)
+        state.notice_posts = [t for t in state.notice_posts if now - t < STATUS_WINDOW]
+        if len(state.notice_posts) >= MAX_NOTICE_POSTS:
+            return True
+        state.notice_posts.append(now)
+        return False
+
     def too_many_user_asks(self, user_id: str) -> bool:
         """too_many_events for a Home Assistant user's own asks (hearth/ask)."""
         now = dt_util.utcnow()
@@ -205,6 +266,9 @@ class HearthHub:
             self.hass.bus.async_fire(
                 EVENT_PARENT_PIN_LOCKED_OUT, {"device_id": device_id, "lockouts": after - before, "retry_in": None}
             )
+        # A device that said its caps once keeps them while its later posts leave them out
+        if status.get("caps") is None and (state.status or {}).get("caps") is not None:
+            status = {**status, "caps": state.status["caps"]}
         state.status = status
         state.seen = dt_util.utcnow()
         # What the TV ran of its commands leaves the queue (its answer no longer carries them)
@@ -212,6 +276,9 @@ class HearthHub:
             self.commands.take_done(device_id, status["commands_done"])
         self._store.async_delay_save(self._data_to_save, 30)
         async_dispatcher_send(self.hass, SIGNAL_STATUS.format(device_id))
+        # A TV paired after it had rules of its own: they're the kids' first budgets
+        if status.get("local_rules") and self.kind(device_id) == KIND_TV:
+            self.household.import_local_rules(device_id, status["local_rules"])
         self.household.recompute()
 
     @callback
@@ -325,6 +392,71 @@ class HearthHub:
         async_dispatcher_send(self.hass, SIGNAL_DEVICE_ADDED, pairing.device_id)
         async_dispatcher_send(self.hass, SIGNAL_PAIRINGS)
         return True
+
+    # Tickets: one confirmed pairing adds the household's other TVs, and a parent's phone in one tap
+
+    def mint_ticket(self, minted_by: str, kind: str, person: str | None) -> str | None:
+        """A single-use ticket a paired TV hands to another TV of its household (kind tv) or to a phone an adult bound
+        as a parent's (kind mobile, for that adult); None when too many are outstanding."""
+        now = dt_util.utcnow()
+        for gone in [h for h, t in self._tickets.items() if t.expires <= now]:
+            del self._tickets[gone]
+        if len(self._tickets) >= MAX_TICKETS:
+            return None
+        ticket = secrets.token_urlsafe(32)
+        self._tickets[hash_secret(ticket)] = Ticket(kind, person if kind == KIND_MOBILE else None, minted_by,
+                                                    now + TICKET_EXPIRES)
+        return ticket
+
+    async def async_redeem(
+        self,
+        ticket: str,
+        device_id: str,
+        kind: str,
+        name: str,
+        model: str | None,
+        sw_version: str | None,
+    ) -> Pairing | None:
+        """Pairs a device that holds a live ticket of its kind, at once (the TV that asked for the ticket vouched for
+        it); None when the ticket is unknown, used, expired or of another kind. The ticket is spent either way."""
+        now = dt_util.utcnow()
+        held = self._tickets.pop(hash_secret(ticket), None)
+        if held is None or held.expires <= now or held.kind != kind or held.minted_by not in self.devices:
+            return None
+        for old in [p.pairing_id for p in self._pairings.values() if p.device_id == device_id]:
+            del self._pairings[old]
+        pairing = Pairing(
+            pairing_id=secrets.token_urlsafe(16),
+            code="",
+            nonce_hash="",
+            device_id=device_id,
+            kind=kind,
+            name=name,
+            model=model,
+            sw_version=sw_version,
+            expires=now + APPROVED_EXPIRES,
+        )
+        self._pairings[pairing.pairing_id] = pairing
+        by_name = self.devices[held.minted_by].get("name") or held.minted_by
+        if not await self.async_approve(pairing.pairing_id, held.person):
+            return None
+        self.hass.bus.async_fire(
+            EVENT_DEVICE_PAIRED,
+            {"device_id": device_id, "name": name, "kind": kind, "person": held.person, "by": held.minted_by},
+        )
+        self.attention.notify(
+            Item(
+                f"hearth_paired_{device_id}",
+                f"**{name}** paired with Hearth through **{by_name}**, which is already paired. If that wasn't you, "
+                "delete it in [Devices & services](/config/integrations/integration/hearth).",
+                title="A Hearth device paired",
+                urgency="notice",
+                audience=ADMINS,
+                bell=True,
+                phone=False,
+            )
+        )
+        return pairing
 
     def deny(self, pairing_id: str) -> None:
         pairing = self.pairing(pairing_id)

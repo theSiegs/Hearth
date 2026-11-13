@@ -1255,7 +1255,7 @@ abstract class AppLocalizations {
   /// Kids profiles page: under the Fix button
   ///
   /// In en, this message translates to:
-  /// **'Puts Hearth and HearthTube back where they\'re missing. Each kid they\'re added for gets one Family Link notice.'**
+  /// **'Puts Hearth and HearthTube back where they\'re missing.'**
   String get kidsProfilesFixBody;
 
   /// Kids profiles page: when the TV has no kids profiles
@@ -1611,6 +1611,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'School time at {time}'**
   String glintSchoolTimeAt(String time);
+
+  /// Short message when something tries to open the Home Assistant dashboard panel in a kids profile, where it never opens
+  ///
+  /// In en, this message translates to:
+  /// **'The dashboard is for adults. Ask an adult.'**
+  String get haPanelKidsAskAdult;
 
   /// Settings page title, also its row in the page that opens it
   ///
@@ -2442,6 +2448,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Asked a parent\'s phone. Allow it there, or enter the PIN here.'**
   String get parentPinPhoneAsked;
+
+  /// PIN screen for a Hearth notice's button: the adults' phones were asked too
+  ///
+  /// In en, this message translates to:
+  /// **'Sent to your phone. Answer there, or enter the PIN here.'**
+  String get noticeSentToPhone;
+
+  /// Brief message: a Hearth notice's button ran after the Parent PIN
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get noticeDone;
+
+  /// Brief message: a Hearth notice's button waits for an adult's answer on their phone
+  ///
+  /// In en, this message translates to:
+  /// **'Sent to your phone'**
+  String get noticeSent;
+
+  /// Brief message: the Hearth notice whose button was pressed no longer exists
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s already been answered'**
+  String get noticeGone;
+
+  /// Brief message: this Home Assistant can't take a notice's button from the TV
+  ///
+  /// In en, this message translates to:
+  /// **'Answer this on your phone'**
+  String get noticeUsePhone;
+
+  /// Brief message: Home Assistant refused a notice's button because of too many tries
+  ///
+  /// In en, this message translates to:
+  /// **'Too many tries. Try again later.'**
+  String get noticeTooMany;
+
+  /// Brief message: a notice's button didn't get through, or Home Assistant couldn't run it
+  ///
+  /// In en, this message translates to:
+  /// **'That didn\'t work. Try again.'**
+  String get noticeFailed;
 
   /// PIN screen: the parent's phone answered Deny
   ///
@@ -3554,14 +3602,20 @@ abstract class AppLocalizations {
   /// Switch on the Continue Watching page
   ///
   /// In en, this message translates to:
-  /// **'Playback Percentage'**
-  String get cwPlaybackPercentage;
-
-  /// Switch on the Continue Watching page
-  ///
-  /// In en, this message translates to:
   /// **'Episode & Video Details'**
   String get cwEpisodeDetails;
+
+  /// Switch on the Continue Watching page: this profile's Continue Watching goes to the household's other TVs
+  ///
+  /// In en, this message translates to:
+  /// **'Share What I Watch With Our Other TVs'**
+  String get cwShareWatchHistory;
+
+  /// Subtitle of the share switch on the Continue Watching page
+  ///
+  /// In en, this message translates to:
+  /// **'What you watch shows in Continue Watching on your other TVs. Off: it stays on the TV you watched it on.'**
+  String get cwShareWatchHistoryDescription;
 
   /// Next to Apps with Continue Watching on the Continue Watching page: how many apps are blocked
   ///
@@ -5376,7 +5430,7 @@ abstract class AppLocalizations {
   /// Setup flow: Home Assistant TV status step
   ///
   /// In en, this message translates to:
-  /// **'The TV can send what\'s playing and the active profile to Home Assistant. On the same phone page, add the ID of a webhook automation from Home Assistant.'**
+  /// **'Pair the TV with Hearth in Home Assistant: it tells Home Assistant what\'s playing and the active profile, and takes each kid\'s limits from there. Pairing one TV pairs the others in your household too.'**
   String get setupFlowHaStatusBody;
 
   /// Setup flow: Home Assistant TV status step, when the phone sent no webhook ID
@@ -6524,6 +6578,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t mark that done. Try again in a moment.'**
   String get glanceTodoFailed;
+
+  /// A kid's own screen-time rules (a TV without Home Assistant): the tile and page title
+  ///
+  /// In en, this message translates to:
+  /// **'Screen time'**
+  String get screenTimeTitle;
+
+  /// Screen time tile: the kid has no rules
+  ///
+  /// In en, this message translates to:
+  /// **'No limits'**
+  String get screenTimeNone;
+
+  /// Screen time tile: the kid has rules
+  ///
+  /// In en, this message translates to:
+  /// **'Limits set'**
+  String get screenTimeSet;
+
+  /// Screen time tile when Home Assistant decides the kid's limits
+  ///
+  /// In en, this message translates to:
+  /// **'Set in Home Assistant'**
+  String get screenTimeInHomeAssistant;
+
+  /// Screen time page: what the limits cover
+  ///
+  /// In en, this message translates to:
+  /// **'For this kid on every TV in your household. Time in any app counts, except Hearth itself.'**
+  String get screenTimeHint;
+
+  /// Screen time: the group of every app
+  ///
+  /// In en, this message translates to:
+  /// **'All screen time'**
+  String get screenTimeAll;
+
+  /// Screen time: the group of games
+  ///
+  /// In en, this message translates to:
+  /// **'Games'**
+  String get screenTimeGames;
+
+  /// Screen time: the group of YouTube and HearthTube
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube'**
+  String get screenTimeYouTube;
+
+  /// Screen time: minutes on Monday to Friday
+  ///
+  /// In en, this message translates to:
+  /// **'Weekdays'**
+  String get screenTimeWeekdays;
+
+  /// Screen time: minutes on Saturday and Sunday
+  ///
+  /// In en, this message translates to:
+  /// **'Weekends'**
+  String get screenTimeWeekends;
+
+  /// Screen time: a limit of 0 minutes
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get screenTimeNoneAllowed;
+
+  /// Screen time page: the bedtime section and its start
+  ///
+  /// In en, this message translates to:
+  /// **'Bedtime'**
+  String get bedtimeTitle;
+
+  /// Bedtime: none
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get bedtimeOff;
+
+  /// Bedtime: when it ends in the morning
+  ///
+  /// In en, this message translates to:
+  /// **'Until'**
+  String get bedtimeUntil;
+
+  /// Bedtime: which nights it holds
+  ///
+  /// In en, this message translates to:
+  /// **'Nights'**
+  String get bedtimeNights;
+
+  /// Bedtime nights: all
+  ///
+  /// In en, this message translates to:
+  /// **'Every night'**
+  String get bedtimeNightsAll;
+
+  /// Bedtime nights: before a weekday
+  ///
+  /// In en, this message translates to:
+  /// **'School nights (Sunday to Thursday)'**
+  String get bedtimeNightsWeekdays;
+
+  /// Bedtime nights: before a weekend day
+  ///
+  /// In en, this message translates to:
+  /// **'Friday and Saturday'**
+  String get bedtimeNightsWeekends;
+
+  /// Settings > Family: let a computer on the network debug the TV for two minutes (Hearth answers others Cancel)
+  ///
+  /// In en, this message translates to:
+  /// **'Allow a computer to connect'**
+  String get adbAllowTitle;
+
+  /// After the Parent PIN: what allowing a computer does; quotes Android's debugging prompt
+  ///
+  /// In en, this message translates to:
+  /// **'For the next 2 minutes, when the TV asks \"Allow debugging?\", it\'s yours to answer. After that, Hearth says no to any computer but its own again.'**
+  String get adbAllowBody;
 }
 
 class _AppLocalizationsDelegate

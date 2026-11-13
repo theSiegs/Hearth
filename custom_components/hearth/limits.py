@@ -181,6 +181,12 @@ class LimitsData:
     day: str | None = None
     bonus: dict[str, dict[str, int]] = field(default_factory=dict)
     reached: dict[str, list[str]] = field(default_factory=dict)
+    # A TV's own rules taken (or passed over) once per "device_id:profile_id" (Household.import_local_rules)
+    imported: list[str] = field(default_factory=list)
+
+
+# A TV's own rules name their groups all, games and youtube (ScreenTimeRules on the TV)
+TV_GROUP_ALIASES: dict[str, tuple[str, ...]] = {"youtube": ("youtube", "video")}
 
 
 class Limits:
@@ -197,6 +203,7 @@ class Limits:
             day=stored.get("day"),
             bonus=stored.get("bonus", {}),
             reached=stored.get("reached", {}),
+            imported=stored.get("imported", []),
         )
 
     def _save(self) -> None:
@@ -206,13 +213,20 @@ class Limits:
                 "day": self.data.day,
                 "bonus": self.data.bonus,
                 "reached": self.data.reached,
+                "imported": self.data.imported,
             },
             5,
         )
 
     async def async_flush(self) -> None:
         await self._store.async_save(
-            {"budgets": self.data.budgets, "day": self.data.day, "bonus": self.data.bonus, "reached": self.data.reached}
+            {
+                "budgets": self.data.budgets,
+                "day": self.data.day,
+                "bonus": self.data.bonus,
+                "reached": self.data.reached,
+                "imported": self.data.imported,
+            }
         )
 
     def new_day(self, today: date) -> bool:
@@ -231,6 +245,28 @@ class Limits:
     def set_budget(self, person: str, group: str, kind: str, minutes: int | None) -> None:
         self.data.budgets.setdefault(person, {}).setdefault(group, {})[kind] = minutes
         self._save()
+
+    def take_rules(self, key: str, person: str, budgets: dict[str, dict[str, int]], groups: set[str]) -> bool:
+        """A TV's own rules for one of its profiles ([key]: "device_id:profile_id"), mapped to [person]: they become
+        the person's budgets when the person has none yet, once per key. The TV's YouTube group goes to Home Assistant's
+        YouTube group, else Video; a group Home Assistant has nothing like is left out. Says whether any budget was set."""
+        if key in self.data.imported:
+            return False
+        self.data.imported.append(key)
+        taken = False
+        if not any(m is not None for g in self.data.budgets.get(person, {}).values() for m in g.values()):
+            for tv_group, kinds in budgets.items():
+                # The TV's YouTube group is Home Assistant's own YouTube group when it has one, else Video (which
+                # holds YouTube and HearthTube); other groups match by id
+                group = next((g for g in TV_GROUP_ALIASES.get(tv_group, (tv_group,)) if g in groups), None)
+                if group is None or group in self.data.budgets.get(person, {}):
+                    continue
+                for kind, minutes in kinds.items():
+                    if kind in DAY_TYPES:
+                        self.data.budgets.setdefault(person, {}).setdefault(group, {})[kind] = minutes
+                        taken = True
+        self._save()
+        return taken
 
     def bonus(self, person: str, group: str) -> int:
         return self.data.bonus.get(person, {}).get(group, 0)

@@ -67,10 +67,12 @@ const String _hiddenCalendarsKey = "hidden_calendars";
 const String _haPanelFullDashboardKey = "ha_panel_full_dashboard";
 const String _showInputsWidgetInStatusBarKey = "show_inputs_widget_in_status_bar";
 const String _showContinueWatchingKey = "show_continue_watching";
+/// Whether what this profile watches goes to the household's other TVs (Continue Watching). In the profile's look, so
+/// every TV in the household has the same answer; the Java side reads it from there (Household.publishWatch).
+const String _shareWatchHistoryKey = "share_watch_history";
 const String _continueWatchingCardSizeKey = "continue_watching_card_size";
 const String _continueWatchingMaxItemsKey = "continue_watching_max_items";
 const String _continueWatchingShowProgressKey = "continue_watching_show_progress";
-const String _continueWatchingShowPercentageKey = "continue_watching_show_percentage";
 const String _continueWatchingShowDescriptionKey = "continue_watching_show_description";
 const String _continueWatchingOrderKey = "continue_watching_order";
 const String _hiddenWatchNextProgramIdsKey = "hidden_watch_next_program_ids";
@@ -198,9 +200,9 @@ class SettingsService extends ChangeNotifier {
     _continueWatchingCardSizeKey,
     _continueWatchingMaxItemsKey,
     _continueWatchingShowProgressKey,
-    _continueWatchingShowPercentageKey,
     _continueWatchingShowDescriptionKey,
     _continueWatchingOrderKey,
+    _shareWatchHistoryKey,
     _hiddenWatchNextProgramIdsKey,
     _hiddenWatchNextPackagesKey,
     _startOnBootKey,
@@ -341,6 +343,9 @@ class SettingsService extends ChangeNotifier {
 
   bool get showContinueWatching => _bool(_showContinueWatchingKey, true);
 
+  /// What this profile watches follows it to the household's other TVs (on unless the person turned it off).
+  bool get shareWatchHistory => _bool(_shareWatchHistoryKey, true);
+
   /// The Continue Watching cards' height, in dp.
   int get continueWatchingCardHeight {
     final String size = _string(_continueWatchingCardSizeKey, "normal");
@@ -350,8 +355,6 @@ class SettingsService extends ChangeNotifier {
   int get continueWatchingMaxItems => _int(_continueWatchingMaxItemsKey, 15);
 
   bool get continueWatchingShowProgress => _bool(_continueWatchingShowProgressKey, true);
-
-  bool get continueWatchingShowPercentage => _bool(_continueWatchingShowPercentageKey, false);
 
   bool get continueWatchingShowDescription => _bool(_continueWatchingShowDescriptionKey, true);
 
@@ -658,14 +661,14 @@ class SettingsService extends ChangeNotifier {
 
   Future<void> setShowContinueWatching(bool show) => _setBool(_showContinueWatchingKey, show);
 
+  Future<void> setShareWatchHistory(bool share) => _setBool(_shareWatchHistoryKey, share);
+
   Future<void> setContinueWatchingCardHeight(int height) =>
       _setString(_continueWatchingCardSizeKey, height.toString());
 
   Future<void> setContinueWatchingMaxItems(int count) => _setInt(_continueWatchingMaxItemsKey, count);
 
   Future<void> setContinueWatchingShowProgress(bool show) => _setBool(_continueWatchingShowProgressKey, show);
-
-  Future<void> setContinueWatchingShowPercentage(bool show) => _setBool(_continueWatchingShowPercentageKey, show);
 
   Future<void> setContinueWatchingShowDescription(bool show) => _setBool(_continueWatchingShowDescriptionKey, show);
 

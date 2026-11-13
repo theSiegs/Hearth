@@ -20,6 +20,7 @@ import 'dart:math';
 
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/quiet_failure.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -114,7 +115,8 @@ Future<bool> chooseNewParentPin(BuildContext context) async {
   if (first == null || !context.mounted) return false;
   final second = await showDialog<String>(
     context: context,
-    builder: (_) => ParentPinDialog(title: l.parentPinConfirm, verify: (pin) => pin == first),
+    // Typing the new PIN again isn't a guess at the Parent PIN: its own count, not the TV's
+    builder: (_) => ParentPinDialog(title: l.parentPinConfirm, verify: (pin) => pin == first, lockout: PinLockout()),
   );
   if (second == null) return false;
   final channel = context.mounted ? context.read<FLauncherChannel?>() : null;
@@ -135,18 +137,47 @@ Future<void> forgetHaParentPins(FLauncherChannel? channel) async {
 
 /// Full-screen PIN entry in Google TV's style: the shuffled row pad (see [_RowPad]), number keys type directly.
 /// Pops with the entered PIN, or null on Back.
+/// Where the TV keeps the one count of wrong Parent PINs (ParentPinPolicy on the Java side), so restarting Hearth gives
+/// no fresh tries and HearthTube's pads count in the same one: when the pad opens again (ms since the epoch, 0: open).
+abstract class PinLockoutStore {
+  Future<int> lockedUntil();
+
+  Future<int> miss();
+
+  Future<void> clear();
+}
+
+class ChannelPinLockoutStore implements PinLockoutStore {
+  final FLauncherChannel channel;
+
+  ChannelPinLockoutStore(this.channel);
+
+  @override
+  Future<int> lockedUntil() => channel.parentPinLockedUntil();
+
+  @override
+  Future<int> miss() => channel.parentPinMiss();
+
+  @override
+  Future<void> clear() => channel.parentPinClear();
+}
+
 /// Repeated wrong guesses lock a PIN pad for a while: after [freeTries] misses in a row it waits [baseSeconds], and
 /// each miss after that doubles the wait (up to [maxSeconds]). A right PIN clears it. Shared by every pad that checks
-/// a PIN, so closing and reopening the dialog doesn't give the tries back.
+/// a PIN, so closing and reopening the dialog doesn't give the tries back; with a [store] (the TV's), restarting Hearth
+/// doesn't either, and the store's word on how long to wait wins.
 class PinLockout {
   static const int freeTries = 5;
   static const int baseSeconds = 30;
-  static const int maxSeconds = 300;
+  static const int maxSeconds = 3600;
 
   static final PinLockout shared = PinLockout();
 
-  /// Told when a lockout starts (the Parent PIN pads count them for Home Assistant).
+  /// Told when a lockout starts without a [store] (one with a store counts them itself, for Home Assistant).
   void Function()? onLocked;
+
+  /// The TV's count, when there is one.
+  PinLockoutStore? store;
 
   int _misses = 0;
   DateTime? _until;
@@ -155,18 +186,41 @@ class PinLockout {
 
   int secondsLeft(DateTime now) => lockedAt(now) ? _until!.difference(now).inSeconds + 1 : 0;
 
-  void miss(DateTime now) {
+  /// A wrong PIN. Locks at once by this count; with a [store], then as long as the store says.
+  Future<void> miss(DateTime now) async {
     _misses++;
-    if (_misses < freeTries) return;
-    final seconds = (baseSeconds * (1 << (_misses - freeTries))).clamp(baseSeconds, maxSeconds);
-    _until = now.add(Duration(seconds: seconds));
-    onLocked?.call();
+    if (_misses >= freeTries) {
+      final seconds = (baseSeconds * (1 << (_misses - freeTries).clamp(0, 20))).clamp(baseSeconds, maxSeconds);
+      _until = now.add(Duration(seconds: seconds));
+      if (store == null) onLocked?.call();
+    }
+    final kept = store;
+    if (kept != null) _take(await kept.miss());
   }
 
   void clear() {
     _misses = 0;
     _until = null;
+    store?.clear();
   }
+
+  /// Reads how long the store says to wait (a pad opening, or Hearth just started).
+  Future<void> sync() async {
+    final kept = store;
+    if (kept != null) _take(await kept.lockedUntil());
+  }
+
+  void _take(int untilMs) {
+    _until = untilMs > 0 ? DateTime.fromMillisecondsSinceEpoch(untilMs) : null;
+  }
+}
+
+/// Thrown by a [ParentPinDialog]'s verify or askPhone that settled things another way (the PIN wasn't judged, so it
+/// isn't counted as wrong): the pad closes with [value].
+class PinPadClose implements Exception {
+  final String? value;
+
+  const PinPadClose([this.value]);
 }
 
 class ParentPinDialog extends StatefulWidget {
@@ -189,6 +243,14 @@ class ParentPinDialog extends StatefulWidget {
   /// PIN had been entered (see ParentApproval). Left null for every other pad (new PINs, streaming apps' PINs).
   final FLauncherChannel? phone;
 
+  /// Set where a parent's phone is asked another way (a Hearth integration notice asks the integration): called as
+  /// the pad opens, in place of [phone]; what it returns shows under the title (null: nothing). It may throw
+  /// [PinPadClose].
+  final Future<String?> Function()? askPhone;
+
+  /// A line under the title its caller may set while the pad is open (null: none), such as the phones asked later.
+  final ValueListenable<String?>? note;
+
   const ParentPinDialog(
       {super.key,
       required this.title,
@@ -197,6 +259,8 @@ class ParentPinDialog extends StatefulWidget {
       this.random,
       this.lockout,
       this.phone,
+      this.askPhone,
+      this.note,
       this.length = digitCount});
 
   @override
@@ -211,6 +275,8 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
   // Whether a parent's phone was asked, and whether it said no
   bool _phoneAsked = false;
   bool _phoneDenied = false;
+  // What [ParentPinDialog.askPhone] said
+  String? _phoneNote;
 
   PinLockout get _lockout => widget.lockout ?? PinLockout.shared;
 
@@ -220,7 +286,19 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
   void initState() {
     super.initState();
     final phone = widget.phone;
-    if (phone != null && widget.verify != null) _askPhone(phone);
+    if (widget.askPhone != null && widget.verify != null) {
+      _askOtherPhone(widget.askPhone!);
+    } else if (phone != null && widget.verify != null) {
+      _askPhone(phone);
+    }
+    // The TV's count: a wait from before (another pad, HearthTube, Hearth restarted) holds here too
+    if (widget.verify != null && _lockout.store != null) {
+      _lockout.sync().then((_) {
+        if (!mounted) return;
+        setState(() {});
+        if (_locked) _lock();
+      }).catchError((_) {});
+    }
   }
 
   @override
@@ -256,6 +334,17 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
     });
   }
 
+  Future<void> _askOtherPhone(Future<String?> Function() ask) async {
+    try {
+      final note = await ask();
+      if (mounted && note != null) setState(() => _phoneNote = note);
+    } on PinPadClose catch (close) {
+      if (mounted) Navigator.of(context).pop(close.value);
+    } catch (_) {
+      // The PIN still works
+    }
+  }
+
   void _lock() {
     _tick?.cancel();
     _tick = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -278,8 +367,25 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
     var ok = true;
     if (widget.verify != null) {
       _checking = true;
+      // The TV's count first: a wait started on another pad (HearthTube's, another of Hearth's) holds here too,
+      // and this PIN isn't checked while it lasts
+      if (_lockout.store != null) {
+        try {
+          await _lockout.sync();
+        } catch (_) {}
+        if (!mounted) return;
+        if (_locked) {
+          _checking = false;
+          _lock();
+          setState(() => _entered = "");
+          return;
+        }
+      }
       try {
         ok = await widget.verify!(_entered);
+      } on PinPadClose catch (close) {
+        if (mounted) Navigator.of(context).pop(close.value);
+        return;
       } catch (_) {
         ok = false;
       } finally {
@@ -292,7 +398,8 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
       Navigator.of(context).pop(_entered);
       return;
     }
-    _lockout.miss(DateTime.now());
+    await _lockout.miss(DateTime.now()).catchError((_) {});
+    if (!mounted) return;
     if (_locked) _lock();
     setState(() => _error = true);
     Future.delayed(const Duration(milliseconds: 400), () {
@@ -340,11 +447,21 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
                       const SizedBox(height: 16),
                       Text(widget.subtitle!, style: const TextStyle(color: _textDim, fontSize: 15)),
                     ],
-                    if (_phoneAsked || _phoneDenied) ...[
+                    if (_phoneAsked || _phoneDenied || _phoneNote != null) ...[
                       const SizedBox(height: 16),
-                      Text(_phoneDenied ? l.parentPinPhoneDenied : l.parentPinPhoneAsked,
+                      Text(_phoneNote ?? (_phoneDenied ? l.parentPinPhoneDenied : l.parentPinPhoneAsked),
                           style: const TextStyle(color: _textDim, fontSize: 15)),
                     ],
+                    if (widget.note != null)
+                      ValueListenableBuilder<String?>(
+                        valueListenable: widget.note!,
+                        builder: (_, said, _) => said == null || said == _phoneNote
+                            ? const SizedBox.shrink()
+                            : Padding(
+                                padding: const EdgeInsets.only(top: 16),
+                                child: Text(said, style: const TextStyle(color: _textDim, fontSize: 15)),
+                              ),
+                      ),
                   ],
                 ),
               ),

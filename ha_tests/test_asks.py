@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import Context, HomeAssistant
 from pytest_homeassistant_custom_component.common import async_capture_events, async_mock_service
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
@@ -65,12 +65,12 @@ async def test_a_kid_asks_and_the_first_adult_answers(
 
 
 async def test_not_now_starts_a_cooldown_and_a_phone_button_answers(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer, hass_admin_user
 ) -> None:
     client, secret = await _household_with_sam(hass, hass_client_no_auth)
     request = (await (await _ask(client, secret, minutes=15, profile_id="user:10")).json())["request"]
 
-    hass.bus.async_fire("mobile_app_notification_action", {"action": f"HEARTH_MORE|{request['id']}|0"})
+    hass.bus.async_fire("mobile_app_notification_action", {"action": f"HEARTH_MORE|{request['id']}|0"}, context=Context(user_id=hass_admin_user.id))
     await hass.async_block_till_done()
     body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
     assert body["state"]["profiles"][KID]["request"]["status"] == "denied"
@@ -179,3 +179,18 @@ async def test_a_family_safety_answer_that_fails_is_told(
 
     notifications = persistent_notification._async_get_or_create_notifications(hass)
     assert any(key.startswith("hearth_more_fs_") for key in notifications)
+
+
+async def test_a_phone_button_from_someone_who_isnt_an_adult_does_nothing(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_read_only_user
+) -> None:
+    # A kid with Home Assistant on their own phone fires the same action for their own ask
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    request = (await (await _ask(client, secret, minutes=15, profile_id="user:10")).json())["request"]
+    for context in (Context(user_id=hass_read_only_user.id), Context()):
+        hass.bus.async_fire(
+            "mobile_app_notification_action", {"action": f"HEARTH_MORE|{request['id']}|60"}, context=context
+        )
+    await hass.async_block_till_done()
+    body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
+    assert body["state"]["profiles"][KID]["request"]["status"] == "pending"

@@ -25,9 +25,9 @@ without hand-made helpers, tokens or YAML:
 - **People, not devices.** Screen time, allowances and approvals belong to a household person (Home Assistant's
   `person`), whichever device or service the minutes came from.
 
-**Hearth keeps working without it.** Everything Hearth does with Home Assistant today (webhook status, the panel's
-token, `rest_command` pop-ups, `sensor.hearth_allowance`) stays available. The integration is the easy path, not a
-requirement.
+**Hearth keeps working without it.** Hearth TV has its own screen-time rules, and the panel's token and pop-ups work
+without the integration. TV status and Home Assistant's say in screen time go through the integration only: the older
+webhook status and `sensor.hearth_allowance` are retired.
 
 ## What it replaces
 
@@ -77,7 +77,14 @@ No token, no webhook ID typed.
 4. The device gets its own secret, once. That is the only thing of Home Assistant's it keeps. Pairing again gives a
    new secret and ends the old one; deleting the device in Home Assistant ends it at once.
 
-The legacy **Set up from your phone** page stays for the webhook-and-token path.
+**Once for the household.** A TV of a Hearth household that is paired gets a single-use ticket from Home Assistant for
+each TV of its household on the network that isn't paired, and leaves it for that TV in household sync, which pairs
+with it at once: no code, no administrator. So pairing one TV pairs them all, and a TV that joins later is paired too.
+A TV unpaired on purpose (on the TV, or deleted in Home Assistant) isn't paired again this way. Home Assistant shows a
+notification and fires `hearth_device_paired` for each one (see [Tickets](#the-devices-side-of-the-api)). The same
+tickets give a parent's phone its own pairing in one tap (TV remote API, Version 2, V2.10b).
+
+**Set up from your phone** stays for the panel's token; the webhook part of it is retired.
 
 ## Data in
 
@@ -89,6 +96,14 @@ minutes, a phone as its battery allows). The body is the JSON a TV already posts
 it (`screen`, `app`, `app_package`, `media_*`, `day`, `seconds_today`, `app_seconds_today`, `playing_seconds_today`).
 The integration keeps only known fields, cleaned, and keeps the last status across restarts. **Connected** turns off
 after 15 minutes without a post; the device's other entities show unavailable then.
+
+**Caps.** A device may say what it can be sent: `"caps": [...]`, at most 16 of `commands.play` (`hearth.play_on_tv`),
+`events` (HearthTube's started videos, the Events endpoint), `push` (a ping channel, see [Away from
+home](#away-from-home)) and `notices` (attention items in its state document, to come); unknown ones are dropped, so a
+newer device may send more. Optional: a device that never sent `caps` gets its kind's, a TV `commands.play` and
+`events`, a phone `push`, which is what each could do before. Once sent, a device's caps stay until it sends others
+(a post without `caps` keeps them). Caps say only what a device is sent: its **kind** still decides who it is (a TV's
+profiles, a phone's one person) and what it may vouch for (only a TV mints tickets).
 
 ### A kids profile's YouTube
 
@@ -134,10 +149,21 @@ entities; it never signs in to those services itself.
 | Hearth TVs | this one | seconds today per profile and per app (`usage_today`), playing time per app | seconds |
 | Hearth Mobile | this one | seconds today and per app on that phone | seconds to minutes |
 | Phones, tablets, Google TV kids profiles | [HAFamilyLink, theSiegs fork](https://github.com/theSiegs/HAFamilyLink) (branch `ha/combined`) | per child: Daily Screen Time (with usage totals) and Screen Time Remaining; per device: Daily Screen Time (per-app seconds in `apps`) and per-app usage sensors | polled every 60 s, but Google's numbers lag: seconds to about 40 minutes, for a TV profile sometimes until it next starts |
-| Xbox, Windows | [Microsoft Family Safety](https://github.com/noiwid/HAFamilySafety) (HACS) | `sensor.<child>_screen_time` (minutes today, the whole account) and `sensor.<device>_screen_time` per device | polled, 5 minutes by default (30 s to an hour) |
+| Xbox, Windows | [Microsoft Family Safety](https://github.com/noiwid/HAFamilySafety) (HACS) | `sensor.<child>_screen_time` (minutes today, the whole account) and `sensor.<device>_screen_time` per device; per-app minutes from the child's Applications sensor (`applications`: each app's `app_id`, `app_name` and `usage_minutes`), which Hearth reads for the child's Screen Time (or Xbox Screen Time: Xbox apps only) as a source, each app by its Microsoft app id (`x:...` Xbox, `appx:...` or `win32:...` Windows, `a:...` a phone) as groups and pickers name them. A source with an `apps` attribute (Family Link's) uses that instead | polled, 5 minutes by default (30 s to an hour) |
 | Nintendo Switch | [Nintendo Switch parental controls](https://www.home-assistant.io/integrations/nintendo_parental_controls) (built in) | Used screen time and Screen time remaining per Switch (minutes; added as a source, its time is games unless chosen otherwise). Whole-console: on a shared Switch, use each player's playing-time sensor as the source instead. Per-app minutes (its usage report service) aren't read yet | polled every 60 s; the Switch must be online; its values aren't marked unavailable when an update fails |
 | Nintendo Switch, live | Switch friend presence: HACS [Nintendo-Switch-Presence](https://github.com/itsfatlum/Nintendo-Switch-Presence), fed by a self-hosted [nxapi](https://github.com/samuelthomas2774/nxapi) presence server and a watcher account | what each kid's Switch is playing now | 30-60 s |
 | Xbox, live | Home Assistant's Xbox integration | now playing per gamer | about a minute |
+| Phones without Hearth's app, live | Home Assistant's companion app (Android): **Last used app** (`sensor.<device>_last_used_app`) and **Interactive** (`binary_sensor.<device>_interactive`), both disabled by default in the app | the app in use while the screen is on; not timed | when the sensor updates |
+
+**A phone's app as now playing** (kids' Family Link phones and tablets, an adult's own phone; anyone, adults
+included): in the companion app on that phone, Settings > Companion app > Manage sensors, turn on **Last used app**
+and **Interactive** (and, for prompt updates, let the app run in the background). Then add
+`sensor.<device>_last_used_app` as a screen time source for its person. Hearth sees the Last used app sensor by its
+name and makes it a **phone app** source (`phone_app: true`, live): it's now playing only while the same device's
+Interactive sensor is on (another binary sensor can be named as the source's `screen` on Hearth's page), never the
+home screen or the system's own screens, and it's **not timed**: Family Link counts a kid's phone, and an adult's
+phone isn't counted. It shows in Playing, the household's `playing`, together and the history's `played`. Without the
+Interactive sensor it's never playing (the last app stays put after the screen goes off).
 
 How a source is added: in the household's options, **Add a screen time source**: pick a `duration` sensor (or one in
 minutes or hours), whose it is (a person), whether it's live (what's playing now) or totals, whether it's the same
@@ -187,8 +213,9 @@ TVs, which drops the old entries when saved.
 
 ### Play sessions
 
-Where a source says what's playing **now** (Hearth TVs and phones, Xbox now playing, Switch friend presence), the
-integration looks at least once a minute and whenever the sensor changes. A live source's time accrues between two
+Where a source says what's playing **now** (Hearth TVs and phones, Xbox now playing, Switch friend presence, a kid's
+Switch's playing sensors, a phone app source), the integration looks at least once a minute and whenever the sensor
+changes. A live source's time accrues between two
 looks that both saw the same title (a skipped look loses that minute, never adds one; a gap of over 3 minutes, such as
 Home Assistant being stopped, adds nothing). Today's timed seconds per source and title are kept across restarts.
 (Built so far: today's totals. A 7-day timeline of sessions, to show and check a day, is still to do.)
@@ -244,6 +271,22 @@ at the same time (overlapping by a minute or more). The integration shows it as:
 
 Automations and dashboards can use it like any other state, and rules can depend on it. Only live sources can show
 it; minutes known only from totals are never "together".
+
+What counts as playing now, for Playing, `playing` and together:
+
+- **Hearth devices**: a TV's app in front for its current profile's person, a phone's for its person. When the TV
+  has a media player in the options (`media_players`, TV device id to `media_player`) that's playing or paused, its
+  `media_series_title` (else `media_title`) is the person's `title` and `media_title` the `episode`, and together
+  matches on the show rather than the app. Not timed here (the devices' own counts are).
+- **Live sources** (Xbox now playing, Switch friend presence): timed by the integration.
+- **A kid's Switch**: a Nintendo enforcer's `playing` entities (a shared Switch's player sensors; else the Switch's own
+  Playing sensor when no one else's enforcer is on it). While one is on, the person plays the game it names (a
+  `title`, `game` or `application_name` attribute, as a patched integration or presence gives it), else "Switch", on
+  the Switch's target (`nintendo:<entity>`). Not timed (Nintendo's own minutes count); counted for together. A live
+  source on the same Switch says it instead.
+- **Phone app sources**: above, in [Screen time from other integrations](#screen-time-from-other-integrations).
+
+Each such play is also logged when it ends, in the history's `played` (see [History](#history)).
 
 ## Limits
 
@@ -309,9 +352,11 @@ minutes, group: All screen time by default; by title isn't built), whoever asks:
   actionable notification: the amount asked, the next one up, **Not now** (see [Ask for more](#ask-for-more)). The
   first answer adds the bonus (or not) and is shown on the kid's device. One open request per person; it's open 30
   minutes.
-- **Offer more** (Configure > Offer more time): when one of a kid's chosen groups runs out, the adults get the same
-  actionable notification the other way round ("Sam's YouTube is used up. Give Sam 30 more minutes today?"). Nothing
-  is asked of the kid and their devices aren't told about it; "Not now" starts no cooldown.
+- **Suggest to phones** (the Kids tab of Hearth's page, or Configure > Suggest more time to phones): when one of a
+  kid's chosen groups runs out, its suggestion goes to the adults' phones ("Sam's YouTube ran out. Give 30 more
+  minutes today?", with two amounts and Not today); see [Pushed to phones](#pushed-to-phones). Nothing is asked of the
+  kid and their devices aren't told about it. (This was Offer more time, which made an offered request: its choices
+  carry over.)
 - **Chores** (Configure > Chores earn time): per person, a to-do list, a group and what a chore is worth (15 minutes
   by default, or the chore's own "+N": "Dishes +30"). Each item checked off adds its minutes once and is removed from
   the list; `hearth_chore_done` (person, chore, group, minutes) and the adults' phone are told.
@@ -339,7 +384,8 @@ until the group has time again (a bonus, a higher budget, a new day):
     today's daily limit goes to 0 (`familylink.set_daily_limit`, every device of the child), so the apps a parent gave
     unlimited time in Family Link still work, as when Family Link's own limit is reached. The limit they had (the
     child's weekday limit entity) is kept and put back when there's time again, and just before midnight, since it's
-    the weekday's setting. An app with unlimited time is never paused for a group either. Calls, texts, the system and
+    the weekday's setting. With the child's Daily Limit switch off (Family Link then locks nothing), Hearth switches
+    it on for the lock and off again when it puts the limit back. An app with unlimited time is never paused for a group either. Calls, texts, the system and
     the parental controls' own apps are never paused for a group.
 
     **During School time, pause these apps** (Google Messages by default in the form): those apps are paused while
@@ -377,6 +423,12 @@ until the group has time again (a bonus, a higher budget, a new day):
     playing sensor, or friend presence) and the Switch is held only while it's on, so a brother or sister with time left
     can play. Nintendo reports play about every 10 minutes, so with its sensor the hold can start and end that late;
     friend presence is about a minute. Two kids held on one Switch share the hold: it's put back only when neither is.
+
+    An adult's **pause** holds the Switch the same way, through the same hold: a family pause of the person
+    (`hearth.pause` without an app or group), or a pause of a group the enforcer covers (`group: games` with the
+    defaults; a pause of Video doesn't touch it). It's let go when the pause ends (or 2 minutes before midnight, as
+    above), and on a shared Switch it's held only while the person is the one playing. A parent's grant in the Nintendo
+    app (a changed limit, bonus time) lifts it as it lifts a budget's hold; an allow doesn't, as for any pause.
 - What's held is kept across restarts, so only what Hearth held is let go. For a few minutes after Home Assistant
   starts nothing is let go (the sources report in first). A failed call shows on the person's **Held by parental
   controls** sensor and is tried again 5 minutes later. Each change fires `hearth_enforced` (person, by, held, let go).
@@ -407,6 +459,34 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
   leave, `place` (its name), `text`: "ends when Sam gets home, or 21:00"} on the Screen time today sensor, in
   `hearth.explain` (with the exception, and with a pause in `blocked_by`) and in the household summary. A pause for
   several people ends per person (each person's pause is their own), so the others stay paused until they move too.
+- **Extra time on one device.** `hearth.add_bonus` with `device` (a target id from the household summary's
+  `targets`: `hearth:<device_id>`, `fl:<Family Link device id>`, `fs:xbox`, `fs:windows`, `nintendo:<entity>`) gives
+  that many minutes (more than 0) on that device only, today (returns `{id: "dx_...", until}`, so an undo can end
+  just that one); `hearth.allow` with `device` opens a group there until the time (`end_of_day`, `school_time_end` or
+  a time; no `app`, no `ends_on`; returns the `dx_...` id). The person's shared time keeps counting and every other
+  device still reads it: only that device may go past it. Ended early by `hearth.allow_end` with `people` and the
+  same `device`, or with its id. On a Family Link device, a Family Safety platform or a Switch (`groups: false` in
+  `targets`) only `all` can be given: what holds a group there holds it on every device of theirs (Family Link's app
+  pauses are the child's, Family Safety's app blocks the account's). What it does, by device:
+  - a Hearth TV or phone: that device's state document shows the group with what's left of the bonus there (the
+    minutes less what that device used of the group since; an allow: the group isn't held there), never less than
+    the pool; until midnight.
+  - a Family Link device: a Family Link bonus of that many minutes on that device (`add_time_bonus`, only where
+    Google's own limit would stop it, as for an allow of All screen time: the limit Hearth sets to 0 when All screen
+    time is out, say), which Google counts down; Hearth remembers it as its own, so it's no parent's grant, and
+    ending it early resets it (unless a parent's bonus came on top).
+  - a Family Safety platform: Hearth's lock of that platform is let go, and Microsoft's own allowance gets extra
+    time where it would stop it (`add_time_bonus`, until then; on Windows only where Family Safety takes it); by the
+    clock, from now. Microsoft's extra time doesn't lift the platform's allowed hours, so extra time that runs past
+    the end of today's allowed hours moves that end to cover it, rounded up to the next half hour
+    (`set_screentime_intervals` with `today_only`: Family Safety puts the day back at midnight; only a day with one
+    allowed window, and on the Xbox only with the Xbox Family Settings sign-in). Ended early, the end it found goes
+    back, unless a parent changed it since or other extra time of theirs still needs it. Any platform their Family
+    Safety reports is a target, whether or not Hearth's enforcer holds it. When it ends, Hearth locks
+    the platform again if the pool is still out.
+  - a Switch: Hearth's hold of the Switch is let go (its own limit and Suspend software put back, which still
+    apply); by the clock, from now.
+  Each shows in the summary's `device_extras`, in `hearth.explain` (`device_extras`) and as a contract 2 line.
 - Bedtime, School time itself and a family pause still lock the person. An allow lifts Hearth's holds, not those
   locks: a TV can't open one app through a lock without a change on the TV, and Family Link's own bedtime still locks
   the phone. To lift School time, take it off (`hearth.school_time_off`).
@@ -443,7 +523,8 @@ attribute present), so an older Family Link or Family Safety keeps working as be
   Link itself; its answer (`results`: `restored`, `kept_current`, ...) is read and shown.
 - **Parent grants.** A parent's change that lets a kid use what Hearth holds becomes a grant `{id, person, via
   (family_link, nintendo, family_safety), source ("from the Family Link app"), target {kind: device, app, switch or
-  platform; value}, until, since, reason, endable, end_with}`. It lifts only the hold it came from (the child's Family
+  platform; value}, until, since, reason, endable, end_with}`; in the household summary an app's grant also has the
+  app's `name` when Hearth knows it (its app catalog, or the kid's Family Link sensors). It lifts only the hold it came from (the child's Family
   Link device lock, the paused app, the Switch, a Family Safety platform), not a whole group everywhere as an allow
   does, and budgets keep counting. Grants are kept across restarts and end on their own; when one ends, enforcing goes
   on as usual. They show in `hearth.explain`'s `exceptions` (`type: "grant"`), the person's `exceptions` attribute,
@@ -472,20 +553,31 @@ attribute present), so an older Family Link or Family Safety keeps working as be
     would block within that time (Screen time remaining lower than the minutes needed; a device with no limit gets
     none), as much as is missing; once per allow.
   - Family Safety: extra time (its experimental `add_time_bonus`, `until` the allow's end or midnight) on the
-    enforcer's platforms whose allowance would block (allowance minus used lower than the minutes needed). It replaces
-    Hearth's own lock there (`released_hold`). When Microsoft doesn't apply it, the person's status says Family Safety
-    extra time is unavailable; nothing fails.
+    enforcer's platforms whose allowance would block (allowance minus used lower than the minutes needed): the Xbox,
+    and Windows where the installed Family Safety takes `platform: Windows` (its service schema says so; upstream's
+    is Xbox only, and Windows is then skipped quietly). It replaces Hearth's own lock there (`replace_lock` only when
+    the platform's `hold` is Hearth's, never over a parent's lock). Family Safety's answer says what became of that
+    lock: with `hold_kept: true` (a Family Safety that keeps holds puts the lock back after the extra time) Hearth
+    still holds the platform; with `hold_kept: false`, or upstream's `replaced_lock: true` without `hold_kept` (the
+    extra time ended the lock), Hearth no longer holds it and doesn't let go of it again later; an answer with
+    neither changes nothing. When Microsoft doesn't apply it,
+    the person's status says Family Safety extra time is unavailable and it counts as not given; nothing fails.
   - Ending the allow early (`hearth.allow_end`) resets the Family Link bonus Hearth added (only where no parent's bonus
     came on top: `reset_bonus` ends every bonus of the day; without `reset_bonus` or the button it lapses at
-    midnight) and cancels the Family Safety extra time (`cancel_time_bonus`).
+    midnight) and cancels the Family Safety extra time Hearth gave (`cancel_time_bonus`, on each platform it gave it
+    on), except where the platform's `hold` now reads `parent` (a parent's extra time or lock came since: kept,
+    `extra_time_kept` in the status).
 - **First-party limits in explain.** `hearth.explain` also lists `device_limit` (a Family Link device's own daily limit
   reached with no bonus left, by its switch, with its `device` name, until midnight; or a Family Safety platform that
   Microsoft's allowance or allowed hours stop, with its `platform`) when Hearth isn't the one holding it, and
   `parent_lock` (a parent's own Family Safety lock, with its `platform`, until it ends), so explain says what the
   device does.
 - **Requests answered in the Family Safety app.** `microsoft_family_safety_request_resolved` with `via: app` closes the
-  matching ask as answered there (`answered_in: family_safety`; shown as "answered in the Family Safety app"); `via:
-  service` (Hearth's own answer) is left alone. Family Link has no kid requests, so there's nothing to close there.
+  matching ask as answered there (`answered_in: family_safety`): `outcome` `approved` or `denied` as such ("approved
+  in the Family Safety app", "denied in the Family Safety app"); `unknown` (the request left Microsoft's list without
+  Family Safety seeing how: answered in the Family Safety app or on the device) as status `handled`, shown as
+  "handled outside Hearth (the Family Safety app or the device)", never as expired. `hearth_more_time_answered` says
+  the same status. `via: service` (Hearth's own answer) is left alone. Family Link has no kid requests, so there's nothing to close there.
 
 ### Places
 
@@ -547,6 +639,50 @@ the people chosen):
   child's daily limit is on), and/or as Hearth bonus minutes on a group. Family Link's way is the default, as that is
   what a household's own "extra hour" automation did: it raises the phone's own limit. A Hearth bonus raises a Hearth
   budget instead.
+- **Family Safety (Windows, Xbox)** gets the same extra minutes, Family Link's way, when "Extra minutes as Family
+  Safety's daily limits today" (`bonus_family_safety`) is on. It's off by default, apart from Family Link's, so a
+  schedule set up before it existed doesn't start raising Windows and Xbox limits. For a kid with a Family Safety
+  enforcer (the chosen people, or everyone with Family Safety), its Windows and Xbox platforms each get this weekday's
+  limit plus the extra (at most 24 hours), through upstream's `microsoft_family_safety.set_screentime_limit` with the
+  kid's entity (an older Family Safety: its account id), `day_of_week` (today's; Family Safety counts 0 as Sunday),
+  `platform`, `hours` and `minutes`. The limit read is the integration's per-day limit number of the platform (Windows'
+  "<name> Thursday Limit", unique id `<entry>_<account>_limit_thursday`; the Xbox's "<name> Xbox Thursday Limit",
+  `<entry>_<account>_xbox_limit_thursday`, there once the kid's Xbox schedule is on): a parent's change of the weekday
+  before Hearth's is what the extra goes on top of. A platform without a limit that day (24 hours) is left alone, as
+  is Mobile (it has no weekday limit). The weekday's limit is a setting, not today's alone, so it's a **temporary
+  limit** Hearth puts back itself, the same way as the Switch's (`temporary_limit.py`): before writing, it records the
+  limit it added to, the one it writes, the day and weekday, the platform and the kid, kept across a restart and
+  midnight (never added to twice). It puts the recorded weekday's limit back 2 minutes before midnight, at once when
+  today's day off is called off (`hearth.school_time_off_cancel` for today, on a day off, for the people named or
+  everyone; with or without School time taken off) or today's day type changes away from a day off or half day (then
+  it isn't raised again that day; Family Link's extra minutes stay), or on the next start when Home Assistant was off
+  then (the recorded weekday's, not the new day's). Only while the limit still reads Hearth's: a limit a parent changed
+  since stays. The Xbox's write goes through the Xbox Family Settings sign-in and fails without it: a failed call is
+  never taken as done (it's logged and tried again while it's still today, and nothing is put back for it), doesn't
+  hold up Family Link or another kid, and the 06:00 check tells the adults about a platform still not raised. A Family
+  Safety without `set_screentime_limit` is skipped quietly. School time has no Family Safety equivalent, and Hearth's
+  day types don't change bedtime, so the allowed hours (`set_screentime_intervals`) aren't touched. The schedule
+  doesn't use Family Safety's today-only changes (`today_only`, `restore_today_only`); only extra time that runs past
+  today's allowed hours does (Extra time on one device, above). Nor does it use Family Safety's
+  account lock switch (`lock_account`), which saves the limits it finds as its restore point: switched on on a bonus
+  day, it would save (and later put back) the raised value. If a parent uses it then, Hearth's put-back still only
+  fires while the limit reads Hearth's value.
+- **Nintendo Switch** gets the same extra minutes when "Extra minutes on the Switch's limit today"
+  (`bonus_nintendo`) is on (off by default, as Family Safety's). Each Switch of a chosen kid's Nintendo enforcer (its
+  Max screentime today) gets today's limit plus the extra, at most 360 minutes (the Switch's own maximum), once a day:
+  a Switch two kids share is raised once, for both. Nintendo has no today-only limit (the number is the Switch's
+  setting of every day, or of this weekday), so Hearth puts it back itself, as the Nintendo enforcer does: 2 minutes
+  before midnight, and only while the Switch still reads the limit Hearth set (a parent's change in the Nintendo app
+  since stays). It's a temporary limit, as Family Safety's above: it keeps the limit it added to (with the day,
+  weekday, device and bedtime) across a restart, so it never adds to its own value twice, a failed write isn't taken
+  as done (tried again while it's still today), and if Home Assistant was off over midnight a Switch with a limit per weekday
+  gets that weekday's limit and bedtime back through `nintendo_parental_controls.update_daily_restrictions`. A Switch
+  with no limit (-1) is left alone, as is one at 360 already. While bonus time from the Nintendo app runs the Switch
+  refuses a new limit, so Hearth waits. **While Hearth holds the Switch** (limit 0, for a budget or a pause) nothing is
+  written to it: the extra goes into the limit the hold puts back, so letting go gives the raised limit, and a cancel
+  or midnight takes it out again. A cancel (`hearth.school_time_off_cancel` for today on a day off, when it names all
+  the Switch's kids) or today's day type changing away from a day off or half day puts the limit back at once, under
+  the same rules, and it isn't raised again that day.
 - `hearth.school_time_off` (`people`; `date`, today by default; `from`, a time; `reason`) does the same for anyone,
   any day; `hearth.school_time_off_cancel` (`people`, `date`) drops one not started, or puts one already off back from
   today.
@@ -560,11 +696,13 @@ ended is left for the next school day. Switched on or pinned, it waits two minut
 Link is read once a minute).
 
 **Checks.** At 06:00 a School time that should be off and isn't is turned off again, and the adults are told what
-didn't apply (the extra time, too). At the watchdog time (10:00 by default) on a school day, they're told about anyone
-whose School time is still off, unless it was taken off for today. "Told" is a notification in Home Assistant and the
-schedule's phone (else the one that answers requests for more time). Each step fires `hearth_schedule` (action:
-`school_time_off`, `school_time_back`, `half_day`, `bonus`, `site_list`, `site_list_failed`; person; details; for
-the website list `via`: `family_link` or `family_safety`). Each action runs once a day; what's pending is kept across
+didn't apply (the extra time, too, Family Safety's by platform). At the watchdog time (10:00 by default) on a school
+day, they're told about anyone whose School time is still off, unless it was taken off for today. "Told" is a
+notification in Home Assistant and the schedule's phone (else the one that answers requests for more time). Each step
+fires `hearth_schedule` (action:
+`school_time_off`, `school_time_back`, `half_day`, `bonus`, `bonus_back`, `site_list`, `site_list_failed`; person;
+details; for the website list `via`: `family_link` or `family_safety`; Family Safety's `bonus` and `bonus_back` have
+`via: family_safety` and `platform`). Each action runs once a day; what's pending is kept across
 restarts.
 
 **Website block list** (Configure > Website block list): an https address, a time (07:30 by default) and the people
@@ -638,7 +776,9 @@ same meaning, from the integration instead of a template.
 
 A **phone** gets its person's part of the same document, in the answer to each post and pushed when it changes (see
 [Away from home](#away-from-home)). Each person's part also says `tile_exchange_share`: whether a parent let their
-phone share with its launcher's tile exchange (Configure > Tile exchange sharing; false unless chosen).
+phone share with its launcher's tile exchange (Configure > Tile exchange sharing; false unless chosen). And `playing`: what they're
+playing now, anywhere Hearth sees it, as in the household summary's `playing` (so a TV profile's part, a phone's and
+`hearth/me` all have it).
 
 **Pop-ups** (not built yet): `hearth.notify` (target: devices, a person's devices, or the household; `title`, `message`, `duration`,
 `position`, `image`, `camera`, up to three `actions`). On a TV it's Hearth TV's pop-up; on a phone, a notification.
@@ -688,7 +828,7 @@ person; a TV for the profile's, the one in front when none is given). 200 `{"ok"
 `cooldown` with `retry_in` (10 minutes after "not now"); 404 `no_person`; 429 `too_often` past 10 asks and event posts a minute; 400 otherwise. A request is open 30 minutes.
 
 The adults are told: `hearth_more_time_requested` (`id`, `person`, `person_name`, `minutes`, `group`, `note`,
-`device_id`, `asked`, `expires`), a notification in Home Assistant, and an actionable one on the adults' phones (the
+`device_id`, `asked`, `expires`) and an actionable notification on the adults' phones (the
 asked amount, the next one up, Not now: `HEARTH_MORE|<id>|<minutes>`, 0 for not now; see [The adults'
 phones](#the-adults-phones)). The first answer wins, once: from a phone, Hearth's page, or `{"type": "hearth/approvals/answer", "request_id", "minutes" (1-600) |
 "deny": true}` on the WebSocket, or the service `hearth.answer_request` (`request_id`; `minutes` 1-600 or `deny:
@@ -700,7 +840,7 @@ approved), asked_minutes, group, expires, answered (when it was answered or expi
 
 #### The adults' phones
 
-Every adult on Hearth's page gets requests for more time, offers (Configure > Offer more time) and chores done on each
+Every adult on Hearth's page gets requests for more time, suggestions chosen for phones (Pushed to phones) and chores done on each
 of their Home Assistant companion apps: a `mobile_app` registration that their person follows as a device tracker
 (`device_trackers`), or that their Home Assistant user registered. Its notify service is `notify.mobile_app_<device
 name, slugified>`, as the companion app names it. The phone chosen in Configure > Watch for new apps (option
@@ -723,6 +863,51 @@ answered. `hearth://ask/<id>` is exactly that: scheme `hearth`, host `ask`, the 
 handles it (Hearth's own phone app, Glint) answers through the WebSocket (`hearth/approvals/answer`). Once a request is
 answered anywhere (a button, Hearth's page, the service, the WebSocket, Family Safety's own app) or expires, every phone
 that would get it is sent `{"message": "clear_notification", "data": {"tag": "hearth_more_<id>"}}`.
+
+#### Attention
+
+Every notice Hearth gives goes through one layer (attention.py): an **item** with a `key`, a `title` and `text`, an
+`urgency` (`info`, `notice`, `urgent`), an **audience**, buttons (`actions`: `{id, label, service, data}`), a `tag`
+(the key when not given), whether it also goes to Home Assistant's bell, an expiry, and what it's `about` (`person`,
+`group`). Audiences: `adults` (every adult's companion apps as above, with the `ask_notify` phone once),
+`chosen_phone` (`ask_notify`), `schedule_phone` (the schedule's own notify service, else `ask_notify`), `admins` (the
+bell only, so far) and `person:<entity id>` (that person's companion apps). Delivery adapters take it out: the
+companion app (`delivery/companion.py`) and the bell (`delivery/bell.py`); an Echo later. An item with the same key or
+tag replaces the one before; clearing a key or tag takes it off every channel it went to.
+
+**The bell is for the household's own business.** Home Assistant's bell shows to everyone who uses Home Assistant, so
+it gets only admin notices: a device waiting to pair or paired, a TV's rules taken, a Family Safety answer that failed,
+the new apps' list and the schedule's checks. Nothing about a kid goes there (a request or offer and its note, where a
+kid went, a chore done, a suggestion): those go to the adults' phones, and requests are answered there or on Hearth's
+page.
+
+Items are kept while the
+household reloads (an options change), not over a restart: their sources put them back (requests have their own
+store).
+
+**Tags.** Every companion-app push carries `data.tag` starting with `hearth_`, so an app that shows Hearth's notices
+(Glint) can tell them apart: `hearth_more_<request id>` (a request or an offer), `hearth_place_<person entity id>` (where a kid
+went), `hearth_schedule_check` and `hearth_school_time_watchdog` (the schedule), `hearth_chore_<to-do item uid>` (a
+chore done), `hearth_app_<package>` (a new app), `hearth_suggest:<person entity id>:<suggestion key>` (a suggestion
+pushed to phones), `hearth_approve:<notice key>` (a TV notice's button waiting for a parent's phone). Bell-only notices keep their ids (`hearth_pairing_<id>`,
+`hearth_paired_<device>`, `hearth_rules_<device>`, `hearth_more_fs_<request id>`, `hearth_new_apps`).
+
+**Buttons.** A button with a service goes to the phone as `HEARTH_ACT|<item key>|<n>`: the service and its data stay in
+Home Assistant. When it's pressed, the presser must be an adult (or an administrator), and one the item reached (a
+user whose companion app, or whose person's, got it; any administrator for `admins`); the action then runs as them
+(`Context(user_id)`), so a `hearth.*` service checks them as usual. Only services in the `hearth` domain run this
+way; any other is refused (with a warning in the log). A press for an item that's gone (cleared, expired,
+or from before a restart) is ignored. The older `HEARTH_MORE|` and `HEARTH_APP|` buttons work as before.
+
+**On the TVs.** An item can also be for the TVs (`tv`): then it's in the state document of every TV that says it shows
+notices (cap `notices`) as `notices` (see [The device's side of the API](#the-devices-side-of-the-api)), and the TV
+shows it in its adult profiles only. So far that's the suggestions pushed to phones. A phone never gets them. A press
+on the TV needs a Parent PIN or a parent's phone (`POST /notice`): with **a parent's phone**, the adults get an item of
+its own (key `approve:<notice key>:<n>:<random>`, tag `hearth_approve:<notice key>`, never the bell): "Approve +30 min
+for Sam?", "Sam's Video ran out. Asked on Kitchen.", with that one button and **Don't allow**. Its button runs as the
+adult who taps it, as any item's (the adult check, then the reached check); either button takes it off every phone,
+and so do the notice going, a newer ask for the same notice, or 10 minutes passing. The history says who answered
+(`notice_answer`).
 
 #### A kid's own Home Assistant user
 
@@ -802,7 +987,8 @@ while on), a phone at its next post.
 **One app or group.** `hearth.pause` with `app` (a package) or `group` (an id or name; `all` is the family pause) pauses
 only that, for the people (everyone by default), for `minutes` or `until` a time (no `ends_on`). Nobody is locked:
 the app or group's apps are held as a group out of time is, on every Hearth TV and phone (HearthTube too, in a group
-that lists it), by Family Link and by Family Safety's Xbox and Windows apps. The person's document has it as a group
+that lists it), by Family Link and by Family Safety's Xbox and Windows apps, and the person's Switch when their
+Nintendo enforcer covers the group (Games, say). A family pause holds the Switch too (see Enforce, Nintendo). The person's document has it as a group
 `{id: "pause:group:<id>" or "pause:app:<package>", name: "<name> (paused: <reason>)", minutes_left: 0, apps,
 paused: {until, reason, name}}`, so devices that know only groups hold it; Hearth TV's time's up card then says
 "<name> is paused" with no ask for more. **No device should offer to ask for more time for a `paused` group**: more
@@ -821,7 +1007,11 @@ then sends the same object as an event whenever it changes, at most every 2 seco
 - `people`: `id`, `name`, `kind` (as set on Hearth's page, `kind_set` true; else `kid` when they have limits, otherwise
   `person`), `tv_profiles`, `all`
   (the shared pool: All screen time's `used_minutes` and `minutes_left`), `groups` (each with a budget or use today),
-  `locked` and `locked_by`, `playing`.
+  `locked` and `locked_by`, `playing` (one entry per thing on now, see [Now playing](#now-playing-entries) below;
+  `target` as in `targets` below).
+- `playing`: everyone's plays now, for a dashboard, oldest first: `person`, `name`, `item` (the title, else the app or
+  package), and `kind`, `app`, `title`, `series`, `artist`, `episode`, `device`, `target`, `since`, `minutes`,
+  `remaining`, `progress` and `text` as in each person's `playing`.
 - `devices`: each Hearth TV and phone: `id`, `name`, `kind`, `connected`, `screen`, `app`, `media_title`, `media_app`,
   `profile` (a TV's), `kids_profile`, `media_player` and `person`.
 - `approvals`: requests for more time (`type: "more_time"`, as the event above) and devices waiting to pair
@@ -832,7 +1022,11 @@ then sends the same object as an event whenever it changes, at most every 2 seco
 - each person also has (new fields, nothing renamed): `allows` (their allows now), `grants` (parent grants, above),
   `first_party` (`family_link`: per device `device`, `daily_limit`, `minutes_left`, `bonus_left`, `reached`,
   `blocking`; `family_safety`: per platform `minutes_left`, `allowance_minutes`, `used_minutes`, `allowed_now`, `hold`,
-  `parent_lock`, `blocking`; only what the integrations' entities give), `sync` (per parental control: `held`,
+  `parent_lock`, `blocking`; `nintendo`: per Switch of theirs (their Nintendo enforcer's, or one a source of theirs is
+  on) `device_id`, `name`, `target`, `available`, `played_minutes`, `player_minutes` (their own player's on a shared
+  Switch), `limit_minutes` (null: no limit), `minutes_left`, `extra_minutes` (-1: unlimited today), `suspended`,
+  `playing`, `bedtime`, `last_synced`, `held_by_hearth`, `blocking` and `entities` (the Switch's entities by key);
+  only what the integrations' entities give), `sync` (per parental control: `held`,
   `error`, `failed_at`, and `last`, what Hearth last did and whether it took: `{at, ok, held, let_go, outcomes
   {item: restored | kept_current | ...}, bonus_added, extra_time, parent_grant, reason, error}`) and
   `answered_elsewhere` (requests answered in the Family Safety app lately).
@@ -840,11 +1034,74 @@ then sends the same object as an event whenever it changes, at most every 2 seco
   summary is an administrator or an adult. An allow and a pause that end on a place carry `ends_on` (above).
 - each person also has `pauses`: an adult's pauses of one app or group, `[{app, group, name, until, reason}]` (`app`
   or `group` is null), apart from the family `pause`.
+- each person also has `devices_today` `[{target, name, kind, minutes}]` (most first) and `apps_today` `[{package,
+  name, minutes, groups}]` (an app's package, or `title:<id>` for a title; most first, at most 50): today's minutes as
+  Hearth counts them, each device's time once. A device's `kind` is `tv`, `phone`, `xbox`, `windows`, `switch` or null
+  (a `source:` sensor whose integration doesn't say: an Xbox integration's is `xbox`, Nintendo's `switch`, the
+  companion app's `phone`). An app's `groups` are the group ids it counts in, in the household's order, without
+  `all` (`["games"]`, `[]` for none). `target` is the device's id as in `targets` (below) where Hearth can tell:
+  `hearth:<device_id>` for a Hearth TV or phone, `fl:<device id>` for a source that is one Family Link device's own
+  Daily screen time sensor, `nintendo:<entity>` for a source on the same Home Assistant device as the person's
+  Nintendo enforcer; any other source is `source:<id>` (a child's Family Link total for all their devices, say, or
+  Family Safety's). An app's minutes are summed over the devices.
+- each person with Family Link also has `school_time` {`start`, `end`} (local times) on a school or half day: today's
+  School time window (a half day's ends early as configured). And `school_time_off` (only while there is one): School
+  time taken off for them today (`hearth.school_time_off`), `[{id, date, from, reason, applied, ...}]`.
+- each person also has `targets` `[{id, name, kind, via, groups}]`: their devices, for extra time on one device
+  (above). `kind`: `tv`, `phone`, `xbox`, `windows` or `switch`; `via`: `hearth` (a Hearth TV with one of their
+  profiles, or their Hearth phone), `family_link` (each Family Link device, `fl:<device id>`), `family_safety` (each
+  platform their Family Safety reports, whether or not Hearth's enforcer holds it, `fs:xbox`, `fs:windows`) or `nintendo` (their Switch,
+  `nintendo:<the enforcer's entity>`); `groups` true where one group can be held or given on that device alone
+  (Hearth's own devices). A TV's `name` is as shown ("Kitchen" is "Kitchen TV"). One handset that's both a Hearth phone and
+  a Family Link device of theirs (the same name) is both: the Family Link one says `same_as` (the Hearth phone's id)
+  and the Hearth phone `also` (`["fl:<id>"]`); show it once. Extra time there for one group goes on the Hearth phone;
+  for All screen time give it on both if Family Link holds the phone too. And `device_extras` `[{id, target, name, via, kind (bonus | allow), group, until,
+  minutes_left, reason}]`: that extra time now (`minutes_left`: a Hearth device's by its use, a Family Link bonus as
+  given, the rest by the clock).
+- each person also has `week`: their last 7 local days, newest first, today included: `[{date, minutes {<group id>:
+  n}, out [group ids that ran out], bonus {<group id> (or `all` for extra time on one device): minutes}, asks,
+  budget {<group id>: n | null}}]` (`date` is `YYYY-MM-DD`). Today's `minutes` are live (as `groups`, every group of
+  the household); a past day's are the day's `day` record in [History](#history). A day with no record (before Hearth
+  kept them, or Home Assistant down across more than one midnight) has `minutes` `{}`: unknown, not zero. `budget` is
+  that day's budget per group of the household, without its bonus (null: no limit; add `bonus` for "of"): today's as
+  counted, a past day's as recorded with its `day` record, and for a day recorded before budgets were (or not
+  recorded) the budgets now for that day's type, from the dates typed in and the weekday rule of
+  [School days](#school-days-and-day-types) (an entity's or calendar's answer is only ever today's).
 - `groups`: every group of the household, budget or not today: `[{id, name, not_screen_time}]`.
 - `not_screen_time`, `contract`, and `version` (changes with any of it).
 - `media_rooms`: the house's media players by room, below.
 - Contract 2: each person's `headline`, `lines` and `actions`, and the household's `household` {`headline`,
-  `actions`}, below.
+  `actions`, `suggestions`, `counts`}, below; and each person's `binding`, `day_line` and `state`, and each group's
+  `state` and `limited` ([Dashboard fields](#dashboard-fields)).
+
+#### Now playing entries
+
+Each entry of a person's `playing` is one specific thing on now, the most specific known:
+
+```json
+{"kind": "video", "title": "Sleepytime", "series": "Bluey", "artist": null, "episode": "s2e4", "app": "HearthTube",
+ "package": "com.thesiegs.hearthtube", "device": "Kitchen TV", "state": "playing", "target": "hearth:<device id>",
+ "since": "2026-11-13T17:02:00+00:00", "minutes": 12, "remaining": 8, "progress": 0.6,
+ "text": "bluey · s2e4 · 8 min left"}
+```
+
+- `kind`: `video` (a show, video or movie: a TV's media player in the options, else the device's own media session),
+  `music` (a track: the player says music, or an artist without a show), `game` (a Switch's or a live source's title,
+  or an app in the Games group) or `app`.
+- `title`: the most specific thing: the episode's, video's or movie's title, the track, the game; null when only the
+  app is known. `series`: a show's name (an episode's); `artist`: a track's; `episode`: `s2e4` (or `e4`) when the media
+  player gives the numbers. `app` is the container (secondary), `since` when the play started (UTC).
+- Time, worked out when the summary is: `remaining` (whole minutes) and `progress` (0 to 1) when the length is known:
+  a media player's `media_duration`, `media_position` and `media_position_updated_at`, or a Hearth device's status
+  `media_duration_s` with `media_position_s` as of `media_position_at` (epoch milliseconds; TV builds send these from
+  now on). The position runs on while it plays and stands while it's paused. Else null. `minutes`: whole minutes since
+  `since` (null for music, which has no time).
+- `text`: short and lower case: `bluey · s2e4 · 8 min left`, `minecraft · 25 min`, `artist · track`.
+- A device's own state document (and so its `/wait`) carries only the play itself (`kind`, `title`, `series`,
+  `artist`, `episode`, `app`, `package`, `device`, `state`, `target`, `since`): never `minutes`, `remaining`,
+  `progress` or `text`, which tick.
+- Playing together: the same show (else the same title) on two devices. A Switch whose game Nintendo doesn't name
+  (`Switch`) is together only with someone on the same console, never with a kid on another Switch.
 
 A second parent who isn't an administrator (an adult on Hearth's page whose person is their Home Assistant user) reads
 the whole summary, contract 2 included, without pairing codes: the household's headline and actions never mention a
@@ -871,18 +1128,32 @@ The **headline** is the first of these that holds (glance.py), in this order:
 | notice | a group out, or under 10 minutes (fewest first) | `youtube · out`, `youtube · 7 left` | `out:<group>`, `low:<group>` |
 | notice | an allow (`hearth.allow`) | `youtube allowed till 8:00` | `allow:<id>` |
 | notice | School time taken off today | `no school time today` | `school_off:<id>` |
+| notice | extra time on one device | `kitchen · 25 left there`, `xbox · open till 6:30`, `pixel · +30 in family link`, `tv · games open till 8:00` | `device_bonus:<target>` |
 | notice | an adult's pause of one app or group | `youtube paused · homework till 7:00` | `paused:group:<id>`, `paused:app:<package>` |
-| notice | a parent's grant | `switch open · the nintendo app till 9:00` | `grant:<id>` |
+| notice | a parent's grant: a bonus, an unlock or a changed daily limit, a Switch or a platform let go | `switch open · the nintendo app till 9:00` | `grant:<id>` |
 | notice | Google's or Microsoft's own limit stops a device of theirs (Hearth isn't holding it) | `sam's phone · google's own limit`, `xbox · microsoft's own limit` | `device_limit:<entity or platform>` |
 | notice | a parent's own Family Safety lock | `xbox locked in family safety till 7:00` | `parent_lock:<platform>` |
 | notice | a parental control Hearth couldn't hold or let go through | `family link · didn't take` | `sync_error:<kind>` |
-| calm | a request answered in the Family Safety app | `answered in the Family Safety app` | `answered:<id>` |
+| calm | a request answered outside Hearth | `request approved in the Family Safety app`, `request handled outside Hearth (the Family Safety app or the device)` | `answered:<id>` |
 | calm | the most-used group with a limit (All screen time only when it's the only one) | `youtube · 25 left` | `left:<group>` |
 | calm | nothing else | `all clear` | `clear` |
 
-Times are local, 12-hour, without am/pm. **lines** are the rest of that list in the same order, then each group with a
-limit (All screen time first, `left`, `low` or `out` as above), what's playing (`hearthtube · kitchen`, key
-`playing:<package>`) and the next lock (`bedtime at 9:00`, key `next:<kind>:<at>`); never the headline again.
+Times are local, 12-hour, without am/pm; 12:00 at night and at midday are `midnight` and `noon` (`till midnight`).
+Lengths of time are in one format everywhere (noiwid's): `45 min` under an hour, `2 h 10`, `1 h 05`, `3 h` from one;
+before `left`, `more`, `of`, after `+` and `give` the bare number under an hour (`10 left`, `+15`, `give 30?`) and
+the same format from one (`1 h 20 left`, `+1 h`, `asks for 1 h 30 more`). Keys never carry a count, so the format
+changing moves no key.
+**lines** are the rest of that list in the same order, then each group with a limit (All screen time first, `left`,
+`low` or `out` as above), what's playing (`hearthtube · kitchen`, key `playing:<package>`), the next lock (`bedtime
+at 9:00`, key `next:<kind>:<at>`) and, last, the app limits a parent changed in their own app (below); never the
+headline again.
+
+An app's limit a parent changed in the Family Link app is a standing grant: Hearth sees it again every day, so it's
+`calm` and never the headline. Such grants with the same source and end are one line, by the app's name (never its
+package; a readable guess from the package when no name is known): `roblox open · the family link app till
+midnight` (key `grant:<id>`), two or three named (`youtube kids and roblox open · ...`, `a, b and c open · ...`),
+more counted (`16 apps open · the family link app till midnight`); a line of two or more has the key
+`grants:<via>:<until>:<apps>`, `<apps>` a short hash of the set of packages, so it stays while the set does.
 
 **actions** are what an adult can do for the person now, each `{id, label, service, data, confirm?, primary?}`: an app
 calls `service` with exactly `data`, with the adult's own Home Assistant sign-in, after asking `confirm` when it's set;
@@ -895,6 +1166,8 @@ calls `service` with exactly `data`, with the adult's own Home Assistant sign-in
 | `pause` (confirm) | not paused | `hearth.pause` `{people: [person], minutes: 30}` |
 | `pause_end` | paused (the family pause) | `hearth.pause_end` `{people: [person]}` (ends that pause only) |
 | `pause_end:group:<id>`, `pause_end:app:<package>` | an app or group paused | `hearth.pause_end` `{people: [person], group}` or `{people: [person], app}` |
+| `device_bonus_end:<target>` (confirm) | extra time on that device | `hearth.allow_end` `{people: [person], device: <target>}` |
+| `school_off` (confirm) | a school or half day, before the person's School time ends, and not taken off for them today | `hearth.school_time_off` `{people: [person]}` |
 | `allow_end:<id>` (confirm) | an allow | `hearth.allow_end` `{people: [person], group}` or `{people: [person], app}` |
 | `grant_end:<id>` (confirm) | a parent's grant that maps to a write in their app (`endable`) | `hearth.allow_end` `{id}` |
 
@@ -903,7 +1176,41 @@ asks waiting`; notice: a pause, `everyone paused till 6:30` or `sam paused till 
 device waiting to pair; notice: kids out of time; calm: `all clear`) and `actions`: each waiting request's yes and no
 (labelled with the kid's name), `pause_end` (`hearth.pause_end {}`, ends the family pause; app and group pauses stay) while anyone is paused, and
 `pause_all` (`hearth.pause {minutes: 30}`, confirm) unless everyone is. Approving a device to pair isn't an action:
-it's an administrator's step on Hearth's page, with no service.
+it's an administrator's step on Hearth's page, with no service. `counts` is what a tile's badge and a TV's top row
+show, counted once here: `{asks, suggestions, pairings, paused, out, low, locked, held}` (`asks`: requests for more
+time waiting; `suggestions`: the household's suggestions; `pairings`: devices waiting to pair, as the reader sees
+them; `paused`: people under the family pause; `out`, `low`, `locked`, `held`: kids whose `state` is that).
+
+#### Dashboard fields
+
+Decided here so every surface (the panel, a TV, Glint) shows the same pool, line and color; a surface picks its own
+hues for each role, never the role.
+
+- Each group has `state`: `paused` (an adult paused that group), `allowed` (an allow lifts it; an allow of All lifts
+  every group), else by its `minutes_left`: `out` (0), `low` (under 10), `ok`, or `none` (no budget today). And
+  `limited`: false when it has no budget today, so the TV and Glint hide it and the panel mutes it. `all` has them too.
+- Each person has `binding`: `{"group": "games", "minutes_left": 10}` or null: the group that stops them first, out
+  first, else the fewest minutes left, All screen time on a tie; a group an allow lifts or without a budget never
+  binds. The give button targets it (`bonus:<group>` in `actions`).
+- Each person has `day_line`, `{text, level, key}` like a line: `<All used> of <All budget + bonus> · <binding
+  group> · <its left>`:
+
+  | Case | text | level | key |
+  |---|---|---|---|
+  | a group binds | `2 h 10 of 3 h · games · 10 left` | calm (notice under 10) | `day:left:games` (`day:low:games`) |
+  | All binds | `2 h 10 of 3 h · 50 left` | calm (notice under 10) | `day:left:all` |
+  | a group out | `1 h 40 of 3 h · games out` | notice | `day:out:games` |
+  | All out | `3 h of 3 h · out of time` | urgent | `day:out:all` |
+  | no budget for All | `1 h 20 today · games · 10 left` | as above | as above |
+  | nothing limited | `1 h 20 today · no limit` | calm | `day:none` |
+  | an allow of All, nothing else limited | `1 h 20 today · allowed till 8:00` | notice | `day:allowed:all` |
+  | the family pause | `paused · dinner till 6:30` | urgent | `day:pause:<until>` |
+  | bedtime, School time or another lock | `bedtime till 7:00` | notice | `day:lock:<kind>:<until>` |
+
+- Each person has `state`, the first that holds: `paused` (the family pause), `locked` (bedtime, School time or
+  another lock now), `out` (the binding group is out), `held` (a first-party control holds a device of theirs:
+  Hearth's hold through Family Link, Family Safety or Nintendo, their own limit, a parent's Family Safety lock, or
+  Google TV's own Kids limit), `low` (the binding group under 10), `ok`, `none` (nothing limited today).
 
 A trimmed example: a kid Alex who asked for more, is paused and is low on video, and Sam with nothing to report. The
 whole summary, from a test (with a grant of Sam's from the Nintendo app added by hand), is
@@ -934,7 +1241,7 @@ whole summary, from a test (with a grant of Sam's from the Nintendo app added by
           "key": "low:video"
         },
         {
-          "text": "screen time · 95 left",
+          "text": "screen time · 1 h 35 left",
           "level": "calm",
           "key": "left:all"
         }
@@ -1002,7 +1309,7 @@ whole summary, from a test (with a grant of Sam's from the Nintendo app added by
       },
       "lines": [
         {
-          "text": "screen time · 105 left",
+          "text": "screen time · 1 h 45 left",
           "level": "calm",
           "key": "left:all"
         },
@@ -1099,6 +1406,126 @@ whole summary, from a test (with a grant of Sam's from the Nintendo app added by
 Hearth's page opens on a tab from its link: `/hearth#today`, `#kids`, `#devices`, `#apps`, `#family`, and
 `#approvals` (Today, where requests for more time and devices waiting to pair are shown first).
 
+#### Today on Hearth's page
+
+Today follows the round 2 dashboard spec (its sections 2 and 3) and draws only what the summary decides; the page
+capitalizes the first letter of the server's text and nothing else.
+
+- **Suggested now**, a slot at the top that keeps its height: the household's `headline`, then each request for more
+  time (its text as the kid's `ask:<id>` line says it, with No and +15, +30, +45, +1 h), then `household.suggestions`
+  with their own buttons (each calls its action's service with exactly its data, after its `confirm`). With nothing
+  waiting, the headline reads "All clear".
+- The family pause, then devices waiting to pair and parental controls that need a look, then the kids.
+- Each **kid card**: the ring for All screen time and the big `2 h 10 / 2 h 30`, the `day_line`, the card and its dot
+  colored by the person's `state` (each bar by its group's `state`), one bar per group (All first, then fewest left
+  first; a group with `limited` false is muted, "No limit · 25 min"; a `+15` tag for extra time), and what's on from
+  `playing[].text`. The give button is the person's `bonus:<binding group>` action ("+15 games"); more of it, All
+  screen time and taking 15 back are under More. **Last 7 days** draws `week` oldest on the left in noiwid's bar
+  style: All (or the pool chip chosen) per day with the day's budget plus bonus as a tick, `+30` over a day with extra
+  time, a red dot under a day something ran out, and a hatched bar for a day with no record; a tap says `Tue · 2 h 40
+  of 3 h · games ran out · +30 given · 1 ask` (or `Tue · no record`). **Today, hour by hour** (opened) reads Home
+  Assistant's hourly statistics of the person's Screen time today sensor (`recorder/statistics_during_period`;
+  `hearth/config` names each person's sensor in `screen_time_sensors`) plus the sensor's live value for the current
+  hour, as noiwid's chart does. **Today by device and app**: `48 min today`, `25 left there`, `open there till 7:00`,
+  +15 there, and the top 8 apps with their pools (`Minecraft · 35 min · games`).
+- TVs and phones say what's on with the summary's `text` (`Alex · bluey · s2e4 · 8 min left`), and **Family today, by
+  pool** shows each group with a budget with a short bar per kid (with two kids or more).
+
+Every length of time on the page is in the one format (`45 min`, `2 h 10`), and times of day as `till 6:30`.
+
+#### The family card (a TV's dashboard)
+
+The integration serves a Lovelace card, `custom:hearth-family-card` (`frontend/hearth-family-card.js`), and adds it to
+every dashboard as noiwid's Family Link and Family Safety integrations add theirs, so there is no resource to add. It
+subscribes to the household summary and draws the spec's sections 2.1 to 2.6 for a TV across the room (big type,
+buttons a remote reaches, arrow keys that move between them): the household headline, requests waiting (their yes
+and no) and suggestions with their buttons, the family pause at the end of that row, one tile per kid (name, the All
+bar colored by state, `day_line`, what's on, 7 bars for the last 7 days with the budget tick and out dots, and the
+give button for the pool that binds), and each pool today with every kid's state in it. Groups without a budget today
+are left out (decision 6). The text is the summary's, lower case as it comes. Only an administrator or an adult sees
+it (the summary's own rule); a kid's sign-in gets "Hearth's family card is for adults." Buttons run as the signed-in
+user, after the action's `confirm`.
+
+To give a TV its view: Settings > Dashboards > Add dashboard > New dashboard from scratch, titled "Hearth TV" with the
+URL `hearth-tv` (it can be hidden from the sidebar), then in its raw configuration editor:
+
+```yaml
+views:
+  - title: Family
+    path: family
+    type: panel
+    cards:
+      - type: custom:hearth-family-card
+        title: Family        # optional
+        autofocus: true      # optional: focus the first button when it opens (the default)
+```
+
+Open `/hearth-tv/family` on the TV, signed in as an adult's user. After an update of Hearth, a restart of Home
+Assistant fetches the new card.
+
+#### Suggestions
+
+Each person in the summary also has `suggestions`, and `household.suggestions` lists everyone's (with `person` and
+`person_name`), out of All screen time first. A suggestion is what an adult will likely be asked for next, with the
+answer ready: `{key, text, level, reason, minutes, group | device, actions}`.
+
+| Reason | When | Text | Key |
+|---|---|---|---|
+| `group_out` | a group with a budget is out (and no allow lifts it) | `games ran out · give 15?` | `more:<group>` |
+| `group_out` | All screen time is out: then only this one, since more of a group wouldn't open anything | `screen time ran out · give 30?` | `more:all` |
+| `device_limit` | Google's, Microsoft's or Nintendo's own limit stops a device while Hearth's time isn't out | `xbox · microsoft's limit · give 15?` | `device:<target>` |
+
+There's no suggestion while a request for it waits (its yes and no are the actions then), while extra time on that
+device runs, or after an adult chose "not today". The amount is the household's own for that kid and group (Pushed to
+phones), else what an adult usually gives them (History), else 15 minutes (30 for All screen time). The actions
+are two amounts (`hearth.add_bonus`, the first `primary`) and "not today" (`hearth.dismiss_suggestion` with the key),
+which puts it off until midnight.
+
+##### Pushed to phones
+
+Per kid and group (or one device of theirs), the household can have a suggestion also go to the adults' phones: in
+the Kids tab of Hearth's page (Suggest to phones: All screen time and each group with a limit, a toggle and +15, +30,
++45 or +60), or Configure > Suggest more time to phones. Everything is off by default. The option is `suggest_push`:
+`[{person, group | device, minutes?}]` (`minutes` one of 15, 30, 45, 60, the suggestion's first amount; without it,
+the amount above).
+
+- **Once a day.** A chosen suggestion is pushed when it appears (the household is looked at 10 seconds after it last
+  changed), at most once a day per suggestion: each push is logged (`pushed`, with the suggestion's key), so a restart
+  doesn't push it again. One put off today ("not today") isn't pushed.
+- **The notification.** To every adult's phones (the `adults` audience, as requests), never the kid's and never Home
+  Assistant's bell: title "Sam's YouTube ran out" (or "Sam's Xbox reached its own limit"), text "Give 30 more minutes
+  today?", the suggestion's buttons ("+30 min", "+15 min", "Not today") as `HEARTH_ACT|suggest:<person>:<key>|<n>`,
+  run as the adult who pressed one. Its item key is `suggest:<person entity id>:<suggestion key>`, its tag
+  `hearth_suggest:<person entity id>:<suggestion key>`.
+- **Off the phones.** When the suggestion goes (more time given anywhere, put off, the group no longer out, a new day,
+  the pair no longer chosen), it's cleared on every phone. After a restart, one still on the phones gets its buttons
+  back and is cleared the same way.
+- **At most 6 an hour.** Past that, a suggestion isn't pushed (not later that day either); it's still in the household
+  summary.
+
+A group running out no longer makes an offered request (older Hearths' Configure > Offer more time, option
+`offer_more`): its pairs become pushed pairs with their amounts when the household loads, so the adults get one
+notification for it, not two. An offered request (`offered: true`) still works as before where one is made.
+
+#### History
+
+Hearth keeps 90 days of what happened with each person's time (history.py): a group running out (`out`), a request
+(`ask`), an offer (`offer`), an answer (`answer`, with its status), a bonus to a group (`bonus`) or on one device
+(`device_bonus`), a suggestion put off (`dismiss`), one pushed to the adults' phones (`pushed`, with its key) and a
+TV notice's button an adult answered (`notice_answer`: `via` `pin` or `phone`, `by` the adult's person, else `user`
+their user id, the notice's `key`, the button's `action` and the TV's `device`), what each person played (`played`:
+`item` the title, game or app as shown, `device` where (a Hearth device id, `source:<id>` or `nintendo:<entity>`) and
+`minutes`, once a play of a minute or more ends; one event per person, item and device a local day, a later play of
+the same adding its minutes; at most 50 a person a day, kept 28 days; a play in progress when Home Assistant stops is
+cut there), and each local day's final minutes
+(`day`: `date` and `minutes` {group id: minutes, seconds / 60 rounded}, every group of the household), logged for every
+person when the day turns. When Home Assistant was down at midnight, the first look after it starts records yesterday
+from what the Hearth devices last posted for it and the live sources' timings (a totals sensor has started the new day
+by then, so its time is missing; someone with only totals sources gets no record). Events hold entity ids, group ids, device ids, minutes and times,
+never names or notes. Suggestions are sized from it: the most common bonus for a kid and group over the last 28 days,
+once there are at least 3. Minutes per kid and group are already recorded by Home Assistant's statistics (each
+group's Today sensor is `total_increasing`).
+
 ### Play on a TV
 
 **Proposed for the TV; built in Home Assistant.** `hearth.play_on_tv` starts something on a paired Hearth TV, from an
@@ -1113,7 +1540,7 @@ id, or its device in Home Assistant: a device selector gives that), `what` and, 
 - Home Assistant can't reach a TV, so it **queues a one-shot command** in the TV's state document, and the TV takes it
   with its next status answer: within about 2 seconds after it posts, at least every 2 minutes while it's on. The
   service answers (when asked for a response) `{"id", "device_id", "expires"}`. A TV that hasn't posted in 15 minutes
-  (not connected) is refused; a phone isn't a TV.
+  (not connected) is refused; a phone isn't a TV (a device whose caps say `commands.play` is played on as a TV is).
 - A new play for the same TV replaces one still waiting (only the last ask is played). A command waits 3 minutes,
   then it's dropped. Commands are kept while the household reloads (an options change), not over a restart.
 - `hearth_command_done` (`device_id`, `id`, `type: "play"`, `result`, `error`) tells how it went, once: `ok`, `failed`
@@ -1184,7 +1611,9 @@ status post.
 
 - **A topic per phone.** Each phone gets its own random topic when it pairs (32 characters of `A-Z a-z 0-9 _ -`,
   as long as a secret: on a public server, whoever knows the topic can listen to it and post to it). Pairing again
-  makes a new one; a phone paired before this got one when the household next loaded. TVs have none.
+  makes a new one; a phone paired before this got one when the household next loaded. TVs have none. (Who gets pings
+  follows caps, see [Device status](#device-status): a device that says `push` gets a topic when the household next
+  loads, and one that leaves it out of the caps it says gets no pings.)
 - **Where the phone hears it.** The approved pair answer and every status answer to a phone carry `"push":
   {"server": "https://ntfy.example.com", "topic": "<topic>"}`, or `"push": null` while there's no server (an added
   field: `contract` stays 1). The status answer is the one to follow: the server can be set, changed or removed at any
@@ -1214,11 +1643,30 @@ shows each kid's time left and what's playing, with buttons for extra time, and 
 summary; settings are saved to the entry's options as the Configure menu saves them, and budgets as the services set
 them.
 
+Each kid's card also pauses that kid alone (`hearth.pause` with `people`), ends an app or group pause, takes School time
+off today (or puts it back), and opens **Today by device and app**: minutes per device with +15 on one device
+(`hearth.add_bonus` with `device`) and the apps used most. The **Kids** tab has a card per Nintendo Switch of theirs
+(today's play, the Switch's own limit, time left and extra time, playing now, last synced), with Hearth's extra time on
+that Switch and, as the installed Nintendo integration allows, Nintendo's own extra playing time, its cancel and the
+games' allow list, and **Suggest to phones**: per group with a limit (and All screen time), whether its suggestion
+also goes to the adults' phones and the amount (`suggest_push` in `hearth/config` and `hearth/config/set`, checked:
+a kid, a group id or a device, 15, 30, 45 or 60 minutes, each pair once; see [Pushed to phones](#pushed-to-phones)).
+`hearth/config` says what the installed integration can do (`capabilities.nintendo`: `installed`,
+`add_bonus`, `bonus_min`, `bonus_max`, `unlimited`, `cancel_bonus`, `list_apps`, `set_app_allowed`, found by probing
+the services' own schemas, so core's 5 to 30 minutes and a patched copy's 5 to 360 or unlimited both show right) and
+how each parental control is doing (`parental_controls`: each installed integration's entries and their state, and
+Family Safety's Connection sensor), shown on **Devices** and, when one isn't working, on **Today**. The page's Nintendo
+commands (`hearth/nintendo/bonus`, `hearth/nintendo/bonus_cancel`, `hearth/nintendo/apps`,
+`hearth/nintendo/app_allowed`) take the kid and the Switch's device id, check the Switch is theirs and the service is
+there, and refuse Nintendo's own extra time while Hearth holds that Switch (Hearth's extra time on it lets the hold go
+instead; Nintendo's on a held Switch would read as a parent's change in the Nintendo app). See
+[dashboard-parity.md](dashboard-parity.md) for how the page compares with the Family Link and Family Safety dashboards.
+
 The Configure menu (Settings > Devices & services > Hearth > Configure) still has everything, as a menu:
 
 **Who's who on the TVs**, **Add / Remove a screen time source**, **Add / Remove a title**, **Locks** (bedtime,
 school time), **Enforce limits** (Family Link, Family Safety, Nintendo), **School days**, **Schedule**, **Places**, **Website
-block list**, **Chores earn time**, **Offer more time**, **Sort new apps**, **Watch for new apps**, **Add a group**, **Add apps to Video or Games**, **Not screen time**, **Remove a group**, **Tile
+block list**, **Chores earn time**, **Suggest more time to phones**, **Sort new apps**, **Watch for new apps**, **Add a group**, **Add apps to Video or Games**, **Not screen time**, **Remove a group**, **Tile
 exchange sharing** and **Parent PINs**. (Suggested title matches and rules aren't built.)
 
 Budgets aren't in the options: they're number entities, so a dashboard, a voice assistant or an automation can change
@@ -1284,24 +1732,59 @@ What step 1 built. Every endpoint answers local network addresses only (403 othe
    [Away from home](#away-from-home)).
 4. The device keeps `secret`, and nothing else of Home Assistant's.
 
+**Tickets** (a paired TV only). `POST /api/hearth/device/<device_id>/ticket` with header `X-Hearth-Secret` and
+`{"kind": "tv"}` (for another TV of its household) or `{"kind": "mobile", "person": "person.alex"}` (for a phone an
+adult bound as that adult's; `person` must be an adult on Hearth's page, else 403 `not_an_adult`) answers
+`{"ticket", "expires_in": 300}`. 403 `not_a_tv` from a phone; 429 `too_often` past the status rate, or `try_later` with
+ten tickets outstanding. A ticket is single use and lives five minutes; Home Assistant keeps only its hash.
+`POST /api/hearth/pair/redeem` with `{"ticket", "device_id", "kind", "name", "model", "version"}` pairs that device at
+once and answers as an approved pairing does (step 3 above, `person` the ticket's). 404 `unknown` for a ticket that's
+unknown, used, expired, of another kind, or whose TV was removed since; it's spent either way. Each redeemed ticket
+fires `hearth_device_paired` (`device_id`, `name`, `kind`, `person`, `by`: the TV that vouched) and leaves a
+notification.
+
 **Status.** `POST /api/hearth/device/<device_id>/status` with header `X-Hearth-Secret: <secret>` and the status JSON
 (see [Device status](#device-status)), at most 64 KB. 200 (below); 401 `not_paired` for an unknown device or
 wrong secret (it was removed: stop posting and offer to pair again); 429 `too_often` past 20 posts a minute; 400
 `bad_request`. A refused secret is a plain 401, never a failed Home Assistant login, so it doesn't count toward Home
 Assistant's IP ban. The 200 answer carries the device's state document, `{"ok": true, "contract": 1, "state": {...}}` (see
 [What a device gets](#what-a-device-gets)). Every device endpoint answers 503 `not_set_up` while the integration is
-loading: try again, don't unpair. A device may also send `app_categories`, `{"<package>": "game" | "video" | ...}`
+loading: try again, don't unpair. A TV with screen-time rules of its own (set before it was paired, household-sync.md "Screen time without Home
+Assistant") sends them as `local_rules`, `{"<profile_id>": {"all": {"weekday", "weekend"}, "groups": [{"id",
+"weekday", "weekend"}]}}`: once a profile is mapped to a kid who has no budgets yet, they become that kid's budgets
+(only the groups Home Assistant has; bedtime isn't taken), with a notification. Each TV profile is taken or passed
+over once, so a budget cleared later doesn't come back. A device may also send `app_categories`, `{"<package>": "game" | "video" | ...}`
 (Android's category, lower case), which helps sort its apps into Video, Games, Social or Messaging. A TV's
 document also carries `commands` (one-shot commands such as a play, see [Play on a TV](#play-on-a-tv)), and the TV
 says which it ran in `commands_done`. A phone's answer also says `push` (its ntfy channel, or null; see [Away from
 home](#away-from-home)).
 
-**Events** (a TV only). `POST /api/hearth/device/<device_id>/events` with the same header and
+**Notices** (a TV whose caps say `notices`; never a phone). Its state document carries `notices`, what the adults
+should see on it (attention items for TVs, see [Attention](#attention); so far the suggestions pushed to phones),
+oldest first:
+`[{"key", "tag", "title", "message", "for"?, "urgency": "info" | "notice" | "urgent", "actions": [{"id": "0", "title"}],
+"expires"?}]`. `for` is a person entity id from the document's `people` (that adult's profiles only); without it, every
+adult profile, never a kid's. The TV shows them as Home Assistant notifications to it (a `tag` replaces one with the
+same tag); one gone from the list is cleared. `actions` carry only a button's number and title, never a service. The
+fields stay the same while the item does (no countdowns), so an unchanged notice doesn't wake the TV's wait; a new one,
+or one gone, does. A TV without the cap gets no `notices`.
+
+**Wait for a change** (any paired device). `GET /api/hearth/device/<device_id>/wait?version=<v>&timeout=<s>` with
+the same header holds until the device's state document is no longer version `<v>` (the `version` of the last
+document it got), then answers `{"changed": true}`; after `<s>` seconds (at most 55) with nothing changed it answers
+`{"changed": false}`. A missing or old `<v>` answers changed at once. It never carries the document: on changed the
+device posts its status and reads the state from that answer. One wait per device: a new one ends the previous with
+`{"changed": false}`, and so does an options change (the integration reloads), so ask again. 401 and 503 as for
+Status; 400 for a bad `timeout`. A TV holds one while it's paired and its screen is on, so a pause, a lock or an
+answered request reaches it within seconds rather than at its next two-minute post; a phone holds one only while its
+ask waits. An older integration answers 404: keep posting as before.
+
+**Events** (a TV, or a device whose caps say `events`). `POST /api/hearth/device/<device_id>/events` with the same header and
 `{"events": [...]}`, at most 50, each `{"type": "video_started", "profile_id", "t" (ms), "v" (video id), "title",
 "ch" (channel name), "cid" (channel id)}`. `profile_id` is the TV's own key for the profile (`user:10`), resolved
 with the TV it came from as in [TV profile keys](#tv-profile-keys). 200 `{"ok": true, "added": n}` once all are taken:
 an entry of a profile mapped to no one, or one that isn't valid, is dropped, and a resend is harmless, so the TV marks
-them all sent. 403 `not_a_tv` from a phone; 429 `too_often` past 10 posts a minute; 400 for more than 50 or a
+them all sent. 403 `not_a_tv` from a device without `events` (a phone, by default); 429 `too_often` past 10 posts a minute; 400 for more than 50 or a
 malformed body.
 
 **Parent PINs** (any paired device). Each adult on Hearth's page has their own (4 digits), set in Configure > Parent PINs or on Hearth's page, and kept as a salted
@@ -1323,10 +1806,91 @@ version alone means its copy is current, and one with neither means Home Assista
 ones, no longer managed). The TV keeps its own lockout too and posts `pin_lockouts` (how many it has had, only going up)
 in its status; each rise fires `hearth_parent_pin_locked_out` (`device_id`, `lockouts`: how many new, `retry_in`: null).
 
+**A notice's button** (a TV that shows notices). `POST /api/hearth/device/<device_id>/notice` with the same header and
+`{"key": "<a notice's key>", "action": <its button's id as a number>, "pin": "<digits>"}` or `{..., "approval":
+"phone"}` (exactly one of the two). A secret alone never runs a service:
+- With `pin`: checked as `verify_pin` checks one (any adult's Parent PIN, the same lockout: wrong guesses here and
+  there count together, and a right one fires `hearth_parent_pin_used`). The button's service then runs as that
+  adult: as their person's Home Assistant user when it's an adult's or an administrator's, else as the household's
+  own (no user, as an automation); the history names the adult either way. 200 `{"ok": true, "done": true}`.
+- With `"approval": "phone"`: the adults' phones are asked (see [Attention](#attention), On the TVs), and an adult's
+  tap there runs it as them. 200 `{"ok": true, "pending": "phone"}`; the notice going from the document is the TV's
+  sign it was answered.
+
+Only a button the TV was shown runs (a `hearth` service; the notice's own number). Errors: 404 `gone` (no such notice
+in this TV's document now, or the TV doesn't declare `notices`); 403 `wrong_pin` (also when Home Assistant has no
+Parent PIN), with `retry_after` (seconds) on the wrong one that starts a lockout and on every try until it ends, the
+right PIN included; 400 `bad_request` (a malformed body, both or neither of `pin` and `approval`, a button that isn't
+there or doesn't run); 429 `too_many` past 6 presses a minute; 401, 403 `not_local` and 503 as for Status; 500
+`failed` when the service itself failed.
+
 **Entities**, per device, by kind as in [Kinds](#kinds). Screen time today is in seconds (shown in minutes), with
 per-app, playing and (on a TV) per-profile attributes kept out of history. All but Connected are unavailable until the
 first post and once the device has been quiet for 15 minutes; the last status is kept across restarts. Deleting the
 device removes it from the household.
+
+## MCP and voice
+
+Hearth registers a Home Assistant **LLM API**, `hearth` ("Hearth", `llm_api.py`), so a language model can read the
+household and act on it with the same rules as Hearth's page. Home Assistant offers it in two places:
+
+- **MCP Server** (Settings > Devices & services > Add integration > Model Context Protocol Server). In its options,
+  tick **Hearth** among the LLM APIs (with Assist, if you want both). A client (Claude, say) then uses
+  `https://<home assistant>/api/mcp` with a long-lived access token or Home Assistant's OAuth; the token's user is
+  who acts. `/api/mcp/hearth` serves Hearth's tools alone, for administrators only (Home Assistant's rule).
+- **Assist** (Settings > Voice assistants > an assistant > its conversation agent's options, **Control Home
+  Assistant**): tick **Hearth** among the LLM APIs. A chat in the Home Assistant app runs as the signed-in user; a
+  voice satellite runs with no user.
+
+**Who may use it.** Every call is checked, and the tools a model is offered follow from it:
+
+- An **adult** (an administrator, or a user whose person is an adult on Hearth's page, as for the services): every
+  tool. Actions act at once, run as that user (`Context(user_id)`), and answer with exactly what changed so the adult
+  can correct it.
+- **No user** (a voice satellite: Home Assistant can't tell who's speaking): nothing, unless **Let voice assistants
+  use Hearth** is on (Hearth's page, People tab, or Configure > Voice assistants; `voice_assistants` in the options,
+  off by default). With it on, the read tools answer, and an action is **not run**: the adults' phones get "Approve:
+  give Sam 30 more minutes of Video today?" (asked by voice, and on which satellite) with the action's button and
+  Don't allow, and the tool answers "Sent to your phone for approval". The first adult to tap it runs it as
+  themselves, once; it comes off every phone then, on Don't allow, or after 10 minutes (key `voice:<id>`, tag
+  `hearth_voice:<id>`, never on the bell). A spoken PIN isn't used: a kid in the room would hear it. Turning the
+  option off takes every tool away from voice at once.
+- **Anyone else** (a kid with a Home Assistant user of their own): no tools, and each tool refuses them anyway.
+
+**Read tools** (from the household summary and `hearth.explain`; no pairing codes, TV profile keys or coordinates):
+
+| Tool | What it answers |
+|---|---|
+| `hearth_get_household` | Each person today: All screen time and each group (used, left, budget, bonus), locked and by what, pause, bedtime and School time, playing, the headline; requests waiting; the Hearth devices |
+| `hearth_get_person` | One person: the above with minutes per device and per app, allows, pauses, grants, extra time on one device, Google's and Microsoft's own limits, the last 7 days, and their devices' ids |
+| `hearth_explain` | Why an app or group is (not) allowed now, until when, what holds it; says when a parent blocked the app in Family Link or Family Safety |
+| `hearth_get_suggestions` | Hearth's suggestions (key, text, minutes, amounts) |
+| `hearth_get_requests` | Requests for more time waiting, with their ids; those answered in a parent's own app lately |
+
+**Action tools** (each a `hearth.*` service; people, groups, apps and devices by name or id):
+
+| Tool | Service | Answers with |
+|---|---|---|
+| `hearth_add_bonus` | `add_bonus` (person, minutes -240 to 240, group, device) | the pool or group, minutes left now, today's budget and bonus; the device's extra id |
+| `hearth_pause` / `hearth_pause_end` | `pause` / `pause_end` (people, minutes or until, app or group) | each person's pause now |
+| `hearth_allow` / `hearth_allow_end` | `allow` / `allow_end` (one person, app or group, until, device) | the allow's id and end, and `explain` after it |
+| `hearth_answer_request` | `answer_request` (request id, minutes or deny) | the answer, and minutes left |
+| `hearth_dismiss_suggestion` | `dismiss_suggestion` | the suggestion put off today |
+| `hearth_school_time_off` / `_cancel` | `school_time_off` / `school_time_off_cancel` | the ids, and the person's School time off |
+
+Every answer also has `done` (in words), the service and its data, how to undo it, and `logged` (the history events
+it made).
+
+**What it never does.** There is no budget tool: lasting changes stay on Hearth's page. And Hearth never lets a kid
+into an app or game a parent blocked: `hearth_allow` of an app listed in the kid's Family Link **Blocked Apps** sensor,
+or reported blocked by Family Safety (other than an app Hearth's own pause blocked), is refused, and so is approving a
+Family Safety request for a particular game or app (deny it, or answer it in the Family Safety app). These checks are
+in the tools, not in what the model is told.
+
+**Audit.** History events an action logs carry `via` (`mcp` or `voice`) and `user` (the Home Assistant user who acted,
+or who tapped Allow). An action that logs nothing of its own (a pause, an allow, School time off) logs an `assist`
+event: the `tool` and what it did (app, group, minutes, device, until, date), never a reason. Home Assistant's
+logbook also has the service call's user.
 
 ## Security
 
@@ -1342,13 +1906,18 @@ device removes it from the household.
 - Everything a device sends is untrusted: only known fields, lengths capped, control characters stripped, numbers
   bounded, never templated.
 - Kids' devices hold no Home Assistant token.
-- Pairing is the one step that needs an administrator.
+- Pairing is the one step that needs an administrator, once: after that, a paired TV can vouch for other devices with
+  tickets. A leaked TV secret could therefore pair another TV, or a phone for an adult on Hearth's page; each such
+  pairing leaves a notification and fires `hearth_device_paired`, and deleting the device ends it. Tickets travel only
+  inside the sealed household sync (TV to TV) or the paired, encrypted TV remote session.
 - **Who may call Hearth's services.** Every `hearth.*` service checks its caller: a call with no user (an automation,
   or a script an automation started) may; so may an administrator, and a user whose person is an adult on Hearth's
   page (the rule that lets them read the household summary, auth.py). Anyone else (a kid with a Home Assistant user of
   their own) gets Home Assistant's Unauthorized error, for the read-only ones too (`explain`, `get_watch_log`,
   `watch_digest`): a kid doesn't read the watch log. A script a kid starts from a dashboard runs as the kid, so it's
   refused as well.
+- **Assistants** (MCP Server, Assist) get Hearth's tools only for an adult, or for a voice satellite while Let voice
+  assistants use Hearth is on, and then every action waits for an adult's tap on their phone (MCP and voice).
 - **A kid's own user** may use `hearth/me`, `hearth/me/subscribe` and `hearth/ask`, which take no person: each is
   the caller's own person (whose `user_id` is theirs), so a kid reads and asks for themselves only.
 
@@ -1369,7 +1938,8 @@ device removes it from the household.
    | `sensor.hearth_allowance` | the state document in each status answer |
 
    Each moves when an adult chooses, checked side by side in history for a few days first.
-4. After a release or two of both, the webhook path is documented as legacy.
+4. The webhook path and `sensor.hearth_allowance` are retired: Hearth TV no longer posts to a webhook or reads the
+   sensor, and a webhook id an older version kept is forgotten. Pair the TV instead.
 
 ### Replacing hand-written automations
 
@@ -1385,7 +1955,7 @@ automations, and what replaces each (the names here are examples):
 | a one-shot "no School time on Wednesday from noon" | `hearth.school_time_off` {people, date, from: "12:00"} |
 | syncs a website list into Family Link every morning | Configure > Website block list |
 | adds bonus minutes when a chore is checked off | Configure > Chores earn time |
-| offers an adult "give 30 more?" when a kid's time runs out | Configure > Offer more time |
+| offers an adult "give 30 more?" when a kid's time runs out | Kids tab > Suggest to phones (or Configure > Suggest more time to phones) |
 | resets bonus helpers at midnight | nothing: Bonus today starts at 0 each day |
 | ends a family pause at a set time | `hearth.pause` with `until` |
 | lets a kid use one app for homework | `hearth.allow` {people, app, until} |

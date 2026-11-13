@@ -5,6 +5,8 @@ See docs/home-assistant-integration.md.
 
 from __future__ import annotations
 
+import logging
+
 from datetime import datetime, timedelta
 
 import voluptuous as vol
@@ -23,20 +25,24 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.util import dt as dt_util
 
+from .entry_tasks import async_wait_for_entry_tasks
+from .entry_tasks import entry_task
 from .api import async_register_views
-from .auth import register_service
+from .auth import is_adult_user, register_service
 from .websocket import async_register_commands
 from .pause import end_app_pause, end_pause, set_app_pause, set_pause
 from .places import ARRIVE, LEAVE
-from . import panel
+from . import llm_api, panel, suggest_push
 from .apps import ACTION_PREFIX
+from .asks import ACTION_PREFIX as ASK_ACTION_PREFIX
 from .commands import is_profile_id, what_to_play
-from .const import CONF_DEVICES, CONF_KIND, CONF_PROFILES, CONF_PUSH_TOPIC, DOMAIN, KIND_MOBILE, KIND_TV
+from .const import CAP_PLAY, CAP_PUSH, CONF_DEVICES, CONF_PROFILES, CONF_PUSH_TOPIC, DOMAIN
 from .profiles import ISSUE_PROFILE_KEYS, legacy_keys
 from .push import new_topic
 from .hub import HearthHub
+from .attention import ACT_PREFIX
 from .limits import DAY_TYPES
-from .asks import CONF_OFFER_MORE, AskError
+from .asks import EVENT_MORE_TIME_ANSWERED, EVENT_MORE_TIME_REQUESTED, AskError
 from .const import EVENT_BUDGET_REACHED
 from .counting import ALL
 from .exceptions import END_OF_DAY, SCHOOL_TIME_END, at_time, end_of_day
@@ -64,6 +70,8 @@ ADD_BONUS_SCHEMA = vol.Schema(
         vol.Required("person"): cv.entity_id,
         vol.Required("minutes"): vol.All(vol.Coerce(int), vol.Range(min=-1440, max=1440)),
         vol.Optional("group", default="all"): cv.string,
+        # Only on this device of theirs (a target id: hearth:<id>, fl:<id>, fs:xbox, nintendo:<entity>)
+        vol.Optional("device"): cv.string,
     }
 )
 SET_BUDGET_SCHEMA = vol.Schema(
@@ -108,6 +116,8 @@ PAUSE_END_SCHEMA = vol.Schema(
         vol.Exclusive("group", "what"): cv.string,
     }
 )
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def _paused_what(household, data, group_id) -> tuple[str | None, str | None]:
@@ -171,10 +181,23 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         return by_name or given
 
     @callback
-    def add_bonus(call: ServiceCall) -> None:
-        """Minutes added to (or, negative, taken from) a person's group today: the one way to extend."""
+    def add_bonus(call: ServiceCall) -> ServiceResponse:
+        """Minutes added to (or, negative, taken from) a person's group today: the one way to extend. With a device,
+        minutes on that device only (device_extra.py)."""
         target = household(call)
-        target.add_bonus(call.data["person"], group_id(target, call.data["group"]), call.data["minutes"])
+        group = group_id(target, call.data["group"])
+        if call.data.get("device"):
+            if call.data["minutes"] <= 0:
+                raise ServiceValidationError("Extra time on one device is a number of minutes more than 0")
+            if group != ALL and target.group(group) is None:
+                raise ServiceValidationError(f"No group {call.data['group']}")
+            extra = target.add_device_extra(
+                call.data["person"], call.data["device"].strip(), "bonus", group, call.data["minutes"]
+            )
+            # Its id, so an undo ends just this one (hearth.allow_end {id})
+            return {"id": extra.id, "until": dt_util.as_local(extra.until).isoformat()}
+        target.add_bonus(call.data["person"], group, call.data["minutes"])
+        return {}
 
     @callback
     def set_budget(call: ServiceCall) -> None:
@@ -184,7 +207,9 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         for kind in days:
             target.set_budget(call.data["person"], group_id(target, call.data["group"]), kind, call.data["minutes"])
 
-    register_service(hass, DOMAIN, SERVICE_ADD_BONUS, add_bonus, schema=ADD_BONUS_SCHEMA)
+    register_service(
+        hass, DOMAIN, SERVICE_ADD_BONUS, add_bonus, schema=ADD_BONUS_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    )
     register_service(hass, DOMAIN, SERVICE_SET_BUDGET, set_budget, schema=SET_BUDGET_SCHEMA)
 
     def loaded_household():
@@ -244,10 +269,13 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     register_service(hass, DOMAIN, "pause", pause, schema=PAUSE_SCHEMA)
     register_service(hass, DOMAIN, "pause_end", pause_end, schema=PAUSE_END_SCHEMA)
     _register_answer_request(hass)
+    _register_dismiss_suggestion(hass)
     _register_exception_services(hass, loaded_household, group_id)
     _register_watch_services(hass)
     _register_play_on_tv(hass)
     _register_copy_sites(hass, loaded_household)
+    # Hearth for assistants: Home Assistant's MCP Server and Assist (llm_api.py)
+    llm_api.async_register(hass)
     return True
 
 
@@ -290,6 +318,33 @@ def _register_answer_request(hass: HomeAssistant) -> None:
     )
 
 
+DISMISS_SUGGESTION_SCHEMA = vol.Schema(
+    {
+        vol.Required("person"): cv.entity_id,
+        vol.Required("key"): vol.All(cv.string, vol.Length(min=1, max=200)),
+    }
+)
+
+
+def _register_dismiss_suggestion(hass: HomeAssistant) -> None:
+    """hearth.dismiss_suggestion: an adult puts a suggestion off for the rest of the day ("not today")."""
+
+    @callback
+    def dismiss_suggestion(call: ServiceCall) -> None:
+        from .history import DISMISS
+
+        entries = hass.config_entries.async_loaded_entries(DOMAIN)
+        if not entries:
+            raise ServiceValidationError("Hearth isn't set up")
+        household = entries[0].runtime_data.household
+        if call.data["person"] not in household.people():
+            raise ServiceValidationError(f"{call.data['person']} isn't one of the household's people")
+        household.history.log(DISMISS, call.data["person"], key=call.data["key"].strip())
+        household.recompute()
+
+    register_service(hass, DOMAIN, "dismiss_suggestion", dismiss_suggestion, schema=DISMISS_SUGGESTION_SCHEMA)
+
+
 ALLOW_SCHEMA = vol.All(
     vol.Schema(
         {
@@ -299,6 +354,8 @@ ALLOW_SCHEMA = vol.All(
             vol.Optional("until", default=END_OF_DAY): vol.Any(vol.In((END_OF_DAY, SCHOOL_TIME_END)), cv.time, cv.datetime),
             vol.Optional("reason"): cv.string,
             vol.Optional("ends_on"): ENDS_ON_SCHEMA,
+            # Only on this device of theirs (a target id): a group, open there until the time
+            vol.Optional("device"): cv.string,
         }
     ),
     cv.has_at_least_one_key("app", "group"),
@@ -310,6 +367,8 @@ ALLOW_END_SCHEMA = vol.All(
             vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id]),
             vol.Exclusive("app", "what"): cv.string,
             vol.Exclusive("group", "what"): cv.string,
+            # Extra time on this device ends (a bonus or an allow there)
+            vol.Optional("device"): cv.string,
         }
     ),
     cv.has_at_least_one_key("id", "people"),
@@ -388,6 +447,20 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         app, group = what(household, call.data)
         now = dt_util.now()
         until = {p: until_for(household, p, call.data["until"], now) for p in people}
+        if call.data.get("device"):
+            if app is not None:
+                raise ServiceValidationError("On one device, allow a group (an app goes with every device)")
+            if call.data.get("ends_on"):
+                raise ServiceValidationError("An allow on one device ends at a time, not at a place")
+            extras = [
+                household.add_device_extra(p, call.data["device"].strip(), "allow", group, until=until[p],
+                                           reason=call.data.get("reason"))
+                for p in people
+            ]
+            return {
+                "id": extras[0].id if len(extras) == 1 else [e.id for e in extras],
+                "until": {p: dt_util.as_local(u).isoformat() for p, u in until.items()},
+            }
         ends_on = _place_ends_on(household, people, call.data.get("ends_on"))
         allowed = household.allows.add(until, app, group, call.data.get("reason"), ends_on)
         household.recompute()
@@ -405,6 +478,13 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         # A parent's grant (grants.py) ends by its id too
         grant = household.end_grant(call.data["id"]) if call.data.get("id") else None
         ended = [grant.id] if grant is not None else []
+        # Extra time on one device: by its id, or the people's on that device
+        if call.data.get("device") or (call.data.get("id") or "").startswith("dx_"):
+            ended += household.end_device_extras(
+                call.data.get("id"), call.data.get("people"), (call.data.get("device") or "").strip() or None
+            )
+            if call.data.get("device"):
+                return {"ended": ended}
         ended += household.allows.end(call.data.get("id"), call.data.get("people"), app, group)
         household.recompute()
         # Extra time Hearth gave in Family Link or Family Safety for an allow that ended goes too
@@ -434,14 +514,14 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         if ends_on and day != today:
             raise ServiceValidationError("ends_on works for today's School time off only")
         ids = household.scheduler.take_off(people, day, call.data.get("from"), call.data.get("reason"), ends_on)
-        hass.async_create_task(household.scheduler.async_tick())
+        entry_task(hass, household.hub.entry.entry_id, household.scheduler.async_tick(), "hearth school time off")
         return {"ids": ids}
 
     async def school_time_off_cancel(call: ServiceCall) -> ServiceResponse:
         household = loaded_household()
         people = people_of(household, call.data["people"]) if call.data.get("people") else None
         changed = household.scheduler.cancel(people, call.data.get("date"))
-        hass.async_create_task(household.scheduler.async_tick())
+        entry_task(hass, household.hub.entry.entry_id, household.scheduler.async_tick(), "hearth school time back")
         return {"ids": changed}
 
     register_service(
@@ -533,7 +613,7 @@ def _register_play_on_tv(hass: HomeAssistant) -> None:
             )
         if device_id is None:
             raise ServiceValidationError(f"{given} isn't one of the household's Hearth devices")
-        if hub.kind(device_id) != KIND_TV:
+        if not hub.has_cap(device_id, CAP_PLAY):
             raise ServiceValidationError(f"{hub.devices[device_id].get('name') or device_id} isn't a TV")
         return device_id
 
@@ -658,26 +738,11 @@ def _register_watch_services(hass: HomeAssistant) -> None:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bool:
-    # Phones paired before push existed get their topic now (before the update listener, so it doesn't reload)
-    devices = entry.data.get(CONF_DEVICES, {})
-    if any(d.get(CONF_KIND) == KIND_MOBILE and not d.get(CONF_PUSH_TOPIC) for d in devices.values()):
-        hass.config_entries.async_update_entry(
-            entry,
-            data={
-                **entry.data,
-                CONF_DEVICES: {
-                    device_id: (
-                        {**d, CONF_PUSH_TOPIC: new_topic()}
-                        if d.get(CONF_KIND) == KIND_MOBILE and not d.get(CONF_PUSH_TOPIC)
-                        else d
-                    )
-                    for device_id, d in devices.items()
-                },
-            },
-        )
     _check_profile_keys(hass, entry)
+    _migrate_offer_more(hass, entry)
     hub = HearthHub(hass, entry)
     await hub.async_load()
+    _give_push_topics(hass, entry, hub)
     entry.runtime_data = hub
     await hub.household.school.async_refresh()
     hub.household.recompute()
@@ -729,14 +794,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     if lists := hub.household.chores.lists():
         entry.async_on_unload(async_track_state_change_event(hass, lists, hub.household.chores.async_changed))
 
-    @callback
-    def offer_more(event) -> None:
-        """A group ran out: the adults are offered to give more, where the household chose to."""
-        for raw in hub.entry.options.get(CONF_OFFER_MORE, []):
-            if raw.get("person") == event.data.get("person") and raw.get("group") == event.data.get("group"):
-                hub.asks.offer(raw["person"], raw["group"], int(raw.get("minutes") or 30))
-
-    entry.async_on_unload(hass.bus.async_listen(EVENT_BUDGET_REACHED, offer_more))
+    # A group running out no longer makes an offered request: where the household chose it, its suggestion goes to
+    # the adults' phones instead (suggest_push.py), so one run-out is one notification
+    hub.suggest_push.start()
+    entry.async_on_unload(hub.suggest_push.stop)
+    # The history log (history.py): what ran out, what was asked and offered, and the answers
+    history = hub.household.history
+    entry.async_on_unload(hass.bus.async_listen(EVENT_BUDGET_REACHED, history.on_budget_reached))
+    entry.async_on_unload(hass.bus.async_listen(EVENT_MORE_TIME_REQUESTED, history.on_requested))
+    entry.async_on_unload(hass.bus.async_listen(EVENT_MORE_TIME_ANSWERED, history.on_answered))
 
     @callback
     def family_safety_request(event) -> None:
@@ -776,10 +842,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     # And whenever a screen time source changes
     if entities := hub.household.source_entities():
         entry.async_on_unload(async_track_state_change_event(hass, entities, recompute))
-    @callback
-    def phone_answer(event) -> None:
-        """A Sort button on a new app's phone notification: HEARTH_APP|<group>|<package>."""
+    async def phone_answer(event) -> None:
+        """A button on a phone notification: an attention item's (HEARTH_ACT|<key>|<n>), a request's
+        (HEARTH_MORE|<id>|<minutes>) or a new app's Sort (HEARTH_APP|<group>|<package>)."""
         action = str(event.data.get("action") or "")
+        if not action.startswith((ASK_ACTION_PREFIX, ACTION_PREFIX, ACT_PREFIX)):
+            return
+        # Only an adult's (or an administrator's) phone answers or sorts: a kid with Home Assistant on their own phone
+        # can fire the same action, for their own ask
+        user = await hass.auth.async_get_user(event.context.user_id) if event.context.user_id else None
+        if not is_adult_user(hass, hub, user):
+            _LOGGER.warning("A Hearth notification action from someone who isn't an adult was ignored")
+            return
+        # An item's action, run as that adult when the item reached them
+        if await hub.attention.act(action, user):
+            return
         # A request for more time: the first adult's answer decides
         if hub.asks.phone_answer(action, event.context.user_id):
             return
@@ -793,9 +870,37 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     # "Something changed" pings to the phones, when a push server is set
     hub.push.start()
     entry.async_on_unload(hub.push.stop)
+    hub.waits.start()
+    entry.async_on_unload(hub.waits.stop)
     # People and groups come from the entry: when it changes (options, a phone paired), its entities are made again
     entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
     return True
+
+
+def _give_push_topics(hass: HomeAssistant, entry: HearthConfigEntry, hub: HearthHub) -> None:
+    """Devices that get pings but have no topic (phones paired before push existed) get one now: after the hub
+    loaded what each device last said (its caps), before the update listener, so it doesn't reload."""
+    devices = entry.data.get(CONF_DEVICES, {})
+    missing = {d for d, device in devices.items() if not device.get(CONF_PUSH_TOPIC) and hub.has_cap(d, CAP_PUSH)}
+    if not missing:
+        return
+    hass.config_entries.async_update_entry(
+        entry,
+        data={
+            **entry.data,
+            CONF_DEVICES: {
+                device_id: ({**d, CONF_PUSH_TOPIC: new_topic()} if device_id in missing else d)
+                for device_id, d in devices.items()
+            },
+        },
+    )
+
+
+def _migrate_offer_more(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
+    """Configure > Offer more time's pairs (offer_more) become pushed suggestions with their amounts (suggest_push):
+    before the update listener, so it doesn't reload."""
+    if (options := suggest_push.migrated(entry.options)) is not None:
+        hass.config_entries.async_update_entry(entry, options=options)
 
 
 def _check_profile_keys(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
@@ -823,6 +928,8 @@ async def _async_entry_updated(hass: HomeAssistant, entry: HearthConfigEntry) ->
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bool:
+    # Work under way (a Family Link write, a store write) finishes first, so the flush saves what it did
+    await async_wait_for_entry_tasks(hass, entry.entry_id)
     await entry.runtime_data.async_flush()
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 

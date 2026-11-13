@@ -15,7 +15,6 @@ import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_NAME
-from homeassistant.components import persistent_notification
 from homeassistant.core import callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import (
@@ -42,6 +41,7 @@ from .const import (
     CONF_OUTSIDE_ALL,
     CONF_ROLES,
     CONF_TILE_EXCHANGE,
+    CONF_VOICE_ASSISTANTS,
     CONF_PERSON,
     CONF_PROFILES,
     CONF_PUSH_SERVER,
@@ -63,12 +63,13 @@ from .enforce import (
     NINTENDO_DOMAIN,
     PLATFORMS,
 )
-from .notifications import pairing_notification_id
+from .notifications import clear_pairing
 from .schooldays import CALENDAR_OFF, CALENDAR_SCHOOL, CONF_SCHOOL_DAYS, SCHOOL_BUDGET
 from .schedule import CONF_SCHEDULE, CONF_SITE_LIST
 from .chores import CONF_CHORES, DEFAULT_MINUTES
 from .asks import AMOUNTS, CONF_OFFER_MORE
-from .sources import CONF_SOURCES, CONF_TITLES
+from .suggest_push import CONF_SUGGEST_PUSH, pairs as suggest_pairs
+from .sources import CONF_SOURCES, CONF_TITLES, is_phone_app
 from . import parent_pin
 from . import phones as adult_phones
 from .push import clean_server
@@ -121,7 +122,7 @@ class HearthConfigFlow(ConfigFlow, domain=DOMAIN):
             hub = _loaded_hub(self.hass)
             if hub is None or not await hub.async_approve(self._pairing_id, user_input.get(CONF_PERSON)):
                 return self.async_abort(reason="expired")
-            persistent_notification.async_dismiss(self.hass, pairing_notification_id(self._pairing_id))
+            clear_pairing(self.hass, self._pairing_id)
             return self.async_abort(reason="paired", description_placeholders={"name": pairing.name})
         # A phone is one person's: say whose (a TV's profiles are mapped in the options)
         schema = (
@@ -157,7 +158,7 @@ class HearthOptionsFlow(OptionsFlow):
                 "places",
                 "site_list",
                 "chores",
-                "offer_more",
+                "suggest_push",
                 "sort_apps",
                 "new_apps",
                 "add_group",
@@ -165,6 +166,7 @@ class HearthOptionsFlow(OptionsFlow):
                 "not_screen_time",
                 "remove_group",
                 "tile_exchange",
+                "voice_assistants",
                 "parent_pin",
                 "push",
             ],
@@ -281,6 +283,17 @@ class HearthOptionsFlow(OptionsFlow):
         )
         return self.async_show_form(step_id="tile_exchange", data_schema=schema)
 
+    async def async_step_voice_assistants(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Voice assistants may use Hearth (llm_api.py): calls without a Home Assistant user (a voice satellite) get
+        Hearth's tools, and their actions ask an adult's phone first. Off by default."""
+        options = self._options()
+        if user_input is not None:
+            return self.async_create_entry(data={**options, CONF_VOICE_ASSISTANTS: bool(user_input.get("enabled"))})
+        schema = vol.Schema(
+            {vol.Optional("enabled", default=bool(options.get(CONF_VOICE_ASSISTANTS))): BooleanSelector()}
+        )
+        return self.async_show_form(step_id="voice_assistants", data_schema=schema)
+
     async def async_step_push(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """The ntfy server the phones are pinged through when their state changes (push.py); empty: no pings."""
         options = self._options()
@@ -395,15 +408,18 @@ class HearthOptionsFlow(OptionsFlow):
                 source_id, n = base, 2
                 while any(s["id"] == source_id for s in sources):
                     source_id, n = f"{base}_{n}", n + 1
+                # A companion app's Last used app: a phone app source (live while the screen is on, not timed)
+                phone_app = is_phone_app(entity_id)
                 sources.append(
                     {
                         "id": source_id,
                         "entity_id": entity_id,
                         "person": user_input[CONF_PERSON],
                         "name": name,
-                        "live": user_input.get("live", False),
+                        "live": user_input.get("live", False) or phone_app,
                         "same_as": user_input.get("same_as") or None,
                         "group": user_input.get("group") or self._source_group(entity_id),
+                        **({"phone_app": True} if phone_app else {}),
                     }
                 )
                 return self.async_create_entry(data={**options, CONF_SOURCES: sources})
@@ -687,7 +703,7 @@ class HearthOptionsFlow(OptionsFlow):
 
     async def async_step_schedule(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """What each day type does to the kids' Family Link (schedule.py): School time off on days off, School time
-        ending early on half days, extra time on both."""
+        ending early on half days, extra time on both (Family Link, and when chosen Family Safety and the Switch)."""
         options = self._options()
         current: dict[str, Any] = dict(options.get(CONF_SCHEDULE) or {})
         if user_input is not None:
@@ -709,6 +725,10 @@ class HearthOptionsFlow(OptionsFlow):
                 ),
                 vol.Optional("half_day_bonus", description=suggested("half_day_bonus", 0)): minutes,
                 vol.Optional("bonus_family_link", default=current.get("bonus_family_link", True)): BooleanSelector(),
+                vol.Optional(
+                    "bonus_family_safety", default=current.get("bonus_family_safety", False)
+                ): BooleanSelector(),
+                vol.Optional("bonus_nintendo", default=current.get("bonus_nintendo", False)): BooleanSelector(),
                 vol.Optional("bonus_group", description=suggested("bonus_group")): self._group_selector(),
                 vol.Optional("people", description=suggested("people")): EntitySelector(
                     EntitySelectorConfig(domain="person", multiple=True)
@@ -834,24 +854,24 @@ class HearthOptionsFlow(OptionsFlow):
             step_id="places", data_schema=schema, errors=errors, description_placeholders={"favorites": listed}
         )
 
-    async def async_step_offer_more(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """When one of these groups of a person's runs out, the adults are offered to give more. Choosing a person
-        again replaces theirs; no groups stops it."""
+    async def async_step_suggest_push(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """When one of these groups of a kid's runs out, its suggestion also goes to the adults' phones
+        (suggest_push.py). Choosing a kid again replaces their groups (a device of theirs stays); no groups stops it."""
         options = self._options()
-        offers: list[dict[str, Any]] = list(options.get(CONF_OFFER_MORE, []))
         if user_input is not None:
             person = user_input[CONF_PERSON]
-            kept = [o for o in offers if o.get("person") != person]
-            minutes = int(user_input.get("minutes") or 30)
+            kept = [p for p in suggest_pairs(options) if p["person"] != person or p.get("device")]
+            minutes = int(user_input.get("minutes") or 15)
             kept += [{"person": person, "group": g, "minutes": minutes} for g in user_input.get("groups") or []]
-            return self.async_create_entry(data={**options, CONF_OFFER_MORE: kept})
+            options = {k: v for k, v in options.items() if k != CONF_OFFER_MORE}
+            return self.async_create_entry(data={**options, CONF_SUGGEST_PUSH: kept})
         schema = vol.Schema(
             {
                 vol.Required(CONF_PERSON): PERSON_SELECTOR,
                 vol.Optional("groups", default=[]): self._group_selector(multiple=True),
-                vol.Optional("minutes", default="30"): SelectSelector(
+                vol.Optional("minutes", default="15"): SelectSelector(
                     SelectSelectorConfig(options=[str(m) for m in AMOUNTS])
                 ),
             }
         )
-        return self.async_show_form(step_id="offer_more", data_schema=schema)
+        return self.async_show_form(step_id="suggest_push", data_schema=schema)

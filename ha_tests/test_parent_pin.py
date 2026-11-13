@@ -110,6 +110,25 @@ async def test_wrong_pins_lock_the_device_out(
     assert await (await _verify(client, secret, "1111")).json() == {"ok": False}
 
 
+async def test_a_reload_keeps_the_lockout(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """Changing an option reloads the entry; that mustn't hand someone guessing the PIN a fresh set of tries."""
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    await _adults(hass, "person.alex")
+    await _option(hass, "parent_pin", {"person": "person.alex", "pin": PIN, "pin_again": PIN})
+    for _ in range(parent_pin.FREE_TRIES):
+        await _verify(client, secret, "1111")
+
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+
+    response = await _verify(client, secret, PIN)
+    assert response.status == 429
+    assert (await response.json())["error"] == "locked_out"
+
+
 async def test_the_pin_is_typed_twice_and_can_be_removed(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:

@@ -13,8 +13,8 @@ import java.util.Date;
 /**
  * A profile's YouTube allowance for HearthTube to enforce. Hearth works it out on its own: a daily limit set for the
  * profile in Hearth's Settings, less what HearthTube has played for it today (HearthTube reports that itself).
- * Home Assistant is optional: when it's set up and has a say for the profile (HaAllowance: a pool shared with the
- * family's other devices, a schedule), the stricter of the two counts.
+ * Home Assistant is optional. Without it, Hearth's own rules for the kid (LocalAllowance) say what Home Assistant would.
+ * Paired with the Hearth integration, Home Assistant's say wins outright and Hearth's own limit stands aside.
  *
  * Paired with the Hearth integration, a kids profile's other groups are held too: an app whose group's time is up
  * today doesn't open from Hearth, and comes back to Hearth's home when it opens another way ({@link #timeUpGroup}).
@@ -66,10 +66,19 @@ final class Allowance {
     static Values forProfile(Context context, String profileKey, long now) {
         // An adult's profile has no allowance, whatever was stored for it (an older Hearth let an adult set one)
         if (profileKey == null || ProfileUsers.isAdults(context, ProfileUsers.serialOfKey(profileKey))) return NONE;
-        int limit = dailyMinutes(context, profileKey);
+        // Paired with the Hearth integration, Home Assistant's rules win outright: Hearth's own limit stands aside
+        int limit = HaIntegration.isPaired(context) ? 0 : dailyMinutes(context, profileKey);
         long playedMs = UsageToday.playingMs(context, profileKey, CompanionApps.HEARTHTUBE, now);
         HaAllowance.Values ha = HaAllowance.forProfile(context, profileKey, now);
-        return combine(limit, playedMs, ha.youtubeMinutesLeft, ha.scheduleLocked, ha.message, ha.checkedAt);
+        Values values = combine(limit, playedMs, ha.youtubeMinutesLeft, ha.scheduleLocked, ha.message, ha.checkedAt);
+        // Without Home Assistant those were Hearth's own rules, worked out just now
+        return LocalAllowance.homeAssistantDecides(context) ? values : ownRules(values, now);
+    }
+
+    /** {@code values} as Hearth's own: its source is Hearth, and it was checked at {@code now}. */
+    static Values ownRules(Values values, long now) {
+        String source = values.youtubeMinutesLeft != null || values.scheduleLocked ? SOURCE_HEARTH : values.source;
+        return new Values(values.youtubeMinutesLeft, values.scheduleLocked, values.message, now, source);
     }
 
     /**
@@ -194,6 +203,20 @@ final class Allowance {
         if (inHearth && MainActivity.notifyTimeUp(paused ? null : group)) return;
         Toast.makeText(context, paused ? pauseMessage(context)
                 : context.getString(R.string.time_up_for_group, group), Toast.LENGTH_LONG).show();
+    }
+
+    /** Tells the kid a lock holds the apps (Hearth's own bedtime): "Bedtime until 7:00 AM"; as often as showTimeUp. */
+    static void showLocked(Context context) {
+        long now = SystemClock.elapsedRealtime();
+        if (HELD_ALL.equals(sToldGroup) && now - sToldAt < TELL_AGAIN_AFTER_MS) return;
+        sToldGroup = HELD_ALL;
+        sToldAt = now;
+        JSONObject lock = HaLocks.locksOf(HaAllowance.entryFor(context,
+                LauncherAccessibilityService.getActiveProfileKey(context), System.currentTimeMillis()))
+                .optJSONObject("lock");
+        Long until = lock != null ? HaLocks.parseTime(lock.optString("until", null)) : null;
+        String time = until != null ? DateFormat.getTimeFormat(context).format(new Date(until)) : "";
+        Toast.makeText(context, context.getString(R.string.bedtime_until, time), Toast.LENGTH_LONG).show();
     }
 
     /** "Paused: Dinner, until 7:00 PM", as the active profile's pause says it. */

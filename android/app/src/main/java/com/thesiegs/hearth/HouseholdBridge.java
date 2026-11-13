@@ -32,6 +32,13 @@ final class HouseholdBridge {
     static final String PARENT_PIN = "parent_pin";
     /** Continue Watching: a person's played and kept titles (HouseholdWatch). */
     static final String WATCH = "watch";
+    /** A kid's own screen-time rules, for TVs without Home Assistant (LocalRules); item "", the newest write wins. */
+    static final String RULES = "rules";
+    /**
+     * A kid's minutes on one TV on one day: item {@code tv:<tv id>:<day>}, value {@code {package: milliseconds}}. Only
+     * that TV writes it and its counts only grow, so the newest write is also the largest; every TV sums them.
+     */
+    static final String USAGE = "usage";
     /** Where a wallpaper picture shows: always, by day, by night. */
     static final List<String> SLOTS = Arrays.asList("any", "day", "night");
     /** A look or layout's JSON may be this long; a layout with hundreds of apps is some 100 KB. */

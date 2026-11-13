@@ -54,6 +54,7 @@ import 'package:flauncher/widgets/search/search_results_row.dart';
 import 'package:flauncher/widgets/settings/settings_panel.dart';
 import 'package:flauncher/providers/ha_panel_service.dart';
 import 'package:flauncher/widgets/ha_panel/ha_panel.dart';
+import 'package:flauncher/widgets/ha_panel/ha_panel_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -65,6 +66,7 @@ import 'package:flauncher/providers/profile_service.dart';
 import 'models/category.dart';
 import 'package:flauncher/widgets/title_pill.dart';
 import 'package:flauncher/widgets/time_up_card.dart';
+import 'package:flauncher/widgets/notice_press.dart';
 import 'package:flauncher/quiet_failure.dart';
 
 class FLauncher extends StatefulWidget {
@@ -151,6 +153,12 @@ class _FLauncherState extends State<FLauncher> {
   /// Hearth's own Home Assistant panel's connection, made the first time it opens and kept with the home.
   HaPanelService? _haPanel;
 
+  /// Hearth's own Home Assistant panel while it's open: a switch to a kids profile closes it.
+  Route<void>? _haPanelRoute;
+
+  // Whether a kids profile was on at the last profile change
+  bool _kidsProfileOn = false;
+
   @override
   void initState() {
     super.initState();
@@ -159,6 +167,8 @@ class _FLauncherState extends State<FLauncher> {
     FLauncherChannel.listenForSearch(_openSearch);
     // Profile Pairing's "Change PIN": Settings on that app's profile PINs.
     FLauncherChannel.listenForProfilePins(_openProfilePins);
+    // A Hearth integration notice's button: the Parent PIN pad for it
+    FLauncherChannel.listenForNoticePress(_openNoticePress);
     // Home means the home: whatever is open over it closes
     FLauncherChannel.listenForHomePressed(_onHomePressed);
     // An app picked here was held (its group's time is up, a family pause): the time's up card says why
@@ -172,6 +182,10 @@ class _FLauncherState extends State<FLauncher> {
       try {
         final pins = await channel.takePendingProfilePins();
         if (pins != null) _openProfilePins(pins);
+      } catch (err) { noteFailure('flauncher', err); }
+      try {
+        final press = await channel.takePendingNoticePress();
+        if (press != null) _openNoticePress(press);
       } catch (err) { noteFailure('flauncher', err); }
     });
     _homeSearch = context.read<HomeSearch?>();
@@ -203,6 +217,9 @@ class _FLauncherState extends State<FLauncher> {
   void _onProfileChanged() {
     final profiles = _profileService;
     if (profiles == null) return;
+    // The Home Assistant panel is for adults: a kids profile coming on closes it, Hearth's own and the full dashboard
+    if (profiles.isKidsProfile && !_kidsProfileOn) _closeHaPanel();
+    _kidsProfileOn = profiles.isKidsProfile;
     final key = profiles.activeProfileKey;
     if (key != null && key != _lastProfile) {
       _lastProfile = key;
@@ -290,11 +307,24 @@ class _FLauncherState extends State<FLauncher> {
     showDialog(context: context, barrierColor: Colors.transparent, builder: (_) => SettingsPanel(openProfilePinsFor: packageName));
   }
 
+  /// One of the Hearth integration's notice buttons was pressed: the Parent PIN pad for it, over the home.
+  void _openNoticePress(Map<dynamic, dynamic> map) {
+    final press = NoticePress.from(map);
+    if (!mounted || press == null) return;
+    answerNotice(context, context.read<FLauncherChannel>(), press);
+  }
+
   /// The Home Assistant panel along the right edge: Hearth's own, drawn from the profile's dashboard (or Home
   /// Assistant's web page, if the profile chose that).
   void _openHaPanel() {
     final channel = context.read<FLauncherChannel>();
     final settings = context.read<SettingsService>();
+    // Never in a kids profile, whatever opened it (the edges don't offer it there; see haPanelAllowed)
+    if (isKidsProfileOn(context)) {
+      final l = AppLocalizations.of(context);
+      if (l != null) ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(l.haPanelKidsAskAdult)));
+      return;
+    }
     if (settings.haPanelFullDashboard) {
       channel.openHaPanel();
       return;
@@ -310,7 +340,19 @@ class _FLauncherState extends State<FLauncher> {
       },
       language: () => mounted ? Localizations.localeOf(context).languageCode : "en",
     );
-    HaPanel.open(context, service);
+    final route = HaPanel.open(context, service);
+    _haPanelRoute = route;
+    route.popped.whenComplete(() {
+      if (_haPanelRoute == route) _haPanelRoute = null;
+    });
+  }
+
+  /// Closes the Home Assistant panel if it's open: Hearth's own, and Home Assistant's web page.
+  void _closeHaPanel() {
+    final route = _haPanelRoute;
+    _haPanelRoute = null;
+    if (route != null && route.isActive) route.navigator?.removeRoute(route);
+    context.read<FLauncherChannel>().closeHaPanel().catchError((Object e) => noteFailure('flauncher', e));
   }
 
   void _openSearch(String mode) {

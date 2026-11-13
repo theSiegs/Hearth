@@ -2,7 +2,6 @@ package com.thesiegs.hearth;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.os.SystemClock;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -18,34 +17,21 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Each profile's allowance as Home Assistant works it out (a YouTube time pool shared with the family's other
- * devices, Family Link schedules), for HearthTube to enforce: read from one entity, {@link #ENTITY}, whose attribute
- * "profiles" (or else its state, as JSON) maps a profile_id (the key Hearth sends Home Assistant, "user:11") to
- * {"youtube_minutes_left": int or null, "schedule_locked": bool, "message": optional text}. Read with the Home Assistant panel's address and token,
- * every minute or so and at once when the profile changes; the last good read is kept for the day (a new day forgets
- * it), and when it was read goes with it, so HearthTube can tell how fresh it is and decide what to do without one.
- *
- * A TV paired with the Hearth integration (see {@link HaIntegration}) doesn't read the entity: each status post's
- * answer carries every profile's groups and minutes left, and the YouTube minutes are the fewest left in any group
- * holding HearthTube ({@link #fromDocument}). Its other groups whose time is up today name the apps Hearth holds for
- * the profile (Allowance.timeUpGroup): every app when it's All screen time.
+ * Each profile's allowance as the Hearth integration works it out, for HearthTube and Hearth's holds to enforce. A TV
+ * paired with the integration (see {@link HaIntegration}) gets it in each status post's answer: every profile's groups
+ * and minutes left, and the YouTube minutes are the fewest left in any group holding HearthTube ({@link #fromDocument}).
+ * Its other groups whose time is up today name the apps Hearth holds for the profile (Allowance.timeUpGroup): every
+ * app when it's All screen time. The last answer is kept for the day (a new day forgets it), with when it came, so
+ * HearthTube can tell how fresh it is. Without the integration, Hearth's own rules give the same (LocalAllowance).
  */
 final class HaAllowance {
     private static final String TAG = "HearthAllowance";
-    static final String ENTITY = "sensor.hearth_allowance";
     private static final String PREFS = "ltv_ha_allowance";
     private static final String DAY_KEY = "day";
     private static final String PROFILES_KEY = "profiles";
     private static final String CHECKED_KEY = "checked_at";
     /** This TV's profile keys and the Home Assistant person each is mapped to, from the integration's last answer. */
     private static final String PEOPLE_KEY = "people";
-    /** How often it's read. */
-    static final long READ_EVERY_MS = 60_000;
-    /** After a failed read (no entity yet, Home Assistant away), the next one waits this long. */
-    private static final long RETRY_AFTER_FAILURE_MS = 10 * 60_000;
-
-    /** Guarded by HaAllowance.class. */
-    private static long sNextReadAt;
 
     /**
      * What {@link Values#timeUpGroup} says while a family pause holds every app: not a group's name (no name has a
@@ -138,42 +124,6 @@ final class HaAllowance {
             if (group != null) return group;
             return allExcept.contains(packageName) ? null : allOutOfTime;
         }
-    }
-
-    /** Whether a read is due (main thread). */
-    static synchronized boolean due() {
-        return SystemClock.elapsedRealtime() >= sNextReadAt;
-    }
-
-    /** The next read happens at the next chance (a profile change). */
-    static synchronized void readSoon() {
-        sNextReadAt = 0;
-    }
-
-    /** Reads the entity (blocking: off the main thread). Returns whether it was read. */
-    static boolean read(Context context) {
-        synchronized (HaAllowance.class) {
-            sNextReadAt = SystemClock.elapsedRealtime() + RETRY_AFTER_FAILURE_MS;
-        }
-        if (!HaConfig.isConfigured(context) || HaIntegration.isPaired(context)) return false;
-        JSONObject state = HaApi.state(context, ENTITY);
-        JSONObject profiles = profilesOf(state);
-        if (profiles == null) {
-            // Unreadable, or not a profiles map (unknown, unavailable): what was read today still counts (fail-open)
-            Log.i(TAG, "No allowance from Home Assistant (" + ENTITY + (state == null ? " unreadable)" : " has no profiles)"));
-            return false;
-        }
-        synchronized (HaAllowance.class) {
-            sNextReadAt = SystemClock.elapsedRealtime() + READ_EVERY_MS;
-        }
-        long now = System.currentTimeMillis();
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-                .putString(DAY_KEY, UsageToday.day(now))
-                .putString(PROFILES_KEY, profiles.toString())
-                .putLong(CHECKED_KEY, now)
-                .apply();
-        // Even the same values: the read time changed, and HearthTube judges freshness by it
-        return true;
     }
 
     /**
@@ -329,41 +279,63 @@ final class HaAllowance {
         return false;
     }
 
-    /**
-     * The profiles map from the entity: its "profiles" attribute, else its state as JSON (a template helper made in
-     * Home Assistant's UI can't have attributes, and a state is at most 255 characters, enough for a few profiles).
-     * "{}" is a map with no limits; anything else (unknown, unavailable, not JSON) is null.
-     */
-    static JSONObject profilesOf(JSONObject state) {
-        if (state == null) return null;
-        JSONObject attributes = state.optJSONObject("attributes");
-        JSONObject profiles = attributes != null ? attributes.optJSONObject("profiles") : null;
-        if (profiles != null) return profiles;
-        String value = state.optString("state", "").trim();
-        if (!value.startsWith("{")) return null;
-        try {
-            return new JSONObject(value);
-        } catch (JSONException e) {
-            return null;
-        }
-    }
-
     /** This profile's allowance as last read today; values null when Home Assistant has said nothing today. */
     static Values forProfile(Context context, String profileKey, long now) {
+        // Without Home Assistant, Hearth's own rules say the same things
+        if (!LocalAllowance.homeAssistantDecides(context)) {
+            return valuesOf(LocalAllowance.entryFor(context, profileKey, now), null);
+        }
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        if (profileKey == null || !UsageToday.day(now).equals(prefs.getString(DAY_KEY, null))) {
-            return new Values(null, false, null, null);
+        if (profileKey == null) return new Values(null, false, null, null);
+        // A new day before Home Assistant has answered: its lock or pause still running holds, the minutes don't
+        if (!UsageToday.day(now).equals(prefs.getString(DAY_KEY, null))) {
+            return valuesOf(entryFor(context, profileKey, now), null);
         }
         Long checkedAt = prefs.contains(CHECKED_KEY) ? prefs.getLong(CHECKED_KEY, 0) : null;
         return valuesOf(entryFor(context, profileKey, now), checkedAt);
     }
 
-    /** This profile's entry as last read today (null: none, or nothing today). */
+    /**
+     * This profile's entry as Home Assistant last said today (null: none, or nothing today); without Home Assistant,
+     * from Hearth's own rules (LocalAllowance).
+     */
     static JSONObject entryFor(Context context, String profileKey, long now) {
+        if (!LocalAllowance.homeAssistantDecides(context)) return LocalAllowance.entryFor(context, profileKey, now);
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        if (profileKey == null || !UsageToday.day(now).equals(prefs.getString(DAY_KEY, null))) return null;
+        if (profileKey == null) return null;
+        JSONObject entry;
         try {
-            return new JSONObject(prefs.getString(PROFILES_KEY, "{}")).optJSONObject(profileKey);
+            entry = new JSONObject(prefs.getString(PROFILES_KEY, "{}")).optJSONObject(profileKey);
+        } catch (JSONException e) {
+            return null;
+        }
+        if (UsageToday.day(now).equals(prefs.getString(DAY_KEY, null))) return entry;
+        // Home Assistant hasn't answered since the day changed (it may be away): its last word still counts for what
+        // runs past midnight, never for yesterday's minutes
+        return carriedOver(entry, now);
+    }
+
+    /**
+     * What of yesterday's entry still holds today: a lock (bedtime) or a pause that hasn't ended, and nothing else (no
+     * minutes, no group out of time). Null when nothing does.
+     */
+    static JSONObject carriedOver(JSONObject entry, long now) {
+        JSONObject locks = entry != null ? entry.optJSONObject(LOCKS_KEY) : null;
+        if (locks == null) return null;
+        JSONObject kept = new JSONObject();
+        try {
+            for (String field : new String[]{"lock", "pause"}) {
+                JSONObject value = locks.optJSONObject(field);
+                Long until = value != null ? HaLocks.parseTime(value.optString("until", null)) : null;
+                if (until != null && until > now) kept.put(field, value);
+            }
+            if (kept.length() == 0) return null;
+            JSONObject out = new JSONObject();
+            out.put("youtube_minutes_left", JSONObject.NULL);
+            out.put("out_of_time", new JSONObject());
+            out.put("schedule_locked", kept.has("lock"));
+            out.put(LOCKS_KEY, kept);
+            return out;
         } catch (JSONException e) {
             return null;
         }

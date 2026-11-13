@@ -20,6 +20,10 @@ add_bonus:
       example: youtube
       selector:
         text:
+    device:
+      example: fs:xbox
+      selector:
+        text:
 
 set_budget:
   fields:
@@ -270,6 +274,10 @@ allow:
       example: '{"arrive": "home"}'
       selector:
         object:
+    device:
+      example: fs:xbox
+      selector:
+        text:
 
 allow_end:
   fields:
@@ -285,6 +293,10 @@ allow_end:
       selector:
         text:
     group:
+      selector:
+        text:
+    device:
+      example: fs:xbox
       selector:
         text:
 
@@ -356,6 +368,18 @@ answer_request:
     deny:
       selector:
         boolean:
+dismiss_suggestion:
+  fields:
+    person:
+      required: true
+      selector:
+        entity:
+          domain: person
+    key:
+      required: true
+      example: "more:games"
+      selector:
+        text:
 copy_sites:
   fields:
     people:

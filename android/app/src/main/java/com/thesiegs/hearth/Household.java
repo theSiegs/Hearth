@@ -40,6 +40,8 @@ final class Household {
     /** A short wait after a change so several changes go out together; the periodic check is the backstop. */
     private static final long SYNC_DELAY_MS = 2_000;
     private static final long PERIODIC_MS = 5 * 60_000;
+    /** How often this TV tells the others a kid's minutes here (when they moved). */
+    private static final long USAGE_MS = 2 * 60_000;
     private static final int SOCKET_TIMEOUT_MS = 15_000;
     /** How long after a play is saved its title goes out: plays save often, and one sweep covers them all. */
     private static final long WATCH_DELAY_MS = 60_000;
@@ -225,10 +227,14 @@ final class Household {
                     // A profile whose Google account Hearth has seen since takes its titles now
                     applyWatch(null);
                     publishWatch();
+                    applyRules(null);
+                    haRound();
                     // A notification past its time leaves the Bell
                     refreshNotices(sContext);
                     syncAll("periodic");
                 }, PERIODIC_MS, PERIODIC_MS, TimeUnit.MILLISECONDS);
+                // A kid's minutes reach the other TVs within a couple of minutes, so they're the same everywhere
+                EXEC.scheduleWithFixedDelay(Household::publishUsage, USAGE_MS, USAGE_MS, TimeUnit.MILLISECONDS);
             }
         }
         EXEC.execute(() -> {
@@ -237,6 +243,10 @@ final class Household {
             applyEntries();
             applyWatch(null);
             publishWatch();
+            publishUnpublishedRules();
+            applyRules(null);
+            readOtherUsage();
+            haRound();
             refreshNotices(sContext);
         });
         syncSoon();
@@ -348,6 +358,195 @@ final class Household {
         });
     }
 
+    // ---- Home Assistant once for the household (HouseholdHa) ----
+
+    private static volatile boolean sHaBusy;
+
+    /** This TV paired with Home Assistant, or left it: the household hears soon, and pairs its other TVs. */
+    static void onHaChanged(Context context) {
+        if (!mayBeInHousehold(context)) return;
+        EXEC.execute(Household::haRound);
+    }
+
+    /**
+     * Says whether this TV is paired; paired, gets a ticket for each TV of the household on the network that isn't;
+     * not paired (and not unpaired on purpose), pairs with a ticket left for it. On the household thread; the calls to
+     * Home Assistant run on its own thread.
+     */
+    private static void haRound() {
+        if (sContext == null || !member(sContext)) return;
+        Context app = sContext;
+        HouseholdStore store = store(app);
+        HouseholdLog log = store.log();
+        String self = store.tvId();
+        long now = System.currentTimeMillis();
+        boolean paired = HaIntegration.isPaired(app);
+        boolean left = HaIntegration.leftOnPurpose(app);
+        String want = HouseholdHa.stateOf(paired, left, HaIntegration.ticketRefusedLately(app, now));
+        HouseholdEntry have = log.get(HouseholdHa.STATE, HouseholdBridge.SHARED, self);
+        boolean hasState = have != null && !have.deleted;
+        if (want == null ? hasState : !hasState || !want.equals(have.value)) {
+            if (want == null) {
+                log.delete(HouseholdHa.STATE, HouseholdBridge.SHARED, self, now);
+            } else {
+                log.put(HouseholdHa.STATE, HouseholdBridge.SHARED, self, want, now);
+            }
+            store.save();
+            syncSoon();
+        }
+        if (sHaBusy) return;
+        List<HouseholdEntry> all = log.all();
+        if (paired) {
+            List<String> online = new ArrayList<>();
+            for (HouseholdNet.Peer peer : HouseholdNet.peers()) online.add(peer.tvId);
+            List<String> need = HouseholdHa.needTickets(all, self, online, now);
+            String url = HaConfig.baseUrl(app);
+            if (need.isEmpty() || url == null) return;
+            sHaBusy = true;
+            HaApi.EXECUTOR.execute(() -> {
+                try {
+                    for (String tv : need) {
+                        String ticket = HaIntegration.requestTicket(app, "tv", null);
+                        if (ticket == null) break;
+                        String value = HouseholdHa.ticketValue(url, ticket);
+                        EXEC.execute(() -> {
+                            if (value == null || !member(app)) return;
+                            store.log().put(HouseholdHa.TICKET, HouseholdBridge.SHARED, tv, value,
+                                    System.currentTimeMillis());
+                            store.save();
+                            Log.i(TAG, "Home Assistant: a pairing ticket for another TV of the household");
+                            syncSoon();
+                        });
+                    }
+                } finally {
+                    sHaBusy = false;
+                }
+            });
+        } else if (!left) {
+            String[] ticket = HouseholdHa.ticketFor(all, self, now);
+            if (ticket == null) return;
+            sHaBusy = true;
+            HaApi.EXECUTOR.execute(() -> {
+                try {
+                    String result = HaIntegration.redeemTicket(app, ticket[0], ticket[1]);
+                    Log.i(TAG, "Home Assistant: the household's pairing ticket " + result);
+                    if ("unreachable".equals(result)) return;
+                    EXEC.execute(() -> {
+                        if (!member(app)) return;
+                        // Spent either way: a refused one is made again by a paired TV
+                        store.log().delete(HouseholdHa.TICKET, HouseholdBridge.SHARED, self, System.currentTimeMillis());
+                        store.save();
+                        haRound();
+                        syncSoon();
+                    });
+                } finally {
+                    sHaBusy = false;
+                }
+            });
+        }
+    }
+
+    // ---- A kid's own rules and minutes (TVs without Home Assistant) ----
+
+    /** The other TVs' minutes today, profile key -> package -> milliseconds, as last read from the household. */
+    private static volatile Map<String, Map<String, Long>> sOtherUsage = new HashMap<>();
+    private static volatile String sOtherUsageDay = "";
+
+    /**
+     * Hearth's own rules for a profile were changed here: the household's other TVs take them. The rules as saved
+     * travel with the call: a round applying the household's (older) entry meanwhile can't put the old ones back
+     * before they're published.
+     */
+    static void onRulesChanged(Context context, String profileKey) {
+        if (!mayBeInHousehold(context) || profileKey == null) return;
+        Context app = context.getApplicationContext();
+        org.json.JSONObject saved = LocalAllowance.rules(app, profileKey);
+        EXEC.execute(() -> {
+            if (!member(app)) return;
+            // What this edit saved, here too, whatever a round put back since
+            LocalAllowance.setRules(app, profileKey, saved);
+            publish(app, HouseholdBridge.RULES, profileKey, "", saved != null ? saved.toString() : null);
+        });
+    }
+
+    /** Rules set on this TV for a person the household has none for become entries (the household's win otherwise). */
+    private static void publishUnpublishedRules() {
+        if (sContext == null || !member(sContext)) return;
+        HouseholdLog log = store(sContext).log();
+        for (Map.Entry<String, String> person : local(sContext).profiles().entrySet()) {
+            org.json.JSONObject rules = LocalAllowance.rules(sContext, person.getValue());
+            if (rules == null || log.get(HouseholdBridge.RULES, person.getKey(), "") != null) continue;
+            publish(sContext, HouseholdBridge.RULES, person.getValue(), "", rules.toString());
+        }
+    }
+
+    /** Puts the household's rules among {@code entries} (null: all) in place for this TV's profiles. */
+    private static void applyRules(List<HouseholdEntry> entries) {
+        if (sContext == null || !member(sContext)) return;
+        if (entries == null) entries = store(sContext).log().all();
+        Map<String, String> profiles = local(sContext).profiles();
+        int changed = 0;
+        for (HouseholdEntry entry : entries) {
+            if (!HouseholdBridge.RULES.equals(entry.kind)) continue;
+            String key = profiles.get(entry.profile);
+            if (key == null) continue;
+            org.json.JSONObject rules = null;
+            if (!entry.deleted) {
+                try {
+                    rules = new org.json.JSONObject(entry.value);
+                } catch (org.json.JSONException e) {
+                    continue;
+                }
+            }
+            if (LocalAllowance.setRules(sContext, key, rules)) {
+                // The rules' YouTube group takes the place of an older YouTube limit set on this TV
+                Allowance.setDailyMinutes(sContext, key, 0);
+                changed++;
+            }
+        }
+        if (changed > 0) Log.i(TAG, "Screen time rules: took " + changed + " from the household");
+    }
+
+    /** Each kid's minutes on this TV today, when they moved, as this TV's usage entry. On the household thread. */
+    private static void publishUsage() {
+        if (sContext == null || !member(sContext)) return;
+        HouseholdStore store = store(sContext);
+        HouseholdLog log = store.log();
+        long now = System.currentTimeMillis();
+        String item = HouseholdUsage.item(store.tvId(), UsageToday.day(now));
+        int sent = 0;
+        for (Map.Entry<String, String> person : local(sContext).profiles().entrySet()) {
+            if (LocalAllowance.rules(sContext, person.getValue()) == null) continue;
+            Map<String, Long> ms = UsageToday.frontMs(sContext, person.getValue(), now);
+            ms.remove(sContext.getPackageName());
+            if (ms.isEmpty()) continue;
+            String value = HouseholdUsage.valueOf(ms);
+            HouseholdEntry have = log.get(HouseholdBridge.USAGE, person.getKey(), item);
+            if (have != null && value.equals(have.value)) continue;
+            if (log.put(HouseholdBridge.USAGE, person.getKey(), item, value, now) != null) sent++;
+        }
+        if (sent == 0) return;
+        store.save();
+        syncSoon();
+    }
+
+    /** Reads the other TVs' minutes today from the household's entries. On the household thread. */
+    private static void readOtherUsage() {
+        if (sContext == null || !member(sContext)) return;
+        HouseholdStore store = store(sContext);
+        String day = UsageToday.day(System.currentTimeMillis());
+        sOtherUsage = HouseholdUsage.others(store.log().all(), store.tvId(), day, local(sContext).profiles());
+        sOtherUsageDay = day;
+        LocalAllowance.forget();
+    }
+
+    /** The household's other TVs' minutes today for this profile, package -> milliseconds (empty: none). */
+    static Map<String, Long> otherUsage(Context context, String profileKey, long now) {
+        if (profileKey == null || !UsageToday.day(now).equals(sOtherUsageDay)) return new HashMap<>();
+        Map<String, Long> usage = sOtherUsage.get(profileKey);
+        return usage != null ? new HashMap<>(usage) : new HashMap<>();
+    }
+
     /** Each person's own newest titles that differ from the household's become entries. On the household thread. */
     private static void publishWatch() {
         if (sContext == null || !member(sContext)) return;
@@ -359,6 +558,9 @@ final class Household {
         int sent = 0;
         int[] fetches = {POSTER_FETCHES_PER_ROUND};
         for (Map.Entry<String, String> person : local(sContext).profiles().entrySet()) {
+            // A person who keeps what they watch on the TV they watched it on (their look says so) sends nothing
+            HouseholdEntry look = log.get(HouseholdBridge.LOOK, person.getKey(), "");
+            if (!HouseholdWatch.shares(look != null ? look.value : null)) continue;
             for (WatchHistory.Entry e : HouseholdWatch.toSend(history.ownEntries(person.getValue()), now)) {
                 String item = HouseholdWatch.itemOf(e.kind, e.packageName, e.item);
                 // A kept entry's poster goes with it: the other TV can't load this one's address for it
@@ -668,6 +870,9 @@ final class Household {
         if (reviewing(sContext)) prefs(sContext).edit().putString(REVIEW_READY_PREF, "1").apply();
         applyEntries();
         applyWatch(result.applied);
+        applyRules(result.applied);
+        readOtherUsage();
+        haRound();
         noticesArrived(result.applied);
         publishUnpublished();
         sLastSyncAt = System.currentTimeMillis();
@@ -1432,7 +1637,11 @@ final class Household {
         synchronized (sPopped) {
             if (sPopped.size() > 1000) sPopped.clear();
             for (HouseholdNotices.Notice n : visible) {
-                if (!sPopped.add(n.item + "@" + n.at) || !sNoticesRead || n.writer.equals(ownTv)) continue;
+                boolean fresh = sPopped.add(n.item + "@" + n.at);
+                // The integration's: each TV of the household reads it too, so it pops up once whoever wrote it
+                if (n.fromIntegration() && !sPopped.add(poppedMark(n))) fresh = false;
+                if (!fresh || !sNoticesRead || n.writer.equals(ownTv)) continue;
+                if (n.fromIntegration() && !HaNotices.popsUp(n.urgency)) continue;
                 if (n.isJoin() || now - n.at < HouseholdNotices.POP_UP_MS) popUp.add(n);
             }
             sNoticesRead = true;
@@ -1498,6 +1707,12 @@ final class Household {
             HouseholdLog log = noticeLog(app);
             HouseholdNotices.Notice n = HouseholdNotices.parse(log.get(HouseholdNotices.KIND, person, item));
             if (n == null || n.at != at || index < 0 || index >= n.actions.size()) return;
+            if (n.fromIntegration()) {
+                // The Hearth integration's: a Parent PIN or a parent's phone, asked of the integration. Only one the
+                // profile on screen sees (never in a kids profile)
+                if (listedIntegrationNotice(app, person, item) != null) openIntegrationPress(app, n, index);
+                return;
+            }
             long now = System.currentTimeMillis();
             boolean mine = log == LOCAL_NOTICES || n.writer.equals(store(app).tvId());
             if (mine || HaConfig.isConfigured(app)) {
@@ -1537,12 +1752,176 @@ final class Household {
 
     /** Calls a notification button's service with this TV's Home Assistant token, off the household thread. */
     private static void callAction(Context context, HouseholdNotices.Action action) {
+        if (action.service == null) return;
         String[] service = action.service.split("\\.", 2);
         org.json.JSONObject data = action.dataObject();
         HaApi.EXECUTOR.execute(() -> {
             boolean ok = HaApi.callService(context, service[0], service[1], data);
             Log.i(TAG, "A notification's button ran " + service[0] + (ok ? "" : ": Home Assistant refused or is away"));
         });
+    }
+
+    // ---- The Hearth integration's notices (HaNotices) ----
+
+    private static final String INTEGRATION_NOTICES_PREFS = "hearth_ha_notices";
+    /** The notices filed from the last state document (HaNotices.filed), to clear the ones the next one drops. */
+    private static final String FILED_KEY = "filed";
+    /**
+     * Notices answered here (done, or gone), by key, and when: not filed again from a document read meanwhile, which
+     * may still hold them. Household thread.
+     */
+    private static final Map<String, Long> sAnsweredNotices = new HashMap<>();
+    private static final long ANSWERED_MS = 10 * 60_000;
+
+    /** A notice popped up once, whichever TV of the household wrote it. */
+    private static String poppedMark(HouseholdNotices.Notice n) {
+        return "k|" + n.item + "|" + n.key + "|" + n.title + "|" + n.text;
+    }
+
+    /**
+     * The integration's state document came with these notices (none: it has none now). Each is filed in the Bell like a
+     * Home Assistant notification (a tag replaces, {@code for} names the person, none is every adult), never for a kids
+     * profile; an unchanged one isn't written again; and one an earlier document had and this one doesn't is cleared,
+     * on every TV of the household.
+     */
+    static void onIntegrationNotices(Context context, List<HaNotices.Item> items) {
+        Context app = context.getApplicationContext();
+        sContext = app;
+        EXEC.execute(() -> fileIntegrationNotices(app, items));
+    }
+
+    private static void fileIntegrationNotices(Context app, List<HaNotices.Item> items) {
+        HouseholdLog log = noticeLog(app);
+        long now = System.currentTimeMillis();
+        SharedPreferences prefs = app.getSharedPreferences(INTEGRATION_NOTICES_PREFS, Context.MODE_PRIVATE);
+        Set<String> before = HaNotices.fromJson(prefs.getString(FILED_KEY, null));
+        Set<String> filed = new LinkedHashSet<>();
+        List<HouseholdNotices.Notice> popUp = new ArrayList<>();
+        sAnsweredNotices.values().removeIf(at -> now - at > ANSWERED_MS || at > now);
+        String onScreen = personOnScreen(app);
+        boolean kidsOnScreen = ProfileUsers.isKids(app);
+        String writer = log == LOCAL_NOTICES ? LOCAL_NOTICES_TV : store(app).tvId();
+        List<HouseholdNotices.Person> people = null;
+        boolean changed = false;
+        for (HaNotices.Item n : items) {
+            if (sAnsweredNotices.containsKey(n.key)) continue;
+            String person = HouseholdNotices.ALL_ADULTS;
+            if (n.target != null) {
+                if (people == null) people = people(app);
+                person = HouseholdNotices.target(n.target, people,
+                        HaIntegration.isPaired(app) ? HaIntegration.deviceId(app) : null);
+                // No one here, or a kid: not this TV's to show
+                if (person == null || kidsPerson(app, people, person)) continue;
+            }
+            String item = HaNotices.item(person, n);
+            String value = HaNotices.value(n, now);
+            if (value == null) continue;
+            String mark = HaNotices.filed(person, item);
+            filed.add(mark);
+            HouseholdEntry held = log.get(HouseholdNotices.KIND, person, item);
+            if (held != null && HaNotices.same(held.value, value)) continue;
+            if (!HouseholdNotices.roomFor(log.all(), writer, item)) continue;
+            HouseholdEntry entry = log.put(HouseholdNotices.KIND, person, item, value, now);
+            if (entry == null) continue;
+            changed = true;
+            HouseholdNotices.Notice kept = HouseholdNotices.parse(entry);
+            if (kept == null) continue;
+            boolean first;
+            synchronized (sPopped) {
+                sPopped.add(entry.item + "@" + HouseholdLog.millisOf(entry));
+                first = sPopped.add(poppedMark(kept));
+            }
+            boolean forOnScreen = HouseholdNotices.ALL_ADULTS.equals(person) || person.equals(onScreen);
+            if (first && !before.contains(mark) && forOnScreen && !kidsOnScreen && HaNotices.popsUp(kept.urgency)) {
+                popUp.add(kept);
+            }
+        }
+        for (String gone : HaNotices.gone(before, filed)) {
+            String person = HaNotices.personOf(gone);
+            String item = HaNotices.itemOf(gone);
+            HouseholdNotices.Notice held = HouseholdNotices.parse(log.get(HouseholdNotices.KIND, person, item));
+            if (held == null || !held.fromIntegration()) continue;
+            log.delete(HouseholdNotices.KIND, person, item, now);
+            changed = true;
+        }
+        if (!filed.equals(before)) prefs.edit().putString(FILED_KEY, HaNotices.toJson(filed).toString()).apply();
+        if (changed) noticesChanged(app, log);
+        for (HouseholdNotices.Notice n : popUp) HearthBellItems.popUp(app, n);
+    }
+
+    /** Whether the person id is a kids profile's on this TV. */
+    private static boolean kidsPerson(Context context, List<HouseholdNotices.Person> people, String person) {
+        for (HouseholdNotices.Person p : people) {
+            if (person.equals(p.id) && ProfilePairing.isKids(context, p.key)) return true;
+        }
+        return false;
+    }
+
+    /** The integration's notice {@code item} for {@code person} as the profile on screen sees it in the Bell, or null. */
+    private static HouseholdNotices.Notice listedIntegrationNotice(Context context, String person, String item) {
+        for (HouseholdNotices.Notice n : notices(context)) {
+            if (n.fromIntegration() && n.item.equals(item) && n.person.equals(person)) return n;
+        }
+        return null;
+    }
+
+    /**
+     * One of the integration's notice buttons pressed (Bell or pop-up): Hearth opens the Parent PIN pad for it, which
+     * asks the integration (pressIntegrationNotice). A TV not paired with the integration can't ask it: the adult
+     * answers on their phone.
+     */
+    private static void openIntegrationPress(Context context, HouseholdNotices.Notice n, int index) {
+        if (!HaIntegration.isPaired(context)) {
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> android.widget.Toast.makeText(context,
+                    R.string.ha_notice_use_phone, android.widget.Toast.LENGTH_LONG).show());
+            return;
+        }
+        Map<String, Object> press = new HashMap<>();
+        press.put("person", n.person);
+        press.put("item", n.item);
+        press.put("index", index);
+        press.put("title", n.title.isEmpty() ? n.text : n.title);
+        press.put("button", n.actions.get(index).title);
+        // The Parent PIN pad's "ask a parent's phone", as on its other uses: when an adult has phone approval on (the
+        // integration picks the phones)
+        press.put("phone", !ParentApproval.parentPhones(context).isEmpty());
+        MainActivity.openNoticePress(context, press);
+    }
+
+    /**
+     * Asks the integration to run button {@code index} of the notice the profile on screen sees (blocking; not on the
+     * main thread): with {@code pin}, or (null) by the adults' phones. Answers {"result": an HaNotices.Outcome in lower
+     * case, "retryAfter": seconds}. Done or gone clears it here and on every TV; a wrong PIN that locks the pad
+     * there locks it here too (ParentPinPolicy).
+     */
+    static Map<String, Object> pressIntegrationNotice(Context context, String person, String item, int index,
+            String pin) {
+        Map<String, Object> out = new HashMap<>();
+        HouseholdNotices.Notice n = person == null || item == null ? null
+                : listedIntegrationNotice(context, person, item);
+        HaNotices.Result result;
+        if (n == null) {
+            result = new HaNotices.Result(HaNotices.Outcome.GONE, 0);
+        } else if (index < 0 || index >= n.actions.size() || (pin != null && !pin.matches("[0-9]{4,12}"))) {
+            result = new HaNotices.Result(HaNotices.Outcome.BAD_REQUEST, 0);
+        } else {
+            result = HaIntegration.pressNotice(context, n.key, n.actions.get(index).id, pin);
+        }
+        if (n != null && (result.outcome == HaNotices.Outcome.DONE || result.outcome == HaNotices.Outcome.GONE)) {
+            String key = n.key;
+            EXEC.execute(() -> sAnsweredNotices.put(key, System.currentTimeMillis()));
+            clearNotice(context, person, item);
+        }
+        // As for a refused status: the bridge checks the pairing (HaIntegration unpairs after lasting refusals)
+        if (result.outcome == HaNotices.Outcome.NOT_PAIRED) HaBridgeService.sync(context);
+        if (result.outcome == HaNotices.Outcome.WRONG_PIN && result.retryAfterS > 0) {
+            ParentPinPolicy.holdUntil(context, System.currentTimeMillis() + result.retryAfterS * 1000L);
+        }
+        out.put("result", result.outcome.name().toLowerCase(java.util.Locale.ROOT));
+        out.put("retryAfter", result.retryAfterS);
+        // Home Assistant names no Parent PIN (its last document): every PIN is wrong there, only a phone answers
+        if (result.outcome == HaNotices.Outcome.WRONG_PIN) out.put("noParentPin", !HaParentPins.managed(context));
+        return out;
     }
 
     /**

@@ -61,14 +61,11 @@ public class HaBridgeService extends Service {
 
     /**
      * Where the status goes and with what, as one value that changes whenever any of it does: the Hearth integration
-     * ({@code integrationUrl}, set while paired, and {@code pairing}, which changes with every pairing) or else the
-     * webhook; and the Home Assistant token ({@code token}, which changes when a new one is saved). Null when the status
-     * goes nowhere.
+     * ({@code integrationUrl}, set while paired, and {@code pairing}, which changes with every pairing) and the Home
+     * Assistant token ({@code token}, which changes when a new one is saved). Null when the status goes nowhere.
      */
-    static String reportTarget(String integrationUrl, String pairing, String webhookUrl, String token) {
-        String to = integrationUrl != null ? "integration " + integrationUrl + " " + pairing
-                : webhookUrl != null ? "webhook " + webhookUrl : null;
-        return to == null ? null : to + " " + token;
+    static String reportTarget(String integrationUrl, String pairing, String token) {
+        return integrationUrl == null ? null : "integration " + integrationUrl + " " + pairing + " " + token;
     }
 
     /**
@@ -78,6 +75,8 @@ public class HaBridgeService extends Service {
      */
     static void sync(Context context) {
         Context app = context.getApplicationContext();
+        // The retired webhook way's id: nothing posts to it any more
+        if (HaConfig.prefs(app).contains(HaConfig.WEBHOOK_KEY)) HaConfig.prefs(app).edit().remove(HaConfig.WEBHOOK_KEY).apply();
         // A new address or token: a phone's answer that is being waited for is heard with the new ones
         HaEventSession events = sEvents;
         if (events != null) events.settingsChanged();
@@ -199,7 +198,7 @@ public class HaBridgeService extends Service {
             return;
         }
         String target = reportTarget(HaIntegration.isPaired(this) ? HaIntegration.statusUrl(this) : null,
-                HaIntegration.pairingStamp(this), HaStatusReporter.webhookUrl(this), HaConfig.tokenStamp(this));
+                HaIntegration.pairingStamp(this), HaConfig.tokenStamp(this));
         if (target == null) {
             mStatus.stop();
             mReportingTo = null;

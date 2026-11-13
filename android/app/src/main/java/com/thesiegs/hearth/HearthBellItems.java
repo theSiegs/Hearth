@@ -169,7 +169,8 @@ final class HearthBellItems {
                     n.code.isEmpty() ? context.getString(R.string.household_join_bell_text_other, asked)
                             : context.getString(R.string.household_join_bell_text_other_code, asked, n.code)};
         }
-        return new String[] {context.getString(R.string.ha_notification_bell_app), n.title, n.text};
+        return new String[] {context.getString(n.fromIntegration() ? R.string.ha_notice_bell_app
+                : R.string.ha_notification_bell_app), n.title, n.text};
     }
 
     private static Map<String, Object> item(Context context, String key, String label, String title, String text,

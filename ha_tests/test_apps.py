@@ -2,7 +2,7 @@
 later, and that beats everything."""
 
 from homeassistant.components import persistent_notification
-from homeassistant.core import HomeAssistant
+from homeassistant.core import Context, HomeAssistant
 from pytest_homeassistant_custom_component.common import async_capture_events, async_mock_service
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
@@ -62,7 +62,7 @@ async def test_a_new_app_is_sorted_without_asking(
 
 
 async def test_an_app_an_adult_moved_stays_where_they_put_it(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_admin_user
 ) -> None:
     async_mock_service(hass, "notify", "mobile_app_parent")
     await _watching(hass, hass_client_no_auth, phone=True)
@@ -70,7 +70,7 @@ async def test_an_app_an_adult_moved_stays_where_they_put_it(
     await hass.async_block_till_done()
 
     # An older phone button still works: it moves the app
-    hass.bus.async_fire("mobile_app_notification_action", {"action": "HEARTH_APP|streaming|com.example.show"})
+    hass.bus.async_fire("mobile_app_notification_action", {"action": "HEARTH_APP|streaming|com.example.show"}, context=Context(user_id=hass_admin_user.id))
     await hass.async_block_till_done()
     entry = hass.config_entries.async_entries(DOMAIN)[0]
     assert entry.options["app_groups"] == {"com.example.show": "streaming"}

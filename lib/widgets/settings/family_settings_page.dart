@@ -90,8 +90,36 @@ class FamilySettingsPage extends StatelessWidget {
           trailing: const Icon(Icons.chevron_right, color: Colors.white54),
           onPressed: () => Navigator.of(context).pushNamed(RemotePhonesPage.routeName),
         ),
+        // Hearth answers other computers' "Allow debugging?" Cancel; a parent lets one in for two minutes
+        FocusableSettingsTile(
+          leading: const Icon(Icons.computer),
+          title: Text(l.adbAllowTitle, style: textTheme.bodyMedium),
+          onPressed: () => _allowComputer(context),
+        ),
       ],
     );
+  }
+
+  /// The Parent PIN, always (a parent at the remote isn't enough: this lets a computer control the TV), then two
+  /// minutes in which the TV's "Allow debugging?" is the parent's to answer.
+  Future<void> _allowComputer(BuildContext context) async {
+    final l = AppLocalizations.of(context)!;
+    final settings = context.read<SettingsService>();
+    final channel = context.read<FLauncherChannel?>();
+    if (settings.hasParentPin) {
+      final pin = await showDialog<String>(
+        context: context,
+        builder: (_) => ParentPinDialog(title: l.parentPinTitle, verify: settings.checkParentPin),
+      );
+      if (pin == null || !context.mounted) return;
+    }
+    try {
+      await channel?.allowAdbComputer();
+    } catch (err) {
+      noteFailure('allow_adb_computer', err);
+      return;
+    }
+    if (context.mounted) await showMessageDialog(context, title: l.adbAllowTitle, message: l.adbAllowBody);
   }
 
   /// The household's Parent PIN, entered here, becomes this TV's (so joining never replaced it unseen).
