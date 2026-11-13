@@ -6,10 +6,10 @@ the companion app on the audience's phones, and Home Assistant's bell when the i
 with the item's source (when a request is told, when an offer is made); here is only the generic work: an item with
 the same key or tag replaces the one before, and clearing a key or tag takes it off every channel it went to.
 
-A phone button on an item runs a Hearth service (only the hearth domain) as the adult who pressed it: the phone sends HEARTH_ACT|<item key>|<n>, and
-the service and its data are looked up here, never carried in the string. The adult check comes first (in the
-action handler), then the presser must be someone the item reached. The older HEARTH_MORE| and HEARTH_APP| buttons are
-passed through as they are (phones already hold them).
+A phone button on an item runs a Hearth service (only the hearth domain) as the adult who pressed it: the phone sends
+HEARTH_ACT|<item key>|<n>, and the service and its data are looked up here, never carried in the string. The adult check
+comes first (in the action handler), then the presser must be someone the item reached. The older HEARTH_MORE| and
+HEARTH_APP| buttons are passed through as they are (phones already hold them).
 
 Items are kept outside the entry (an options change reloads it, and a button pressed meanwhile must still find its
 item), not across a restart: each source puts its items back then (asks have their own store; suggestions are
@@ -147,6 +147,14 @@ class Attention:
             item.reached = frozenset(self._users(targets))
             companion.send(self.hass, self.options, targets, item)
         items[item.key] = item
+        self._tidy()
+
+    def adopt(self, item: Item) -> None:
+        """Keeps [item] without sending it: one its source sent before Home Assistant restarted, still on the phones,
+        so its buttons work again and clearing it takes it off them."""
+        if item.phone:
+            item.reached = frozenset(self._users(self.targets(item.audience)))
+        _items(self.hass)[item.key] = item
         self._tidy()
 
     def clear(self, key_or_tag: str, *, audience: str = ADULTS, bell_too: bool = False, phone: bool = False) -> None:

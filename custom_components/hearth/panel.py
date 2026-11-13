@@ -23,6 +23,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 
 from .apps import CONF_APP_WATCH, CONF_ASK_NOTIFY
+from .asks import AMOUNTS, CONF_OFFER_MORE
 from .const import (
     CONF_GROUP_APPS,
     CONF_GROUPS,
@@ -54,6 +55,7 @@ from .notifications import clear_pairing
 from .places import CONF_PLACES, FAVORITES, MAX_FAVORITES, MAX_NAME, RESERVED, SCHOOLS, TRACKERS
 from .schooldays import CONF_SCHOOL_DAYS
 from .sources import CONF_SOURCES, CONF_TITLES
+from .suggest_push import CONF_SUGGEST_PUSH, pairs as suggest_pairs
 from .profiles import OPTION_KEY
 from . import nintendo, parent_pin, phones
 from .push import clean_server
@@ -265,6 +267,8 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
         "ask_notify": options.get(CONF_ASK_NOTIFY),
         # Each adult's phones, and whether they get requests (and open hearth://ask/<id> on Android)
         "ask_phones": phones.page_view(hass, options),
+        # Which kids' suggestions also go to the adults' phones, and the amount each offers (suggest_push.py)
+        "suggest_push": suggest_pairs(options),
         "notify_services": sorted(
             f"notify.{name}" for name in hass.services.async_services().get("notify", {}) if name.startswith("mobile_app_")
         ),
@@ -288,6 +292,32 @@ def _unique_keys(favorites: list[dict[str, Any]]) -> list[dict[str, Any]]:
     if len(set(keys)) != len(keys):
         raise vol.Invalid("Each favorite place needs its own key")
     return favorites
+
+
+def _raise(message: str):
+    raise vol.Invalid(message)
+
+
+def _one_pair_each(found: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """A suggest_push list: each kid and group (or device) once."""
+    keys = [(p["person"], p.get("device") or p.get("group")) for p in found]
+    if len(set(keys)) != len(keys):
+        raise vol.Invalid("Each kid and group is listed once")
+    return found
+
+
+# A pushed pair: a kid's group or one device of theirs (a target id), and maybe the amount it offers
+_SUGGEST_PAIR = vol.All(
+    vol.Schema(
+        {
+            vol.Required("person"): cv.entity_domain("person"),
+            vol.Exclusive("group", "what"): vol.All(cv.string, vol.Match(r"^[a-z0-9_]{1,64}$")),
+            vol.Exclusive("device", "what"): vol.All(cv.string, vol.Length(min=1, max=200)),
+            vol.Optional("minutes"): vol.In(AMOUNTS),
+        }
+    ),
+    lambda pair: pair if ("group" in pair) != ("device" in pair) else _raise("A group or a device"),
+)
 
 
 # What the page may write to the options, each checked as the Configure menu would leave it
@@ -337,6 +367,7 @@ OPTION_SCHEMAS: dict[str, Any] = {
     phones.CONF_ASK_NOTIFY_OFF: [_PERSON],
     phones.CONF_ASK_DEEP_LINK: [_PERSON],
     CONF_PUSH_SERVER: clean_server,
+    CONF_SUGGEST_PUSH: vol.All([_SUGGEST_PAIR], vol.Length(max=200), _one_pair_each),
     CONF_PLACES: vol.Schema(
         {
             vol.Optional(SCHOOLS): vol.Schema({_PERSON: cv.entity_domain("zone")}),
@@ -388,7 +419,11 @@ def ws_config_set(hass: HomeAssistant, connection: websocket_api.ActiveConnectio
     except vol.Invalid as err:
         connection.send_error(msg["id"], "invalid", str(err))
         return
-    hass.config_entries.async_update_entry(hub.entry, options={**hub.entry.options, key: value})
+    options = {**hub.entry.options, key: value}
+    if key == CONF_SUGGEST_PUSH:
+        # The older offer_more (moved into suggest_push when the household loads) mustn't come back with it
+        options.pop(CONF_OFFER_MORE, None)
+    hass.config_entries.async_update_entry(hub.entry, options=options)
     connection.send_result(msg["id"])
 
 

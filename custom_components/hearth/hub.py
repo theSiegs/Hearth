@@ -48,6 +48,7 @@ from .asks import Asks
 from .attention import ADMINS, Attention, Item
 from .commands import Commands
 from .push import PushChannel, new_topic
+from .suggest_push import SuggestPush
 from .wait import DeviceWaits
 from .household import Household
 from .parent_pin import EVENT_PARENT_PIN_LOCKED_OUT
@@ -166,6 +167,8 @@ class HearthHub:
         self.commands = Commands(hass)
         # "Something changed" pings to the phones, when the household has a push server
         self.push = PushChannel(hass, self)
+        # The suggestions the household chose, on the adults' phones
+        self.suggest_push = SuggestPush(hass, self)
         self.waits = DeviceWaits(hass, self)
 
     # The devices

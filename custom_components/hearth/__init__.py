@@ -32,7 +32,7 @@ from .auth import is_adult_user, register_service
 from .websocket import async_register_commands
 from .pause import end_app_pause, end_pause, set_app_pause, set_pause
 from .places import ARRIVE, LEAVE
-from . import panel
+from . import panel, suggest_push
 from .apps import ACTION_PREFIX
 from .asks import ACTION_PREFIX as ASK_ACTION_PREFIX
 from .commands import is_profile_id, what_to_play
@@ -42,7 +42,7 @@ from .push import new_topic
 from .hub import HearthHub
 from .attention import ACT_PREFIX
 from .limits import DAY_TYPES
-from .asks import CONF_OFFER_MORE, EVENT_MORE_TIME_ANSWERED, EVENT_MORE_TIME_REQUESTED, AskError
+from .asks import EVENT_MORE_TIME_ANSWERED, EVENT_MORE_TIME_REQUESTED, AskError
 from .const import EVENT_BUDGET_REACHED
 from .counting import ALL
 from .exceptions import END_OF_DAY, SCHOOL_TIME_END, at_time, end_of_day
@@ -737,6 +737,7 @@ def _register_watch_services(hass: HomeAssistant) -> None:
 
 async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bool:
     _check_profile_keys(hass, entry)
+    _migrate_offer_more(hass, entry)
     hub = HearthHub(hass, entry)
     await hub.async_load()
     _give_push_topics(hass, entry, hub)
@@ -791,14 +792,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     if lists := hub.household.chores.lists():
         entry.async_on_unload(async_track_state_change_event(hass, lists, hub.household.chores.async_changed))
 
-    @callback
-    def offer_more(event) -> None:
-        """A group ran out: the adults are offered to give more, where the household chose to."""
-        for raw in hub.entry.options.get(CONF_OFFER_MORE, []):
-            if raw.get("person") == event.data.get("person") and raw.get("group") == event.data.get("group"):
-                hub.asks.offer(raw["person"], raw["group"], int(raw.get("minutes") or 30))
-
-    entry.async_on_unload(hass.bus.async_listen(EVENT_BUDGET_REACHED, offer_more))
+    # A group running out no longer makes an offered request: where the household chose it, its suggestion goes to
+    # the adults' phones instead (suggest_push.py), so one run-out is one notification
+    hub.suggest_push.start()
+    entry.async_on_unload(hub.suggest_push.stop)
     # The history log (history.py): what ran out, what was asked and offered, and the answers
     history = hub.household.history
     entry.async_on_unload(hass.bus.async_listen(EVENT_BUDGET_REACHED, history.on_budget_reached))
@@ -895,6 +892,13 @@ def _give_push_topics(hass: HomeAssistant, entry: HearthConfigEntry, hub: Hearth
             },
         },
     )
+
+
+def _migrate_offer_more(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
+    """Configure > Offer more time's pairs (offer_more) become pushed suggestions with their amounts (suggest_push):
+    before the update listener, so it doesn't reload."""
+    if (options := suggest_push.migrated(entry.options)) is not None:
+        hass.config_entries.async_update_entry(entry, options=options)
 
 
 def _check_profile_keys(hass: HomeAssistant, entry: HearthConfigEntry) -> None:

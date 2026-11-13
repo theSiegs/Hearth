@@ -584,6 +584,19 @@ class HearthPanel extends HTMLElement {
         await this._setOption(key, [...set], `${this._personName(d.person)}: ${action === "ask-on" ? (el.checked ? "gets requests" : "no requests") : el.checked ? "opens in their app" : "opens Hearth's page"}`);
         return;
       }
+      case "suggest-on":
+      case "suggest-minutes": {
+        const all = cfg.suggest_push || [];
+        const mine = all.find((p) => p.person === d.person && p.group === d.group);
+        const kept = all.filter((p) => p !== mine);
+        const row = el.closest("li");
+        const minutes = Number(row?.querySelector("select")?.value) || 15;
+        const on = action === "suggest-on" ? el.checked : Boolean(mine);
+        if (on) kept.push({ person: d.person, group: d.group, minutes });
+        const what = d.group === "all" ? "All screen time" : this._groupName(d.group);
+        await this._setOption("suggest_push", kept, on ? `${what}: suggested to phones (+${minutes} min)` : `${what}: not suggested to phones`);
+        return;
+      }
       case "new-apps-save": {
         const entities = [...this.shadowRoot.querySelectorAll("[data-app-watch]:checked")].map((x) => x.value);
         await this._ws({ type: "hearth/config/set", key: "app_watch", value: entities });
@@ -1113,6 +1126,7 @@ class HearthPanel extends HTMLElement {
     const kid = kids.find((k) => k.id === this._kid) || kids[0];
     return `${this._kidPicker()}
       ${this._limitsCard(kid)}
+      ${this._suggestCard(kid)}
       ${this._sourcesCard(kid)}
       ${this._locksCard(kid)}
       ${this._enforceCard(kid)}
@@ -1142,6 +1156,32 @@ class HearthPanel extends HTMLElement {
         })
         .join("")}
       </tbody></table>
+    </section>`;
+  }
+
+  // Which of the kid's suggestions ("games ran out · give 15?") also go to the adults' phones, once a day, and how much
+  // each offers: All screen time and every group with a limit (option suggest_push; off by default)
+  _suggestCard(kid) {
+    const cfg = this._config;
+    const b = cfg.budgets?.[kid.id] || {};
+    const limited = (g) => g.id === "all" || [b[g.id]?.school, b[g.id]?.other].some((v) => v !== null && v !== undefined);
+    const groups = (cfg.groups || []).filter(limited);
+    const pairs = (cfg.suggest_push || []).filter((p) => p.person === kid.id && p.group);
+    const rows = groups
+      .map((g) => {
+        const pair = pairs.find((p) => p.group === g.id);
+        const minutes = pair?.minutes || (g.id === "all" ? 30 : 15);
+        const data = `data-person="${esc(kid.id)}" data-group="${esc(g.id)}"`;
+        return `<li><div class="grow">${esc(g.id === "all" ? "All screen time" : g.name)}</div>
+          <label class="check"><input type="checkbox" data-change="suggest-on" ${data} ${pair ? "checked" : ""}> When it runs out</label>
+          <select data-change="suggest-minutes" ${data} aria-label="${esc(g.name)}: minutes offered" ${pair ? "" : "disabled"}>
+            ${[15, 30, 45, 60].map((m) => `<option value="${m}" ${m === minutes ? "selected" : ""}>+${m} min</option>`).join("")}</select></li>`;
+      })
+      .join("");
+    return `<section class="card">
+      <h3><ha-icon icon="mdi:cellphone-message"></ha-icon>Suggest to phones</h3>
+      <p class="muted small">When one runs out, the adults' phones get "give more?" with two amounts and Not today, once a day. Off: it still shows here and in the adults' apps.</p>
+      <ul class="list compact small-controls">${rows}</ul>
     </section>`;
   }
 

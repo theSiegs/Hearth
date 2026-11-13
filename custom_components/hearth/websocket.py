@@ -28,7 +28,7 @@ from homeassistant.util import dt as dt_util
 from .const import CONF_KIND, CONF_MEDIA_PLAYERS, CONF_PERSON, CONF_ROLES, CONTRACT, DOMAIN, SIGNAL_DEVICE_ADDED, KIND_TV, SIGNAL_PAIRINGS, SIGNAL_PEOPLE, SIGNAL_STATUS, SIGNAL_WATCH
 from .counting import ALL
 from . import parent_pin
-from .asks import AMOUNTS, CONF_OFFER_MORE, VIA_HOME_ASSISTANT, AskError
+from .asks import AMOUNTS, VIA_HOME_ASSISTANT, AskError
 from .limits import OTHER
 from .media import media_rooms
 from .auth import is_adult_user
@@ -199,13 +199,11 @@ def summary(hub) -> dict[str, Any]:
 
 def _suggest_hints(hub, person: str, view: dict[str, Any], now) -> dict[str, Any]:
     """What sizes and silences a person's suggestions (glance.suggestions): what an adult put off today, the amounts
-    the household chose (offer_more), and what's usually given (history.py)."""
+    the household chose for the ones pushed to phones (suggest_push.py), and what's usually given (history.py)."""
+    from .suggest_push import chosen_minutes
+
     history = hub.household.history
-    chosen = {
-        str(o["group"]): int(o.get("minutes") or 30)
-        for o in hub.entry.options.get(CONF_OFFER_MORE, [])
-        if o.get("person") == person and o.get("group")
-    }
+    chosen = chosen_minutes(hub.entry.options, person)
     usual = {}
     for group in view.get("groups") or []:
         if group.get("minutes_left") is not None and group["minutes_left"] <= 0:

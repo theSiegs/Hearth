@@ -324,9 +324,11 @@ minutes, group: All screen time by default; by title isn't built), whoever asks:
   actionable notification: the amount asked, the next one up, **Not now** (see [Ask for more](#ask-for-more)). The
   first answer adds the bonus (or not) and is shown on the kid's device. One open request per person; it's open 30
   minutes.
-- **Offer more** (Configure > Offer more time): when one of a kid's chosen groups runs out, the adults get the same
-  actionable notification the other way round ("Sam's YouTube is used up. Give Sam 30 more minutes today?"). Nothing
-  is asked of the kid and their devices aren't told about it; "Not now" starts no cooldown.
+- **Suggest to phones** (the Kids tab of Hearth's page, or Configure > Suggest more time to phones): when one of a
+  kid's chosen groups runs out, its suggestion goes to the adults' phones ("Sam's YouTube ran out. Give 30 more
+  minutes today?", with two amounts and Not today); see [Pushed to phones](#pushed-to-phones). Nothing is asked of the
+  kid and their devices aren't told about it. (This was Offer more time, which made an offered request: its choices
+  carry over.)
 - **Chores** (Configure > Chores earn time): per person, a to-do list, a group and what a chore is worth (15 minutes
   by default, or the chore's own "+N": "Dishes +30"). Each item checked off adds its minutes once and is removed from
   the list; `hearth_chore_done` (person, chore, group, minutes) and the adults' phone are told.
@@ -807,7 +809,7 @@ approved), asked_minutes, group, expires, answered (when it was answered or expi
 
 #### The adults' phones
 
-Every adult on Hearth's page gets requests for more time, offers (Configure > Offer more time) and chores done on each
+Every adult on Hearth's page gets requests for more time, suggestions chosen for phones (Pushed to phones) and chores done on each
 of their Home Assistant companion apps: a `mobile_app` registration that their person follows as a device tracker
 (`device_trackers`), or that their Home Assistant user registered. Its notify service is `notify.mobile_app_<device
 name, slugified>`, as the companion app names it. The phone chosen in Configure > Watch for new apps (option
@@ -855,7 +857,8 @@ store).
 **Tags.** Every companion-app push carries `data.tag` starting with `hearth_`, so an app that shows Hearth's notices
 (Glint) can tell them apart: `hearth_more_<request id>` (a request or an offer), `hearth_place_<person entity id>` (where a kid
 went), `hearth_schedule_check` and `hearth_school_time_watchdog` (the schedule), `hearth_chore_<to-do item uid>` (a
-chore done), `hearth_app_<package>` (a new app). Bell-only notices keep their ids (`hearth_pairing_<id>`,
+chore done), `hearth_app_<package>` (a new app), `hearth_suggest:<person entity id>:<suggestion key>` (a suggestion
+pushed to phones). Bell-only notices keep their ids (`hearth_pairing_<id>`,
 `hearth_paired_<device>`, `hearth_rules_<device>`, `hearth_more_fs_<request id>`, `hearth_new_apps`).
 
 **Buttons.** A button with a service goes to the phone as `HEARTH_ACT|<item key>|<n>`: the service and its data stay in
@@ -1291,16 +1294,42 @@ answer ready: `{key, text, level, reason, minutes, group | device, actions}`.
 | `device_limit` | Google's, Microsoft's or Nintendo's own limit stops a device while Hearth's time isn't out | `xbox · microsoft's limit · give 15?` | `device:<target>` |
 
 There's no suggestion while a request for it waits (its yes and no are the actions then), while extra time on that
-device runs, or after an adult chose "not today". The amount is the household's own for that kid and group (Configure >
-Offer more time), else what an adult usually gives them (History), else 15 minutes (30 for All screen time). The actions
+device runs, or after an adult chose "not today". The amount is the household's own for that kid and group (Pushed to
+phones), else what an adult usually gives them (History), else 15 minutes (30 for All screen time). The actions
 are two amounts (`hearth.add_bonus`, the first `primary`) and "not today" (`hearth.dismiss_suggestion` with the key),
 which puts it off until midnight.
+
+##### Pushed to phones
+
+Per kid and group (or one device of theirs), the household can have a suggestion also go to the adults' phones: in
+the Kids tab of Hearth's page (Suggest to phones: All screen time and each group with a limit, a toggle and +15, +30,
++45 or +60), or Configure > Suggest more time to phones. Everything is off by default. The option is `suggest_push`:
+`[{person, group | device, minutes?}]` (`minutes` one of 15, 30, 45, 60, the suggestion's first amount; without it,
+the amount above).
+
+- **Once a day.** A chosen suggestion is pushed when it appears (the household is looked at 10 seconds after it last
+  changed), at most once a day per suggestion: each push is logged (`pushed`, with the suggestion's key), so a restart
+  doesn't push it again. One put off today ("not today") isn't pushed.
+- **The notification.** To every adult's phones (the `adults` audience, as requests), never the kid's and never Home
+  Assistant's bell: title "Sam's YouTube ran out" (or "Sam's Xbox reached its own limit"), text "Give 30 more minutes
+  today?", the suggestion's buttons ("+30 min", "+15 min", "Not today") as `HEARTH_ACT|suggest:<person>:<key>|<n>`,
+  run as the adult who pressed one. Its item key is `suggest:<person entity id>:<suggestion key>`, its tag
+  `hearth_suggest:<person entity id>:<suggestion key>`.
+- **Off the phones.** When the suggestion goes (more time given anywhere, put off, the group no longer out, a new day,
+  the pair no longer chosen), it's cleared on every phone. After a restart, one still on the phones gets its buttons
+  back and is cleared the same way.
+- **At most 6 an hour.** Past that, a suggestion isn't pushed (not later that day either); it's still in the household
+  summary.
+
+A group running out no longer makes an offered request (older Hearths' Configure > Offer more time, option
+`offer_more`): its pairs become pushed pairs with their amounts when the household loads, so the adults get one
+notification for it, not two. An offered request (`offered: true`) still works as before where one is made.
 
 #### History
 
 Hearth keeps 90 days of what happened with each person's time (history.py): a group running out (`out`), a request
 (`ask`), an offer (`offer`), an answer (`answer`, with its status), a bonus to a group (`bonus`) or on one device
-(`device_bonus`), and a suggestion put off (`dismiss`). Events hold entity ids, group ids, device ids, minutes and times,
+(`device_bonus`), a suggestion put off (`dismiss`) and one pushed to the adults' phones (`pushed`, with its key). Events hold entity ids, group ids, device ids, minutes and times,
 never names or notes. Suggestions are sized from it: the most common bonus for a kid and group over the last 28 days,
 once there are at least 3. Minutes per kid and group are already recorded by Home Assistant's statistics (each
 group's Today sensor is `total_increasing`).
@@ -1427,7 +1456,10 @@ off today (or puts it back), and opens **Today by device and app**: minutes per 
 (`hearth.add_bonus` with `device`) and the apps used most. The **Kids** tab has a card per Nintendo Switch of theirs
 (today's play, the Switch's own limit, time left and extra time, playing now, last synced), with Hearth's extra time on
 that Switch and, as the installed Nintendo integration allows, Nintendo's own extra playing time, its cancel and the
-games' allow list. `hearth/config` says what the installed integration can do (`capabilities.nintendo`: `installed`,
+games' allow list, and **Suggest to phones**: per group with a limit (and All screen time), whether its suggestion
+also goes to the adults' phones and the amount (`suggest_push` in `hearth/config` and `hearth/config/set`, checked:
+a kid, a group id or a device, 15, 30, 45 or 60 minutes, each pair once; see [Pushed to phones](#pushed-to-phones)).
+`hearth/config` says what the installed integration can do (`capabilities.nintendo`: `installed`,
 `add_bonus`, `bonus_min`, `bonus_max`, `unlimited`, `cancel_bonus`, `list_apps`, `set_app_allowed`, found by probing
 the services' own schemas, so core's 5 to 30 minutes and a patched copy's 5 to 360 or unlimited both show right) and
 how each parental control is doing (`parental_controls`: each installed integration's entries and their state, and
@@ -1442,7 +1474,7 @@ The Configure menu (Settings > Devices & services > Hearth > Configure) still ha
 
 **Who's who on the TVs**, **Add / Remove a screen time source**, **Add / Remove a title**, **Locks** (bedtime,
 school time), **Enforce limits** (Family Link, Family Safety, Nintendo), **School days**, **Schedule**, **Places**, **Website
-block list**, **Chores earn time**, **Offer more time**, **Sort new apps**, **Watch for new apps**, **Add a group**, **Add apps to Video or Games**, **Not screen time**, **Remove a group**, **Tile
+block list**, **Chores earn time**, **Suggest more time to phones**, **Sort new apps**, **Watch for new apps**, **Add a group**, **Add apps to Video or Games**, **Not screen time**, **Remove a group**, **Tile
 exchange sharing** and **Parent PINs**. (Suggested title matches and rules aren't built.)
 
 Budgets aren't in the options: they're number entities, so a dashboard, a voice assistant or an automation can change
@@ -1638,7 +1670,7 @@ automations, and what replaces each (the names here are examples):
 | a one-shot "no School time on Wednesday from noon" | `hearth.school_time_off` {people, date, from: "12:00"} |
 | syncs a website list into Family Link every morning | Configure > Website block list |
 | adds bonus minutes when a chore is checked off | Configure > Chores earn time |
-| offers an adult "give 30 more?" when a kid's time runs out | Configure > Offer more time |
+| offers an adult "give 30 more?" when a kid's time runs out | Kids tab > Suggest to phones (or Configure > Suggest more time to phones) |
 | resets bonus helpers at midnight | nothing: Bonus today starts at 0 each day |
 | ends a family pause at a set time | `hearth.pause` with `until` |
 | lets a kid use one app for homework | `hearth.allow` {people, app, until} |

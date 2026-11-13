@@ -67,6 +67,7 @@ from .schooldays import CALENDAR_OFF, CALENDAR_SCHOOL, CONF_SCHOOL_DAYS, SCHOOL_
 from .schedule import CONF_SCHEDULE, CONF_SITE_LIST
 from .chores import CONF_CHORES, DEFAULT_MINUTES
 from .asks import AMOUNTS, CONF_OFFER_MORE
+from .suggest_push import CONF_SUGGEST_PUSH, pairs as suggest_pairs
 from .sources import CONF_SOURCES, CONF_TITLES
 from . import parent_pin
 from . import phones as adult_phones
@@ -156,7 +157,7 @@ class HearthOptionsFlow(OptionsFlow):
                 "places",
                 "site_list",
                 "chores",
-                "offer_more",
+                "suggest_push",
                 "sort_apps",
                 "new_apps",
                 "add_group",
@@ -837,24 +838,24 @@ class HearthOptionsFlow(OptionsFlow):
             step_id="places", data_schema=schema, errors=errors, description_placeholders={"favorites": listed}
         )
 
-    async def async_step_offer_more(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """When one of these groups of a person's runs out, the adults are offered to give more. Choosing a person
-        again replaces theirs; no groups stops it."""
+    async def async_step_suggest_push(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """When one of these groups of a kid's runs out, its suggestion also goes to the adults' phones
+        (suggest_push.py). Choosing a kid again replaces their groups (a device of theirs stays); no groups stops it."""
         options = self._options()
-        offers: list[dict[str, Any]] = list(options.get(CONF_OFFER_MORE, []))
         if user_input is not None:
             person = user_input[CONF_PERSON]
-            kept = [o for o in offers if o.get("person") != person]
-            minutes = int(user_input.get("minutes") or 30)
+            kept = [p for p in suggest_pairs(options) if p["person"] != person or p.get("device")]
+            minutes = int(user_input.get("minutes") or 15)
             kept += [{"person": person, "group": g, "minutes": minutes} for g in user_input.get("groups") or []]
-            return self.async_create_entry(data={**options, CONF_OFFER_MORE: kept})
+            options = {k: v for k, v in options.items() if k != CONF_OFFER_MORE}
+            return self.async_create_entry(data={**options, CONF_SUGGEST_PUSH: kept})
         schema = vol.Schema(
             {
                 vol.Required(CONF_PERSON): PERSON_SELECTOR,
                 vol.Optional("groups", default=[]): self._group_selector(multiple=True),
-                vol.Optional("minutes", default="30"): SelectSelector(
+                vol.Optional("minutes", default="15"): SelectSelector(
                     SelectSelectorConfig(options=[str(m) for m in AMOUNTS])
                 ),
             }
         )
-        return self.async_show_form(step_id="offer_more", data_schema=schema)
+        return self.async_show_form(step_id="suggest_push", data_schema=schema)

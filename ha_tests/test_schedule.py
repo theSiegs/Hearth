@@ -355,23 +355,27 @@ async def test_a_chore_checked_off_adds_its_minutes_once(
     assert hass.states.get("number.hearth_sam_video_bonus_today").state == "45"
 
 
-async def test_the_adults_are_offered_more_when_a_group_runs_out(
+async def test_the_adults_get_a_suggestion_when_a_chosen_group_runs_out(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
+    """Configure > Suggest more time to phones (it was Offer more time, an offered request): the group's suggestion
+    goes to the adults' phones instead, and nothing is asked of the kid."""
     await _household_with_sam(hass, hass_client_no_auth)
-    await _option(hass, "offer_more", {"person": "person.sam", "groups": ["video"], "minutes": "30"})
+    await _option(hass, "suggest_push", {"person": "person.sam", "groups": ["video"], "minutes": "30"})
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    assert entry.options["suggest_push"] == [{"person": "person.sam", "group": "video", "minutes": 30}]
     await hass.services.async_call(
         DOMAIN, "set_budget", {"person": "person.sam", "group": "video", "minutes": 10}, blocking=True
     )
     await hass.async_block_till_done()
-    hub = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
-    [offer] = hub.asks.pending()
-    assert offer.offered and offer.minutes == 30 and offer.group == "video"
-    # The kid's devices aren't told about it as a request of theirs
+    hub = entry.runtime_data
+    hub.suggest_push.check()
+    # No offered request; the kid's devices aren't told of anything
+    assert hub.asks.pending() == []
     assert hub.asks.latest_for("person.sam") is None
-    hub.asks.answer(offer.id, 30, None)
-    await hass.async_block_till_done()
-    assert hass.states.get("sensor.hearth_sam_video_minutes_left").state == "30"
+    item = hub.attention.item("suggest:person.sam:more:video")
+    assert item is not None and item.text == "Give 30 more minutes today?"
+    assert item.actions[0].service == "hearth.add_bonus" and item.actions[0].data["minutes"] == 30
 
 
 async def test_an_adult_s_app_is_offered_no_school_time_today_until_it_ends(

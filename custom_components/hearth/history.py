@@ -1,6 +1,6 @@
 """What happened with each person's time, day by day: a group running out, a request for more, an offer, an answer,
-a bonus (to a group or on one device) and a suggestion an adult put off for the day. See
-docs/home-assistant-integration.md, History.
+a bonus (to a group or on one device), a suggestion an adult put off for the day and one pushed to the adults'
+phones. See docs/home-assistant-integration.md, History.
 
 The log is what suggestions are sized and silenced from: "usually gets 30 more games", "not today". It's kept with
 Home Assistant's storage helper for HISTORY_DAYS, so it survives a restart, and holds no names or notes: people are
@@ -27,7 +27,9 @@ ANSWER = "answer"
 BONUS = "bonus"
 DEVICE_BONUS = "device_bonus"
 DISMISS = "dismiss"
-KINDS = (OUT, ASK, OFFER, ANSWER, BONUS, DEVICE_BONUS, DISMISS)
+# A suggestion pushed to the adults' phones (suggest_push.py), by its key: once a day
+PUSHED = "pushed"
+KINDS = (OUT, ASK, OFFER, ANSWER, BONUS, DEVICE_BONUS, DISMISS, PUSHED)
 
 HISTORY_DAYS = 90
 # A runaway automation mustn't grow this without end
@@ -137,6 +139,14 @@ class History:
         return {
             str(e["key"])
             for e in self.of(person, kinds=(DISMISS,))
+            if e.get("key") and self._local_day(e) == day
+        }
+
+    def pushed(self, person: str, day: date) -> set[str]:
+        """The suggestion keys pushed to the adults' phones for the person on [day]."""
+        return {
+            str(e["key"])
+            for e in self.of(person, kinds=(PUSHED,))
             if e.get("key") and self._local_day(e) == day
         }
 

@@ -6,9 +6,10 @@ request gets an id and an expiry; the adults are told (an event, an actionable n
 time today (add_bonus), maybe another amount than asked; "not now" starts a cooldown before that person may ask again.
 The asking device sees the answer in its next status answer (the person's state document, "request").
 
-An offer goes the other way (Configure > Offer more time): when a chosen group of a kid's runs out, the adults are
-asked whether to give some more, with the same buttons; nothing is asked of the kid, and their devices aren't told
-about it as a request of theirs. "Not now" to an offer starts no cooldown.
+An offer goes the other way (offer): the adults are asked whether to give some more, with the same buttons; nothing is
+asked of the kid, and their devices aren't told about it as a request of theirs. "Not now" to an offer starts no
+cooldown. A group running out no longer makes one (it was Configure > Offer more time): its suggestion goes to the
+adults' phones instead (suggest_push.py), so one run-out is one notification. offer stays for whoever still calls it.
 
 A request made on an Xbox or Windows PC (Microsoft Family Safety's microsoft_family_safety_request event) becomes an
 ask too, for the person whose Family Safety account it is (Configure > Enforce), once per request id. The adults
@@ -50,7 +51,8 @@ OPEN_FOR = timedelta(minutes=30)
 SHOWN_FOR = timedelta(hours=2)
 COOLDOWN = timedelta(minutes=10)
 MAX_NOTE = 120
-# Options: [{"person", "group", "minutes"}]: offer the adults more time when that group runs out
+# Options (older households): [{"person", "group", "minutes"}]: offer the adults more time when that group runs out.
+# Moved into suggest_push when the household loads (suggest_push.migrated)
 CONF_OFFER_MORE = "offer_more"
 
 # Where a request came from: a Hearth device (or an offer), or Microsoft Family Safety
