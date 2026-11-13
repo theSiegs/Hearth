@@ -192,3 +192,41 @@ test("what Hearth holds reads by app name and why, under Device limits", () => {
   assert.match(html, /Family Link: holding Google Messages for School time · put back Music/);
   assert.doesNotMatch(html, /holding com\./);
 });
+
+test("the Chores card: today's list with tick, Give and Undo, the tasks and the balance", () => {
+  const p = panel();
+  p._tab = "kids";
+  p._todo = {
+    "person.sam": {
+      today: [
+        { id: "t1:2026-11-13", task: "t1", title: "Feed the cat", reward: "+15 min Games", done: true, granted: "t1:2026-11-13#1", by: "adult" },
+        { id: "t2:2026-11-13", task: "t2", title: "Teeth", reward: "+5 min Games", done: true, granted: null, by: "adult" },
+        { id: "t3", task: "t3", title: "Math sheet", reward: null, done: false, granted: null, by: "kid" },
+      ],
+      tasks: [
+        { id: "t1", title: "Feed the cat", repeat: { kind: "weekdays", days: [0, 1, 2, 3, 4] }, due_time: "07:30", reward: { pool: "all", minutes: 15 } },
+        { id: "t4", title: "Mow", repeat: { kind: "after_done", n: 7 }, reward: { cents: 500 } },
+      ],
+      ledger: [{ key: "t1:2026-11-13#1", kind: "earned", title: "Feed the cat", day: "2026-11-13", pool: "all", minutes: 15 }],
+      balance_cents: 1250,
+    },
+  };
+  const html = p._page();
+  assert.match(html, /<h3><ha-icon icon="mdi:checkbox-marked-circle-outline"><\/ha-icon>Chores<\/h3>/);
+  assert.match(html, /data-change="todo-check"[^>]*data-item="t1:2026-11-13" checked/);
+  assert.match(html, /data-action="todo-undo"[^>]*data-key="t1:2026-11-13#1"/);
+  // Done with no reward given (a shared screen's tick): Give
+  assert.match(html, /no reward given<\/span><button class="btn" data-action="todo-give"[^>]*data-item="t2:2026-11-13"/);
+  assert.match(html, /Math sheet <span class="chip small">Sam's own<\/span>/);
+  assert.match(html, /Mon to Fri · by 07:30 · \+15 min All screen time/);
+  assert.match(html, /7 days after done · \+\$5\.00/);
+  assert.match(html, /Balance: <b>\$12\.50<\/b>/);
+  assert.match(html, /data-action="todo-add" data-person="person.sam"/);
+});
+
+test("the Chores card says when the list couldn't be read", () => {
+  const p = panel();
+  p._tab = "kids";
+  p._todo = { "person.sam": null };
+  assert.match(p._page(), /The to-do list couldn't be read/);
+});

@@ -97,6 +97,19 @@ const hourBars = (rows, midnight, live) => {
   return bars.map((v) => Math.min(60, v));
 };
 
+const money = (cents) => `${cents < 0 ? "−" : ""}$${(Math.abs(cents) / 100).toFixed(2)}`;
+const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const repeatWords = (task) => {
+  const r = task.repeat || {};
+  if (r.kind === "daily") return "every day";
+  if (r.kind === "weekdays") return r.days.join() === "0,1,2,3,4" ? "Mon to Fri" : r.days.join() === "5,6" ? "Sat and Sun" : r.days.map((d) => DAY_NAMES[d]).join(", ");
+  if (r.kind === "every_n") return `every ${r.n} days`;
+  if (r.kind === "after_done") return `${r.n} days after done`;
+  return task.due_date ? `once, by ${task.due_date}` : "once";
+};
+const rewardWords = (reward, groups) =>
+  reward.cents !== undefined ? `+${money(reward.cents)}` : `+${reward.minutes} min ${(groups.find((g) => g.id === reward.pool) || {}).name || reward.pool}`;
+
 const slug = (text) =>
   String(text || "")
     .toLowerCase()
@@ -116,6 +129,9 @@ class HearthPanel extends HTMLElement {
     this._toast = null;
     this._setupStep = null;
     this._watch = {};
+    // A kid's to-do list, as hearth/todo/list answers (null: couldn't be read)
+    this._todo = {};
+    this._todoBusy = new Set();
     this._busy = false;
     this._drafts = {};
     this._open = new Set();
@@ -372,12 +388,14 @@ class HearthPanel extends HTMLElement {
         }
         this._render();
         if (d.tab === "kids" && this._kid) this._loadWatch(this._kid);
+        if (d.tab === "kids") this._loadTodo(this._kid || this._kids()[0]?.id);
         return;
       case "kid":
         this._kid = d.kid;
         if (d.go) this._tab = d.go;
         this._render();
         this._loadWatch(d.kid);
+        this._loadTodo(d.kid);
         return;
       case "grant-end":
         if (!window.confirm("End what the parent gave in their app? Hearth's hold comes back.")) return;
@@ -427,6 +445,39 @@ class HearthPanel extends HTMLElement {
       }
       case "pause-end":
         await this._service("pause_end", {}, "Pause ended");
+        return;
+      case "todo-add": {
+        const id = CSS.escape(d.person);
+        const title = this._value(`#todo-title-${id}`);
+        if (!title) return this._notify("Give the task a name");
+        const kind = this._value(`#todo-repeat-${id}`) || "daily";
+        const n = Number(this._value(`#todo-n-${id}`)) || 0;
+        const repeat =
+          kind === "school" ? { kind: "weekdays", days: [0, 1, 2, 3, 4] } : kind === "weekend" ? { kind: "weekdays", days: [5, 6] } : kind === "every_n" || kind === "after_done" ? { kind, n } : { kind };
+        if (repeat.n !== undefined && !(n >= 1 && n <= 365)) return this._notify("Every 1 to 365 days");
+        const rewardKind = this._value(`#todo-reward-${id}`);
+        const amount = Number(this._value(`#todo-amount-${id}`)) || 0;
+        let reward = null;
+        if (rewardKind === "minutes") reward = { pool: this._value(`#todo-pool-${id}`) || "all", minutes: Math.round(amount) };
+        if (rewardKind === "money") reward = { cents: Math.round(amount * 100) };
+        if (reward && !(amount > 0)) return this._notify("How much is it worth?");
+        const due = this._value(`#todo-due-${id}`);
+        await this._todoWs({ type: "hearth/todo/task/save", person: d.person, title, repeat, due_time: due || null, reward }, d.person, `Added ${title}`);
+        return;
+      }
+      case "todo-del":
+        if (!window.confirm("Remove this task from the list? What it gave stays given.")) return;
+        await this._todoWs({ type: "hearth/todo/task/delete", task_id: d.task }, d.person, "Removed");
+        return;
+      case "todo-check":
+        await this._todoWs({ type: "hearth/todo/check", item: d.item, done: el.checked }, d.person);
+        return;
+      case "todo-give":
+        await this._todoWs({ type: "hearth/todo/give", item: d.item }, d.person, "Given");
+        return;
+      case "todo-undo":
+        if (!window.confirm("Take this reward back? Minutes already used are taken too: the group can run out now.")) return;
+        await this._todoWs({ type: "hearth/todo/undo", key: d.key }, d.person, "Taken back");
         return;
       case "bonus-custom": {
         const minutes = Number(this._value(`#custom-${CSS.escape(d.person)}`));
@@ -1530,6 +1581,7 @@ class HearthPanel extends HTMLElement {
       ${this._enforceCard(kid)}
       ${this._switchCard(kid)}
       ${this._youtubeCard(kid)}
+      ${this._choresCard(kid)}
       ${this._extraTimeCard(kid)}`;
   }
 
@@ -1581,6 +1633,85 @@ class HearthPanel extends HTMLElement {
       <p class="muted small">When one runs out, the adults' phones get "give more?" with two amounts and Not today, once a day. Off: it still shows here and in the adults' apps.</p>
       <ul class="list compact small-controls">${rows}</ul>
     </section>`;
+  }
+
+  // A kid's to-do list (todos.py): tasks with how they repeat and their reward, today's items (tick, Give, Undo),
+  // what chores gave lately and the money balance. A reward is granted when the item is checked off: no approval step
+  _choresCard(kid) {
+    const p = esc(kid.id);
+    const t = this._todo[kid.id];
+    const head = `<h3><ha-icon icon="mdi:checkbox-marked-circle-outline"></ha-icon>Chores</h3>`;
+    if (t === undefined) {
+      // Opened straight on the Kids tab: read it now
+      if (!this._todoBusy.has(kid.id)) setTimeout(() => this._loadTodo(kid.id), 0);
+      return `<section class="card">${head}<p class="muted">Loading…</p></section>`;
+    }
+    if (t === null) return `<section class="card">${head}<p class="muted">The to-do list couldn't be read.</p></section>`;
+    const groups = this._config.groups || [];
+    const today = (t.today || [])
+      .map((i) => {
+        const state = i.granted
+          ? `<span class="chip small">given</span><button class="btn" data-action="todo-undo" data-person="${p}" data-key="${esc(i.granted)}">Undo</button>`
+          : i.done && i.reward
+            ? `<span class="chip dim small">no reward given</span><button class="btn" data-action="todo-give" data-person="${p}" data-item="${esc(i.id)}">Give</button>`
+            : "";
+        return `<li><label class="check grow"><input type="checkbox" data-change="todo-check" data-person="${p}" data-item="${esc(i.id)}" ${i.done ? "checked" : ""}>
+          ${esc(i.title)}${i.reward ? ` <span class="muted small">${esc(i.reward)}</span>` : ""}${i.by === "kid" ? ` <span class="chip small">${esc(kid.name)}'s own</span>` : ""}</label>${state}</li>`;
+      })
+      .join("");
+    const tasks = (t.tasks || [])
+      .map(
+        (task) => `<li><div class="grow">${esc(task.title)} <span class="muted small">${esc(repeatWords(task))}${task.due_time ? ` · by ${esc(task.due_time)}` : ""}${task.reward ? ` · ${esc(rewardWords(task.reward, groups))}` : ""}</span></div>
+          <button class="icon-btn" data-action="todo-del" data-task="${esc(task.id)}" data-person="${p}" aria-label="Remove ${esc(task.title)}"><ha-icon icon="mdi:delete-outline"></ha-icon></button></li>`
+      )
+      .join("");
+    const recent = (t.ledger || [])
+      .filter((e) => e.kind === "earned")
+      .slice(0, 8)
+      .map(
+        (e) => `<li><div class="grow">${esc(e.title)} <span class="muted small">${esc(e.day)} · ${esc(e.cents !== undefined ? money(e.cents) : `+${e.minutes} min ${this._groupName(e.pool)}`)}${e.reversed_at ? " · taken back" : ""}</span></div>
+          ${e.reversed_at ? "" : `<button class="btn" data-action="todo-undo" data-person="${p}" data-key="${esc(e.key)}">Undo</button>`}</li>`
+      )
+      .join("");
+    return `<section class="card">
+      ${head}
+      <p class="muted small">${esc(kid.name)}'s to-do list (todo.hearth_${esc(kid.id.split(".")[1] || "")} on a tablet or by voice). A reward is given when ${esc(kid.name)} or an adult checks the item off; the adults' phones are told, with Undo. Balance: <b>${esc(money(t.balance_cents || 0))}</b></p>
+      <h4>Today</h4>
+      ${today ? `<ul class="list compact">${today}</ul>` : `<p class="muted">Nothing on the list today.</p>`}
+      <h4>Tasks</h4>
+      ${tasks ? `<ul class="list compact">${tasks}</ul>` : `<p class="muted">No tasks yet.</p>`}
+      <div class="inline wrap">
+        <input id="todo-title-${p}" type="text" maxlength="120" placeholder="Feed the cat" aria-label="Task">
+        <select id="todo-repeat-${p}" aria-label="Repeats">
+          <option value="daily">Every day</option><option value="school">Mon to Fri</option><option value="weekend">Sat and Sun</option>
+          <option value="every_n">Every N days</option><option value="after_done">N days after done</option><option value="once">Once</option></select>
+        <input id="todo-n-${p}" type="number" min="1" max="365" placeholder="N" aria-label="N days" style="width:5em">
+        <input id="todo-due-${p}" type="time" aria-label="Due by">
+        <select id="todo-reward-${p}" aria-label="Reward"><option value="">No reward</option><option value="minutes">Minutes</option><option value="money">Money</option></select>
+        <input id="todo-amount-${p}" type="number" min="1" step="1" placeholder="15 min or $" aria-label="Amount" style="width:7em">
+        <select id="todo-pool-${p}" aria-label="Reward group">${groups.map((g) => `<option value="${esc(g.id)}">${esc(g.name)}</option>`).join("")}</select>
+        <button class="btn primary" data-action="todo-add" data-person="${p}">Add</button>
+      </div>
+      ${recent ? `<h4>Lately</h4><ul class="list compact">${recent}</ul>` : ""}
+    </section>`;
+  }
+
+  async _loadTodo(person) {
+    if (!person || this._todoBusy.has(person)) return;
+    this._todoBusy.add(person);
+    try {
+      this._todo[person] = await this._hass.callWS({ type: "hearth/todo/list", person });
+    } catch (_err) {
+      this._todo[person] = null;
+    } finally {
+      this._todoBusy.delete(person);
+    }
+    this._render();
+  }
+
+  async _todoWs(message, person, done) {
+    await this._ws(message, done);
+    await this._loadTodo(person);
   }
 
   _extraTimeCard(kid) {
