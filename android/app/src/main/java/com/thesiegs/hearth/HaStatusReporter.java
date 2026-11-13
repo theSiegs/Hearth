@@ -11,6 +11,7 @@ import android.media.session.MediaSessionManager;
 import android.media.session.PlaybackState;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 
 import org.json.JSONArray;
@@ -67,6 +68,8 @@ final class HaStatusReporter {
     private long mScreenTimeSeenAt;
     /** The last body sent; used on the sender thread (a new one after a restart, hence volatile). */
     private volatile String mLastSent;
+    /** The media position last put in a status; used on the sender thread. */
+    private volatile MediaPosition mLastPosition;
     /**
      * Paired and the screen on, a thread holds the integration's long-poll so a pause, a lock or an answered request
      * arrives in seconds rather than at the next two-minute post. Seconds each wait is held (the integration keeps
@@ -446,6 +449,14 @@ final class HaStatusReporter {
         status.put("media_album", nullable(text(metadata, MediaMetadata.METADATA_KEY_ALBUM)));
         status.put("media_duration_s", metadata == null ? JSONObject.NULL
                 : Math.max(0, metadata.getLong(MediaMetadata.METADATA_KEY_DURATION) / 1000));
+        // Where the same session is, as of when: the integration works out the time left from these, so they needn't
+        // be sent more often (a session that only refreshes its position keeps the last one, see MediaPosition)
+        MediaPosition position = s.playback == null ? null : MediaPosition.of(mLastPosition, s.mediaPackage,
+                s.playback.getState(), s.playback.getPosition(), s.playback.getPlaybackSpeed(),
+                s.playback.getLastPositionUpdateTime(), SystemClock.elapsedRealtime(), now);
+        mLastPosition = position;
+        status.put("media_position_s", position == null ? JSONObject.NULL : position.positionMs / 1000);
+        status.put("media_position_at", position == null ? JSONObject.NULL : position.at);
         status.put("now_playing_available", s.nowPlayingAvailable);
         status.put("pin_lockouts", HaParentPins.lockouts(mContext));
         // The parent PINs' hashes come in the answer only when they changed since these
@@ -453,6 +464,47 @@ final class HaStatusReporter {
         // What this TV does beyond what every TV did before caps: its state document carries notices
         status.put("caps", new JSONArray(CAPS));
         return status;
+    }
+
+    /**
+     * Where a media session's playback was (ms) and when that was true (epoch ms), from its PlaybackState: any app's
+     * session, HearthTube's too. The integration moves it on while the state says playing.
+     */
+    static final class MediaPosition {
+        /** A report this close to where the last one says playback should be is the same play going on. */
+        static final long SLACK_MS = 2000;
+
+        final String packageName;
+        final int state;
+        final float speed;
+        final long positionMs;
+        final long at;
+
+        private MediaPosition(String packageName, int state, float speed, long positionMs, long at) {
+            this.packageName = packageName;
+            this.state = state;
+            this.speed = speed;
+            this.positionMs = positionMs;
+            this.at = at;
+        }
+
+        /**
+         * The position as of the session's last update ([updatedElapsed], elapsedRealtime; 0 when it doesn't say,
+         * then as of now); null when the session doesn't know it ([positionMs] PLAYBACK_POSITION_UNKNOWN). The
+         * [last] one comes back when this agrees with it, so the status stays the same and isn't sent again.
+         */
+        static MediaPosition of(MediaPosition last, String packageName, int state, long positionMs, float speed,
+                long updatedElapsed, long elapsedNow, long wallNow) {
+            if (positionMs < 0) return null;
+            long at = updatedElapsed > 0 ? wallNow - Math.max(0, elapsedNow - updatedElapsed) : wallNow;
+            if (last != null && last.state == state && last.speed == speed
+                    && Objects.equals(last.packageName, packageName)) {
+                long expected = last.positionMs + (state == PlaybackState.STATE_PLAYING
+                        ? (long) ((at - last.at) * (double) speed) : 0);
+                if (Math.abs(expected - positionMs) <= SLACK_MS) return last;
+            }
+            return new MediaPosition(packageName, state, speed, positionMs, at);
+        }
     }
 
     private MediaController primaryController() {
