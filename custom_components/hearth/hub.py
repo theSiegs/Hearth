@@ -28,6 +28,7 @@ from .const import (
     CONNECTED_WITHIN,
     KIND_MOBILE,
     MAX_EVENT_POSTS,
+    MAX_NOTICE_POSTS,
     MAX_PENDING_PAIRINGS,
     MAX_STATUS_POSTS,
     PAIRING_EXPIRES,
@@ -141,6 +142,7 @@ class DeviceState:
     seen: datetime | None = None
     posts: list[datetime] = field(default_factory=list)
     event_posts: list[datetime] = field(default_factory=list)
+    notice_posts: list[datetime] = field(default_factory=list)
 
 
 class HearthHub:
@@ -232,6 +234,16 @@ class HearthHub:
         if len(state.event_posts) >= MAX_EVENT_POSTS:
             return True
         state.event_posts.append(now)
+        return False
+
+    def too_many_notice_presses(self, device_id: str) -> bool:
+        """The same for its notices' button presses, counted on their own."""
+        now = dt_util.utcnow()
+        state = self.state(device_id)
+        state.notice_posts = [t for t in state.notice_posts if now - t < STATUS_WINDOW]
+        if len(state.notice_posts) >= MAX_NOTICE_POSTS:
+            return True
+        state.notice_posts.append(now)
         return False
 
     def too_many_user_asks(self, user_id: str) -> bool:

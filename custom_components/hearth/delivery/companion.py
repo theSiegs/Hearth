@@ -22,7 +22,7 @@ def buttons(item: Item) -> list[dict[str, str]]:
     from ..attention import ACT_PREFIX
 
     return [
-        {"action": f"{ACT_PREFIX}{item.key}|{n}" if action.service else action.id, "title": action.label}
+        {"action": f"{ACT_PREFIX}{item.key}|{n}" if action.service or action.dismiss else action.id, "title": action.label}
         for n, action in enumerate(item.actions)
     ]
 

@@ -1,6 +1,6 @@
 """What happened with each person's time, day by day: a group running out, a request for more, an offer, an answer,
 a bonus (to a group or on one device), a suggestion an adult put off for the day and one pushed to the adults'
-phones. See docs/home-assistant-integration.md, History.
+phones, and a TV notice's button an adult answered. See docs/home-assistant-integration.md, History.
 
 The log is what suggestions are sized and silenced from: "usually gets 30 more games", "not today". It's kept with
 Home Assistant's storage helper for HISTORY_DAYS, so it survives a restart, and holds no names or notes: people are
@@ -29,7 +29,11 @@ DEVICE_BONUS = "device_bonus"
 DISMISS = "dismiss"
 # A suggestion pushed to the adults' phones (suggest_push.py), by its key: once a day
 PUSHED = "pushed"
-KINDS = (OUT, ASK, OFFER, ANSWER, BONUS, DEVICE_BONUS, DISMISS, PUSHED)
+# A TV notice's button an adult answered (notices.py), by Parent PIN on the TV or on their phone (`via`): who
+# (`by`: their person, else `user`: their Home Assistant user id), the notice's `key`, the button's `action` number
+# and the TV (`device`)
+NOTICE_ANSWER = "notice_answer"
+KINDS = (OUT, ASK, OFFER, ANSWER, BONUS, DEVICE_BONUS, DISMISS, PUSHED, NOTICE_ANSWER)
 
 HISTORY_DAYS = 90
 # A runaway automation mustn't grow this without end

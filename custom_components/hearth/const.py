@@ -104,6 +104,8 @@ EVENT_VIDEO_STARTED = "hearth_video_started"
 SIGNAL_WATCH = "hearth_watch"
 # A device may post its events this many times in STATUS_WINDOW (each post carries at most 50)
 MAX_EVENT_POSTS = 10
+# A TV may press its notices' buttons this many times in STATUS_WINDOW
+MAX_NOTICE_POSTS = 6
 
 # Android app categories a device may report for its apps (ApplicationInfo.category, lower case)
 APP_CATEGORIES = (

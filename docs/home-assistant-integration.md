@@ -859,7 +859,7 @@ store).
 (Glint) can tell them apart: `hearth_more_<request id>` (a request or an offer), `hearth_place_<person entity id>` (where a kid
 went), `hearth_schedule_check` and `hearth_school_time_watchdog` (the schedule), `hearth_chore_<to-do item uid>` (a
 chore done), `hearth_app_<package>` (a new app), `hearth_suggest:<person entity id>:<suggestion key>` (a suggestion
-pushed to phones). Bell-only notices keep their ids (`hearth_pairing_<id>`,
+pushed to phones), `hearth_approve:<notice key>` (a TV notice's button waiting for a parent's phone). Bell-only notices keep their ids (`hearth_pairing_<id>`,
 `hearth_paired_<device>`, `hearth_rules_<device>`, `hearth_more_fs_<request id>`, `hearth_new_apps`).
 
 **Buttons.** A button with a service goes to the phone as `HEARTH_ACT|<item key>|<n>`: the service and its data stay in
@@ -871,7 +871,13 @@ or from before a restart) is ignored. The older `HEARTH_MORE|` and `HEARTH_APP|`
 
 **On the TVs.** An item can also be for the TVs (`tv`): then it's in the state document of every TV that says it shows
 notices (cap `notices`) as `notices` (see [The device's side of the API](#the-devices-side-of-the-api)), and the TV
-shows it in its adult profiles only. So far that's the suggestions pushed to phones. A phone never gets them.
+shows it in its adult profiles only. So far that's the suggestions pushed to phones. A phone never gets them. A press
+on the TV needs a Parent PIN or a parent's phone (`POST /notice`): with **a parent's phone**, the adults get an item of
+its own (key `approve:<notice key>:<n>:<random>`, tag `hearth_approve:<notice key>`, never the bell): "Approve +30 min
+for Sam?", "Sam's Video ran out. Asked on Kitchen.", with that one button and **Don't allow**. Its button runs as the
+adult who taps it, as any item's (the adult check, then the reached check); either button takes it off every phone,
+and so do the notice going, a newer ask for the same notice, or 10 minutes passing. The history says who answered
+(`notice_answer`).
 
 #### A kid's own Home Assistant user
 
@@ -1334,7 +1340,9 @@ notification for it, not two. An offered request (`offered: true`) still works a
 
 Hearth keeps 90 days of what happened with each person's time (history.py): a group running out (`out`), a request
 (`ask`), an offer (`offer`), an answer (`answer`, with its status), a bonus to a group (`bonus`) or on one device
-(`device_bonus`), a suggestion put off (`dismiss`) and one pushed to the adults' phones (`pushed`, with its key). Events hold entity ids, group ids, device ids, minutes and times,
+(`device_bonus`), a suggestion put off (`dismiss`), one pushed to the adults' phones (`pushed`, with its key) and a
+TV notice's button an adult answered (`notice_answer`: `via` `pin` or `phone`, `by` the adult's person, else `user`
+their user id, the notice's `key`, the button's `action` and the TV's `device`). Events hold entity ids, group ids, device ids, minutes and times,
 never names or notes. Suggestions are sized from it: the most common bonus for a kid and group over the last 28 days,
 once there are at least 3. Minutes per kid and group are already recorded by Home Assistant's statistics (each
 group's Today sensor is `total_increasing`).
@@ -1618,6 +1626,24 @@ them sealed with an Android Keystore key. They're sent only when they changed: t
 version alone means its copy is current, and one with neither means Home Assistant has none (the TV keeps its last
 ones, no longer managed). The TV keeps its own lockout too and posts `pin_lockouts` (how many it has had, only going up)
 in its status; each rise fires `hearth_parent_pin_locked_out` (`device_id`, `lockouts`: how many new, `retry_in`: null).
+
+**A notice's button** (a TV that shows notices). `POST /api/hearth/device/<device_id>/notice` with the same header and
+`{"key": "<a notice's key>", "action": <its button's id as a number>, "pin": "<digits>"}` or `{..., "approval":
+"phone"}` (exactly one of the two). A secret alone never runs a service:
+- With `pin`: checked as `verify_pin` checks one (any adult's Parent PIN, the same lockout: wrong guesses here and
+  there count together, and a right one fires `hearth_parent_pin_used`). The button's service then runs as that
+  adult: as their person's Home Assistant user when it's an adult's or an administrator's, else as the household's
+  own (no user, as an automation); the history names the adult either way. 200 `{"ok": true, "done": true}`.
+- With `"approval": "phone"`: the adults' phones are asked (see [Attention](#attention), On the TVs), and an adult's
+  tap there runs it as them. 200 `{"ok": true, "pending": "phone"}`; the notice going from the document is the TV's
+  sign it was answered.
+
+Only a button the TV was shown runs (a `hearth` service; the notice's own number). Errors: 404 `gone` (no such notice
+in this TV's document now, or the TV doesn't declare `notices`); 403 `wrong_pin` (also when Home Assistant has no
+Parent PIN), with `retry_after` (seconds) on the wrong one that starts a lockout and on every try until it ends, the
+right PIN included; 400 `bad_request` (a malformed body, both or neither of `pin` and `approval`, a button that isn't
+there or doesn't run); 429 `too_many` past 6 presses a minute; 401, 403 `not_local` and 503 as for Status; 500
+`failed` when the service itself failed.
 
 **Entities**, per device, by kind as in [Kinds](#kinds). Screen time today is in seconds (shown in minutes), with
 per-app, playing and (on a TV) per-profile attributes kept out of history. All but Connected are unavailable until the

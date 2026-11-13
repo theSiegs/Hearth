@@ -19,7 +19,7 @@ worked out again).
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 import logging
@@ -70,6 +70,8 @@ class Action:
     label: str
     service: str | None = None
     data: Mapping[str, Any] = field(default_factory=dict)
+    # Takes the item off every phone, and runs nothing ("Don't allow"); goes out as HEARTH_ACT too
+    dismiss: bool = False
 
 
 @dataclass
@@ -100,6 +102,12 @@ class Item:
     # On the TVs too: in the state document of a TV that shows notices (cap "notices"), which shows it in its adult
     # profiles (its audience's: every adult's, or one person's), as `notices`
     tv: bool = False
+    # The key of the item this one belongs to (a phone approval of a TV notice's button): cleared with it
+    follows: str | None = None
+    # Done once a button is pressed: taken off every phone then
+    once: bool = False
+    # Called once it's cleared or replaced (its source's own timer, say)
+    on_clear: Callable[[], None] | None = field(default=None, repr=False, compare=False)
 
     @property
     def channel_tag(self) -> str:
@@ -114,13 +122,20 @@ class Item:
             "title": self.title or "",
             "message": self.text,
             "urgency": self.urgency if self.urgency in URGENCIES else INFO,
-            "actions": [{"id": str(n), "title": a.label} for n, a in enumerate(self.actions) if a.service],
+            # Only buttons a press can run (a hearth service)
+            "actions": [{"id": str(n), "title": a.label} for n, a in enumerate(self.actions) if Attention.runs(a)],
         }
         if self.audience.startswith(PERSON):
             notice["for"] = self.audience[len(PERSON):]
         if self.expires is not None:
             notice["expires"] = self.expires.isoformat()
         return notice
+
+
+def _cleared(item: Item) -> None:
+    if item.on_clear is not None:
+        done, item.on_clear = item.on_clear, None
+        done()
 
 
 def _items(hass: HomeAssistant) -> dict[str, Item]:
@@ -161,7 +176,7 @@ class Attention:
         """Keeps [item] (in place of one with its key or tag) and sends it out on its channels."""
         items = _items(self.hass)
         for key in [k for k, i in items.items() if k == item.key or i.channel_tag == item.channel_tag]:
-            del items[key]
+            _cleared(items.pop(key))
         if item.bell:
             bell.show(self.hass, item)
         if item.phone:
@@ -183,15 +198,19 @@ class Attention:
         if item.tv:
             self._tvs_changed()
 
-    def tv_notices(self, people: set[str]) -> list[dict[str, Any]]:
-        """The items a TV shows (Item.tv), as its state document has them, oldest first: every adult's, and one
-        person's only when that person is one of the TV's ([people])."""
+    def tv_items(self, people: set[str]) -> list[Item]:
+        """The items a TV shows (Item.tv), oldest first: every adult's, and one person's only when that person is one
+        of the TV's ([people])."""
         return [
-            item.notice()
+            item
             for item in self.items()
             if item.tv
             and (item.audience == ADULTS or (item.audience.startswith(PERSON) and item.audience[len(PERSON):] in people))
         ]
+
+    def tv_notices(self, people: set[str]) -> list[dict[str, Any]]:
+        """tv_items as a TV's state document has them (its notices)."""
+        return [item.notice() for item in self.tv_items(people)]
 
     def _tvs_changed(self) -> None:
         """A TV item came or went: the TVs' waits look again (their document's notices changed)."""
@@ -206,12 +225,17 @@ class Attention:
             found = [Item(key_or_tag, "", audience=audience, bell=bell_too, phone=phone)]
         for item in found:
             items.pop(item.key, None)
+            _cleared(item)
             if item.tv:
                 self._tvs_changed()
             if item.phone:
                 companion.clear(self.hass, self.options, self.targets(item.audience), item.channel_tag)
             if item.bell:
                 bell.dismiss(self.hass, item.channel_tag)
+        # And what belonged to them (a phone approval of a TV notice's button)
+        gone = {item.key for item in found}
+        for follower in [i for i in items.values() if i.follows in gone]:
+            self.clear(follower.key)
 
     # Audiences
 
@@ -272,22 +296,44 @@ class Attention:
         if item is None or not parts[2].isdigit() or int(parts[2]) >= len(item.actions):
             _LOGGER.debug("A Hearth notification button for something gone was ignored")
             return True
-        chosen = item.actions[int(parts[2])]
+        n = int(parts[2])
+        chosen = item.actions[n]
         allowed = user.is_admin if item.audience == ADMINS else user.id in item.reached
-        if not allowed or not chosen.service or "." not in chosen.service:
+        if not allowed or not (chosen.service or chosen.dismiss):
             _LOGGER.warning("A Hearth notification button from someone it wasn't for was ignored")
             return True
-        domain, service = chosen.service.split(".", 1)
-        if domain != DOMAIN:
-            # Only Hearth's own services: they check the adult and the person themselves
-            _LOGGER.warning("A Hearth notification button for %s was refused: only hearth services run", chosen.service)
+        if chosen.dismiss:
+            self.clear(item.key)
             return True
+        if await self.run(chosen, user.id) and item.about.get("notice"):
+            # A phone approval of a TV notice's button: who answered it goes in the history
+            from .notices import VIA_PHONE, log_answer
+
+            log_answer(self.hub, item.about, VIA_PHONE, user_id=user.id)
+        if item.once:
+            self.clear(item.key)
+        return True
+
+    @staticmethod
+    def runs(action: Action) -> bool:
+        """Whether [action] would run: a service, in the hearth domain only."""
+        service = action.service or ""
+        return "." in service and service.split(".", 1)[0] == DOMAIN
+
+    async def run(self, action: Action, user_id: str | None) -> bool:
+        """Runs a button's service as [user_id] (Context(user_id); none: the household's own, as an automation's).
+        Only Hearth's own services, which check the adult and the person themselves. True when it ran."""
+        if not self.runs(action):
+            _LOGGER.warning("A Hearth notification button for %s was refused: only hearth services run", action.service)
+            return False
+        domain, service = action.service.split(".", 1)
         try:
             await self.hass.services.async_call(
-                domain, service, dict(chosen.data), blocking=True, context=Context(user_id=user.id)
+                domain, service, dict(action.data), blocking=True, context=Context(user_id=user_id)
             )
-        except Exception as err:  # noqa: BLE001 - a phone button has nobody to raise to
-            _LOGGER.warning("A Hearth notification button's %s failed: %s", chosen.service, err)
+        except Exception as err:  # noqa: BLE001 - a button has nobody to raise to
+            _LOGGER.warning("A Hearth notification button's %s failed: %s", action.service, err)
+            return False
         return True
 
 
