@@ -3,7 +3,8 @@ own TVs and phones, Family Link's devices, Family Safety's platforms and a Ninte
 
     hearth:<device_id>     a Hearth TV or phone        holds one group on that device alone (groups: true)
     fl:<FL device id>      a Family Link device        Family Link's app pauses are the child's, every device's
-    fs:xbox, fs:windows    a Family Safety platform    Family Safety's app blocks are the account's
+    fs:xbox, fs:windows    a Family Safety platform    Family Safety's app blocks are the account's (any platform
+                                                       their Family Safety reports, held by Hearth or not)
     nintendo:<entity_id>   a Switch (Hearth's Nintendo enforcer entity)
 
 The ids are what hearth.add_bonus and hearth.allow take as `device`, and what devices_today names.
@@ -70,8 +71,11 @@ def targets_of(household: Household, person: str) -> list[dict[str, Any]]:
         if enforcer.person != person:
             continue
         if enforcer.kind == FAMILY_SAFETY:
-            for platform in enforcer.platforms:
-                if platform in ("Xbox", "Windows"):
+            from .native_sync import fs_platform_state
+
+            for platform in ("Xbox", "Windows"):
+                # A platform Hearth doesn't hold still takes extra time (Microsoft's, and its allowed hours moved)
+                if platform in enforcer.platforms or fs_platform_state(hass, enforcer.entity_id, platform) is not None:
                     found.append(
                         {
                             "id": f"fs:{platform.lower()}",
@@ -92,6 +96,34 @@ def targets_of(household: Household, person: str) -> list[dict[str, Any]]:
                 }
             )
     return found
+
+
+# A source's integration, for the kind of device it counts
+_SOURCE_KINDS = {"xbox": "xbox", "nintendo_parental_controls": "switch", "mobile_app": "phone", "familylink": "phone"}
+
+
+def kind_of_target(household: Household, target: str) -> str | None:
+    """tv, phone, xbox, windows or switch for a target id (or a counted source:<id>), from what it is; None when Hearth
+    can't tell (a sensor of another integration)."""
+    via, _, rest = target.partition(":")
+    if via == HEARTH:
+        device = household.hub.devices.get(rest) or {}
+        return "tv" if device.get(CONF_KIND) == KIND_TV else "phone"
+    if via == "fl":
+        return "phone"
+    if via == "fs":
+        return rest if rest in ("xbox", "windows") else None
+    if via == "nintendo":
+        return "switch"
+    if via == "source":
+        source = next((s for s in household.sources if s.id == rest), None)
+        if source is None:
+            return None
+        if source.phone_app:
+            return "phone"
+        entry = er.async_get(household.hass).async_get(source.entity_id)
+        return _SOURCE_KINDS.get(entry.platform) if entry is not None else None
+    return None
 
 
 def _shown(name: str, tv: bool) -> str:

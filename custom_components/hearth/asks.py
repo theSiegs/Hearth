@@ -6,9 +6,10 @@ request gets an id and an expiry; the adults are told (an event, an actionable n
 time today (add_bonus), maybe another amount than asked; "not now" starts a cooldown before that person may ask again.
 The asking device sees the answer in its next status answer (the person's state document, "request").
 
-An offer goes the other way (Configure > Offer more time): when a chosen group of a kid's runs out, the adults are
-asked whether to give some more, with the same buttons; nothing is asked of the kid, and their devices aren't told
-about it as a request of theirs. "Not now" to an offer starts no cooldown.
+An offer goes the other way (offer): the adults are asked whether to give some more, with the same buttons; nothing is
+asked of the kid, and their devices aren't told about it as a request of theirs. "Not now" to an offer starts no
+cooldown. A group running out no longer makes one (it was Configure > Offer more time): its suggestion goes to the
+adults' phones instead (suggest_push.py), so one run-out is one notification. offer stays for whoever still calls it.
 
 A request made on an Xbox or Windows PC (Microsoft Family Safety's microsoft_family_safety_request event) becomes an
 ask too, for the person whose Family Safety account it is (Configure > Enforce), once per request id. The adults
@@ -30,13 +31,12 @@ from typing import Any
 
 import logging
 
-from homeassistant.components import persistent_notification
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
 from .entry_tasks import entry_task
-from . import phones
+from .attention import ADULTS, NOTICE, Action, Item
 from .const import DOMAIN, SIGNAL_PAIRINGS
 
 _LOGGER = logging.getLogger(__name__)
@@ -51,7 +51,8 @@ OPEN_FOR = timedelta(minutes=30)
 SHOWN_FOR = timedelta(hours=2)
 COOLDOWN = timedelta(minutes=10)
 MAX_NOTE = 120
-# Options: [{"person", "group", "minutes"}]: offer the adults more time when that group runs out
+# Options (older households): [{"person", "group", "minutes"}]: offer the adults more time when that group runs out.
+# Moved into suggest_push when the household loads (suggest_push.migrated)
 CONF_OFFER_MORE = "offer_more"
 
 # Where a request came from: a Hearth device (or an offer), or Microsoft Family Safety
@@ -69,6 +70,15 @@ PENDING = "pending"
 APPROVED = "approved"
 DENIED = "denied"
 EXPIRED = "expired"
+# A Family Safety request settled outside Hearth without saying how (it left Microsoft's list: answered in the Family
+# Safety app, or on the device), never "expired": someone dealt with it
+HANDLED = "handled"
+# What the adults are shown for a request settled outside Hearth, by status
+ELSEWHERE_TEXT = {
+    APPROVED: "approved in the Family Safety app",
+    DENIED: "denied in the Family Safety app",
+    HANDLED: "handled outside Hearth (the Family Safety app or the device)",
+}
 
 
 @dataclass
@@ -337,7 +347,8 @@ class Asks:
     @callback
     def resolved_elsewhere(self, request_id: str, outcome: str | None, minutes: Any = None) -> Ask | None:
         """A Family Safety request answered in the Family Safety app (microsoft_family_safety_request_resolved, via
-        app): its open ask closes as answered there. None when no open ask has that request id."""
+        app): its open ask closes as answered there, approved or denied when [outcome] says so, else handled (Family
+        Safety only saw it leave Microsoft's list: unknown). None when no open ask has that request id."""
         self._tidy()
         ask = next(
             (
@@ -351,7 +362,7 @@ class Asks:
             return None
         ask.answered = dt_util.utcnow()
         ask.answered_in = FAMILY_SAFETY
-        ask.status = {"approved": APPROVED, "denied": DENIED}.get(str(outcome or "").lower(), EXPIRED)
+        ask.status = {"approved": APPROVED, "denied": DENIED}.get(str(outcome or "").lower(), HANDLED)
         if ask.status == APPROVED and isinstance(minutes, (int, float)) and minutes > 0:
             ask.granted = int(minutes)
         self.hass.bus.async_fire(
@@ -378,7 +389,7 @@ class Asks:
                 "id": a.id,
                 "status": a.status,
                 "answered_in": a.answered_in,
-                "text": "answered in the Family Safety app",
+                "text": ELSEWHERE_TEXT.get(a.status, ELSEWHERE_TEXT[HANDLED]),
                 "platform": a.platform,
                 "answered": a.answered.isoformat() if a.answered else None,
             }
@@ -401,12 +412,17 @@ class Asks:
         except Exception as err:  # noqa: BLE001 - told to the adults instead
             _LOGGER.warning("Hearth couldn't answer the Family Safety request %s: %s", ask.external_id, err)
             who = self.hub.household.person_name(ask.person)
-            persistent_notification.async_create(
-                self.hass,
-                f"Hearth couldn't {'approve' if approve else 'deny'} {who}'s request in Family Safety ({err}). "
-                "Answer it in the Family Safety app.",
-                title="Family Safety request",
-                notification_id=f"hearth_more_fs_{ask.id}",
+            self.hub.attention.notify(
+                Item(
+                    f"hearth_more_fs_{ask.id}",
+                    f"Hearth couldn't {'approve' if approve else 'deny'} {who}'s request in Family Safety ({err}). "
+                    "Answer it in the Family Safety app.",
+                    title="Family Safety request",
+                    urgency=NOTICE,
+                    bell=True,
+                    phone=False,
+                    about={"person": ask.person},
+                )
             )
 
     # Telling the adults
@@ -434,34 +450,36 @@ class Asks:
                 + "."
                 + (f" “{ask.note}”" if ask.note else "")
             )
-        persistent_notification.async_create(
-            self.hass,
-            message + " Answer on Hearth's page or your phone.",
-            title=title,
-            notification_id=f"hearth_more_{ask.id}",
-        )
-        # The asked amount first; Android shows three buttons, so: asked, the next one up, not now
+        # The asked amount first; Android shows three buttons, so: asked, the next one up, not now. The buttons are
+        # HEARTH_MORE| ones (phone_answer), as phones have always had them
         amounts = [ask.minutes] + [m for m in AMOUNTS if m > ask.minutes][:1]
-        actions = [{"action": f"{ACTION_PREFIX}{ask.id}|{m}", "title": f"+{m} min"} for m in amounts]
-        actions.append({"action": f"{ACTION_PREFIX}{ask.id}|0", "title": "Not now"})
-        phones.send(
-            self.hass,
-            self.hub.entry.options,
-            title,
-            message,
-            {"tag": f"hearth_more_{ask.id}", "actions": actions},
-            ask_id=ask.id,
+        actions = [Action(f"{ACTION_PREFIX}{ask.id}|{m}", f"+{m} min") for m in amounts]
+        actions.append(Action(f"{ACTION_PREFIX}{ask.id}|0", "Not now"))
+        self.hub.attention.notify(
+            Item(
+                f"hearth_more_{ask.id}",
+                message,
+                title=title,
+                urgency=NOTICE,
+                audience=ADULTS,
+                actions=tuple(actions),
+                # Not on Home Assistant's bell: it shows to everyone who uses Home Assistant, and a kid's request
+                # (and its note) is the adults' business. Answered on the adults' phones and Hearth's page
+                expires=ask.expires,
+                about={"person": ask.person, "group": ask.group},
+                opens=ask.id,
+            )
         )
 
     def tell(self, title: str, message: str, tag: str) -> None:
-        """News for the adults, the way requests reach them: a notification here, and on the adults' phones."""
-        persistent_notification.async_create(self.hass, message, title=title, notification_id=tag)
-        phones.send(self.hass, self.hub.entry.options, title, message, {"tag": tag})
+        """News about a kid for the adults, the way requests reach them: on the adults' phones (not Home Assistant's
+        bell, which everyone who uses Home Assistant sees)."""
+        self.hub.attention.notify(Item(tag, message, title=title, audience=ADULTS))
 
     def _clear_notification(self, ask: Ask) -> None:
-        """An answered (or expired) request comes off Home Assistant's notifications and every adult's phone."""
-        persistent_notification.async_dismiss(self.hass, f"hearth_more_{ask.id}")
-        phones.clear(self.hass, self.hub.entry.options, f"hearth_more_{ask.id}")
+        """An answered (or expired) request comes off every adult's phone (and off Home Assistant's bell, where an
+        older Hearth put it)."""
+        self.hub.attention.clear(f"hearth_more_{ask.id}", audience=ADULTS, bell_too=True, phone=True)
 
     @callback
     def phone_answer(self, action: str, user_id: str | None) -> bool:

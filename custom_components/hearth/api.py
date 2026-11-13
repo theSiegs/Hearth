@@ -27,6 +27,8 @@ from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.util.network import is_local
 
 from .const import (
+    CAP_EVENTS,
+    CAP_PUSH,
     CONF_PUSH_SERVER,
     CONF_ROLES,
     CONTRACT,
@@ -42,7 +44,7 @@ from .hub import HearthHub, collect_secret, find_pairing, pin_lockout
 from .wait import WAIT_MAX
 from .push import clean_server, push_answer
 from .notifications import notify_pairing
-from . import parent_pin
+from . import notices, parent_pin
 from .asks import AskError
 from .status import clean_status, text
 from .watch import MAX_EVENTS, clean_started
@@ -322,7 +324,7 @@ class StatusView(HomeAssistantView):
         if status.get("local_rules"):
             imported = hub.household.limits.data.imported
             answer["local_rules_taken"] = [p for p in status["local_rules"] if f"{device_id}:{p}" in imported]
-        if hub.kind(device_id) == KIND_MOBILE:
+        if hub.has_cap(device_id, CAP_PUSH):
             # The phone has this version now: it isn't pinged for it; and where to listen for the next (or null)
             hub.push.delivered(device_id, state["version"])
             answer["push"] = hub.push.answer_for(device_id)
@@ -349,7 +351,8 @@ class EventsView(HomeAssistantView):
             return _error(HTTPStatus.SERVICE_UNAVAILABLE, "not_set_up")
         if not hub.authorized(device_id, request.headers.get(HEADER_SECRET)):
             return _error(HTTPStatus.UNAUTHORIZED, "not_paired")
-        if hub.kind(device_id) != KIND_TV:
+        # HearthTube's started videos: a TV's, unless a device says otherwise in its caps
+        if not hub.has_cap(device_id, CAP_EVENTS):
             return _error(HTTPStatus.FORBIDDEN, "not_a_tv")
         if hub.too_many_events(device_id):
             return _error(HTTPStatus.TOO_MANY_REQUESTS, "too_often")
@@ -404,22 +407,113 @@ class VerifyPinView(HomeAssistantView):
         pin = body.get("pin") if isinstance(body, dict) else None
         if not isinstance(pin, str):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
-        # Counted before the slow check, so parallel guesses can't all slip in under the free tries
-        lock.failures += 1
-        if person := await hass.async_add_executor_job(parent_pin.whose, stored, pin):
-            lock.failures = 0
-            lock.locked_until = None
-            hass.bus.async_fire(parent_pin.EVENT_PARENT_PIN_USED, {"device_id": device_id, "person": person})
+        person, wait_for = await _check_pin(hass, device_id, stored, pin)
+        if person:
             return web.json_response({"ok": True, "person": person})
         answer: dict[str, Any] = {"ok": False}
-        if wait_for := parent_pin.lockout(lock.failures):
-            lock.locked_until = dt_util.utcnow() + wait_for
-            answer["retry_in"] = parent_pin.retry_in(lock.locked_until, dt_util.utcnow())
-            hass.bus.async_fire(
-                parent_pin.EVENT_PARENT_PIN_LOCKED_OUT,
-                {"device_id": device_id, "failures": lock.failures, "retry_in": answer["retry_in"]},
-            )
+        if wait_for:
+            answer["retry_in"] = wait_for
         return web.json_response(answer)
+
+
+async def _check_pin(hass: HomeAssistant, device_id: str, stored: dict[str, str], pin: str) -> tuple[str | None, int]:
+    """A parent PIN from a device that isn't locked out, counted in its lockout (shared by every endpoint that takes
+    one): (whose it is, 0), or (None, the seconds of the lockout this wrong one started, 0 for none)."""
+    lock = pin_lockout(hass, device_id)
+    # Counted before the slow check, so parallel guesses can't all slip in under the free tries
+    lock.failures += 1
+    if person := await hass.async_add_executor_job(parent_pin.whose, stored, pin):
+        lock.failures = 0
+        lock.locked_until = None
+        hass.bus.async_fire(parent_pin.EVENT_PARENT_PIN_USED, {"device_id": device_id, "person": person})
+        return person, 0
+    if wait_for := parent_pin.lockout(lock.failures):
+        lock.locked_until = dt_util.utcnow() + wait_for
+        retry = parent_pin.retry_in(lock.locked_until, dt_util.utcnow())
+        hass.bus.async_fire(
+            parent_pin.EVENT_PARENT_PIN_LOCKED_OUT,
+            {"device_id": device_id, "failures": lock.failures, "retry_in": retry},
+        )
+        return None, retry
+    return None, 0
+
+
+class NoticeView(HomeAssistantView):
+    """POST /api/hearth/device/{device_id}/notice (header X-Hearth-Secret, a TV that shows notices): {"key": a
+    notice's key, "action": its button's number, and "pin": "<digits>" or "approval": "phone"} (notices.py).
+
+    With a Parent PIN (checked as verify_pin checks one, in the same lockout), the button's service runs as that adult:
+    {"ok": true, "done": true}. With "approval": "phone", the adults' phones are asked, and an adult's tap there runs it:
+    {"ok": true, "pending": "phone"}. 404 gone (no such notice for this TV now), 403 wrong_pin (with "retry_after" once
+    locked out), 400 bad_request, 429 too_many. A secret alone never runs a service."""
+
+    url = "/api/hearth/device/{device_id}/notice"
+    name = "api:hearth:device:notice"
+    requires_auth = False
+
+    async def post(self, request: web.Request, device_id: str) -> web.Response:
+        hass: HomeAssistant = request.app["hass"]
+        if not _local(request):
+            return _error(HTTPStatus.FORBIDDEN, "not_local")
+        hub = _hub(hass)
+        if hub is None:
+            return _error(HTTPStatus.SERVICE_UNAVAILABLE, "not_set_up")
+        if not hub.authorized(device_id, request.headers.get(HEADER_SECRET)):
+            return _error(HTTPStatus.UNAUTHORIZED, "not_paired")
+        if hub.too_many_notice_presses(device_id):
+            return _error(HTTPStatus.TOO_MANY_REQUESTS, "too_many")
+        body = await _json_body(request)
+        if not isinstance(body, dict):
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        key, n, pin, approval = body.get("key"), body.get("action"), body.get("pin"), body.get("approval")
+        if (
+            not isinstance(key, str)
+            or not 0 < len(key) <= 256
+            or not isinstance(n, int)
+            or isinstance(n, bool)
+            or n < 0
+            or (pin is None) == (approval is None)
+            or (pin is not None and (not isinstance(pin, str) or not pin.isdigit() or len(pin) > 16))
+            or (approval is not None and approval != notices.VIA_PHONE)
+        ):
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        item = notices.shown(hub, device_id).get(key)
+        if item is None:
+            return _error(HTTPStatus.NOT_FOUND, "gone")
+        # Only a button the TV was shown: a hearth service
+        if n >= len(item.actions) or not hub.attention.runs(item.actions[n]):
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        if approval is not None:
+            notices.ask_phone(hub, device_id, item, n)
+            return web.json_response({"ok": True, "pending": notices.VIA_PHONE})
+
+        lock = pin_lockout(hass, device_id)
+        if wait := parent_pin.retry_in(lock.locked_until, dt_util.utcnow()):
+            return web.json_response({"error": "wrong_pin", "retry_after": wait}, status=HTTPStatus.FORBIDDEN)
+        stored = parent_pin.stored_pins(hub.entry.options)
+        if not stored:
+            # No Parent PIN in Home Assistant: none can be right (the TV can still ask a parent's phone)
+            return _error(HTTPStatus.FORBIDDEN, "wrong_pin")
+        person, wait_for = await _check_pin(hass, device_id, stored, pin)
+        if not person:
+            answer: dict[str, Any] = {"error": "wrong_pin"}
+            if wait_for:
+                answer["retry_after"] = wait_for
+            return web.json_response(answer, status=HTTPStatus.FORBIDDEN)
+        # The notice may have gone while the PIN was checked
+        if notices.shown(hub, device_id).get(key) is None:
+            return _error(HTTPStatus.NOT_FOUND, "gone")
+        user_id = await notices.adult_user(hass, hub, person)
+        if not await hub.attention.run(item.actions[n], user_id):
+            return _error(HTTPStatus.INTERNAL_SERVER_ERROR, "failed")
+        notices.log_answer(
+            hub,
+            {"person": item.about.get("person"), "notice": item.key, "action": n, "device": device_id},
+            notices.VIA_PIN,
+            person=person,
+            user_id=user_id,
+        )
+        return web.json_response({"ok": True, "done": True})
 
 
 class AskView(HomeAssistantView):
@@ -510,6 +604,7 @@ def async_register_views(hass: HomeAssistant) -> None:
         StatusView,
         EventsView,
         VerifyPinView,
+        NoticeView,
         AskView,
         WaitView,
         TicketView,

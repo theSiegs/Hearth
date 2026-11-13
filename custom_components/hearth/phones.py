@@ -44,6 +44,8 @@ class Phone:
     person: str | None  # None: the chosen phone, not found as an adult's
     os: str | None  # android, ios, or None when unknown
     deep_link: bool = False
+    # Another domain's service chosen in the options (the chosen phone's, the schedule's): not always notify
+    domain: str = "notify"
 
     def click(self, ask_id: str) -> dict[str, str]:
         """What a tap on a request's notification opens: Android's clickAction, iOS's url."""
@@ -65,7 +67,8 @@ def _os(entry) -> str | None:
     return None
 
 
-def _service(entry) -> str | None:
+def service_of(entry) -> str | None:
+    """A mobile_app registration's notify service name."""
     name = entry.data.get("device_name")
     return f"mobile_app_{slugify(name)}" if name else None
 
@@ -89,7 +92,7 @@ def person_phones(hass: HomeAssistant, person: str) -> list[tuple[str, str | Non
     out: list[tuple[str, str | None]] = []
     for entry_id in dict.fromkeys(found):
         entry = entries[entry_id]
-        service = _service(entry)
+        service = service_of(entry)
         if service and all(service != s for s, _ in out):
             out.append((service, _os(entry)))
     return out
@@ -119,7 +122,7 @@ def phones(hass: HomeAssistant, options: Mapping[str, Any]) -> list[Phone]:
         service = chosen.split(".", 1)[1]
         if service not in seen:
             seen.add(service)
-            entry = next((e for e in hass.config_entries.async_entries(MOBILE_APP) if _service(e) == service), None)
+            entry = next((e for e in hass.config_entries.async_entries(MOBILE_APP) if service_of(e) == service), None)
             out.append(Phone(service, None, _os(entry) if entry else None))
     return [p for p in out if hass.services.has_service("notify", p.service)]
 
@@ -131,24 +134,26 @@ def send(
     message: str,
     data: dict[str, Any] | None = None,
     ask_id: str | None = None,
+    to: list[Phone] | None = None,
 ) -> list[str]:
-    """The same notification on every adult's phone; with [ask_id], a tap opens that request. The services told."""
+    """The same notification on every adult's phone (or the phones [to]); with [ask_id], a tap opens that request.
+    The services told."""
     told = []
-    for phone in phones(hass, options):
+    for phone in phones(hass, options) if to is None else to:
         payload: dict[str, Any] = {"message": message}
         if title is not None:
             payload["title"] = title
         extra = {**(data or {}), **(phone.click(ask_id) if ask_id else {})}
         if extra:
             payload["data"] = extra
-        hass.async_create_task(hass.services.async_call("notify", phone.service, payload, blocking=False))
+        hass.async_create_task(hass.services.async_call(phone.domain, phone.service, payload, blocking=False))
         told.append(phone.service)
     return told
 
 
-def clear(hass: HomeAssistant, options: Mapping[str, Any], tag: str) -> None:
-    """Takes the notification with [tag] off every adult's phone."""
-    send(hass, options, None, "clear_notification", {"tag": tag})
+def clear(hass: HomeAssistant, options: Mapping[str, Any], tag: str, to: list[Phone] | None = None) -> None:
+    """Takes the notification with [tag] off every adult's phone (or the phones [to])."""
+    send(hass, options, None, "clear_notification", {"tag": tag}, to=to)
 
 
 def page_view(hass: HomeAssistant, options: Mapping[str, Any]) -> dict[str, Any]:

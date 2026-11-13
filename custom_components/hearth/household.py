@@ -15,16 +15,18 @@ import hashlib
 import json
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components import persistent_notification
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
 from .entry_tasks import entry_task
+from .attention import CHOSEN_PHONE, Action, Item
 from .const import (
+    CAP_NOTICES,
     CONF_KIND,
     CONF_LOCKS,
+    CONF_MEDIA_PLAYERS,
     CONF_PERSON,
     CONF_PROFILES,
     CONF_ROLES,
@@ -38,7 +40,6 @@ from .const import (
 )
 from .apps import (
     CONF_APP_WATCH,
-    CONF_ASK_NOTIFY,
     EVENT_NEW_APP,
     AppCatalog,
     observed_from_entities,
@@ -48,8 +49,9 @@ from .apps import (
 )
 from .counting import ALL, DeviceUsage, Reading, group_seconds, merge
 from .limits import CONF_APP_GROUPS, OTHER, OTHER_DAY, SCHOOL_DAY, Group, GroupState, Limits, groups_from_options, groups_of
-from .enforce import FAMILY_LINK, FAMILY_SAFETY, Enforcement, enforcers_from_options, fs_account_of, fs_app, fs_app_platform
+from .enforce import FAMILY_LINK, FAMILY_SAFETY, NINTENDO, Enforcement, enforcers_from_options, fs_account_of, fs_app, fs_app_platform
 from .exceptions import Allows, Lifted, end_of_day
+from .history import BONUS, DEVICE_BONUS, History
 from .grants import Grants
 from .device_extra import ALLOW as EXTRA_ALLOW, BONUS as EXTRA_BONUS, DeviceExtra, DeviceExtras
 from .native_sync import NativeSync
@@ -64,11 +66,15 @@ from .media import media_rooms
 from .profiles import REF_PREFIX, is_ref, split_tv_key, tv_key
 from .schooldays import SchoolDays
 from .live import LiveTracker, Observation, Together
+from .nintendo import playing_entities, playing_title, switch_console, switch_name
 from .sources import (
     Source,
     Title,
     device_key,
+    fs_applications_of,
     now_playing,
+    phone_app_playing,
+    screen_entity,
     sources_from_options,
     title_key,
     titles_from_options,
@@ -79,6 +85,8 @@ if TYPE_CHECKING:
     from .hub import HearthHub
 
 SOURCE_HEARTH = "hearth"
+# What a kid on their Switch plays when Nintendo's integration doesn't say the game
+SWITCH_ITEM = "Switch"
 
 
 @dataclass
@@ -89,6 +97,44 @@ class Playing:
     state: str | None
     # The device as a target id (targets.py): hearth:<id>, fl:<id>, nintendo:<entity> or source:<id>
     target: str | None = None
+    # The most specific thing on, when known: an episode's, a video's or a movie's title, a track, a game (a Switch's,
+    # a live source's); else None and the app is what's on
+    title: str | None = None
+    # A show's episode as "s2e4" (or "e4"), when its media player says
+    episode: str | None = None
+    # When this play started (ISO, UTC; live.py)
+    since: str | None = None
+    # video (a show, video or movie from a media player or the device's media session), music (a track), game (a
+    # Switch's or a live source's title; the household summary makes an app in the Games group a game) or app
+    kind: str | None = None
+    # A show's name (the episode's series); a track's artist
+    series: str | None = None
+    artist: str | None = None
+    # Its length and where it is, when the player says: seconds, the position as of [position_at]; paused freezes it
+    duration_s: float | None = None
+    position_s: float | None = None
+    position_at: datetime | None = None
+    paused: bool = False
+    # What it counts and is timed under (live.py's item, a title key or the app), its live source when timed there,
+    # and its name as the history's `played` events have it
+    key: str | None = None
+    source: str | None = None
+    label: str | None = None
+
+    def view(self) -> dict[str, Any]:
+        return {
+            "kind": self.kind,
+            "app": self.app,
+            "package": self.package,
+            "title": self.title,
+            "series": self.series,
+            "artist": self.artist,
+            "episode": self.episode,
+            "device": self.device,
+            "state": self.state,
+            "target": self.target,
+            "since": self.since,
+        }
 
 
 @dataclass
@@ -122,6 +168,7 @@ class Household:
         self.allows = Allows(hass, hub.entry.entry_id)
         self.grants = Grants(hass, hub.entry.entry_id)
         self.device_extras = DeviceExtras(hass, hub.entry.entry_id)
+        self.history = History(hass, hub.entry.entry_id)
         self.sync = NativeSync(hass, self, hub.entry.entry_id)
         self.scheduler = Scheduler(hass, self, hub.entry.entry_id)
         self.chores = ChoreWatcher(hass, self)
@@ -150,6 +197,7 @@ class Household:
         await self.allows.async_load()
         await self.grants.async_load()
         await self.device_extras.async_load()
+        await self.history.async_load()
         await self.sync.async_load()
         await self.scheduler.async_load()
 
@@ -161,6 +209,7 @@ class Household:
         await self.allows.async_flush()
         await self.grants.async_flush()
         await self.device_extras.async_flush()
+        await self.history.async_flush()
         await self.sync.async_flush()
         await self.scheduler.async_flush()
 
@@ -261,12 +310,25 @@ class Household:
         locks = [lock["entity_id"] for lock in self.options.get(CONF_LOCKS, [])]
         watched = list(self.options.get(CONF_APP_WATCH, []))
         # Who's playing a shared Switch: a change holds or lets it go
-        playing = [e for enforcer in enforcers_from_options(self.options) for e in enforcer.playing]
+        enforcers = enforcers_from_options(self.options)
+        playing = [
+            e for enforcer in enforcers if enforcer.kind == NINTENDO
+            for e in playing_entities(self.hass, enforcer, enforcers)
+        ]
+        sources = sources_from_options(self.options)
+        # A phone app source is playing only while its screen is on
+        screens = [found for s in sources if s.phone_app and (found := screen_entity(self.hass, s))]
+        # A Family Safety Screen Time's breakdown is its child's Applications sensor's
+        applications = [
+            found[0] for s in sources if not s.live and (found := fs_applications_of(self.hass, s.entity_id))
+        ]
         return (
-            [s.entity_id for s in sources_from_options(self.options)]
+            [s.entity_id for s in sources]
+            + applications
             + locks
             + watched
             + playing
+            + screens
             + self.school.watched_entities()
             + self._school_time_sensors()
         )
@@ -408,7 +470,8 @@ class Household:
 
     def _family_safety_apps(self) -> dict[str, str]:
         """App id -> "name (platform)" from the `apps` attribute of the Family Safety sensors of the people with a
-        Family Safety enforcer (their account's sensors), for the app pickers; only ids pause_app takes."""
+        Family Safety enforcer (their account's sensors), or the Applications sensor's `applications` ({app_id,
+        app_name}) without one, for the app pickers; only ids pause_app takes."""
         enforcers = [e for e in enforcers_from_options(self.options) if e.kind == FAMILY_SAFETY]
         found: dict[str, str] = {}
         if not enforcers:
@@ -421,7 +484,14 @@ class Household:
         for state in self.hass.states.async_all("sensor"):
             apps = state.attributes.get("apps")
             if not isinstance(apps, list):
-                continue
+                applications = state.attributes.get("applications")
+                if not isinstance(applications, list):
+                    continue
+                apps = [
+                    {"package": app.get("app_id"), "name": app.get("app_name")}
+                    for app in applications[:500]
+                    if isinstance(app, dict)
+                ]
             # Theirs: by the account (Screen Time has user_id) or the account's device (Applications doesn't)
             if str(state.attributes.get("user_id")) not in accounts:
                 entry = registry.async_get(state.entity_id)
@@ -467,6 +537,12 @@ class Household:
         self.hub.commands.prune()
         today = now.date()
         new_day = self.limits.new_day(today)
+        # Home Assistant was down at midnight: yesterday's minutes are still in the devices' last statuses and the live
+        # timings (kept across the restart), so they're recorded from those on the first look after it starts
+        yesterday = (today - timedelta(days=1)).isoformat()
+        backfill = self.today is None and self.live.day == yesterday
+        back_readings: dict[str, dict[str, list[Reading]]] = {}
+        back_live = self.live.seconds if backfill else {}
         options = self.options
         self.groups = groups_from_options(options)
         self.sources = sources_from_options(options)
@@ -478,7 +554,17 @@ class Household:
         categories: dict[str, str] = {}
         catalog: dict[str, str] = {}
         hints: dict[str, set[str]] = {}
-        def add(person: str, device: str, reading: Reading) -> None:
+        # Each Playing with its play's key in live.py, for when it started
+        plays: list[tuple[Playing, tuple[str, str, str]]] = []
+
+        def observe(entry: Playing, person: str, device: str, item: str, source: str | None, label: str | None) -> None:
+            key = self._key(item)
+            observations.append(Observation(person, device, key, source, self._label(key, label)))
+            entry.key, entry.source, entry.label = key, source, self._label(key, label)
+            playing.setdefault(person, []).append(entry)
+            plays.append((entry, (person, device, key)))
+
+        def add(person: str, device: str, reading: Reading, into: dict[str, dict[str, list[Reading]]] = readings) -> None:
             items = {}
             for item, seconds in reading.items.items():
                 key = self._key(item)
@@ -486,7 +572,7 @@ class Household:
                 if reading.rest_group:
                     hints.setdefault(key, set()).add(reading.rest_group)
             mapped = Reading(reading.source, reading.total_s, items, reading.rest_group)
-            readings.setdefault(person, {}).setdefault(device, []).append(mapped)
+            into.setdefault(person, {}).setdefault(device, []).append(mapped)
 
         # Hearth's own devices
         for device_id, device in self.hub.devices.items():
@@ -497,41 +583,59 @@ class Household:
             catalog.update(status.get("catalog_categories") or {})
             name = device.get("name") or device_id
             # Yesterday's counts from a device that hasn't posted since midnight don't count today
-            fresh = status.get("day") == today.isoformat()
+            into = (
+                readings if status.get("day") == today.isoformat()
+                else back_readings if backfill and status.get("day") == yesterday
+                else None
+            )
             if device.get(CONF_KIND) == KIND_TV:
                 profiles = self.device_profile_people(device_id)
-                if fresh:
+                if into is not None:
                     for profile_id, usage in (status.get("usage_today") or {}).items():
                         person = profiles.get(profile_id)
                         if person:
                             add(person, device_id, Reading(SOURCE_HEARTH, float(usage.get("seconds") or 0),
-                                                           usage.get("apps") or {}))
+                                                           usage.get("apps") or {}), into)
                 person = profiles.get(status.get("profile_id") or "")
             else:
                 person = device.get(CONF_PERSON)
-                if person and fresh:
+                if person and into is not None:
                     add(person, device_id, Reading(SOURCE_HEARTH, float(status.get("seconds_today") or 0),
-                                                   status.get("app_seconds_today") or {}))
+                                                   status.get("app_seconds_today") or {}), into)
             package = status.get("app_package")
             if person and status.get("screen") == "on" and self.hub.connected(device_id) and package:
-                playing.setdefault(person, []).append(Playing(status.get("app"), package, name, status.get("state"), f"hearth:{device_id}"))
-                key = self._key(package)
-                observations.append(Observation(person, device_id, key, None, self._label(key, status.get("app"))))
+                # A TV's media player says what's on, else the device's own media session: the show (else the title)
+                # is what "together" matches on then
+                media = (self._tv_media(device_id) if device.get(CONF_KIND) == KIND_TV else None) or _status_media(status)
+                entry = Playing(status.get("app"), package, name, status.get("state"), f"hearth:{device_id}", kind="app")
+                for field_name, value in (media or {}).items():
+                    setattr(entry, field_name, value)
+                shown = entry.series or entry.title
+                observe(entry, person, device_id, shown or package, None, shown or status.get("app"))
 
         # Sources: totals now; live ones are looked at (and timed) below
         for source in self.sources:
             device = device_key(source, by_id)
-            if source.live:
-                item = now_playing(self.hass, source)
-                if item is not None:
-                    key = self._key(item)
-                    observations.append(
-                        Observation(source.person, device, key, source.reading_source, self._label(key, item))
-                    )
+            if source.phone_app:
+                # A phone's app in use, while its screen is: not timed (its own parental controls count it)
+                package = phone_app_playing(self.hass, source)
+                if package is not None:
                     from .targets import target_of_counted
 
                     target, _ = target_of_counted(self, source.person, f"source:{source.id}")
-                    playing.setdefault(source.person, []).append(Playing(item, None, source.name, "playing", target))
+                    app = self._app_name(package)
+                    observe(Playing(app, package, source.name, "playing", target, kind="app"), source.person, device,
+                            package, None, app)
+            elif source.live:
+                item = now_playing(self.hass, source)
+                if item is not None:
+                    from .targets import target_of_counted
+
+                    target, _ = target_of_counted(self, source.person, f"source:{source.id}")
+                    observe(
+                        Playing(item, None, source.name, "playing", target, item, kind="game"),
+                        source.person, device, item, source.reading_source, item,
+                    )
             else:
                 reading = totals_reading(self.hass, source)
                 if reading is not None:
@@ -541,8 +645,40 @@ class Household:
                 if reading is not None:
                     add(source.person, device, reading)
 
+        # A kid on their Switch (Nintendo's playing sensors): not timed (Nintendo's own minutes count), but together
+        enforcers = enforcers_from_options(options)
+        for enforcer in enforcers:
+            if enforcer.kind != NINTENDO:
+                continue
+            target = f"nintendo:{enforcer.entity_id}"
+            # A live source on the same Switch says it already
+            if any(p.target == target for p in playing.get(enforcer.person, [])):
+                continue
+            on = [
+                state for entity_id in playing_entities(self.hass, enforcer, enforcers)
+                if (state := self.hass.states.get(entity_id)) is not None and state.state == "on"
+            ]
+            if on:
+                game = next((t for state in on if (t := playing_title(state))), None)
+                # Without the game's name, "together" only on the same console (never two Switches both saying
+                # "Switch")
+                item = game or f"{SWITCH_ITEM}@{switch_console(self.hass, enforcer.entity_id)}"
+                observe(
+                    Playing(game or SWITCH_ITEM, None, switch_name(self.hass, enforcer.entity_id), "playing", target, game,
+                            kind="game"),
+                    enforcer.person, target, item, None, game or SWITCH_ITEM,
+                )
+
         started, ended = self.live.look(now, today, observations)
+        for entry, key in plays:
+            entry.since = self.live.since_of(*key)
+        # What was played, once it ends: the week's top titles later (history.py, `played`)
+        for play in self.live.ended_plays:
+            self.history.log_played(play.person, play.label, play.device, play.minutes)
         for source in self.sources:
+            if source.live and (timed := back_live.get(source.reading_source)):
+                add(source.person, device_key(source, by_id),
+                    Reading(source.reading_source, sum(timed.values()), timed, source.group), back_readings)
             if source.live:
                 timed = self.live.seconds.get(source.reading_source, {})
                 if timed:
@@ -559,6 +695,18 @@ class Household:
         self._hints = hints
         self._look_for_new_apps(categories)
         membership = self.membership()
+        # The day turned: each person's final minutes of the day before, as last counted (history.py, `day`)
+        if self.today is not None and self.today != today:
+            for person, last in self.days.items():
+                self.history.log_day(person, self.today, self.day_minutes(last), self.day_budget(last))
+        elif backfill:
+            back_day = today - timedelta(days=1)
+            # Only who had time counted on Hearth's devices or live sources: a totals sensor has started today since
+            for person in back_readings:
+                devices = {device: merge(r) for device, r in back_readings[person].items()}
+                seconds = group_seconds(devices, membership, self.outside_all())
+                self.history.log_day(person, back_day, self.day_minutes(PersonDay(person, groups=seconds)),
+                                     self.budget_on(person, back_day))
         # Today's answer as last worked out; if the day turned without a refresh yet, what's known now
         is_school = (
             self.school.school if self.school.day == today else self.school.budget_is_school(self.school.decide_type(today))
@@ -613,12 +761,30 @@ class Household:
             granted_of=self.grants.lifted,
             paused_of=lambda person: self.paused_packages(person, membership, with_fs=True),
             device_lifted_of=self._device_lifted,
+            paused_groups_of=lambda person: self.paused_groups(person, now),
         )
         # An adult's allow of All screen time opens Google's and Microsoft's own limits too
         self.sync.mirror_allows()
         for together, what in [(t, "started") for t in started] + [(t, "ended") for t in ended]:
             self.hass.bus.async_fire(EVENT_PLAYING_TOGETHER, self._together_event(together, what))
         async_dispatcher_send(self.hass, SIGNAL_PEOPLE, new_day)
+
+    def day_minutes(self, day: PersonDay | None) -> dict[str, int]:
+        """A person's minutes per group of the household (seconds / 60, rounded), as the summary's `week` shows them."""
+        groups = day.groups if day is not None else {}
+        return {g.id: int(round(groups.get(g.id, 0.0) / 60)) for g in self.groups}
+
+    def day_budget(self, day: PersonDay) -> dict[str, int | None]:
+        """A person's budget per group of the household that day, without bonus (None: no limit), as counted."""
+        return {g.id: (state.budget_min if (state := day.limits.get(g.id)) else None) for g in self.groups}
+
+    def budget_on(self, person: str, day: date) -> dict[str, int | None]:
+        """The person's budget per group on [day]: today's as counted, another day's from its day type by the dates
+        and the rule (schooldays.type_by_dates) and the budgets now."""
+        if day == self.today and (today := self.days.get(person)) is not None:
+            return self.day_budget(today)
+        kind = SCHOOL_DAY if self.school.budget_is_school(self.school.type_by_dates(day)) else OTHER_DAY
+        return {g.id: self.limits.budget(person, g.id, kind) for g in self.groups}
 
     # New apps
 
@@ -653,23 +819,14 @@ class Household:
             update_notification(self.hass, [], self.groups)
 
     def _ask_on_phone(self, entry) -> None:
-        service = self.options.get(CONF_ASK_NOTIFY)
-        if not service or "." not in service:
-            return
-        domain, name = service.split(".", 1)
-        if not self.hass.services.has_service(domain, name):
-            return
-        self.hass.async_create_task(
-            self.hass.services.async_call(
-                domain,
-                name,
-                {
-                    "title": "New app: " + entry.name,
-                    "message": (f"{entry.who} has {entry.name}. " if entry.who else f"{entry.name} is new. ")
-                    + "Which group does it count in?",
-                    "data": {"tag": f"hearth_app_{entry.package}", "actions": phone_actions(entry, self.groups)},
-                },
-                blocking=False,
+        self.hub.attention.notify(
+            Item(
+                f"hearth_app_{entry.package}",
+                (f"{entry.who} has {entry.name}. " if entry.who else f"{entry.name} is new. ")
+                + "Which group does it count in?",
+                title="New app: " + entry.name,
+                audience=CHOSEN_PHONE,
+                actions=tuple(Action(a["action"], a["title"]) for a in phone_actions(entry, self.groups)),
             )
         )
 
@@ -714,6 +871,47 @@ class Household:
                 }
                 for e in recent
             ],
+        }
+
+    def _app_name(self, package: str) -> str:
+        entry = self.apps.apps.get(package)
+        return entry.name if entry is not None and entry.name else package
+
+    def _tv_media(self, device_id: str) -> dict[str, Any] | None:
+        """What a TV's media player (options' media_players) says is on, as Playing's fields (kind, title, series,
+        episode, artist, and its length and position when known), or None."""
+        entity_id = self.options.get(CONF_MEDIA_PLAYERS, {}).get(device_id)
+        state = self.hass.states.get(entity_id) if entity_id else None
+        if state is None or state.state not in ("playing", "paused", "buffering", "on"):
+            return None
+        attrs = state.attributes
+
+        def text(name: str) -> str | None:
+            value = attrs.get(name)
+            return value.strip()[:128] if isinstance(value, str) and value.strip() else None
+
+        series, title, artist = text("media_series_title"), text("media_title"), text("media_artist")
+        if not (series or title):
+            return None
+        if series and (not title or title == series):
+            # Only the show's name: it's the most specific known
+            series, title = None, series
+        music = attrs.get("media_content_type") == "music" or (artist is not None and series is None)
+        season, number = attrs.get("media_season"), attrs.get("media_episode")
+        episode = None
+        if series and str(number or "").isdigit():
+            episode = f"s{season}e{number}" if str(season or "").isdigit() else f"e{number}"
+        at = attrs.get("media_position_updated_at")
+        if isinstance(at, str):
+            at = dt_util.parse_datetime(at)
+        return {
+            "kind": "music" if music else "video",
+            "title": title,
+            "series": None if music else series,
+            "artist": artist if music else None,
+            "episode": episode,
+            **_timing(attrs.get("media_duration"), attrs.get("media_position"), at if isinstance(at, datetime) else None),
+            "paused": state.state == "paused",
         }
 
     def _label(self, key: str, fallback: str | None) -> str:
@@ -763,6 +961,15 @@ class Household:
                 found.add(pause["app"])
             elif (group := self.group(pause["group"])) is not None:
                 found |= set(self._group_apps(group, membership, with_fs=with_fs))
+        return found
+
+    def paused_groups(self, person: str, now: datetime | None = None) -> set[str]:
+        """The groups an adult paused for the person while those pauses last, All screen time for a family pause (a
+        Switch is held for them: enforce.py)."""
+        found = {ALL} if pause_of(self.hass, person, now) else set()
+        for pause in app_pauses_of(self.hass, person, now):
+            if pause["group"] is not None and (group := self.group(pause["group"])) is not None:
+                found.add(group.id)
         return found
 
     def _paused_groups_document(self, person: str, membership) -> list[dict[str, Any]]:
@@ -903,6 +1110,8 @@ class Household:
             "groups": groups,
             "locked": bool(day and day.locked),
             **self._locks_document(person, day),
+            # What they're playing now, anywhere (as the household summary's `playing`)
+            "playing": [p.view() for p in (day.playing if day else [])],
             # A parent let this person's phone share with the launcher's tile exchange (off unless chosen)
             "tile_exchange_share": person in self.options.get(CONF_TILE_EXCHANGE, []),
             # Their latest request for more time and its answer (asks.py), while it's still news
@@ -956,6 +1165,10 @@ class Household:
                 # ("person.sam"), and the TV finds that person's profile here
                 "people": {profile_id: person for profile_id, person in sorted(profiles.items()) if person},
             }
+            # What the adults should see on this TV (attention items for TVs: the chosen suggestions), for a TV that
+            # says it shows them; it shows each in its adult profiles only ("for" names one person, else every adult)
+            if self.hub.has_cap(device_id, CAP_NOTICES):
+                body["notices"] = self.hub.attention.tv_notices({p for p in profiles.values() if p})
             # The adults' parent PINs (hashes, never a PIN): a paired TV asks verify_pin, and keeps these (sealed) to
             # check PINs with Home Assistant down. Sent only when they changed since the TV's copy (its
             # parent_pins_version); the version alone says its copy is current. Each says the TV profiles of its adult.
@@ -1313,6 +1526,8 @@ class Household:
             else:
                 until = min(now + timedelta(minutes=minutes or 0), midnight)
         extra = self.device_extras.add(person, target, found["via"], kind, group, until, minutes, base_s, reason)
+        if kind == EXTRA_BONUS:
+            self.history.log(DEVICE_BONUS, person, device=target, group=group, minutes=minutes)
         self.recompute()
         if found["via"] == "family_link":
             self.sync.give_device(person, extra.id, until, target.removeprefix("fl:"), None)
@@ -1349,6 +1564,8 @@ class Household:
         day = self.days.get(person)
         had_none = bool(day and (state := day.limits.get(ALL)) and state.minutes_left == 0)
         self.limits.set_bonus(person, group, self.limits.bonus(person, group) + minutes)
+        if minutes:
+            self.history.log(BONUS, person, group=group, minutes=minutes)
         self.recompute()
         if group == ALL and minutes > 0:
             # All screen time back: Google's and Microsoft's own limits get as much
@@ -1383,14 +1600,44 @@ class Household:
             names = ", ".join(
                 (state.name if (state := self.hass.states.get(p)) else p) for p in taken
             )
-            persistent_notification.async_create(
-                self.hass,
-                f"Hearth took the screen time set on a TV as the first daily limits for {names}. Change them on "
-                "Hearth's page. Bedtime set on the TV isn't taken: set it under Locks.",
-                title="Screen time from the TV",
-                notification_id=f"hearth_rules_{device_id}",
+            self.hub.attention.notify(
+                Item(
+                    f"hearth_rules_{device_id}",
+                    f"Hearth took the screen time set on a TV as the first daily limits for {names}. Change them on "
+                    "Hearth's page. Bedtime set on the TV isn't taken: set it under Locks.",
+                    title="Screen time from the TV",
+                    bell=True,
+                    phone=False,
+                )
             )
         return taken
+
+
+def _status_media(status: dict[str, Any]) -> dict[str, Any] | None:
+    """What a Hearth device's own media session says is on (status.py: media_title, media_artist, and from newer
+    builds media_duration_s with media_position_s as of media_position_at), while it plays or is paused."""
+    title = status.get("media_title")
+    if not title or status.get("state") not in ("playing", "paused"):
+        return None
+    artist = status.get("media_artist")
+    at = status.get("media_position_at")
+    when = dt_util.utc_from_timestamp(at / 1000) if isinstance(at, int) else None
+    return {
+        "kind": "music" if artist else "video",
+        "title": title,
+        "artist": artist,
+        **_timing(status.get("media_duration_s"), status.get("media_position_s"), when),
+        "paused": status.get("state") == "paused",
+    }
+
+
+def _timing(duration: Any, position: Any, at: datetime | None) -> dict[str, Any]:
+    """A play's length and position (seconds), when the player gives a usable length; else none of them."""
+    if isinstance(duration, bool) or not isinstance(duration, (int, float)) or duration <= 0:
+        return {}
+    if isinstance(position, bool) or not isinstance(position, (int, float)) or position < 0 or at is None:
+        return {"duration_s": float(duration)}
+    return {"duration_s": float(duration), "position_s": min(float(position), float(duration)), "position_at": at}
 
 
 def person_identifier(person: str) -> tuple[str, str]:

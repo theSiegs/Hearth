@@ -5,6 +5,10 @@ a person playing an item on a device. Live sources' time accrues between two loo
 that skips a look loses that minute, never gains one). Hearth devices' items aren't timed here (their own counts are
 better) but count for "together". Two or more people on the same title (or the same item, when no title matches) are
 playing together; each one's together time accrues the same way. Kept across restarts; starts again each local day.
+
+Each observation is also a play (a person on an item on a device) from the first look that saw it to the last; a play
+that ended (gone at a look, or a look after a long gap) is in `ended_plays` after that look, for the history's `played`
+events. Plays in progress aren't kept across a restart (one that spans it is cut there).
 """
 
 from __future__ import annotations
@@ -30,6 +34,16 @@ class Observation:
     label: str  # how to show it (the title's name, the app's)
 
 
+@dataclass(frozen=True)
+class Play:
+    person: str
+    device: str
+    item: str
+    label: str
+    since: str  # ISO, UTC
+    minutes: int  # from its first look to its last, rounded
+
+
 @dataclass
 class Together:
     key: str
@@ -51,6 +65,10 @@ class LiveTracker:
         self._last_seen: set[tuple[str, str]] = set()  # (source, item) seen at the last look
         self._last_together: dict[str, set[str]] = {}  # key -> people
         self.together: dict[str, Together] = {}
+        # (person, device, item) -> (first seen, label): the plays in progress
+        self.plays: dict[tuple[str, str, str], tuple[datetime, str]] = {}
+        # The plays the last look saw end
+        self.ended_plays: list[Play] = []
 
     async def async_load(self) -> None:
         stored = await self._store.async_load() or {}
@@ -64,15 +82,38 @@ class LiveTracker:
     async def async_flush(self) -> None:
         await self._store.async_save(self._data())
 
+    def since_of(self, person: str, device: str, item: str) -> str | None:
+        """When a play in progress started (ISO, UTC), or None."""
+        found = self.plays.get((person, device, item))
+        return dt_util.as_utc(found[0]).isoformat() if found else None
+
+    def _plays(self, now: datetime, gap: bool, observations: list[Observation]) -> None:
+        current = {(o.person, o.device, o.item): o.label for o in observations}
+        ended: list[Play] = []
+        for key, (start, label) in list(self.plays.items()):
+            if gap or key not in current:
+                # It ended at the last look that saw it
+                end = self._last or now
+                minutes = max(0, int(round((end - start).total_seconds() / 60)))
+                ended.append(Play(*key, label, dt_util.as_utc(start).isoformat(), minutes))
+                del self.plays[key]
+        for key, label in current.items():
+            start = self.plays[key][0] if key in self.plays else now
+            self.plays[key] = (start, label)
+        self.ended_plays = ended
+
     def look(self, now: datetime, today: date, observations: list[Observation]) -> tuple[list[Together], list[Together]]:
-        """Takes a look; answers the togethers that started and ended since the last."""
+        """Takes a look; answers the togethers that started and ended since the last (the plays that ended are in
+        ended_plays)."""
         if self.day != today.isoformat():
             self.day = today.isoformat()
             self.seconds = {}
             self.together_s = {}
         elapsed = (now - self._last).total_seconds() if self._last else 0.0
-        if elapsed < 0 or elapsed > MAX_GAP_S:
+        gap = elapsed < 0 or elapsed > MAX_GAP_S
+        if gap:
             elapsed = 0.0
+        self._plays(now, gap, observations)
 
         seen = {(o.source, o.item) for o in observations if o.source}
         for source, item in seen & self._last_seen:

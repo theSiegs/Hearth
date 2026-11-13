@@ -1,11 +1,12 @@
 """Hearth's sidebar page: its settings, budgets, pairing and parent PIN commands."""
 
 from datetime import timedelta
+from unittest.mock import patch
 
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
-from custom_components.hearth import parent_pin
+from custom_components.hearth import panel, parent_pin
 from custom_components.hearth.const import DOMAIN
 from test_people import _household_with_sam
 
@@ -30,6 +31,8 @@ async def test_the_page_reads_and_sets_the_household(
     assert config["profiles"] == {"name:sam": "person.sam"}
     assert config["seen_profiles"]["name:sam"] == "Sam · Kitchen"
     assert any(g["id"] == "all" for g in config["groups"])
+    # Today's hour-by-hour chart reads the statistics of each person's Screen time today sensor
+    assert config["screen_time_sensors"] == {"person.sam": "sensor.hearth_sam_screen_time_today"}
 
     answer = await _ws(ws, {"type": "hearth/config/set", "key": "roles", "value": {"person.sam": "kid", "person.alex": "adult"}})
     assert answer["success"], answer
@@ -99,3 +102,13 @@ async def test_only_administrators_use_the_page(
     ws = await hass_ws_client(hass)
     answer = await _ws(ws, {"type": "hearth/config"})
     assert not answer["success"] and answer["error"]["code"] == "unauthorized"
+
+
+async def test_the_family_card_is_added_to_every_dashboard_once(hass: HomeAssistant) -> None:
+    with patch.object(panel, "add_extra_js_url") as add:
+        panel.async_register_card(hass)
+        panel.async_register_card(hass)
+    [(args, _kwargs)] = add.call_args_list
+    assert args[0] is hass
+    assert args[1].startswith("/hearth_static/hearth-family-card.js?v=")
+    assert (panel.FRONTEND / panel.CARD).exists()

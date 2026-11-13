@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from .const import APP_CATEGORIES, TV_STATES
+from .const import APP_CATEGORIES, CAPS, MAX_CAPS, TV_STATES
 from .profiles import is_local_key, is_ref
 
 _CONTROL = re.compile(r"[\x00-\x1f\x7f-\x9f]")
@@ -43,6 +43,9 @@ _TEXT_FIELDS = (
 _BOOL_FIELDS = ("now_playing_available", "kids_profile", "screen_time_up", "google_time_up")
 _INT_FIELDS = {
     "media_duration_s": (0, 7 * MAX_SECONDS_PER_DAY),
+    # Where the media session is (seconds) as of media_position_at (epoch milliseconds), for "8 min left"
+    "media_position_s": (0, 7 * MAX_SECONDS_PER_DAY),
+    "media_position_at": (0, 2**53),
     "screen_time_minutes_left": (0, 24 * 60),
     "screen_time_seen_at": (0, 2**53),
     "screen_time_event_at": (0, 2**53),
@@ -161,7 +164,17 @@ def clean_status(raw: Any) -> dict[str, Any] | None:
     # A TV's own screen-time rules for its kids profiles, from before it was paired: Hearth takes them as a kid's
     # first budgets (Household.import_local_rules)
     status["local_rules"] = local_rules(raw.get("local_rules"))
+    # What the device says it can do (const.CAPS); None when it didn't say, and its kind's apply (hub.has_cap)
+    status["caps"] = caps(raw.get("caps"))
     return status
+
+
+def caps(value: Any) -> list[str] | None:
+    """The known capabilities in a list of at most MAX_CAPS strings, each once (unknown ones dropped: a newer device
+    may know more); None for anything but a list."""
+    if not isinstance(value, list):
+        return None
+    return list(dict.fromkeys(c for c in value[:MAX_CAPS] if isinstance(c, str) and c in CAPS))
 
 
 MAX_RULES_PROFILES = 20

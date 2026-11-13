@@ -9,7 +9,6 @@ import secrets
 from datetime import datetime
 from typing import Any
 
-from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_send
@@ -29,6 +28,7 @@ from .const import (
     CONNECTED_WITHIN,
     KIND_MOBILE,
     MAX_EVENT_POSTS,
+    MAX_NOTICE_POSTS,
     MAX_PENDING_PAIRINGS,
     MAX_STATUS_POSTS,
     PAIRING_EXPIRES,
@@ -37,6 +37,7 @@ from .const import (
     KIND_TV,
     MAX_TICKETS,
     TICKET_EXPIRES,
+    default_caps,
     SIGNAL_DEVICE_ADDED,
     SIGNAL_PAIRINGS,
     SIGNAL_STATUS,
@@ -45,8 +46,10 @@ from .const import (
     STORAGE_VERSION,
 )
 from .asks import Asks
+from .attention import ADMINS, Attention, Item
 from .commands import Commands
 from .push import PushChannel, new_topic
+from .suggest_push import SuggestPush
 from .wait import DeviceWaits
 from .household import Household
 from .parent_pin import EVENT_PARENT_PIN_LOCKED_OUT
@@ -139,6 +142,7 @@ class DeviceState:
     seen: datetime | None = None
     posts: list[datetime] = field(default_factory=list)
     event_posts: list[datetime] = field(default_factory=list)
+    notice_posts: list[datetime] = field(default_factory=list)
 
 
 class HearthHub:
@@ -157,12 +161,16 @@ class HearthHub:
         self._asked_at: dict[str, datetime] = shared["asked_at"]
         # Pairing tickets by their hash (the ticket itself is never kept)
         self._tickets: dict[str, Ticket] = shared["tickets"]
+        # Telling people (the companion app, the bell): first, so everything after can
+        self.attention = Attention(hass, self)
         self.household = Household(hass, self)
         self.asks = Asks(hass, self)
         # One-shot commands for the TVs (hearth.play_on_tv), handed over in their state documents
         self.commands = Commands(hass)
         # "Something changed" pings to the phones, when the household has a push server
         self.push = PushChannel(hass, self)
+        # The suggestions the household chose, on the adults' phones
+        self.suggest_push = SuggestPush(hass, self)
         self.waits = DeviceWaits(hass, self)
 
     # The devices
@@ -174,6 +182,14 @@ class HearthHub:
     def kind(self, device_id: str) -> str | None:
         device = self.devices.get(device_id)
         return device.get(CONF_KIND) if device else None
+
+    def has_cap(self, device_id: str, cap: str) -> bool:
+        """Whether the device can be sent [cap] (const.CAPS): what it said in its status, once it has said; until
+        then its kind's (default_caps), so a device from before caps keeps what it had."""
+        declared = (self.state(device_id).status or {}).get("caps")
+        if declared is not None:
+            return cap in declared
+        return cap in default_caps(self.kind(device_id))
 
     def state(self, device_id: str) -> DeviceState:
         return self._states.setdefault(device_id, DeviceState())
@@ -220,6 +236,16 @@ class HearthHub:
         state.event_posts.append(now)
         return False
 
+    def too_many_notice_presses(self, device_id: str) -> bool:
+        """The same for its notices' button presses, counted on their own."""
+        now = dt_util.utcnow()
+        state = self.state(device_id)
+        state.notice_posts = [t for t in state.notice_posts if now - t < STATUS_WINDOW]
+        if len(state.notice_posts) >= MAX_NOTICE_POSTS:
+            return True
+        state.notice_posts.append(now)
+        return False
+
     def too_many_user_asks(self, user_id: str) -> bool:
         """too_many_events for a Home Assistant user's own asks (hearth/ask)."""
         now = dt_util.utcnow()
@@ -240,6 +266,9 @@ class HearthHub:
             self.hass.bus.async_fire(
                 EVENT_PARENT_PIN_LOCKED_OUT, {"device_id": device_id, "lockouts": after - before, "retry_in": None}
             )
+        # A device that said its caps once keeps them while its later posts leave them out
+        if status.get("caps") is None and (state.status or {}).get("caps") is not None:
+            status = {**status, "caps": state.status["caps"]}
         state.status = status
         state.seen = dt_util.utcnow()
         # What the TV ran of its commands leaves the queue (its answer no longer carries them)
@@ -415,12 +444,17 @@ class HearthHub:
             EVENT_DEVICE_PAIRED,
             {"device_id": device_id, "name": name, "kind": kind, "person": held.person, "by": held.minted_by},
         )
-        persistent_notification.async_create(
-            self.hass,
-            f"**{name}** paired with Hearth through **{by_name}**, which is already paired. If that wasn't you, delete "
-            "it in [Devices & services](/config/integrations/integration/hearth).",
-            title="A Hearth device paired",
-            notification_id=f"hearth_paired_{device_id}",
+        self.attention.notify(
+            Item(
+                f"hearth_paired_{device_id}",
+                f"**{name}** paired with Hearth through **{by_name}**, which is already paired. If that wasn't you, "
+                "delete it in [Devices & services](/config/integrations/integration/hearth).",
+                title="A Hearth device paired",
+                urgency="notice",
+                audience=ADMINS,
+                bell=True,
+                phone=False,
+            )
         )
         return pairing
 

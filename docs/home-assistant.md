@@ -209,6 +209,7 @@ webhook automation, and reading `sensor.hearth_allowance`, is retired: pair the 
 | `state` | `playing`, `paused`, `idle` or `off` |
 | `app`, `app_package` | the app in front |
 | `media_app`, `media_title`, `media_artist`, `media_album`, `media_duration_s` | now playing, from any app's media session (needs notification access) |
+| `media_position_s`, `media_position_at` | where playback is (seconds) and when that was read (epoch ms), from the same media session; Hearth works out the time left |
 | `now_playing_available` | whether Hearth TV can see what's playing |
 | `profile` | the Google TV profile's name |
 | `profile_id` | a stable key for the profile on this TV (`user:<serial>`, or `user:<serial>:<account>` for another adult's account in the same user), unchanged by renames; the serial is this TV's own, so another TV has another key for the same profile |

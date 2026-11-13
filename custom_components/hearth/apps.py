@@ -13,7 +13,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from homeassistant.components import persistent_notification
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
@@ -163,20 +162,25 @@ def options_with_app_in_group(options: dict[str, Any], package: str, group_id: s
 
 def update_notification(hass: HomeAssistant, waiting: list[AppEntry], groups: list[Group]) -> None:
     """One notification in Home Assistant's bell listing the apps waiting to be sorted (gone when none are)."""
+    from .attention import Item, attention
+
     if not waiting:
-        persistent_notification.async_dismiss(hass, NOTIFICATION_ID)
+        attention(hass).clear(NOTIFICATION_ID, bell_too=True)
         return
     names = {g.id: g.name for g in groups}
     lines = [
         f"- **{e.name}**" + (f" ({e.who})" if e.who else "") + (f", suggested: {names.get(e.suggested, e.suggested)}" if e.suggested else "")
         for e in waiting[:20]
     ]
-    persistent_notification.async_create(
-        hass,
-        "New apps to sort into a group:\n" + "\n".join(lines)
-        + "\n\nSort them in [Hearth's options](/config/integrations/integration/" + DOMAIN + ") (Configure > Sort new apps).",
-        title="Hearth: new apps",
-        notification_id=NOTIFICATION_ID,
+    attention(hass).notify(
+        Item(
+            NOTIFICATION_ID,
+            "New apps to sort into a group:\n" + "\n".join(lines)
+            + "\n\nSort them in [Hearth's options](/config/integrations/integration/" + DOMAIN + ") (Configure > Sort new apps).",
+            title="Hearth: new apps",
+            bell=True,
+            phone=False,
+        )
     )
 
 

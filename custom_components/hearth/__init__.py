@@ -32,16 +32,17 @@ from .auth import is_adult_user, register_service
 from .websocket import async_register_commands
 from .pause import end_app_pause, end_pause, set_app_pause, set_pause
 from .places import ARRIVE, LEAVE
-from . import panel
+from . import llm_api, panel, suggest_push
 from .apps import ACTION_PREFIX
 from .asks import ACTION_PREFIX as ASK_ACTION_PREFIX
 from .commands import is_profile_id, what_to_play
-from .const import CONF_DEVICES, CONF_KIND, CONF_PROFILES, CONF_PUSH_TOPIC, DOMAIN, KIND_MOBILE, KIND_TV
+from .const import CAP_PLAY, CAP_PUSH, CONF_DEVICES, CONF_PROFILES, CONF_PUSH_TOPIC, DOMAIN
 from .profiles import ISSUE_PROFILE_KEYS, legacy_keys
 from .push import new_topic
 from .hub import HearthHub
+from .attention import ACT_PREFIX
 from .limits import DAY_TYPES
-from .asks import CONF_OFFER_MORE, AskError
+from .asks import EVENT_MORE_TIME_ANSWERED, EVENT_MORE_TIME_REQUESTED, AskError
 from .const import EVENT_BUDGET_REACHED
 from .counting import ALL
 from .exceptions import END_OF_DAY, SCHOOL_TIME_END, at_time, end_of_day
@@ -268,10 +269,13 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     register_service(hass, DOMAIN, "pause", pause, schema=PAUSE_SCHEMA)
     register_service(hass, DOMAIN, "pause_end", pause_end, schema=PAUSE_END_SCHEMA)
     _register_answer_request(hass)
+    _register_dismiss_suggestion(hass)
     _register_exception_services(hass, loaded_household, group_id)
     _register_watch_services(hass)
     _register_play_on_tv(hass)
     _register_copy_sites(hass, loaded_household)
+    # Hearth for assistants: Home Assistant's MCP Server and Assist (llm_api.py)
+    llm_api.async_register(hass)
     return True
 
 
@@ -312,6 +316,33 @@ def _register_answer_request(hass: HomeAssistant) -> None:
         schema=ANSWER_REQUEST_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
+
+
+DISMISS_SUGGESTION_SCHEMA = vol.Schema(
+    {
+        vol.Required("person"): cv.entity_id,
+        vol.Required("key"): vol.All(cv.string, vol.Length(min=1, max=200)),
+    }
+)
+
+
+def _register_dismiss_suggestion(hass: HomeAssistant) -> None:
+    """hearth.dismiss_suggestion: an adult puts a suggestion off for the rest of the day ("not today")."""
+
+    @callback
+    def dismiss_suggestion(call: ServiceCall) -> None:
+        from .history import DISMISS
+
+        entries = hass.config_entries.async_loaded_entries(DOMAIN)
+        if not entries:
+            raise ServiceValidationError("Hearth isn't set up")
+        household = entries[0].runtime_data.household
+        if call.data["person"] not in household.people():
+            raise ServiceValidationError(f"{call.data['person']} isn't one of the household's people")
+        household.history.log(DISMISS, call.data["person"], key=call.data["key"].strip())
+        household.recompute()
+
+    register_service(hass, DOMAIN, "dismiss_suggestion", dismiss_suggestion, schema=DISMISS_SUGGESTION_SCHEMA)
 
 
 ALLOW_SCHEMA = vol.All(
@@ -582,7 +613,7 @@ def _register_play_on_tv(hass: HomeAssistant) -> None:
             )
         if device_id is None:
             raise ServiceValidationError(f"{given} isn't one of the household's Hearth devices")
-        if hub.kind(device_id) != KIND_TV:
+        if not hub.has_cap(device_id, CAP_PLAY):
             raise ServiceValidationError(f"{hub.devices[device_id].get('name') or device_id} isn't a TV")
         return device_id
 
@@ -707,26 +738,11 @@ def _register_watch_services(hass: HomeAssistant) -> None:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bool:
-    # Phones paired before push existed get their topic now (before the update listener, so it doesn't reload)
-    devices = entry.data.get(CONF_DEVICES, {})
-    if any(d.get(CONF_KIND) == KIND_MOBILE and not d.get(CONF_PUSH_TOPIC) for d in devices.values()):
-        hass.config_entries.async_update_entry(
-            entry,
-            data={
-                **entry.data,
-                CONF_DEVICES: {
-                    device_id: (
-                        {**d, CONF_PUSH_TOPIC: new_topic()}
-                        if d.get(CONF_KIND) == KIND_MOBILE and not d.get(CONF_PUSH_TOPIC)
-                        else d
-                    )
-                    for device_id, d in devices.items()
-                },
-            },
-        )
     _check_profile_keys(hass, entry)
+    _migrate_offer_more(hass, entry)
     hub = HearthHub(hass, entry)
     await hub.async_load()
+    _give_push_topics(hass, entry, hub)
     entry.runtime_data = hub
     await hub.household.school.async_refresh()
     hub.household.recompute()
@@ -778,14 +794,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     if lists := hub.household.chores.lists():
         entry.async_on_unload(async_track_state_change_event(hass, lists, hub.household.chores.async_changed))
 
-    @callback
-    def offer_more(event) -> None:
-        """A group ran out: the adults are offered to give more, where the household chose to."""
-        for raw in hub.entry.options.get(CONF_OFFER_MORE, []):
-            if raw.get("person") == event.data.get("person") and raw.get("group") == event.data.get("group"):
-                hub.asks.offer(raw["person"], raw["group"], int(raw.get("minutes") or 30))
-
-    entry.async_on_unload(hass.bus.async_listen(EVENT_BUDGET_REACHED, offer_more))
+    # A group running out no longer makes an offered request: where the household chose it, its suggestion goes to
+    # the adults' phones instead (suggest_push.py), so one run-out is one notification
+    hub.suggest_push.start()
+    entry.async_on_unload(hub.suggest_push.stop)
+    # The history log (history.py): what ran out, what was asked and offered, and the answers
+    history = hub.household.history
+    entry.async_on_unload(hass.bus.async_listen(EVENT_BUDGET_REACHED, history.on_budget_reached))
+    entry.async_on_unload(hass.bus.async_listen(EVENT_MORE_TIME_REQUESTED, history.on_requested))
+    entry.async_on_unload(hass.bus.async_listen(EVENT_MORE_TIME_ANSWERED, history.on_answered))
 
     @callback
     def family_safety_request(event) -> None:
@@ -826,15 +843,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     if entities := hub.household.source_entities():
         entry.async_on_unload(async_track_state_change_event(hass, entities, recompute))
     async def phone_answer(event) -> None:
-        """A Sort button on a new app's phone notification: HEARTH_APP|<group>|<package>."""
+        """A button on a phone notification: an attention item's (HEARTH_ACT|<key>|<n>), a request's
+        (HEARTH_MORE|<id>|<minutes>) or a new app's Sort (HEARTH_APP|<group>|<package>)."""
         action = str(event.data.get("action") or "")
-        if not action.startswith((ASK_ACTION_PREFIX, ACTION_PREFIX)):
+        if not action.startswith((ASK_ACTION_PREFIX, ACTION_PREFIX, ACT_PREFIX)):
             return
         # Only an adult's (or an administrator's) phone answers or sorts: a kid with Home Assistant on their own phone
         # can fire the same action, for their own ask
         user = await hass.auth.async_get_user(event.context.user_id) if event.context.user_id else None
         if not is_adult_user(hass, hub, user):
             _LOGGER.warning("A Hearth notification action from someone who isn't an adult was ignored")
+            return
+        # An item's action, run as that adult when the item reached them
+        if await hub.attention.act(action, user):
             return
         # A request for more time: the first adult's answer decides
         if hub.asks.phone_answer(action, event.context.user_id):
@@ -854,6 +875,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     # People and groups come from the entry: when it changes (options, a phone paired), its entities are made again
     entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
     return True
+
+
+def _give_push_topics(hass: HomeAssistant, entry: HearthConfigEntry, hub: HearthHub) -> None:
+    """Devices that get pings but have no topic (phones paired before push existed) get one now: after the hub
+    loaded what each device last said (its caps), before the update listener, so it doesn't reload."""
+    devices = entry.data.get(CONF_DEVICES, {})
+    missing = {d for d, device in devices.items() if not device.get(CONF_PUSH_TOPIC) and hub.has_cap(d, CAP_PUSH)}
+    if not missing:
+        return
+    hass.config_entries.async_update_entry(
+        entry,
+        data={
+            **entry.data,
+            CONF_DEVICES: {
+                device_id: ({**d, CONF_PUSH_TOPIC: new_topic()} if device_id in missing else d)
+                for device_id, d in devices.items()
+            },
+        },
+    )
+
+
+def _migrate_offer_more(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
+    """Configure > Offer more time's pairs (offer_more) become pushed suggestions with their amounts (suggest_push):
+    before the update listener, so it doesn't reload."""
+    if (options := suggest_push.migrated(entry.options)) is not None:
+        hass.config_entries.async_update_entry(entry, options=options)
 
 
 def _check_profile_keys(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
