@@ -869,6 +869,10 @@ user whose companion app, or whose person's, got it; any administrator for `admi
 way; any other is refused (with a warning in the log). A press for an item that's gone (cleared, expired,
 or from before a restart) is ignored. The older `HEARTH_MORE|` and `HEARTH_APP|` buttons work as before.
 
+**On the TVs.** An item can also be for the TVs (`tv`): then it's in the state document of every TV that says it shows
+notices (cap `notices`) as `notices` (see [The device's side of the API](#the-devices-side-of-the-api)), and the TV
+shows it in its adult profiles only. So far that's the suggestions pushed to phones. A phone never gets them.
+
 #### A kid's own Home Assistant user
 
 A kid (or anyone) with a Home Assistant user of their own, linked to their person (the person's `user_id`), may use
@@ -1567,6 +1571,16 @@ over once, so a budget cleared later doesn't come back. A device may also send `
 document also carries `commands` (one-shot commands such as a play, see [Play on a TV](#play-on-a-tv)), and the TV
 says which it ran in `commands_done`. A phone's answer also says `push` (its ntfy channel, or null; see [Away from
 home](#away-from-home)).
+
+**Notices** (a TV whose caps say `notices`; never a phone). Its state document carries `notices`, what the adults
+should see on it (attention items for TVs, see [Attention](#attention); so far the suggestions pushed to phones),
+oldest first:
+`[{"key", "tag", "title", "message", "for"?, "urgency": "info" | "notice" | "urgent", "actions": [{"id": "0", "title"}],
+"expires"?}]`. `for` is a person entity id from the document's `people` (that adult's profiles only); without it, every
+adult profile, never a kid's. The TV shows them as Home Assistant notifications to it (a `tag` replaces one with the
+same tag); one gone from the list is cleared. `actions` carry only a button's number and title, never a service. The
+fields stay the same while the item does (no countdowns), so an unchanged notice doesn't wake the TV's wait; a new one,
+or one gone, does. A TV without the cap gets no `notices`.
 
 **Wait for a change** (any paired device). `GET /api/hearth/device/<device_id>/wait?version=<v>&timeout=<s>` with
 the same header holds until the device's state document is no longer version `<v>` (the `version` of the last

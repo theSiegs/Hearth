@@ -2,7 +2,8 @@
 Attention).
 
 An item says what it is about and who it is for (its audience); the delivery adapters (delivery/) take it to a channel:
-the companion app on the audience's phones, and Home Assistant's bell when the item asks for it. Each policy stays
+the companion app on the audience's phones, and Home Assistant's bell when the item asks for it; an item for TVs
+(Item.tv) is also in the state document of every TV that shows notices. Each policy stays
 with the item's source (when a request is told, when an offer is made); here is only the generic work: an item with
 the same key or tag replaces the one before, and clearing a key or tag takes it off every channel it went to.
 
@@ -25,10 +26,11 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import Context, HomeAssistant
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
 from . import phones
-from .const import DOMAIN
+from .const import DOMAIN, SIGNAL_NOTICES
 from .delivery import bell, companion
 
 if TYPE_CHECKING:
@@ -95,10 +97,30 @@ class Item:
     sent: datetime = field(default_factory=dt_util.utcnow)
     # The Home Assistant users it reached on the companion app: the ones whose buttons count
     reached: frozenset[str] = frozenset()
+    # On the TVs too: in the state document of a TV that shows notices (cap "notices"), which shows it in its adult
+    # profiles (its audience's: every adult's, or one person's), as `notices`
+    tv: bool = False
 
     @property
     def channel_tag(self) -> str:
         return self.tag or self.key
+
+    def notice(self) -> dict[str, Any]:
+        """The item as a TV's state document has it: stable fields only (no times counting, no service or data), so
+        an unchanged item doesn't wake the TVs' waits. A button's id is its number, as a press sends it."""
+        notice: dict[str, Any] = {
+            "key": self.key,
+            "tag": self.channel_tag,
+            "title": self.title or "",
+            "message": self.text,
+            "urgency": self.urgency if self.urgency in URGENCIES else INFO,
+            "actions": [{"id": str(n), "title": a.label} for n, a in enumerate(self.actions) if a.service],
+        }
+        if self.audience.startswith(PERSON):
+            notice["for"] = self.audience[len(PERSON):]
+        if self.expires is not None:
+            notice["expires"] = self.expires.isoformat()
+        return notice
 
 
 def _items(hass: HomeAssistant) -> dict[str, Item]:
@@ -148,6 +170,8 @@ class Attention:
             companion.send(self.hass, self.options, targets, item)
         items[item.key] = item
         self._tidy()
+        if item.tv:
+            self._tvs_changed()
 
     def adopt(self, item: Item) -> None:
         """Keeps [item] without sending it: one its source sent before Home Assistant restarted, still on the phones,
@@ -156,6 +180,22 @@ class Attention:
             item.reached = frozenset(self._users(self.targets(item.audience)))
         _items(self.hass)[item.key] = item
         self._tidy()
+        if item.tv:
+            self._tvs_changed()
+
+    def tv_notices(self, people: set[str]) -> list[dict[str, Any]]:
+        """The items a TV shows (Item.tv), as its state document has them, oldest first: every adult's, and one
+        person's only when that person is one of the TV's ([people])."""
+        return [
+            item.notice()
+            for item in self.items()
+            if item.tv
+            and (item.audience == ADULTS or (item.audience.startswith(PERSON) and item.audience[len(PERSON):] in people))
+        ]
+
+    def _tvs_changed(self) -> None:
+        """A TV item came or went: the TVs' waits look again (their document's notices changed)."""
+        async_dispatcher_send(self.hass, SIGNAL_NOTICES)
 
     def clear(self, key_or_tag: str, *, audience: str = ADULTS, bell_too: bool = False, phone: bool = False) -> None:
         """Takes the items with that key or tag off the channels they went to; with none kept (Home Assistant restarted
@@ -166,6 +206,8 @@ class Attention:
             found = [Item(key_or_tag, "", audience=audience, bell=bell_too, phone=phone)]
         for item in found:
             items.pop(item.key, None)
+            if item.tv:
+                self._tvs_changed()
             if item.phone:
                 companion.clear(self.hass, self.options, self.targets(item.audience), item.channel_tag)
             if item.bell:

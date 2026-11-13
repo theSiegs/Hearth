@@ -22,7 +22,7 @@ from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_call_later
 
-from .const import SIGNAL_COMMANDS, SIGNAL_PAIRINGS, SIGNAL_PEOPLE, SIGNAL_WATCH
+from .const import SIGNAL_COMMANDS, SIGNAL_NOTICES, SIGNAL_PAIRINGS, SIGNAL_PEOPLE, SIGNAL_WATCH
 
 if TYPE_CHECKING:
     from .hub import HearthHub
@@ -67,7 +67,7 @@ class DeviceWaits:
     def start(self) -> None:
         self._unsubs = [
             async_dispatcher_connect(self.hass, signal, self.changed)
-            for signal in (SIGNAL_PEOPLE, SIGNAL_WATCH, SIGNAL_PAIRINGS, SIGNAL_COMMANDS)
+            for signal in (SIGNAL_PEOPLE, SIGNAL_WATCH, SIGNAL_PAIRINGS, SIGNAL_COMMANDS, SIGNAL_NOTICES)
         ]
 
     @callback

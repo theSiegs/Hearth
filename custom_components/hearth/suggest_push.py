@@ -7,7 +7,8 @@ suggestion that's there now is pushed once a day (history PUSHED, so a restart d
 buttons: two amounts (hearth.add_bonus) and "not today" (hearth.dismiss_suggestion), run as the adult who pressed one.
 When the suggestion goes (more time given, put off, the group no longer out, a new day, the pair no longer chosen),
 it comes off every phone. At most MAX_PER_HOUR are pushed an hour (every adult gets each one, so that's per adult);
-one past that isn't pushed, and is still in the household summary.
+one past that isn't pushed, and is still in the household summary. Each pushed one also shows on the TVs that show
+notices, in their adult profiles (attention.Item.tv), and goes from them with it.
 
 This replaces the older "offer more time" (option offer_more), which made an offered request on the adults' phones
 when a chosen group ran out: its pairs become pushed pairs with their amounts when the household loads (migrate), and
@@ -239,4 +240,7 @@ class SuggestPush:
             # About a kid: never on Home Assistant's bell
             bell=False,
             about=about,
+            # And on the TVs that show notices, in their adult profiles (a press there needs a Parent PIN or a
+            # parent's phone)
+            tv=True,
         )

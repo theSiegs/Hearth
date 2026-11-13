@@ -23,6 +23,7 @@ from homeassistant.util import dt as dt_util
 from .entry_tasks import entry_task
 from .attention import CHOSEN_PHONE, Action, Item
 from .const import (
+    CAP_NOTICES,
     CONF_KIND,
     CONF_LOCKS,
     CONF_PERSON,
@@ -975,6 +976,10 @@ class Household:
                 # ("person.sam"), and the TV finds that person's profile here
                 "people": {profile_id: person for profile_id, person in sorted(profiles.items()) if person},
             }
+            # What the adults should see on this TV (attention items for TVs: the chosen suggestions), for a TV that
+            # says it shows them; it shows each in its adult profiles only ("for" names one person, else every adult)
+            if self.hub.has_cap(device_id, CAP_NOTICES):
+                body["notices"] = self.hub.attention.tv_notices({p for p in profiles.values() if p})
             # The adults' parent PINs (hashes, never a PIN): a paired TV asks verify_pin, and keeps these (sealed) to
             # check PINs with Home Assistant down. Sent only when they changed since the TV's copy (its
             # parent_pins_version); the version alone says its copy is current. Each says the TV profiles of its adult.

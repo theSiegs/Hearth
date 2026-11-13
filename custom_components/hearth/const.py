@@ -93,6 +93,8 @@ SIGNAL_PEOPLE = "hearth_people"
 SIGNAL_PAIRINGS = "hearth_pairings"
 # A one-shot command was queued for a TV (commands.py): its held wait wakes
 SIGNAL_COMMANDS = "hearth_commands"
+# An attention item the TVs show (notices) came or went: their held waits look again
+SIGNAL_NOTICES = "hearth_notices"
 
 EVENT_BUDGET_REACHED = "hearth_budget_reached"
 EVENT_PLAYING_TOGETHER = "hearth_playing_together"
