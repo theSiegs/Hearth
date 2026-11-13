@@ -98,6 +98,34 @@ def targets_of(household: Household, person: str) -> list[dict[str, Any]]:
     return found
 
 
+# A source's integration, for the kind of device it counts
+_SOURCE_KINDS = {"xbox": "xbox", "nintendo_parental_controls": "switch", "mobile_app": "phone", "familylink": "phone"}
+
+
+def kind_of_target(household: Household, target: str) -> str | None:
+    """tv, phone, xbox, windows or switch for a target id (or a counted source:<id>), from what it is; None when Hearth
+    can't tell (a sensor of another integration)."""
+    via, _, rest = target.partition(":")
+    if via == HEARTH:
+        device = household.hub.devices.get(rest) or {}
+        return "tv" if device.get(CONF_KIND) == KIND_TV else "phone"
+    if via == "fl":
+        return "phone"
+    if via == "fs":
+        return rest if rest in ("xbox", "windows") else None
+    if via == "nintendo":
+        return "switch"
+    if via == "source":
+        source = next((s for s in household.sources if s.id == rest), None)
+        if source is None:
+            return None
+        if source.phone_app:
+            return "phone"
+        entry = er.async_get(household.hass).async_get(source.entity_id)
+        return _SOURCE_KINDS.get(entry.platform) if entry is not None else None
+    return None
+
+
 def _shown(name: str, tv: bool) -> str:
     """A TV's name as shown: "Kitchen" is "Kitchen TV"; a name that says TV already stays."""
     if tv and "tv" not in name.casefold().replace("-", " ").split():

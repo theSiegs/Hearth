@@ -187,6 +187,20 @@ class SchoolDays:
             return WEEKEND
         return DAY_OFF if in_school_year(config, today) else NO_SCHOOL
 
+    def type_by_dates(self, day: date) -> str:
+        """A day's type from the dates typed in and the rule only (an entity's state and the calendar's answer are
+        today's): for a past day whose budget wasn't recorded."""
+        config = self.config
+        if day in config.days_off:
+            return DAY_OFF if day.weekday() < 5 else WEEKEND
+        if day in config.half_days:
+            return HALF_DAY
+        if day in config.extra_school_days or by_rule(config, day):
+            return SCHOOL
+        if day.weekday() >= 5:
+            return WEEKEND
+        return DAY_OFF if in_school_year(config, day) else NO_SCHOOL
+
     def budget_is_school(self, day_type: str) -> bool:
         """Whether a day of this type takes the school-day budget (a half day: as chosen, other days by default)."""
         return day_type == SCHOOL or (day_type == HALF_DAY and self.config.half_day_budget == SCHOOL_BUDGET)

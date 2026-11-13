@@ -66,7 +66,7 @@ from .media import media_rooms
 from .profiles import REF_PREFIX, is_ref, split_tv_key, tv_key
 from .schooldays import SchoolDays
 from .live import LiveTracker, Observation, Together
-from .nintendo import playing_entities, playing_title, switch_name
+from .nintendo import playing_entities, playing_title, switch_console, switch_name
 from .sources import (
     Source,
     Title,
@@ -97,17 +97,38 @@ class Playing:
     state: str | None
     # The device as a target id (targets.py): hearth:<id>, fl:<id>, nintendo:<entity> or source:<id>
     target: str | None = None
-    # What's on, when known: a TV's show (its media player's series, else its title) and the episode; a Switch's game
+    # The most specific thing on, when known: an episode's, a video's or a movie's title, a track, a game (a Switch's,
+    # a live source's); else None and the app is what's on
     title: str | None = None
+    # A show's episode as "s2e4" (or "e4"), when its media player says
     episode: str | None = None
     # When this play started (ISO, UTC; live.py)
     since: str | None = None
+    # video (a show, video or movie from a media player or the device's media session), music (a track), game (a
+    # Switch's or a live source's title; the household summary makes an app in the Games group a game) or app
+    kind: str | None = None
+    # A show's name (the episode's series); a track's artist
+    series: str | None = None
+    artist: str | None = None
+    # Its length and where it is, when the player says: seconds, the position as of [position_at]; paused freezes it
+    duration_s: float | None = None
+    position_s: float | None = None
+    position_at: datetime | None = None
+    paused: bool = False
+    # What it counts and is timed under (live.py's item, a title key or the app), its live source when timed there,
+    # and its name as the history's `played` events have it
+    key: str | None = None
+    source: str | None = None
+    label: str | None = None
 
     def view(self) -> dict[str, Any]:
         return {
+            "kind": self.kind,
             "app": self.app,
             "package": self.package,
             "title": self.title,
+            "series": self.series,
+            "artist": self.artist,
             "episode": self.episode,
             "device": self.device,
             "state": self.state,
@@ -539,6 +560,7 @@ class Household:
         def observe(entry: Playing, person: str, device: str, item: str, source: str | None, label: str | None) -> None:
             key = self._key(item)
             observations.append(Observation(person, device, key, source, self._label(key, label)))
+            entry.key, entry.source, entry.label = key, source, self._label(key, label)
             playing.setdefault(person, []).append(entry)
             plays.append((entry, (person, device, key)))
 
@@ -582,12 +604,14 @@ class Household:
                                                    status.get("app_seconds_today") or {}), into)
             package = status.get("app_package")
             if person and status.get("screen") == "on" and self.hub.connected(device_id) and package:
-                # A TV's media player says the show: it's what "together" matches on then
-                title, episode = (self._tv_media(device_id) if device.get(CONF_KIND) == KIND_TV else None) or (None, None)
-                observe(
-                    Playing(status.get("app"), package, name, status.get("state"), f"hearth:{device_id}", title, episode),
-                    person, device_id, title or package, None, title or status.get("app"),
-                )
+                # A TV's media player says what's on, else the device's own media session: the show (else the title)
+                # is what "together" matches on then
+                media = (self._tv_media(device_id) if device.get(CONF_KIND) == KIND_TV else None) or _status_media(status)
+                entry = Playing(status.get("app"), package, name, status.get("state"), f"hearth:{device_id}", kind="app")
+                for field_name, value in (media or {}).items():
+                    setattr(entry, field_name, value)
+                shown = entry.series or entry.title
+                observe(entry, person, device_id, shown or package, None, shown or status.get("app"))
 
         # Sources: totals now; live ones are looked at (and timed) below
         for source in self.sources:
@@ -600,7 +624,8 @@ class Household:
 
                     target, _ = target_of_counted(self, source.person, f"source:{source.id}")
                     app = self._app_name(package)
-                    observe(Playing(app, package, source.name, "playing", target), source.person, device, package, None, app)
+                    observe(Playing(app, package, source.name, "playing", target, kind="app"), source.person, device,
+                            package, None, app)
             elif source.live:
                 item = now_playing(self.hass, source)
                 if item is not None:
@@ -608,7 +633,7 @@ class Household:
 
                     target, _ = target_of_counted(self, source.person, f"source:{source.id}")
                     observe(
-                        Playing(item, None, source.name, "playing", target),
+                        Playing(item, None, source.name, "playing", target, item, kind="game"),
                         source.person, device, item, source.reading_source, item,
                     )
             else:
@@ -635,9 +660,13 @@ class Household:
             ]
             if on:
                 game = next((t for state in on if (t := playing_title(state))), None)
+                # Without the game's name, "together" only on the same console (never two Switches both saying
+                # "Switch")
+                item = game or f"{SWITCH_ITEM}@{switch_console(self.hass, enforcer.entity_id)}"
                 observe(
-                    Playing(game or SWITCH_ITEM, None, switch_name(self.hass, enforcer.entity_id), "playing", target, game),
-                    enforcer.person, target, game or SWITCH_ITEM, None, game or SWITCH_ITEM,
+                    Playing(game or SWITCH_ITEM, None, switch_name(self.hass, enforcer.entity_id), "playing", target, game,
+                            kind="game"),
+                    enforcer.person, target, item, None, game or SWITCH_ITEM,
                 )
 
         started, ended = self.live.look(now, today, observations)
@@ -669,14 +698,15 @@ class Household:
         # The day turned: each person's final minutes of the day before, as last counted (history.py, `day`)
         if self.today is not None and self.today != today:
             for person, last in self.days.items():
-                self.history.log_day(person, self.today, self.day_minutes(last))
+                self.history.log_day(person, self.today, self.day_minutes(last), self.day_budget(last))
         elif backfill:
             back_day = today - timedelta(days=1)
             # Only who had time counted on Hearth's devices or live sources: a totals sensor has started today since
             for person in back_readings:
                 devices = {device: merge(r) for device, r in back_readings[person].items()}
                 seconds = group_seconds(devices, membership, self.outside_all())
-                self.history.log_day(person, back_day, self.day_minutes(PersonDay(person, groups=seconds)))
+                self.history.log_day(person, back_day, self.day_minutes(PersonDay(person, groups=seconds)),
+                                     self.budget_on(person, back_day))
         # Today's answer as last worked out; if the day turned without a refresh yet, what's known now
         is_school = (
             self.school.school if self.school.day == today else self.school.budget_is_school(self.school.decide_type(today))
@@ -743,6 +773,18 @@ class Household:
         """A person's minutes per group of the household (seconds / 60, rounded), as the summary's `week` shows them."""
         groups = day.groups if day is not None else {}
         return {g.id: int(round(groups.get(g.id, 0.0) / 60)) for g in self.groups}
+
+    def day_budget(self, day: PersonDay) -> dict[str, int | None]:
+        """A person's budget per group of the household that day, without bonus (None: no limit), as counted."""
+        return {g.id: (state.budget_min if (state := day.limits.get(g.id)) else None) for g in self.groups}
+
+    def budget_on(self, person: str, day: date) -> dict[str, int | None]:
+        """The person's budget per group on [day]: today's as counted, another day's from its day type by the dates
+        and the rule (schooldays.type_by_dates) and the budgets now."""
+        if day == self.today and (today := self.days.get(person)) is not None:
+            return self.day_budget(today)
+        kind = SCHOOL_DAY if self.school.budget_is_school(self.school.type_by_dates(day)) else OTHER_DAY
+        return {g.id: self.limits.budget(person, g.id, kind) for g in self.groups}
 
     # New apps
 
@@ -835,21 +877,42 @@ class Household:
         entry = self.apps.apps.get(package)
         return entry.name if entry is not None and entry.name else package
 
-    def _tv_media(self, device_id: str) -> tuple[str, str | None] | None:
-        """What a TV's media player (options' media_players) says is on: (the show, the episode), or None."""
+    def _tv_media(self, device_id: str) -> dict[str, Any] | None:
+        """What a TV's media player (options' media_players) says is on, as Playing's fields (kind, title, series,
+        episode, artist, and its length and position when known), or None."""
         entity_id = self.options.get(CONF_MEDIA_PLAYERS, {}).get(device_id)
         state = self.hass.states.get(entity_id) if entity_id else None
         if state is None or state.state not in ("playing", "paused", "buffering", "on"):
             return None
+        attrs = state.attributes
 
         def text(name: str) -> str | None:
-            value = state.attributes.get(name)
+            value = attrs.get(name)
             return value.strip()[:128] if isinstance(value, str) and value.strip() else None
 
-        series, title = text("media_series_title"), text("media_title")
-        if series:
-            return series, title if title != series else None
-        return (title, None) if title else None
+        series, title, artist = text("media_series_title"), text("media_title"), text("media_artist")
+        if not (series or title):
+            return None
+        if series and (not title or title == series):
+            # Only the show's name: it's the most specific known
+            series, title = None, series
+        music = attrs.get("media_content_type") == "music" or (artist is not None and series is None)
+        season, number = attrs.get("media_season"), attrs.get("media_episode")
+        episode = None
+        if series and str(number or "").isdigit():
+            episode = f"s{season}e{number}" if str(season or "").isdigit() else f"e{number}"
+        at = attrs.get("media_position_updated_at")
+        if isinstance(at, str):
+            at = dt_util.parse_datetime(at)
+        return {
+            "kind": "music" if music else "video",
+            "title": title,
+            "series": None if music else series,
+            "artist": artist if music else None,
+            "episode": episode,
+            **_timing(attrs.get("media_duration"), attrs.get("media_position"), at if isinstance(at, datetime) else None),
+            "paused": state.state == "paused",
+        }
 
     def _label(self, key: str, fallback: str | None) -> str:
         if key.startswith("title:"):
@@ -1548,6 +1611,33 @@ class Household:
                 )
             )
         return taken
+
+
+def _status_media(status: dict[str, Any]) -> dict[str, Any] | None:
+    """What a Hearth device's own media session says is on (status.py: media_title, media_artist, and from newer
+    builds media_duration_s with media_position_s as of media_position_at), while it plays or is paused."""
+    title = status.get("media_title")
+    if not title or status.get("state") not in ("playing", "paused"):
+        return None
+    artist = status.get("media_artist")
+    at = status.get("media_position_at")
+    when = dt_util.utc_from_timestamp(at / 1000) if isinstance(at, int) else None
+    return {
+        "kind": "music" if artist else "video",
+        "title": title,
+        "artist": artist,
+        **_timing(status.get("media_duration_s"), status.get("media_position_s"), when),
+        "paused": status.get("state") == "paused",
+    }
+
+
+def _timing(duration: Any, position: Any, at: datetime | None) -> dict[str, Any]:
+    """A play's length and position (seconds), when the player gives a usable length; else none of them."""
+    if isinstance(duration, bool) or not isinstance(duration, (int, float)) or duration <= 0:
+        return {}
+    if isinstance(position, bool) or not isinstance(position, (int, float)) or position < 0 or at is None:
+        return {"duration_s": float(duration)}
+    return {"duration_s": float(duration), "position_s": min(float(position), float(duration)), "position_at": at}
 
 
 def person_identifier(person: str) -> tuple[str, str]:

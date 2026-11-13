@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import date, datetime, timedelta
-from typing import Any
+from typing import Any, Callable
 
 from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers.storage import Store
@@ -34,8 +34,10 @@ PUSHED = "pushed"
 # (`by`: their person, else `user`: their Home Assistant user id), the notice's `key`, the button's `action` number
 # and the TV (`device`)
 NOTICE_ANSWER = "notice_answer"
-# A local day's final minutes per group ({"date": "YYYY-MM-DD", "minutes": {group: n}}), logged at the day's rollover
-# (or, when Home Assistant was down at midnight, on the first look after it starts): the household summary's `week`
+# A local day's final minutes per group ({"date": "YYYY-MM-DD", "minutes": {group: n}, "budget": {group: n | None}}),
+# logged at the day's rollover (or, when Home Assistant was down at midnight, on the first look after it starts): the
+# household summary's `week`. `budget` is the day's budget per group without its bonus (None: no limit); records from
+# before it was logged have none
 DAY = "day"
 # What a person played, once a play ends (live.py): {"item": the title, game or app as shown, "device": where (a Hearth
 # device id, source:<id> or nintendo:<entity>), "minutes"}. One event per person, item and device a local day (a
@@ -240,20 +242,33 @@ class History:
         return any(e.get("kind") == DAY and e.get("person") == person and e.get("date") == iso for e in self.events)
 
     @callback
-    def log_day(self, person: str, day: date, minutes: dict[str, int]) -> bool:
-        """Records [day]'s final minutes per group for the person, once; says whether it did."""
+    def log_day(
+        self, person: str, day: date, minutes: dict[str, int], budget: dict[str, int | None] | None = None
+    ) -> bool:
+        """Records [day]'s final minutes per group for the person (and its budget per group), once; says whether it
+        did."""
         if self.has_day(person, day):
             return False
-        self.log(DAY, person, date=day.isoformat(), minutes=dict(minutes))
+        extra = {"budget": dict(budget)} if budget is not None else {}
+        self.log(DAY, person, date=day.isoformat(), minutes=dict(minutes), **extra)
         return True
 
-    def week(self, person: str, today_minutes: dict[str, int], now: datetime | None = None) -> list[dict[str, Any]]:
+    def week(
+        self,
+        person: str,
+        today_minutes: dict[str, int],
+        now: datetime | None = None,
+        budget_of: Callable[[date], dict[str, int | None]] | None = None,
+    ) -> list[dict[str, Any]]:
         """The last WEEK_DAYS local days, newest first, today included: {date, minutes {group: n}, out [groups],
-        bonus {group: minutes}, asks}. Today's minutes are [today_minutes] (live); a past day's are its `day` record,
-        {} when there's none (unknown, not zero)."""
+        bonus {group: minutes}, asks, budget {group: n | None}}. Today's minutes are [today_minutes] (live); a past
+        day's are its `day` record, {} when there's none (unknown, not zero). A day's budget is its `day` record's,
+        else [budget_of] (today's live budget, a past day's from its day type and the budgets now)."""
         today = dt_util.as_local(now or dt_util.utcnow()).date()
         dates = [today - timedelta(days=i) for i in range(WEEK_DAYS)]
-        rows = {d: {"date": d.isoformat(), "minutes": {}, "out": [], "bonus": {}, "asks": 0} for d in dates}
+        rows = {
+            d: {"date": d.isoformat(), "minutes": {}, "out": [], "bonus": {}, "asks": 0, "budget": None} for d in dates
+        }
         rows[today]["minutes"] = dict(today_minutes)
         by_iso = {d.isoformat(): d for d in dates}
         # A day's events are at most a day either side of it in UTC
@@ -266,6 +281,8 @@ class History:
                 day = by_iso.get(str(event.get("date")))
                 if day is not None and day != today and isinstance(event.get("minutes"), dict):
                     rows[day]["minutes"] = dict(event["minutes"])
+                    if isinstance(event.get("budget"), dict):
+                        rows[day]["budget"] = dict(event["budget"])
                 continue
             if kind not in (OUT, ASK, BONUS, DEVICE_BONUS):
                 continue
@@ -279,4 +296,7 @@ class History:
             elif kind in (BONUS, DEVICE_BONUS) and isinstance(event.get("minutes"), int):
                 key = event.get("group") or "all"
                 row["bonus"][key] = row["bonus"].get(key, 0) + event["minutes"]
+        for day, row in rows.items():
+            if row["budget"] is None:
+                row["budget"] = dict(budget_of(day)) if budget_of is not None else {}
         return [rows[d] for d in dates]

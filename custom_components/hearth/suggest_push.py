@@ -31,6 +31,7 @@ from .asks import CONF_OFFER_MORE
 from .attention import ADULTS, NOTICE, Action, Item
 from .const import SIGNAL_PAIRINGS, SIGNAL_PEOPLE
 from .counting import ALL
+from .glance import duration
 from .history import PUSHED
 
 if TYPE_CHECKING:
@@ -95,6 +96,11 @@ def migrated(options: Mapping[str, Any]) -> dict[str, Any] | None:
 def chosen_minutes(options: Mapping[str, Any], person: str) -> dict[str, int]:
     """The amounts the household chose for a person's suggestions, by group or device id (glance's hints)."""
     return {_target(p): p["minutes"] for p in pairs(options) if p["person"] == person and p.get("minutes")}
+
+
+def _more(minutes: int) -> str:
+    """"30 more minutes" under an hour, "1 h 30 more" from one (glance.duration's format)."""
+    return f"{minutes} more minutes" if minutes < 60 else f"{duration(minutes)} more"
 
 
 class SuggestPush:
@@ -204,7 +210,7 @@ class SuggestPush:
             target = next((t for t in person.get("targets") or [] if t.get("id") == suggestion["device"]), {})
             device = target.get("name") or "a device"
             title = f"{who}'s {device} reached its own limit"
-            text = f"Give {minutes} more minutes on it today?"
+            text = f"Give {_more(minutes)} on it today?"
         else:
             group = suggestion.get("group")
             name = (
@@ -213,11 +219,12 @@ class SuggestPush:
                 else next((g["name"] for g in person.get("groups") or [] if g["id"] == group), group)
             )
             title = f"{who}'s {name} ran out"
-            text = f"Give {minutes} more minutes today?"
+            text = f"Give {_more(minutes)} today?"
         actions = tuple(
             Action(
                 a["id"],
-                "Not today" if a["service"] == "hearth.dismiss_suggestion" else f"{a['label']} min",
+                "Not today" if a["service"] == "hearth.dismiss_suggestion"
+                else f"+{duration((a.get('data') or {}).get('minutes') or 0)}",
                 a["service"],
                 dict(a.get("data") or {}),
             )

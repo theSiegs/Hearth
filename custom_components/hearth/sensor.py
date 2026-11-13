@@ -252,7 +252,8 @@ class PersonPlaying(HearthPersonEntity, SensorEntity):
     @property
     def native_value(self) -> str | None:
         playing = self.day.playing if self.day else []
-        return (playing[0].title or playing[0].app or playing[0].package) if playing else None
+        # The show's name over its episode's: what a glance at the sensor wants
+        return (playing[0].series or playing[0].title or playing[0].app or playing[0].package) if playing else None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

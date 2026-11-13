@@ -126,6 +126,13 @@ def playing_entities(hass: HomeAssistant, enforcer: Enforcer, enforcers: list[En
     return [playing] if playing else []
 
 
+def switch_console(hass: HomeAssistant, entity_id: str) -> str:
+    """Which Switch an entity is on (its device in Home Assistant, else the entity itself): two kids playing one
+    console are together even when Nintendo doesn't name the game."""
+    entry = er.async_get(hass).async_get(entity_id)
+    return entry.device_id if entry is not None and entry.device_id else entity_id
+
+
 def switch_name(hass: HomeAssistant, entity_id: str) -> str:
     """The name of the Switch an entity is on (as the adult named the device), else "Switch"."""
     entry = er.async_get(hass).async_get(entity_id)

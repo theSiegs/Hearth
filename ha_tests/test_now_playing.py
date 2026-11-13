@@ -123,7 +123,9 @@ async def test_a_tv_s_media_player_says_the_show(
 
     assert _state(hass, "sensor.hearth_sam_playing") == "Bluey"
     attributes = hass.states.get("sensor.hearth_sam_playing").attributes["playing"][0]
-    assert attributes["app"] == "HearthTube" and attributes["title"] == "Bluey" and attributes["episode"] == "Sleepytime"
+    # The most specific thing is the title (the episode's); the show is its series
+    assert attributes["app"] == "HearthTube" and attributes["title"] == "Sleepytime" and attributes["series"] == "Bluey"
+    assert attributes["kind"] == "video" and attributes["episode"] is None
 
     # "Together" goes by the show: Alex watching it elsewhere
     await _alex(hass)
@@ -254,3 +256,47 @@ async def test_a_play_ends_at_the_last_look_that_saw_it(hass: HomeAssistant) -> 
     live.look(start + timedelta(minutes=30), start.date(), seen)
     assert [p.minutes for p in live.ended_plays] == [0]
     assert live.since_of("person.sam", "tv", "Bluey") == dt_util.as_utc(start + timedelta(minutes=30)).isoformat()
+
+
+async def test_two_kids_on_two_switches_without_a_game_name_aren_t_together(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0))
+    await _household_with_sam(hass, hass_client_no_auth)
+    _switch(hass)
+    # Alex's own Switch, another console
+    nintendo = hass.config_entries.async_entries("nintendo_parental_controls")[0]
+    device = dr.async_get(hass).async_get_or_create(
+        config_entry_id=nintendo.entry_id, identifiers={("nintendo_parental_controls", "def456")}, name="Alex's Switch"
+    )
+    alex_limit, alex_playing = "number.alex_s_switch_max_screentime_today", "binary_sensor.alex_s_switch_alex_playing"
+    registry = er.async_get(hass)
+    for entity_id, key in ((alex_limit, "today_max_screentime"), (alex_playing, "p1_playing")):
+        domain, object_id = entity_id.split(".")
+        registry.async_get_or_create(
+            domain, "nintendo_parental_controls", f"def456_{key}", device_id=device.id, suggested_object_id=object_id
+        )
+    hass.states.async_set(alex_limit, "120")
+    await _alex(hass)
+    await _options(
+        hass,
+        enforce=[
+            {"kind": "nintendo", "person": "person.sam", "entity_id": NINTENDO_LIMIT, "playing": [SAM_PLAYING]},
+            {"kind": "nintendo", "person": "person.alex", "entity_id": alex_limit, "playing": [alex_playing]},
+        ],
+    )
+
+    # Both say only "Switch": two consoles, not together
+    hass.states.async_set(SAM_PLAYING, "on")
+    hass.states.async_set(alex_playing, "on")
+    await hass.async_block_till_done()
+    await _recompute(hass)
+    assert _state(hass, "sensor.hearth_sam_playing") == "Switch" and _state(hass, "sensor.hearth_alex_playing") == "Switch"
+    assert _state(hass, "binary_sensor.hearth_home_playing_together") == "off"
+
+    # The same game named on both: together
+    hass.states.async_set(SAM_PLAYING, "on", {"title": "Mario Kart 8 Deluxe"})
+    hass.states.async_set(alex_playing, "on", {"title": "Mario Kart 8 Deluxe"})
+    await hass.async_block_till_done()
+    await _recompute(hass)
+    assert _state(hass, "binary_sensor.hearth_home_playing_together") == "on"

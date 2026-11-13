@@ -1007,10 +1007,11 @@ then sends the same object as an event whenever it changes, at most every 2 seco
 - `people`: `id`, `name`, `kind` (as set on Hearth's page, `kind_set` true; else `kid` when they have limits, otherwise
   `person`), `tv_profiles`, `all`
   (the shared pool: All screen time's `used_minutes` and `minutes_left`), `groups` (each with a budget or use today),
-  `locked` and `locked_by`, `playing` (each `{app, package, title, episode, device, state, target, since}`: `title`
-  a TV's show or a Switch's game when known, `since` when the play started (UTC); `target` as in `targets` below).
+  `locked` and `locked_by`, `playing` (one entry per thing on now, see [Now playing](#now-playing-entries) below;
+  `target` as in `targets` below).
 - `playing`: everyone's plays now, for a dashboard, oldest first: `person`, `name`, `item` (the title, else the app or
-  package), `app`, `title`, `episode`, `device`, `target` and `since`.
+  package), and `kind`, `app`, `title`, `series`, `artist`, `episode`, `device`, `target`, `since`, `minutes`,
+  `remaining`, `progress` and `text` as in each person's `playing`.
 - `devices`: each Hearth TV and phone: `id`, `name`, `kind`, `connected`, `screen`, `app`, `media_title`, `media_app`,
   `profile` (a TV's), `kids_profile`, `media_player` and `person`.
 - `approvals`: requests for more time (`type: "more_time"`, as the event above) and devices waiting to pair
@@ -1033,9 +1034,12 @@ then sends the same object as an event whenever it changes, at most every 2 seco
   summary is an administrator or an adult. An allow and a pause that end on a place carry `ends_on` (above).
 - each person also has `pauses`: an adult's pauses of one app or group, `[{app, group, name, until, reason}]` (`app`
   or `group` is null), apart from the family `pause`.
-- each person also has `devices_today` `[{target, name, minutes}]` (most first) and `apps_today` `[{package, name,
-  minutes}]` (an app's package, or `title:<id>` for a title; most first, at most 50): today's minutes as Hearth counts
-  them, each device's time once. `target` is the device's id as in `targets` (below) where Hearth can tell:
+- each person also has `devices_today` `[{target, name, kind, minutes}]` (most first) and `apps_today` `[{package,
+  name, minutes, groups}]` (an app's package, or `title:<id>` for a title; most first, at most 50): today's minutes as
+  Hearth counts them, each device's time once. A device's `kind` is `tv`, `phone`, `xbox`, `windows`, `switch` or null
+  (a `source:` sensor whose integration doesn't say: an Xbox integration's is `xbox`, Nintendo's `switch`, the
+  companion app's `phone`). An app's `groups` are the group ids it counts in, in the household's order, without
+  `all` (`["games"]`, `[]` for none). `target` is the device's id as in `targets` (below) where Hearth can tell:
   `hearth:<device_id>` for a Hearth TV or phone, `fl:<device id>` for a source that is one Family Link device's own
   Daily screen time sensor, `nintendo:<entity>` for a source on the same Home Assistant device as the person's
   Nintendo enforcer; any other source is `source:<id>` (a child's Family Link total for all their devices, say, or
@@ -1055,15 +1059,49 @@ then sends the same object as an event whenever it changes, at most every 2 seco
   minutes_left, reason}]`: that extra time now (`minutes_left`: a Hearth device's by its use, a Family Link bonus as
   given, the rest by the clock).
 - each person also has `week`: their last 7 local days, newest first, today included: `[{date, minutes {<group id>:
-  n}, out [group ids that ran out], bonus {<group id> (or `all` for extra time on one device): minutes}, asks}]`
-  (`date` is `YYYY-MM-DD`). Today's `minutes` are live (as `groups`, every group of the household); a past day's are
-  the day's `day` record in [History](#history). A day with no record (before Hearth kept them, or Home Assistant down
-  across more than one midnight) has `minutes` `{}`: unknown, not zero.
+  n}, out [group ids that ran out], bonus {<group id> (or `all` for extra time on one device): minutes}, asks,
+  budget {<group id>: n | null}}]` (`date` is `YYYY-MM-DD`). Today's `minutes` are live (as `groups`, every group of
+  the household); a past day's are the day's `day` record in [History](#history). A day with no record (before Hearth
+  kept them, or Home Assistant down across more than one midnight) has `minutes` `{}`: unknown, not zero. `budget` is
+  that day's budget per group of the household, without its bonus (null: no limit; add `bonus` for "of"): today's as
+  counted, a past day's as recorded with its `day` record, and for a day recorded before budgets were (or not
+  recorded) the budgets now for that day's type, from the dates typed in and the weekday rule of
+  [School days](#school-days-and-day-types) (an entity's or calendar's answer is only ever today's).
 - `groups`: every group of the household, budget or not today: `[{id, name, not_screen_time}]`.
 - `not_screen_time`, `contract`, and `version` (changes with any of it).
 - `media_rooms`: the house's media players by room, below.
 - Contract 2: each person's `headline`, `lines` and `actions`, and the household's `household` {`headline`,
-  `actions`}, below.
+  `actions`, `suggestions`, `counts`}, below; and each person's `binding`, `day_line` and `state`, and each group's
+  `state` and `limited` ([Dashboard fields](#dashboard-fields)).
+
+#### Now playing entries
+
+Each entry of a person's `playing` is one specific thing on now, the most specific known:
+
+```json
+{"kind": "video", "title": "Sleepytime", "series": "Bluey", "artist": null, "episode": "s2e4", "app": "HearthTube",
+ "package": "com.thesiegs.hearthtube", "device": "Kitchen TV", "state": "playing", "target": "hearth:<device id>",
+ "since": "2026-11-13T17:02:00+00:00", "minutes": 12, "remaining": 8, "progress": 0.6,
+ "text": "bluey · s2e4 · 8 min left"}
+```
+
+- `kind`: `video` (a show, video or movie: a TV's media player in the options, else the device's own media session),
+  `music` (a track: the player says music, or an artist without a show), `game` (a Switch's or a live source's title,
+  or an app in the Games group) or `app`.
+- `title`: the most specific thing: the episode's, video's or movie's title, the track, the game; null when only the
+  app is known. `series`: a show's name (an episode's); `artist`: a track's; `episode`: `s2e4` (or `e4`) when the media
+  player gives the numbers. `app` is the container (secondary), `since` when the play started (UTC).
+- Time, worked out when the summary is: `remaining` (whole minutes) and `progress` (0 to 1) when the length is known:
+  a media player's `media_duration`, `media_position` and `media_position_updated_at`, or a Hearth device's status
+  `media_duration_s` with `media_position_s` as of `media_position_at` (epoch milliseconds; TV builds send these from
+  now on). The position runs on while it plays and stands while it's paused. Else null. `minutes`: whole minutes since
+  `since` (null for music, which has no time).
+- `text`: short and lower case: `bluey · s2e4 · 8 min left`, `minecraft · 25 min`, `artist · track`.
+- A device's own state document (and so its `/wait`) carries only the play itself (`kind`, `title`, `series`,
+  `artist`, `episode`, `app`, `package`, `device`, `state`, `target`, `since`): never `minutes`, `remaining`,
+  `progress` or `text`, which tick.
+- Playing together: the same show (else the same title) on two devices. A Switch whose game Nintendo doesn't name
+  (`Switch`) is together only with someone on the same console, never with a kid on another Switch.
 
 A second parent who isn't an administrator (an adult on Hearth's page whose person is their Home Assistant user) reads
 the whole summary, contract 2 included, without pairing codes: the household's headline and actions never mention a
@@ -1101,6 +1139,10 @@ The **headline** is the first of these that holds (glance.py), in this order:
 | calm | nothing else | `all clear` | `clear` |
 
 Times are local, 12-hour, without am/pm; 12:00 at night and at midday are `midnight` and `noon` (`till midnight`).
+Lengths of time are in one format everywhere (noiwid's): `45 min` under an hour, `2 h 10`, `1 h 05`, `3 h` from one;
+before `left`, `more`, `of`, after `+` and `give` the bare number under an hour (`10 left`, `+15`, `give 30?`) and
+the same format from one (`1 h 20 left`, `+1 h`, `asks for 1 h 30 more`). Keys never carry a count, so the format
+changing moves no key.
 **lines** are the rest of that list in the same order, then each group with a limit (All screen time first, `left`,
 `low` or `out` as above), what's playing (`hearthtube · kitchen`, key `playing:<package>`), the next lock (`bedtime
 at 9:00`, key `next:<kind>:<at>`) and, last, the app limits a parent changed in their own app (below); never the
@@ -1134,7 +1176,41 @@ asks waiting`; notice: a pause, `everyone paused till 6:30` or `sam paused till 
 device waiting to pair; notice: kids out of time; calm: `all clear`) and `actions`: each waiting request's yes and no
 (labelled with the kid's name), `pause_end` (`hearth.pause_end {}`, ends the family pause; app and group pauses stay) while anyone is paused, and
 `pause_all` (`hearth.pause {minutes: 30}`, confirm) unless everyone is. Approving a device to pair isn't an action:
-it's an administrator's step on Hearth's page, with no service.
+it's an administrator's step on Hearth's page, with no service. `counts` is what a tile's badge and a TV's top row
+show, counted once here: `{asks, suggestions, pairings, paused, out, low, locked, held}` (`asks`: requests for more
+time waiting; `suggestions`: the household's suggestions; `pairings`: devices waiting to pair, as the reader sees
+them; `paused`: people under the family pause; `out`, `low`, `locked`, `held`: kids whose `state` is that).
+
+#### Dashboard fields
+
+Decided here so every surface (the panel, a TV, Glint) shows the same pool, line and color; a surface picks its own
+hues for each role, never the role.
+
+- Each group has `state`: `paused` (an adult paused that group), `allowed` (an allow lifts it; an allow of All lifts
+  every group), else by its `minutes_left`: `out` (0), `low` (under 10), `ok`, or `none` (no budget today). And
+  `limited`: false when it has no budget today, so the TV and Glint hide it and the panel mutes it. `all` has them too.
+- Each person has `binding`: `{"group": "games", "minutes_left": 10}` or null: the group that stops them first, out
+  first, else the fewest minutes left, All screen time on a tie; a group an allow lifts or without a budget never
+  binds. The give button targets it (`bonus:<group>` in `actions`).
+- Each person has `day_line`, `{text, level, key}` like a line: `<All used> of <All budget + bonus> · <binding
+  group> · <its left>`:
+
+  | Case | text | level | key |
+  |---|---|---|---|
+  | a group binds | `2 h 10 of 3 h · games · 10 left` | calm (notice under 10) | `day:left:games` (`day:low:games`) |
+  | All binds | `2 h 10 of 3 h · 50 left` | calm (notice under 10) | `day:left:all` |
+  | a group out | `1 h 40 of 3 h · games out` | notice | `day:out:games` |
+  | All out | `3 h of 3 h · out of time` | urgent | `day:out:all` |
+  | no budget for All | `1 h 20 today · games · 10 left` | as above | as above |
+  | nothing limited | `1 h 20 today · no limit` | calm | `day:none` |
+  | an allow of All, nothing else limited | `1 h 20 today · allowed till 8:00` | notice | `day:allowed:all` |
+  | the family pause | `paused · dinner till 6:30` | urgent | `day:pause:<until>` |
+  | bedtime, School time or another lock | `bedtime till 7:00` | notice | `day:lock:<kind>:<until>` |
+
+- Each person has `state`, the first that holds: `paused` (the family pause), `locked` (bedtime, School time or
+  another lock now), `out` (the binding group is out), `held` (a first-party control holds a device of theirs:
+  Hearth's hold through Family Link, Family Safety or Nintendo, their own limit, a parent's Family Safety lock, or
+  Google TV's own Kids limit), `low` (the binding group under 10), `ok`, `none` (nothing limited today).
 
 A trimmed example: a kid Alex who asked for more, is paused and is low on video, and Sam with nothing to report. The
 whole summary, from a test (with a grant of Sam's from the Nintendo app added by hand), is
@@ -1165,7 +1241,7 @@ whole summary, from a test (with a grant of Sam's from the Nintendo app added by
           "key": "low:video"
         },
         {
-          "text": "screen time · 95 left",
+          "text": "screen time · 1 h 35 left",
           "level": "calm",
           "key": "left:all"
         }
@@ -1233,7 +1309,7 @@ whole summary, from a test (with a grant of Sam's from the Nintendo app added by
       },
       "lines": [
         {
-          "text": "screen time · 105 left",
+          "text": "screen time · 1 h 45 left",
           "level": "calm",
           "key": "left:all"
         },

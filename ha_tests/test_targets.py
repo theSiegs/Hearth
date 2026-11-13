@@ -53,11 +53,14 @@ async def test_minutes_by_device_and_by_app(hass: HomeAssistant, hass_client_no_
 
     sam = _sam(hass)
     assert sam["devices_today"] == [
-        {"target": "fl:d1", "name": "Sam's phone", "minutes": 45},
-        {"target": TV, "name": "Kitchen TV", "minutes": 15},
+        {"target": "fl:d1", "name": "Sam's phone", "kind": "phone", "minutes": 45},
+        {"target": TV, "name": "Kitchen TV", "kind": "tv", "minutes": 15},
     ]
     apps = {a["package"]: a["minutes"] for a in sam["apps_today"]}
     assert apps == {"com.example.game": 35, "com.thesiegs.hearthtube": 10}
+    # The groups each app counts in, All screen time left out
+    groups = {a["package"]: a["groups"] for a in sam["apps_today"]}
+    assert "all" not in groups["com.thesiegs.hearthtube"] and groups["com.thesiegs.hearthtube"]
 
 
 # Extra time on one device

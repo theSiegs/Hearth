@@ -43,6 +43,9 @@ _TEXT_FIELDS = (
 _BOOL_FIELDS = ("now_playing_available", "kids_profile", "screen_time_up", "google_time_up")
 _INT_FIELDS = {
     "media_duration_s": (0, 7 * MAX_SECONDS_PER_DAY),
+    # Where the media session is (seconds) as of media_position_at (epoch milliseconds), for "8 min left"
+    "media_position_s": (0, 7 * MAX_SECONDS_PER_DAY),
+    "media_position_at": (0, 2**53),
     "screen_time_minutes_left": (0, 24 * 60),
     "screen_time_seen_at": (0, 2**53),
     "screen_time_event_at": (0, 2**53),
