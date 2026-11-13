@@ -51,6 +51,8 @@ final class HaStatusReporter {
     private static final String STATE_PREFS = "ltv_ha_status";
     private static final String EVENT_KEY = "screen_time_event";
     private static final String EVENT_AT_KEY = "screen_time_event_at";
+    /** The features this TV declares in its status (the integration's const.CAPS). */
+    static final List<String> CAPS = java.util.Arrays.asList("commands.play", "events", "notices");
 
     private final Context mContext;
     private final Handler mHandler = new Handler(Looper.getMainLooper());
@@ -448,6 +450,8 @@ final class HaStatusReporter {
         status.put("pin_lockouts", HaParentPins.lockouts(mContext));
         // The parent PINs' hashes come in the answer only when they changed since these
         status.put("parent_pins_version", HaParentPins.version(mContext));
+        // What this TV does beyond what every TV did before caps: its state document carries notices
+        status.put("caps", new JSONArray(CAPS));
         return status;
     }
 
@@ -564,6 +568,8 @@ final class HaStatusReporter {
             ParentBlocks.applyDocument(mContext, state);
             // The adults' parent PINs, which are this TV's while Home Assistant names them
             HaParentPins.applyDocument(mContext, state);
+            // The integration's notices for the adults, in the Bell (none in the document: none left)
+            if (state != null) Household.onIntegrationNotices(mContext, HaNotices.fromDocument(state));
             mHandler.post(() -> {
                 ProfileProvider.notifyChanged(mContext);
                 // A pause, a lock, the next bedtime or a request's answer may have changed

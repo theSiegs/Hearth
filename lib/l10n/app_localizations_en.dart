@@ -1377,6 +1377,28 @@ class AppLocalizationsEn extends AppLocalizations {
       'Asked a parent\'s phone. Allow it there, or enter the PIN here.';
 
   @override
+  String get noticeSentToPhone =>
+      'Sent to your phone. Answer there, or enter the PIN here.';
+
+  @override
+  String get noticeDone => 'Done';
+
+  @override
+  String get noticeSent => 'Sent to your phone';
+
+  @override
+  String get noticeGone => 'That\'s already been answered';
+
+  @override
+  String get noticeUsePhone => 'Answer this on your phone';
+
+  @override
+  String get noticeTooMany => 'Too many tries. Try again later.';
+
+  @override
+  String get noticeFailed => 'That didn\'t work. Try again.';
+
+  @override
   String get parentPinPhoneDenied =>
       'Not allowed from the phone. Enter the PIN here.';
 

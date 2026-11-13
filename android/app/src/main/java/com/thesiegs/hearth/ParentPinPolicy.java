@@ -37,10 +37,23 @@ final class ParentPinPolicy {
         SharedPreferences prefs = prefs(context);
         int misses = prefs.getInt(PREF_WRONG, 0) + 1;
         long wait = waitFor(misses);
-        long until = wait > 0 ? now + wait : 0;
+        // A wait Home Assistant set (holdUntil) isn't cut short by this count's own
+        long held = lockedUntil(context, now);
+        long until = Math.max(wait > 0 ? now + wait : 0, held > now ? held : 0);
         prefs.edit().putInt(PREF_WRONG, misses).putLong(PREF_LOCKED_UNTIL, until).commit();
         if (wait > 0) HaParentPins.noteLockout(context);
         return until;
+    }
+
+    /**
+     * Home Assistant locked its parent PINs out until {@code until} (a PIN it checked for a notice's button): the pad
+     * here waits as long, never more than {@link #MAX_MS} from now. A longer wait already set stays.
+     */
+    static synchronized void holdUntil(Context context, long until) {
+        long now = System.currentTimeMillis();
+        long capped = Math.min(until, now + MAX_MS);
+        if (capped <= lockedUntil(context, now)) return;
+        prefs(context).edit().putLong(PREF_LOCKED_UNTIL, capped).commit();
     }
 
     /** A right PIN: the count starts over. */

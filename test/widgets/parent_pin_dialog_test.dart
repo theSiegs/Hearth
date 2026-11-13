@@ -367,6 +367,72 @@ void main() {
       expect(find.byType(ParentPinDialog), findsOneWidget);
     });
   });
+
+  group("a Hearth notice's button", () {
+    Future<Future<String?> Function()> open(WidgetTester tester, Widget dialog) async {
+      String? result;
+      var closed = false;
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () async {
+              result = await showDialog<String>(context: context, builder: (_) => dialog);
+              closed = true;
+            },
+            child: const Text("open"),
+          ),
+        ),
+      ));
+      return () async => closed ? result : "still open";
+    }
+
+    Future<void> type(WidgetTester tester, String pin) async {
+      for (final d in pin.split("")) {
+        await tester.sendKeyEvent(LogicalKeyboardKey(0x00000000030 + int.parse(d)));
+        await tester.pump();
+      }
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+
+    testWidgets("an answer that isn't about the PIN closes the pad without counting a wrong PIN", (tester) async {
+      final store = _FakeStore();
+      final lock = PinLockout()..store = store;
+      final outcome = await open(
+          tester,
+          ParentPinDialog(
+              title: "Allow +15",
+              verify: (pin) async => throw const PinPadClose(),
+              lockout: lock));
+      await tester.pump();
+      await tester.tap(find.text("open"));
+      await tester.pumpAndSettle();
+      await type(tester, "2468");
+      await tester.pumpAndSettle();
+      expect(await outcome(), isNull);
+      expect(store.misses, 0);
+      expect(store.cleared, isFalse);
+    });
+
+    testWidgets("the phones asked another way say so on the pad, and the PIN still works", (tester) async {
+      final lock = PinLockout()..store = _FakeStore();
+      final outcome = await open(
+          tester,
+          ParentPinDialog(
+              title: "Allow +15",
+              verify: (pin) async => pin == "2468",
+              askPhone: () async => "Sent to your phone",
+              lockout: lock));
+      await tester.pump();
+      await tester.tap(find.text("open"));
+      await tester.pumpAndSettle();
+      expect(find.text("Sent to your phone"), findsOneWidget);
+      await type(tester, "2468");
+      await tester.pumpAndSettle();
+      expect(await outcome(), "2468");
+    });
+  });
 }
 
 class _FakeStore implements PinLockoutStore {

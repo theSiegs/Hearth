@@ -59,6 +59,7 @@ import 'package:flauncher/providers/profile_service.dart';
 import 'models/category.dart';
 import 'package:flauncher/widgets/title_pill.dart';
 import 'package:flauncher/widgets/time_up_card.dart';
+import 'package:flauncher/widgets/notice_press.dart';
 import 'package:flauncher/quiet_failure.dart';
 
 class FLauncher extends StatefulWidget {
@@ -137,6 +138,8 @@ class _FLauncherState extends State<FLauncher> {
     FLauncherChannel.listenForSearch(_openSearch);
     // Profile Pairing's "Change PIN": Settings on that app's profile PINs.
     FLauncherChannel.listenForProfilePins(_openProfilePins);
+    // A Hearth integration notice's button: the Parent PIN pad for it
+    FLauncherChannel.listenForNoticePress(_openNoticePress);
     // Home means the home: whatever is open over it closes
     FLauncherChannel.listenForHomePressed(_onHomePressed);
     // An app picked here was held (its group's time is up, a family pause): the time's up card says why
@@ -150,6 +153,10 @@ class _FLauncherState extends State<FLauncher> {
       try {
         final pins = await channel.takePendingProfilePins();
         if (pins != null) _openProfilePins(pins);
+      } catch (err) { noteFailure('flauncher', err); }
+      try {
+        final press = await channel.takePendingNoticePress();
+        if (press != null) _openNoticePress(press);
       } catch (err) { noteFailure('flauncher', err); }
     });
     _homeSearch = context.read<HomeSearch?>();
@@ -266,6 +273,13 @@ class _FLauncherState extends State<FLauncher> {
     // Whatever was open (Settings included) closes first, so the panel opens on the app's page
     Navigator.of(context).popUntil((route) => route.isFirst);
     showDialog(context: context, barrierColor: Colors.transparent, builder: (_) => SettingsPanel(openProfilePinsFor: packageName));
+  }
+
+  /// One of the Hearth integration's notice buttons was pressed: the Parent PIN pad for it, over the home.
+  void _openNoticePress(Map<dynamic, dynamic> map) {
+    final press = NoticePress.from(map);
+    if (!mounted || press == null) return;
+    answerNotice(context, context.read<FLauncherChannel>(), press);
   }
 
   /// The Home Assistant panel along the right edge: Hearth's own, drawn from the profile's dashboard (or Home
