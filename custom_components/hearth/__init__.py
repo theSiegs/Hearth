@@ -18,6 +18,7 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.start import async_at_started
 from homeassistant.helpers.event import (
     async_track_state_change_event,
     async_track_time_change,
@@ -32,7 +33,8 @@ from .auth import is_adult_user, register_service
 from .websocket import async_register_commands
 from .pause import end_app_pause, end_pause, set_app_pause, set_pause
 from .places import ARRIVE, LEAVE
-from . import llm_api, panel, suggest_push
+from . import llm_api, panel, suggest_push, todo_ws
+from .todos import migrated_options
 from .apps import ACTION_PREFIX
 from .asks import ACTION_PREFIX as ASK_ACTION_PREFIX
 from .commands import is_profile_id, what_to_play
@@ -51,7 +53,7 @@ from .enforce import FAMILY_SAFETY, enforcers_from_options, fs_account_of
 from .sites import BLOCKED, BOTH, FROM_CHOICES, LIST_CHOICES, CopySites
 from .watch import CHANNELS, MAX_BLOCKS, MAX_LOG, VIDEOS, WORDS, channel_id_of, clean_word, video_id_of
 
-PLATFORMS = [Platform.BINARY_SENSOR, Platform.NUMBER, Platform.SENSOR]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.NUMBER, Platform.SENSOR, Platform.TODO]
 
 type HearthConfigEntry = ConfigEntry[HearthHub]
 
@@ -735,13 +737,18 @@ def _register_watch_services(hass: HomeAssistant) -> None:
         unschema = vol.Schema({vol.Required("person"): cv.entity_id, vol.Required(field): cv.string})
         register_service(hass, DOMAIN, f"block_{name}", blocking(kind, field, parse, True), schema=schema)
         register_service(hass, DOMAIN, f"unblock_{name}", blocking(kind, field, parse, False), schema=unschema)
+    # The adults' Undo on a chore's notice (todos.py)
+    todo_ws.async_register_services(hass)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bool:
     _check_profile_keys(hass, entry)
     _migrate_offer_more(hass, entry)
+    old_chores = _migrate_chores(hass, entry)
     hub = HearthHub(hass, entry)
     await hub.async_load()
+    if old_chores:
+        hub.household.todos.queue_imports(old_chores)
     _give_push_topics(hass, entry, hub)
     entry.runtime_data = hub
     await hub.household.school.async_refresh()
@@ -752,6 +759,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
         async_register_views(hass)
         async_register_commands(hass)
         panel.async_register_commands(hass)
+        todo_ws.async_register_commands(hass)
         hass.data[_VIEWS_REGISTERED] = True
     # Hearth's page in the sidebar, while the household is set up
     await panel.async_register_panel(hass)
@@ -790,9 +798,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
 
     entry.async_on_unload(async_track_time_interval(hass, schedule_tick, timedelta(minutes=1)))
     entry.async_create_background_task(hass, schedule_tick(), "hearth schedule")
-    # Chores: a to-do list changed
-    if lists := hub.household.chores.lists():
-        entry.async_on_unload(async_track_state_change_event(hass, lists, hub.household.chores.async_changed))
+    # The kids' to-do lists (todos.py): today's grants' notices back after a restart; the old Chores earn time lists
+    # brought in once Home Assistant has started (their entities are there then); and each midnight, old marks go
+    todos = hub.household.todos
+    todos.start()
+    if todos.imports:
+
+        async def import_old_chores(_hass: HomeAssistant) -> None:
+            await todos.async_import()
+
+        entry.async_on_unload(async_at_started(hass, import_old_chores))
+
+    @callback
+    def todos_new_day(_now) -> None:
+        todos.new_day()
+
+    entry.async_on_unload(async_track_time_change(hass, todos_new_day, hour=0, minute=0, second=5))
 
     # A group running out no longer makes an offered request: where the household chose it, its suggestion goes to
     # the adults' phones instead (suggest_push.py), so one run-out is one notification
@@ -901,6 +922,16 @@ def _migrate_offer_more(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
     before the update listener, so it doesn't reload."""
     if (options := suggest_push.migrated(entry.options)) is not None:
         hass.config_entries.async_update_entry(entry, options=options)
+
+
+def _migrate_chores(hass: HomeAssistant, entry: HearthConfigEntry) -> list[dict]:
+    """Configure > Chores earn time (the old chores option) goes: its rows are brought into the kids' to-do lists
+    (todos.py). Before the update listener, so it doesn't reload."""
+    if (moved := migrated_options(dict(entry.options))) is None:
+        return []
+    options, rows = moved
+    hass.config_entries.async_update_entry(entry, options=options)
+    return rows
 
 
 def _check_profile_keys(hass: HomeAssistant, entry: HearthConfigEntry) -> None:

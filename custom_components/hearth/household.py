@@ -56,7 +56,7 @@ from .grants import Grants
 from .device_extra import ALLOW as EXTRA_ALLOW, BONUS as EXTRA_BONUS, DeviceExtra, DeviceExtras
 from .native_sync import NativeSync
 from . import family_link as fl
-from .chores import ChoreWatcher
+from .todos import ChoreBook
 from .schedule import Scheduler
 from .watch import WatchLog
 from .pause import PAUSE, app_pauses_of, end_pause, lock_kinds, lock_until, next_lock, pause_ends_on, pause_of
@@ -171,7 +171,9 @@ class Household:
         self.history = History(hass, hub.entry.entry_id)
         self.sync = NativeSync(hass, self, hub.entry.entry_id)
         self.scheduler = Scheduler(hass, self, hub.entry.entry_id)
-        self.chores = ChoreWatcher(hass, self)
+        self.todos = ChoreBook(hass, self, hub.entry.entry_id)
+        # Chore minutes earned today count as bonus (todos.py)
+        self.limits.chore_minutes = self.todos.minutes_today
         self.places = Places(hass, self)
         self.days: dict[str, PersonDay] = {}
         # The day [days] is of
@@ -200,6 +202,7 @@ class Household:
         await self.history.async_load()
         await self.sync.async_load()
         await self.scheduler.async_load()
+        await self.todos.async_load()
 
     async def async_flush(self) -> None:
         await self.limits.async_flush()
@@ -212,6 +215,7 @@ class Household:
         await self.history.async_flush()
         await self.sync.async_flush()
         await self.scheduler.async_flush()
+        await self.todos.async_flush()
 
     # The mapping
 
