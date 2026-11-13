@@ -63,7 +63,6 @@ import logging
 import secrets
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components import persistent_notification
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
@@ -1111,15 +1110,9 @@ class Scheduler:
 
     def tell(self, title: str, message: str, notification_id: str) -> None:
         """The adults: a notification in Home Assistant, and on the schedule's phone (else the one that answers
-        requests for more time)."""
-        persistent_notification.async_create(self.hass, message, title=title, notification_id=notification_id)
-        from .apps import CONF_ASK_NOTIFY
+        requests for more time), tagged with the notification's id."""
+        from .attention import SCHEDULE_PHONE, Item
 
-        service = self.config.notify or self.household.options.get(CONF_ASK_NOTIFY)
-        if not service or "." not in service:
-            return
-        domain, name = service.split(".", 1)
-        if self.hass.services.has_service(domain, name):
-            self.hass.async_create_task(
-                self.hass.services.async_call(domain, name, {"title": title, "message": message}, blocking=False)
-            )
+        self.household.hub.attention.notify(
+            Item(notification_id, message, title=title, audience=SCHEDULE_PHONE, bell=True)
+        )

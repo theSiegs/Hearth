@@ -15,7 +15,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components import frontend, panel_custom, persistent_notification, websocket_api
+from homeassistant.components import frontend, panel_custom, websocket_api
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.core import HomeAssistant, SupportsResponse, callback
 from homeassistant.exceptions import HomeAssistantError
@@ -50,7 +50,7 @@ from .limits import (
     SCHOOL_DAY,
     slug,
 )
-from .notifications import pairing_notification_id
+from .notifications import clear_pairing
 from .places import CONF_PLACES, FAVORITES, MAX_FAVORITES, MAX_NAME, RESERVED, SCHOOLS, TRACKERS
 from .schooldays import CONF_SCHOOL_DAYS
 from .sources import CONF_SOURCES, CONF_TITLES
@@ -437,7 +437,7 @@ async def ws_pairing(hass: HomeAssistant, connection: websocket_api.ActiveConnec
     elif not await hub.async_approve(msg["pairing_id"], msg.get("person") if pairing.kind == KIND_MOBILE else None):
         connection.send_error(msg["id"], "expired", "That request has expired")
         return
-    persistent_notification.async_dismiss(hass, pairing_notification_id(msg["pairing_id"]))
+    clear_pairing(hass, msg["pairing_id"])
     # The discovered device in Settings > Devices & services goes too
     for flow in hass.config_entries.flow.async_progress_by_handler(DOMAIN):
         if flow.get("context", {}).get("unique_id") == pairing.device_id or (

@@ -15,7 +15,6 @@ import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_NAME
-from homeassistant.components import persistent_notification
 from homeassistant.core import callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import (
@@ -63,7 +62,7 @@ from .enforce import (
     NINTENDO_DOMAIN,
     PLATFORMS,
 )
-from .notifications import pairing_notification_id
+from .notifications import clear_pairing
 from .schooldays import CALENDAR_OFF, CALENDAR_SCHOOL, CONF_SCHOOL_DAYS, SCHOOL_BUDGET
 from .schedule import CONF_SCHEDULE, CONF_SITE_LIST
 from .chores import CONF_CHORES, DEFAULT_MINUTES
@@ -121,7 +120,7 @@ class HearthConfigFlow(ConfigFlow, domain=DOMAIN):
             hub = _loaded_hub(self.hass)
             if hub is None or not await hub.async_approve(self._pairing_id, user_input.get(CONF_PERSON)):
                 return self.async_abort(reason="expired")
-            persistent_notification.async_dismiss(self.hass, pairing_notification_id(self._pairing_id))
+            clear_pairing(self.hass, self._pairing_id)
             return self.async_abort(reason="paired", description_placeholders={"name": pairing.name})
         # A phone is one person's: say whose (a TV's profiles are mapped in the options)
         schema = (

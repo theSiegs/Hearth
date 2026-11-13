@@ -15,13 +15,13 @@ import hashlib
 import json
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components import persistent_notification
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
 from .entry_tasks import entry_task
+from .attention import CHOSEN_PHONE, Action, Item
 from .const import (
     CONF_KIND,
     CONF_LOCKS,
@@ -38,7 +38,6 @@ from .const import (
 )
 from .apps import (
     CONF_APP_WATCH,
-    CONF_ASK_NOTIFY,
     EVENT_NEW_APP,
     AppCatalog,
     observed_from_entities,
@@ -673,23 +672,14 @@ class Household:
             update_notification(self.hass, [], self.groups)
 
     def _ask_on_phone(self, entry) -> None:
-        service = self.options.get(CONF_ASK_NOTIFY)
-        if not service or "." not in service:
-            return
-        domain, name = service.split(".", 1)
-        if not self.hass.services.has_service(domain, name):
-            return
-        self.hass.async_create_task(
-            self.hass.services.async_call(
-                domain,
-                name,
-                {
-                    "title": "New app: " + entry.name,
-                    "message": (f"{entry.who} has {entry.name}. " if entry.who else f"{entry.name} is new. ")
-                    + "Which group does it count in?",
-                    "data": {"tag": f"hearth_app_{entry.package}", "actions": phone_actions(entry, self.groups)},
-                },
-                blocking=False,
+        self.hub.attention.notify(
+            Item(
+                f"hearth_app_{entry.package}",
+                (f"{entry.who} has {entry.name}. " if entry.who else f"{entry.name} is new. ")
+                + "Which group does it count in?",
+                title="New app: " + entry.name,
+                audience=CHOSEN_PHONE,
+                actions=tuple(Action(a["action"], a["title"]) for a in phone_actions(entry, self.groups)),
             )
         )
 
@@ -1416,12 +1406,15 @@ class Household:
             names = ", ".join(
                 (state.name if (state := self.hass.states.get(p)) else p) for p in taken
             )
-            persistent_notification.async_create(
-                self.hass,
-                f"Hearth took the screen time set on a TV as the first daily limits for {names}. Change them on "
-                "Hearth's page. Bedtime set on the TV isn't taken: set it under Locks.",
-                title="Screen time from the TV",
-                notification_id=f"hearth_rules_{device_id}",
+            self.hub.attention.notify(
+                Item(
+                    f"hearth_rules_{device_id}",
+                    f"Hearth took the screen time set on a TV as the first daily limits for {names}. Change them on "
+                    "Hearth's page. Bedtime set on the TV isn't taken: set it under Locks.",
+                    title="Screen time from the TV",
+                    bell=True,
+                    phone=False,
+                )
             )
         return taken
 

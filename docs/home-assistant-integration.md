@@ -831,6 +831,31 @@ handles it (Hearth's own phone app, Glint) answers through the WebSocket (`heart
 answered anywhere (a button, Hearth's page, the service, the WebSocket, Family Safety's own app) or expires, every phone
 that would get it is sent `{"message": "clear_notification", "data": {"tag": "hearth_more_<id>"}}`.
 
+#### Attention
+
+Every notice Hearth gives goes through one layer (attention.py): an **item** with a `key`, a `title` and `text`, an
+`urgency` (`info`, `notice`, `urgent`), an **audience**, buttons (`actions`: `{id, label, service, data}`), a `tag`
+(the key when not given), whether it also goes to Home Assistant's bell, an expiry, and what it's `about` (`person`,
+`group`). Audiences: `adults` (every adult's companion apps as above, with the `ask_notify` phone once),
+`chosen_phone` (`ask_notify`), `schedule_phone` (the schedule's own notify service, else `ask_notify`), `admins` (the
+bell only, so far) and `person:<entity id>` (that person's companion apps). Delivery adapters take it out: the
+companion app (`delivery/companion.py`) and the bell (`delivery/bell.py`); an Echo later. An item with the same key or
+tag replaces the one before; clearing a key or tag takes it off every channel it went to. Items are kept while the
+household reloads (an options change), not over a restart: their sources put them back (requests have their own
+store).
+
+**Tags.** Every companion-app push carries `data.tag` starting with `hearth_`, so an app that shows Hearth's notices
+(Glint) can tell them apart: `hearth_more_<request id>` (a request or an offer), `hearth_place_<person entity id>` (where a kid
+went), `hearth_schedule_check` and `hearth_school_time_watchdog` (the schedule), `hearth_chore_<to-do item uid>` (a
+chore done), `hearth_app_<package>` (a new app). Bell-only notices keep their ids (`hearth_pairing_<id>`,
+`hearth_paired_<device>`, `hearth_rules_<device>`, `hearth_more_fs_<request id>`, `hearth_new_apps`).
+
+**Buttons.** A button with a service goes to the phone as `HEARTH_ACT|<item key>|<n>`: the service and its data stay in
+Home Assistant. When it's pressed, the presser must be an adult (or an administrator), and one the item reached (a
+user whose companion app, or whose person's, got it; any administrator for `admins`); the action then runs as them
+(`Context(user_id)`), so a `hearth.*` service checks them as usual. A press for an item that's gone (cleared, expired,
+or from before a restart) is ignored. The older `HEARTH_MORE|` and `HEARTH_APP|` buttons work as before.
+
 #### A kid's own Home Assistant user
 
 A kid (or anyone) with a Home Assistant user of their own, linked to their person (the person's `user_id`), may use

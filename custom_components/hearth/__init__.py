@@ -40,6 +40,7 @@ from .const import CAP_PLAY, CAP_PUSH, CONF_DEVICES, CONF_PROFILES, CONF_PUSH_TO
 from .profiles import ISSUE_PROFILE_KEYS, legacy_keys
 from .push import new_topic
 from .hub import HearthHub
+from .attention import ACT_PREFIX
 from .limits import DAY_TYPES
 from .asks import CONF_OFFER_MORE, EVENT_MORE_TIME_ANSWERED, EVENT_MORE_TIME_REQUESTED, AskError
 from .const import EVENT_BUDGET_REACHED
@@ -843,15 +844,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     if entities := hub.household.source_entities():
         entry.async_on_unload(async_track_state_change_event(hass, entities, recompute))
     async def phone_answer(event) -> None:
-        """A Sort button on a new app's phone notification: HEARTH_APP|<group>|<package>."""
+        """A button on a phone notification: an attention item's (HEARTH_ACT|<key>|<n>), a request's
+        (HEARTH_MORE|<id>|<minutes>) or a new app's Sort (HEARTH_APP|<group>|<package>)."""
         action = str(event.data.get("action") or "")
-        if not action.startswith((ASK_ACTION_PREFIX, ACTION_PREFIX)):
+        if not action.startswith((ASK_ACTION_PREFIX, ACTION_PREFIX, ACT_PREFIX)):
             return
         # Only an adult's (or an administrator's) phone answers or sorts: a kid with Home Assistant on their own phone
         # can fire the same action, for their own ask
         user = await hass.auth.async_get_user(event.context.user_id) if event.context.user_id else None
         if not is_adult_user(hass, hub, user):
             _LOGGER.warning("A Hearth notification action from someone who isn't an adult was ignored")
+            return
+        # An item's action, run as that adult when the item reached them
+        if await hub.attention.act(action, user):
             return
         # A request for more time: the first adult's answer decides
         if hub.asks.phone_answer(action, event.context.user_id):

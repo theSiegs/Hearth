@@ -30,13 +30,12 @@ from typing import Any
 
 import logging
 
-from homeassistant.components import persistent_notification
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
 from .entry_tasks import entry_task
-from . import phones
+from .attention import ADULTS, NOTICE, Action, Item
 from .const import DOMAIN, SIGNAL_PAIRINGS
 
 _LOGGER = logging.getLogger(__name__)
@@ -411,12 +410,17 @@ class Asks:
         except Exception as err:  # noqa: BLE001 - told to the adults instead
             _LOGGER.warning("Hearth couldn't answer the Family Safety request %s: %s", ask.external_id, err)
             who = self.hub.household.person_name(ask.person)
-            persistent_notification.async_create(
-                self.hass,
-                f"Hearth couldn't {'approve' if approve else 'deny'} {who}'s request in Family Safety ({err}). "
-                "Answer it in the Family Safety app.",
-                title="Family Safety request",
-                notification_id=f"hearth_more_fs_{ask.id}",
+            self.hub.attention.notify(
+                Item(
+                    f"hearth_more_fs_{ask.id}",
+                    f"Hearth couldn't {'approve' if approve else 'deny'} {who}'s request in Family Safety ({err}). "
+                    "Answer it in the Family Safety app.",
+                    title="Family Safety request",
+                    urgency=NOTICE,
+                    bell=True,
+                    phone=False,
+                    about={"person": ask.person},
+                )
             )
 
     # Telling the adults
@@ -444,34 +448,34 @@ class Asks:
                 + "."
                 + (f" “{ask.note}”" if ask.note else "")
             )
-        persistent_notification.async_create(
-            self.hass,
-            message + " Answer on Hearth's page or your phone.",
-            title=title,
-            notification_id=f"hearth_more_{ask.id}",
-        )
-        # The asked amount first; Android shows three buttons, so: asked, the next one up, not now
+        # The asked amount first; Android shows three buttons, so: asked, the next one up, not now. The buttons are
+        # HEARTH_MORE| ones (phone_answer), as phones have always had them
         amounts = [ask.minutes] + [m for m in AMOUNTS if m > ask.minutes][:1]
-        actions = [{"action": f"{ACTION_PREFIX}{ask.id}|{m}", "title": f"+{m} min"} for m in amounts]
-        actions.append({"action": f"{ACTION_PREFIX}{ask.id}|0", "title": "Not now"})
-        phones.send(
-            self.hass,
-            self.hub.entry.options,
-            title,
-            message,
-            {"tag": f"hearth_more_{ask.id}", "actions": actions},
-            ask_id=ask.id,
+        actions = [Action(f"{ACTION_PREFIX}{ask.id}|{m}", f"+{m} min") for m in amounts]
+        actions.append(Action(f"{ACTION_PREFIX}{ask.id}|0", "Not now"))
+        self.hub.attention.notify(
+            Item(
+                f"hearth_more_{ask.id}",
+                message,
+                title=title,
+                urgency=NOTICE,
+                audience=ADULTS,
+                actions=tuple(actions),
+                bell=True,
+                bell_text=message + " Answer on Hearth's page or your phone.",
+                expires=ask.expires,
+                about={"person": ask.person, "group": ask.group},
+                opens=ask.id,
+            )
         )
 
     def tell(self, title: str, message: str, tag: str) -> None:
         """News for the adults, the way requests reach them: a notification here, and on the adults' phones."""
-        persistent_notification.async_create(self.hass, message, title=title, notification_id=tag)
-        phones.send(self.hass, self.hub.entry.options, title, message, {"tag": tag})
+        self.hub.attention.notify(Item(tag, message, title=title, audience=ADULTS, bell=True))
 
     def _clear_notification(self, ask: Ask) -> None:
         """An answered (or expired) request comes off Home Assistant's notifications and every adult's phone."""
-        persistent_notification.async_dismiss(self.hass, f"hearth_more_{ask.id}")
-        phones.clear(self.hass, self.hub.entry.options, f"hearth_more_{ask.id}")
+        self.hub.attention.clear(f"hearth_more_{ask.id}", audience=ADULTS, bell_too=True, phone=True)
 
     @callback
     def phone_answer(self, action: str, user_id: str | None) -> bool:

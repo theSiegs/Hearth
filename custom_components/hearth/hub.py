@@ -9,7 +9,6 @@ import secrets
 from datetime import datetime
 from typing import Any
 
-from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_send
@@ -46,6 +45,7 @@ from .const import (
     STORAGE_VERSION,
 )
 from .asks import Asks
+from .attention import ADMINS, Attention, Item
 from .commands import Commands
 from .push import PushChannel, new_topic
 from .wait import DeviceWaits
@@ -158,6 +158,8 @@ class HearthHub:
         self._asked_at: dict[str, datetime] = shared["asked_at"]
         # Pairing tickets by their hash (the ticket itself is never kept)
         self._tickets: dict[str, Ticket] = shared["tickets"]
+        # Telling people (the companion app, the bell): first, so everything after can
+        self.attention = Attention(hass, self)
         self.household = Household(hass, self)
         self.asks = Asks(hass, self)
         # One-shot commands for the TVs (hearth.play_on_tv), handed over in their state documents
@@ -427,12 +429,17 @@ class HearthHub:
             EVENT_DEVICE_PAIRED,
             {"device_id": device_id, "name": name, "kind": kind, "person": held.person, "by": held.minted_by},
         )
-        persistent_notification.async_create(
-            self.hass,
-            f"**{name}** paired with Hearth through **{by_name}**, which is already paired. If that wasn't you, delete "
-            "it in [Devices & services](/config/integrations/integration/hearth).",
-            title="A Hearth device paired",
-            notification_id=f"hearth_paired_{device_id}",
+        self.attention.notify(
+            Item(
+                f"hearth_paired_{device_id}",
+                f"**{name}** paired with Hearth through **{by_name}**, which is already paired. If that wasn't you, "
+                "delete it in [Devices & services](/config/integrations/integration/hearth).",
+                title="A Hearth device paired",
+                urgency="notice",
+                audience=ADMINS,
+                bell=True,
+                phone=False,
+            )
         )
         return pairing
 
