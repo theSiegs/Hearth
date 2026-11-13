@@ -793,6 +793,20 @@
           "description": "Only say what would be added, without adding anything."
         }
       }
+    },
+    "dismiss_suggestion": {
+      "name": "Not today for a suggestion",
+      "description": "Puts one of a person's suggestions (the household summary's suggestions) off for the rest of the day.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "Whose suggestion it is."
+        },
+        "key": {
+          "name": "Suggestion",
+          "description": "The suggestion's key, such as more:games or device:fs:xbox."
+        }
+      }
     }
   },
   "issues": {

@@ -28,7 +28,7 @@ from homeassistant.util import dt as dt_util
 from .const import CONF_KIND, CONF_MEDIA_PLAYERS, CONF_PERSON, CONF_ROLES, CONTRACT, DOMAIN, SIGNAL_DEVICE_ADDED, KIND_TV, SIGNAL_PAIRINGS, SIGNAL_PEOPLE, SIGNAL_STATUS, SIGNAL_WATCH
 from .counting import ALL
 from . import parent_pin
-from .asks import AMOUNTS, VIA_HOME_ASSISTANT, AskError
+from .asks import AMOUNTS, CONF_OFFER_MORE, VIA_HOME_ASSISTANT, AskError
 from .limits import OTHER
 from .media import media_rooms
 from .auth import is_adult_user
@@ -143,6 +143,7 @@ def summary(hub) -> dict[str, Any]:
                 now,
                 people[-1]["grants"],
                 people[-1]["answered_elsewhere"],
+                _suggest_hints(hub, person, people[-1], now),
             )
         )
     devices = []
@@ -194,6 +195,23 @@ def summary(hub) -> dict[str, Any]:
     }
     body["version"] = hashlib.sha256(json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()[:16]
     return body
+
+
+def _suggest_hints(hub, person: str, view: dict[str, Any], now) -> dict[str, Any]:
+    """What sizes and silences a person's suggestions (glance.suggestions): what an adult put off today, the amounts
+    the household chose (offer_more), and what's usually given (history.py)."""
+    history = hub.household.history
+    chosen = {
+        str(o["group"]): int(o.get("minutes") or 30)
+        for o in hub.entry.options.get(CONF_OFFER_MORE, [])
+        if o.get("person") == person and o.get("group")
+    }
+    usual = {}
+    for group in view.get("groups") or []:
+        if group.get("minutes_left") is not None and group["minutes_left"] <= 0:
+            if (minutes := history.usual_bonus(person, group["id"], now)) is not None:
+                usual[group["id"]] = minutes
+    return {"dismissed": history.dismissed(person, dt_util.as_local(now).date()), "minutes": chosen, "usual": usual}
 
 
 def _grant_views(household, person: str) -> list[dict[str, Any]]:

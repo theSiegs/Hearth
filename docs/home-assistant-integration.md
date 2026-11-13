@@ -1236,6 +1236,33 @@ whole summary, from a test (with a grant of Sam's from the Nintendo app added by
 Hearth's page opens on a tab from its link: `/hearth#today`, `#kids`, `#devices`, `#apps`, `#family`, and
 `#approvals` (Today, where requests for more time and devices waiting to pair are shown first).
 
+#### Suggestions
+
+Each person in the summary also has `suggestions`, and `household.suggestions` lists everyone's (with `person` and
+`person_name`), out of All screen time first. A suggestion is what an adult will likely be asked for next, with the
+answer ready: `{key, text, level, reason, minutes, group | device, actions}`.
+
+| Reason | When | Text | Key |
+|---|---|---|---|
+| `group_out` | a group with a budget is out (and no allow lifts it) | `games ran out · give 15?` | `more:<group>` |
+| `group_out` | All screen time is out: then only this one, since more of a group wouldn't open anything | `screen time ran out · give 30?` | `more:all` |
+| `device_limit` | Google's, Microsoft's or Nintendo's own limit stops a device while Hearth's time isn't out | `xbox · microsoft's limit · give 15?` | `device:<target>` |
+
+There's no suggestion while a request for it waits (its yes and no are the actions then), while extra time on that
+device runs, or after an adult chose "not today". The amount is the household's own for that kid and group (Configure >
+Offer more time), else what an adult usually gives them (History), else 15 minutes (30 for All screen time). The actions
+are two amounts (`hearth.add_bonus`, the first `primary`) and "not today" (`hearth.dismiss_suggestion` with the key),
+which puts it off until midnight.
+
+#### History
+
+Hearth keeps 90 days of what happened with each person's time (history.py): a group running out (`out`), a request
+(`ask`), an offer (`offer`), an answer (`answer`, with its status), a bonus to a group (`bonus`) or on one device
+(`device_bonus`), and a suggestion put off (`dismiss`). Events hold entity ids, group ids, device ids, minutes and times,
+never names or notes. Suggestions are sized from it: the most common bonus for a kid and group over the last 28 days,
+once there are at least 3. Minutes per kid and group are already recorded by Home Assistant's statistics (each
+group's Today sensor is `total_increasing`).
+
 ### Play on a TV
 
 **Proposed for the TV; built in Home Assistant.** `hearth.play_on_tv` starts something on a paired Hearth TV, from an

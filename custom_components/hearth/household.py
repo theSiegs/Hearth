@@ -50,6 +50,7 @@ from .counting import ALL, DeviceUsage, Reading, group_seconds, merge
 from .limits import CONF_APP_GROUPS, OTHER, OTHER_DAY, SCHOOL_DAY, Group, GroupState, Limits, groups_from_options, groups_of
 from .enforce import FAMILY_LINK, FAMILY_SAFETY, Enforcement, enforcers_from_options, fs_account_of, fs_app, fs_app_platform
 from .exceptions import Allows, Lifted, end_of_day
+from .history import BONUS, DEVICE_BONUS, History
 from .grants import Grants
 from .device_extra import ALLOW as EXTRA_ALLOW, BONUS as EXTRA_BONUS, DeviceExtra, DeviceExtras
 from .native_sync import NativeSync
@@ -123,6 +124,7 @@ class Household:
         self.allows = Allows(hass, hub.entry.entry_id)
         self.grants = Grants(hass, hub.entry.entry_id)
         self.device_extras = DeviceExtras(hass, hub.entry.entry_id)
+        self.history = History(hass, hub.entry.entry_id)
         self.sync = NativeSync(hass, self, hub.entry.entry_id)
         self.scheduler = Scheduler(hass, self, hub.entry.entry_id)
         self.chores = ChoreWatcher(hass, self)
@@ -151,6 +153,7 @@ class Household:
         await self.allows.async_load()
         await self.grants.async_load()
         await self.device_extras.async_load()
+        await self.history.async_load()
         await self.sync.async_load()
         await self.scheduler.async_load()
 
@@ -162,6 +165,7 @@ class Household:
         await self.allows.async_flush()
         await self.grants.async_flush()
         await self.device_extras.async_flush()
+        await self.history.async_flush()
         await self.sync.async_flush()
         await self.scheduler.async_flush()
 
@@ -1338,6 +1342,8 @@ class Household:
             else:
                 until = min(now + timedelta(minutes=minutes or 0), midnight)
         extra = self.device_extras.add(person, target, found["via"], kind, group, until, minutes, base_s, reason)
+        if kind == EXTRA_BONUS:
+            self.history.log(DEVICE_BONUS, person, device=target, group=group, minutes=minutes)
         self.recompute()
         if found["via"] == "family_link":
             self.sync.give_device(person, extra.id, until, target.removeprefix("fl:"), None)
@@ -1374,6 +1380,8 @@ class Household:
         day = self.days.get(person)
         had_none = bool(day and (state := day.limits.get(ALL)) and state.minutes_left == 0)
         self.limits.set_bonus(person, group, self.limits.bonus(person, group) + minutes)
+        if minutes:
+            self.history.log(BONUS, person, group=group, minutes=minutes)
         self.recompute()
         if group == ALL and minutes > 0:
             # All screen time back: Google's and Microsoft's own limits get as much

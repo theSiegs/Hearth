@@ -368,6 +368,18 @@ answer_request:
     deny:
       selector:
         boolean:
+dismiss_suggestion:
+  fields:
+    person:
+      required: true
+      selector:
+        entity:
+          domain: person
+    key:
+      required: true
+      example: "more:games"
+      selector:
+        text:
 copy_sites:
   fields:
     people:

@@ -30,6 +30,12 @@ BONUS_MINUTES = 15
 PAUSE_MINUTES = 30
 
 SERVICE_ANSWER = "hearth.answer_request"
+SERVICE_DISMISS = "hearth.dismiss_suggestion"
+
+# What a suggestion offers when the household chose no amount and has no habit yet (history.usual_bonus): All
+# screen time a half hour, a group or one device a quarter
+SUGGEST_ALL_MINUTES = 30
+SUGGEST_MINUTES = 15
 
 
 def news_key(kind: str, subject: Any = None) -> str:
@@ -271,6 +277,118 @@ def _paused_word(paused: dict[str, Any], names: dict[str, str]) -> str:
     return names.get(paused["group"], paused.get("name") or paused["group"]).lower()
 
 
+def _amounts(first: int) -> list[int]:
+    """The two amounts a suggestion offers: its own, and a quarter or a half hour beside it."""
+    return [first, 30 if first == 15 else 15]
+
+
+def _suggestion(
+    person: str, key: str, text: str, reason: str, minutes: int, data: dict[str, Any], **about: Any
+) -> dict[str, Any]:
+    actions = [
+        _action(
+            f"suggest:{key}:{amount}",
+            f"+{amount}",
+            "hearth.add_bonus",
+            {"person": person, "minutes": amount, **data},
+            primary=amount == minutes,
+        )
+        for amount in _amounts(minutes)
+    ]
+    actions.append(_action(f"suggest_dismiss:{key}", "not today", SERVICE_DISMISS, {"person": person, "key": key}))
+    return {"key": key, "text": text, "level": NOTICE, "reason": reason, "minutes": minutes, **about,
+            "actions": actions}
+
+
+def _device_target(row: dict[str, Any], via: str, targets: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """The person's device (targets.py) a first-party row is about."""
+    if via == "family_link":
+        wanted = f"fl:{row.get('device_id')}"
+        return next((t for t in targets if t["id"] == wanted), None)
+    if via == "family_safety":
+        wanted = f"fs:{str(row.get('platform') or '').lower()}"
+        return next((t for t in targets if t["id"] == wanted), None)
+    switches = [t for t in targets if t.get("via") == "nintendo"]
+    named = [t for t in switches if str(t.get("name") or "").casefold() == str(row.get("name") or "").casefold()]
+    return (named or switches)[0] if len(named or switches) == 1 else None
+
+
+def suggestions(
+    person: dict[str, Any],
+    asks: list[dict[str, Any]],
+    allows: list[dict[str, Any]],
+    hints: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """What an adult will likely be asked for next, with the answer ready (round 2, decisions 3 and 4).
+
+    A Hearth group out of time: give more of that group. When All screen time is out, only All: more of a group
+    wouldn't open anything. A device stopped by Google's, Microsoft's or Nintendo's own limit while Hearth's time
+    isn't out: extra time on that device. Never while a request for it waits (its yes and no are the actions then), an
+    allow already lifts it, extra time on that device runs, or an adult put it off today.
+
+    hints: {"dismissed": keys put off today, "minutes": {group or device id: minutes the household chose},
+    "usual": {group: minutes usually given (history.usual_bonus)}}.
+    """
+    hints = hints or {}
+    dismissed = set(hints.get("dismissed") or ())
+    chosen = hints.get("minutes") or {}
+    usual = hints.get("usual") or {}
+    entity = person["id"]
+    names = {g["id"]: g["name"] for g in person.get("groups", [])}
+    asked = {a.get("group") for a in asks}
+    allowed = {a.get("group") for a in allows if a.get("group")}
+    if any(a.get("source") == "family_safety" for a in asks):
+        asked.add("device:family_safety")
+    found: list[dict[str, Any]] = []
+
+    def minutes_for(key: str, group: str, device: bool = False) -> int:
+        given = chosen.get(key) or (None if device else chosen.get(group) or usual.get(group))
+        return int(given) if given else (SUGGEST_ALL_MINUTES if group == ALL and not device else SUGGEST_MINUTES)
+
+    out = [
+        g for g in person.get("groups", [])
+        if g.get("minutes_left") is not None and g["minutes_left"] <= 0 and g["id"] not in allowed
+    ]
+    all_out = any(g["id"] == ALL for g in out) and ALL not in allowed
+    for group in out:
+        if (all_out and group["id"] != ALL) or group["id"] in asked:
+            continue
+        key = news_key("more", group["id"])
+        if key in dismissed:
+            continue
+        word = _group_word(group["id"], names)
+        minutes = minutes_for(group["id"], group["id"])
+        found.append(
+            _suggestion(entity, key, f"{word} ran out · give {minutes}?", "group_out", minutes,
+                        {"group": group["id"]}, group=group["id"])
+        )
+    if all_out:
+        return found
+    # Their own limits: only where Hearth's time isn't what stops them
+    targets = person.get("targets") or []
+    extras = {e.get("target") for e in person.get("device_extras") or []}
+    for via, rows in (person.get("first_party") or {}).items():
+        if via == "family_safety" and "device:family_safety" in asked:
+            continue
+        for row in rows:
+            if not row.get("blocking"):
+                continue
+            target = _device_target(row, via, targets)
+            if target is None or target["id"] in extras:
+                continue
+            key = news_key("device", target["id"])
+            if key in dismissed:
+                continue
+            word = str(target.get("name") or "device").lower()
+            whose = {"family_link": "google's", "family_safety": "microsoft's", "nintendo": "nintendo's"}.get(via, "its")
+            minutes = minutes_for(target["id"], ALL, device=True)
+            found.append(
+                _suggestion(entity, key, f"{word} · {whose} limit · give {minutes}?", "device_limit", minutes,
+                            {"group": ALL, "device": target["id"]}, device=target["id"])
+            )
+    return found
+
+
 def person_glance(
     person: dict[str, Any],
     asks: list[dict[str, Any]],
@@ -279,8 +397,9 @@ def person_glance(
     now: datetime,
     grants: list[dict[str, Any]] | None = None,
     answered: list[dict[str, Any]] | None = None,
+    hints: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """A person's headline, lines and actions, from their part of the summary.
+    """A person's headline, lines, actions and suggestions, from their part of the summary.
 
     asks: their waiting requests for more time (as in approvals); allows: their allows now (Allow.view(person));
     school_time_off: School time taken off for them today (Off.view()); grants: their parent grants (Grant.view());
@@ -469,7 +588,12 @@ def person_glance(
                 confirm=f"end what {APP_WORDS.get(grant.get('via'), 'their app')} gave {name.lower()}?",
             )
         )
-    return {"headline": headline, "lines": lines, "actions": actions}
+    return {
+        "headline": headline,
+        "lines": lines,
+        "actions": actions,
+        "suggestions": suggestions(person, asks, allows, hints),
+    }
 
 
 def household_glance(people: list[dict[str, Any]], approvals: list[dict[str, Any]]) -> dict[str, Any]:
@@ -521,4 +645,11 @@ def household_glance(people: list[dict[str, Any]], approvals: list[dict[str, Any
                 confirm=f"pause everyone for {PAUSE_MINUTES} min?",
             )
         )
-    return {"headline": headline, "actions": actions}
+    # Every person's suggestions, the household's urgent first: out of All screen time before a group or a device
+    found = [
+        {**s, "person": p["id"], "person_name": p.get("name") or p["id"]}
+        for p in people
+        for s in p.get("suggestions") or []
+    ]
+    found.sort(key=lambda s: (s.get("group") != ALL, s["reason"] != "group_out"))
+    return {"headline": headline, "actions": actions, "suggestions": found}

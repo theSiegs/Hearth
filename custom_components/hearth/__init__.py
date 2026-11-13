@@ -41,7 +41,7 @@ from .profiles import ISSUE_PROFILE_KEYS, legacy_keys
 from .push import new_topic
 from .hub import HearthHub
 from .limits import DAY_TYPES
-from .asks import CONF_OFFER_MORE, AskError
+from .asks import CONF_OFFER_MORE, EVENT_MORE_TIME_ANSWERED, EVENT_MORE_TIME_REQUESTED, AskError
 from .const import EVENT_BUDGET_REACHED
 from .counting import ALL
 from .exceptions import END_OF_DAY, SCHOOL_TIME_END, at_time, end_of_day
@@ -268,6 +268,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     register_service(hass, DOMAIN, "pause", pause, schema=PAUSE_SCHEMA)
     register_service(hass, DOMAIN, "pause_end", pause_end, schema=PAUSE_END_SCHEMA)
     _register_answer_request(hass)
+    _register_dismiss_suggestion(hass)
     _register_exception_services(hass, loaded_household, group_id)
     _register_watch_services(hass)
     _register_play_on_tv(hass)
@@ -312,6 +313,33 @@ def _register_answer_request(hass: HomeAssistant) -> None:
         schema=ANSWER_REQUEST_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
+
+
+DISMISS_SUGGESTION_SCHEMA = vol.Schema(
+    {
+        vol.Required("person"): cv.entity_id,
+        vol.Required("key"): vol.All(cv.string, vol.Length(min=1, max=200)),
+    }
+)
+
+
+def _register_dismiss_suggestion(hass: HomeAssistant) -> None:
+    """hearth.dismiss_suggestion: an adult puts a suggestion off for the rest of the day ("not today")."""
+
+    @callback
+    def dismiss_suggestion(call: ServiceCall) -> None:
+        from .history import DISMISS
+
+        entries = hass.config_entries.async_loaded_entries(DOMAIN)
+        if not entries:
+            raise ServiceValidationError("Hearth isn't set up")
+        household = entries[0].runtime_data.household
+        if call.data["person"] not in household.people():
+            raise ServiceValidationError(f"{call.data['person']} isn't one of the household's people")
+        household.history.log(DISMISS, call.data["person"], key=call.data["key"].strip())
+        household.recompute()
+
+    register_service(hass, DOMAIN, "dismiss_suggestion", dismiss_suggestion, schema=DISMISS_SUGGESTION_SCHEMA)
 
 
 ALLOW_SCHEMA = vol.All(
@@ -786,6 +814,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
                 hub.asks.offer(raw["person"], raw["group"], int(raw.get("minutes") or 30))
 
     entry.async_on_unload(hass.bus.async_listen(EVENT_BUDGET_REACHED, offer_more))
+    # The history log (history.py): what ran out, what was asked and offered, and the answers
+    history = hub.household.history
+    entry.async_on_unload(hass.bus.async_listen(EVENT_BUDGET_REACHED, history.on_budget_reached))
+    entry.async_on_unload(hass.bus.async_listen(EVENT_MORE_TIME_REQUESTED, history.on_requested))
+    entry.async_on_unload(hass.bus.async_listen(EVENT_MORE_TIME_ANSWERED, history.on_answered))
 
     @callback
     def family_safety_request(event) -> None:
