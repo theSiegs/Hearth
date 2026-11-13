@@ -1,7 +1,8 @@
 """What happened with each person's time, day by day: a group running out, a request for more, an offer, an answer,
 a bonus (to a group or on one device), a suggestion an adult put off for the day and one pushed to the adults'
-phones, a TV notice's button an adult answered, each local day's final minutes per group, and what each person
-played (a title, game or app, once a play ends). See docs/home-assistant-integration.md, History.
+phones, a TV notice's button an adult answered, an assistant's action (llm_api.py), each local day's final minutes
+per group, and what each person played (a title, game or app, once a play ends). See docs/home-assistant-integration.md,
+History.
 
 The log is what suggestions are sized and silenced from: "usually gets 30 more games", "not today". It's kept with
 Home Assistant's storage helper for HISTORY_DAYS, so it survives a restart, and holds no names or notes: people are
@@ -14,6 +15,7 @@ the kind needs them.
 from __future__ import annotations
 
 from collections import Counter
+from contextvars import ContextVar
 from datetime import date, datetime, timedelta
 from typing import Any, Callable
 
@@ -44,9 +46,15 @@ DAY = "day"
 # play that ends again adds its minutes to it, `at` is the last end); at most MAX_PLAYED a person a day, kept
 # PLAYED_DAYS, and only plays of a minute or more
 PLAYED = "played"
-KINDS = (OUT, ASK, OFFER, ANSWER, BONUS, DEVICE_BONUS, DISMISS, PUSHED, NOTICE_ANSWER, DAY, PLAYED)
 MAX_PLAYED = 50
 PLAYED_DAYS = 28
+# An action an assistant took (MCP or voice, llm_api.py) that logs nothing of its own (a pause, an allow, School time
+# off): the `tool`, and what it did (app, group, minutes, device, until, date)
+ASSIST = "assist"
+KINDS = (OUT, ASK, OFFER, ANSWER, BONUS, DEVICE_BONUS, DISMISS, PUSHED, NOTICE_ANSWER, DAY, PLAYED, ASSIST)
+# Who is acting through an assistant (llm_api.run_audited): {"via": "mcp" | "voice", "user": Home Assistant user id},
+# added to every event logged meanwhile (a day's record aside)
+ACTOR: ContextVar[dict[str, Any] | None] = ContextVar("hearth_actor", default=None)
 # How many local days the household summary's `week` holds, today included
 WEEK_DAYS = 7
 
@@ -91,11 +99,13 @@ class History:
 
     @callback
     def log(self, kind: str, person: str, at: datetime | None = None, **fields: Any) -> dict[str, Any]:
-        """One event; fields that are None are left out."""
+        """One event; fields that are None are left out. During an assistant's action, with who acted (ACTOR)."""
+        actor = ACTOR.get() if kind != DAY else None
         event = {
             "at": (at or dt_util.utcnow()).isoformat(),
             "kind": kind,
             "person": person,
+            **(actor or {}),
             **{k: v for k, v in fields.items() if v is not None},
         }
         self.events.append(event)
