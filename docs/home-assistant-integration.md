@@ -926,7 +926,11 @@ then sends the same object as an event whenever it changes, at most every 2 seco
 - each person also has (new fields, nothing renamed): `allows` (their allows now), `grants` (parent grants, above),
   `first_party` (`family_link`: per device `device`, `daily_limit`, `minutes_left`, `bonus_left`, `reached`,
   `blocking`; `family_safety`: per platform `minutes_left`, `allowance_minutes`, `used_minutes`, `allowed_now`, `hold`,
-  `parent_lock`, `blocking`; only what the integrations' entities give), `sync` (per parental control: `held`,
+  `parent_lock`, `blocking`; `nintendo`: per Switch of theirs (their Nintendo enforcer's, or one a source of theirs is
+  on) `device_id`, `name`, `target`, `available`, `played_minutes`, `player_minutes` (their own player's on a shared
+  Switch), `limit_minutes` (null: no limit), `minutes_left`, `extra_minutes` (-1: unlimited today), `suspended`,
+  `playing`, `bedtime`, `last_synced`, `held_by_hearth`, `blocking` and `entities` (the Switch's entities by key);
+  only what the integrations' entities give), `sync` (per parental control: `held`,
   `error`, `failed_at`, and `last`, what Hearth last did and whether it took: `{at, ok, held, let_go, outcomes
   {item: restored | kept_current | ...}, bonus_added, extra_time, parent_grant, reason, error}`) and
   `answered_elsewhere` (requests answered in the Family Safety app lately).
@@ -942,7 +946,8 @@ then sends the same object as an event whenever it changes, at most every 2 seco
   Nintendo enforcer; any other source is `source:<id>` (a child's Family Link total for all their devices, say, or
   Family Safety's). An app's minutes are summed over the devices.
 - each person with Family Link also has `school_time` {`start`, `end`} (local times) on a school or half day: today's
-  School time window (a half day's ends early as configured).
+  School time window (a half day's ends early as configured). And `school_time_off` (only while there is one): School
+  time taken off for them today (`hearth.school_time_off`), `[{id, date, from, reason, applied, ...}]`.
 - each person also has `targets` `[{id, name, kind, via, groups}]`: their devices, for extra time on one device
   (above). `kind`: `tv`, `phone`, `xbox`, `windows` or `switch`; `via`: `hearth` (a Hearth TV with one of their
   profiles, or their Hearth phone), `family_link` (each Family Link device, `fl:<device id>`), `family_safety` (each
@@ -1339,6 +1344,22 @@ shows each kid's time left and what's playing, with buttons for extra time, and 
 (`hearth/config`, `hearth/config/set`, `hearth/budget`, `hearth/pairing`, `hearth/parent_pin`) and the household
 summary; settings are saved to the entry's options as the Configure menu saves them, and budgets as the services set
 them.
+
+Each kid's card also pauses that kid alone (`hearth.pause` with `people`), ends an app or group pause, takes School time
+off today (or puts it back), and opens **Today by device and app**: minutes per device with +15 on one device
+(`hearth.add_bonus` with `device`) and the apps used most. The **Kids** tab has a card per Nintendo Switch of theirs
+(today's play, the Switch's own limit, time left and extra time, playing now, last synced), with Hearth's extra time on
+that Switch and, as the installed Nintendo integration allows, Nintendo's own extra playing time, its cancel and the
+games' allow list. `hearth/config` says what the installed integration can do (`capabilities.nintendo`: `installed`,
+`add_bonus`, `bonus_min`, `bonus_max`, `unlimited`, `cancel_bonus`, `list_apps`, `set_app_allowed`, found by probing
+the services' own schemas, so core's 5 to 30 minutes and a patched copy's 5 to 360 or unlimited both show right) and
+how each parental control is doing (`parental_controls`: each installed integration's entries and their state, and
+Family Safety's Connection sensor), shown on **Devices** and, when one isn't working, on **Today**. The page's Nintendo
+commands (`hearth/nintendo/bonus`, `hearth/nintendo/bonus_cancel`, `hearth/nintendo/apps`,
+`hearth/nintendo/app_allowed`) take the kid and the Switch's device id, check the Switch is theirs and the service is
+there, and refuse Nintendo's own extra time while Hearth holds that Switch (Hearth's extra time on it lets the hold go
+instead; Nintendo's on a held Switch would read as a parent's change in the Nintendo app). See
+[dashboard-parity.md](dashboard-parity.md) for how the page compares with the Family Link and Family Safety dashboards.
 
 The Configure menu (Settings > Devices & services > Hearth > Configure) still has everything, as a menu:
 
