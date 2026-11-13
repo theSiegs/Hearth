@@ -32,7 +32,7 @@ from .asks import AMOUNTS, VIA_HOME_ASSISTANT, AskError
 from .limits import GAMES, OTHER
 from .media import media_rooms
 from .auth import is_adult_user
-from .glance import duration, household_glance, person_glance
+from .glance import app_name_guess, duration, household_glance, person_glance
 from .grants import APP
 from .places import SIGNAL_PLACES
 from .targets import kind_of_target, target_of_counted, targets_of
@@ -108,7 +108,7 @@ def summary(hub) -> dict[str, Any]:
                 # Google's own daily limit per Family Link device, Microsoft's allowance per platform
                 "first_party": household.sync.first_party(person),
                 # Per parental control: what's held, the last error and what Hearth last did
-                "sync": household.enforcement.status_of(person),
+                "sync": _sync_view(household, person),
                 # Requests answered in a first-party app lately
                 "answered_elsewhere": hub.asks.answered_elsewhere(person),
                 # pause, lock {by, until}, next_lock {at, by, kind}: as in the person's state document
@@ -267,9 +267,31 @@ def _suggest_hints(hub, person: str, view: dict[str, Any], now) -> dict[str, Any
 
 
 def _grant_views(household, person: str) -> list[dict[str, Any]]:
+    """A person's parent grants; an app's carries its name (Hearth's, Family Link's, else a guess from the package:
+    never the package itself)."""
     grants = household.grants.of(person)
     names = household.app_names({g.value for g in grants if g.kind == APP}, person)
-    return [{**g.view(), **({"name": names[g.value]} if g.kind == APP and g.value in names else {})} for g in grants]
+    return [
+        {**g.view(), **({"name": names.get(g.value) or app_name_guess(g.value)} if g.kind == APP else {})}
+        for g in grants
+    ]
+
+
+def _sync_view(household, person: str) -> dict[str, Any]:
+    """Per parental control (enforce.status_of), with `names`: how to show each app it holds or let go of (an app's
+    name, never its package; a guess from the package when no name is known)."""
+    status = household.enforcement.status_of(person)
+    items: set[str] = set()
+    for st in status.values():
+        items |= set(st.get("held") or [])
+        items |= set(((st.get("last") or {}).get("outcomes") or {}).keys())
+    packages = {i for i in items if "." in i and ":" not in i}
+    known = household.app_names(packages, person) if packages else {}
+    names = {p: known.get(p) or app_name_guess(p) for p in packages}
+    for st in status.values():
+        mine = set(st.get("held") or []) | set(((st.get("last") or {}).get("outcomes") or {}).keys())
+        st["names"] = {i: names[i] for i in mine if i in names}
+    return status
 
 
 def _today_by_device_and_app(household, person: str, day) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:

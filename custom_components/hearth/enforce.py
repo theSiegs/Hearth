@@ -110,6 +110,10 @@ FS_BLOCK_UNTIL = "blockUntil"
 # What letting go did: put back what was there before, or kept what a parent set meanwhile
 RESTORED = "restored"
 KEPT_CURRENT = "kept_current"
+# Why an item is held (status_of's why)
+WHY_BUDGET = "budget"
+WHY_SCHOOL = "school_time"
+WHY_PAUSE = "pause"
 # A change seen this soon after Hearth's own call is taken as Hearth's (the integration catching up), not a parent's
 QUIET_AFTER_CALL = timedelta(minutes=1)
 MAX_PACKAGES = 150
@@ -360,6 +364,8 @@ class Enforcement:
         # Called after each run (native_sync.py watches what's held then)
         self.on_applied = None
         self._quiet_until: dict[str, datetime] = {}
+        # Why each wanted item is held, by enforcer key: {item: budget, school_time or pause} (for Hearth's page)
+        self._why: dict[str, dict[str, str]] = {}
 
     async def async_load(self) -> None:
         stored = await self._store.async_load() or {}
@@ -426,8 +432,11 @@ class Enforcement:
             last = self.last.get(key)
             if was is not None and was["last"] is not None and (last is None or was["last"]["at"] > last["at"]):
                 last = was["last"]
+            why = {**(was["why"] if was else {}), **{i: r for i, r in self._why.get(key, {}).items() if i in held.items}}
             found[kind] = {
                 "held": sorted(set(was["held"] if was else []) | held.items),
+                # Why each held item is held: budget, school_time or pause
+                "why": why,
                 "error": (was["error"] if was else None) or held.error,
                 "failed_at": (was["failed_at"] if was else None)
                 or (held.failed_at.isoformat() if held.failed_at else None),
@@ -458,6 +467,7 @@ class Enforcement:
         self.enforcers = enforcers
         now = dt_util.now()
         wanted_now: dict[str, set[str]] = {}
+        why_now: dict[str, dict[str, str]] = {}
         for e in enforcers:
             lifted = lifted_of(e.person) if lifted_of else None
             playing = self._playing(e)
@@ -482,10 +492,16 @@ class Enforcement:
                 paused |= paused_switch(e, set(paused_groups_of(e.person)), now, playing)
             device_lifted = device_lifted_of(e) if device_lifted_of else set()
             wanted_now[e.key] = (budget | school | paused) - granted - device_lifted
+            # School time first, then an adult's pause, then a budget: the reason a parent would name
+            why_now[e.key] = {
+                item: WHY_SCHOOL if item in school else WHY_PAUSE if item in paused else WHY_BUDGET
+                for item in wanted_now[e.key]
+            }
         # What an enforcer no longer configured held is let go
         for key in self.held:
             wanted_now.setdefault(key, set())
         self._wanted = wanted_now
+        self._why = why_now
         if any(self._differs(key) for key in wanted_now):
             self._run()
 

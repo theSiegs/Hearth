@@ -70,6 +70,13 @@ async def test_family_link_pauses_the_group_s_apps_and_resumes_them(
     held = hass.states.get("sensor.hearth_sam_held_by_parental_controls")
     assert int(held.state) == len(paused[0].data["packages"])
     assert events[0].data["by"] == "family_link"
+    # Hearth's page: why each app is held, and its name (a guess from the package when none is known)
+    from custom_components.hearth.websocket import _sync_view
+
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    status = _sync_view(household, "person.sam")["family_link"]
+    assert status["why"]["com.thesiegs.hearthtube"] == "budget"
+    assert status["names"]["com.thesiegs.hearthtube"] and "." not in status["names"]["com.thesiegs.hearthtube"]
 
     await _bonus(hass, "video", 15)
     assert len(resumed) == 1

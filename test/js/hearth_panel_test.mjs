@@ -86,7 +86,8 @@ test("a kid's card has their own pause, School time today and today by device an
   assert.match(html, /Today by device and app/);
   assert.match(html, /data-action="device-bonus"[^>]*data-target="hearth:tv1"/);
   assert.match(html, /A Game/);
-  assert.match(html, /Nintendo · Sam&#39;s Switch: played 1 h 15 min \(theirs 50 min\) · limit 2 h · 45 min left · \+30 min extra · playing now/);
+  assert.match(html, /<summary>Device limits<\/summary>/);
+  assert.match(html, /Sam&#39;s Switch · Nintendo: played 1 h 15 \(theirs 50 min\) · limit 2 h · 45 min left · \+30 min extra · playing now/);
 });
 
 test("a paused kid ends their pause; School time taken off shows and comes back", () => {
@@ -151,4 +152,43 @@ test("a parental control that isn't working shows on Today", () => {
   assert.match(html, /A parental control needs a look/);
   assert.match(html, /Microsoft Family Safety: connection degraded/);
   assert.doesNotMatch(panel()._page(), /needs a look/);
+});
+
+test("a lock chip names its kind and end; what locks them is only in the tooltip", () => {
+  const p = panel({
+    sam: { locked: true, locked_by: ["binary_sensor.phone_school_time_active"], lock: { kind: "school_time", until: "2026-11-12T15:00:00-05:00" } },
+  });
+  p._hass.states["binary_sensor.phone_school_time_active"] = { attributes: { friendly_name: "Sam's Phone School Time Active" } };
+  const html = p._page();
+  assert.match(html, /title="Locked by Sam&#39;s Phone School Time Active"><ha-icon icon="mdi:school-outline"><\/ha-icon>School time till \d+:00<\/span>/);
+  assert.doesNotMatch(html, />Locked: /);
+});
+
+test("a parent's app grants are put together by name, never by package", () => {
+  const app = (value, name) => ({ id: value, via: "family_link", source: "from the Family Link app", target: { kind: "app", value }, until: "2026-11-13T00:00:00-05:00", reason: "the app's limit was changed in the Family Link app", endable: false, ...(name ? { name } : {}) });
+  const few = panel({ sam: { grants: [app("com.spotify.music", "Spotify"), app("com.pandora.android", "Pandora")] } })._page();
+  assert.match(few, /Pandora and Spotify open · Family Link till midnight/);
+  const many = Array.from({ length: 9 }, (_, i) => app(`com.example.app${i}`, `App ${i}`));
+  const html = panel({ sam: { grants: many } })._page();
+  assert.match(html, /9 apps open · Family Link till midnight/);
+  assert.match(html, /title="App 0, App 1, App 2/);
+  assert.doesNotMatch(html, />com\.example/);
+});
+
+test("what Hearth holds reads by app name and why, under Device limits", () => {
+  const html = panel({
+    sam: {
+      sync: {
+        family_link: {
+          held: ["com.google.android.apps.messaging"],
+          why: { "com.google.android.apps.messaging": "school_time" },
+          names: { "com.google.android.apps.messaging": "Google Messages", "com.example.music": "Music" },
+          error: null,
+          last: { at: "2026-11-12T10:00:00Z", outcomes: { "com.example.music": "restored" } },
+        },
+      },
+    },
+  })._page();
+  assert.match(html, /Family Link: holding Google Messages for School time · put back Music/);
+  assert.doesNotMatch(html, /holding com\./);
 });
