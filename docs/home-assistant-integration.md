@@ -97,6 +97,14 @@ it (`screen`, `app`, `app_package`, `media_*`, `day`, `seconds_today`, `app_seco
 The integration keeps only known fields, cleaned, and keeps the last status across restarts. **Connected** turns off
 after 15 minutes without a post; the device's other entities show unavailable then.
 
+**Caps.** A device may say what it can be sent: `"caps": [...]`, at most 16 of `commands.play` (`hearth.play_on_tv`),
+`events` (HearthTube's started videos, the Events endpoint), `push` (a ping channel, see [Away from
+home](#away-from-home)) and `notices` (attention items in its state document, to come); unknown ones are dropped, so a
+newer device may send more. Optional: a device that never sent `caps` gets its kind's, a TV `commands.play` and
+`events`, a phone `push`, which is what each could do before. Once sent, a device's caps stay until it sends others
+(a post without `caps` keeps them). Caps say only what a device is sent: its **kind** still decides who it is (a TV's
+profiles, a phone's one person) and what it may vouch for (only a TV mints tickets).
+
 ### A kids profile's YouTube
 
 What a kids profile started in HearthTube comes up, and what a parent blocks here goes down to it (the design is
@@ -1277,7 +1285,7 @@ id, or its device in Home Assistant: a device selector gives that), `what` and, 
 - Home Assistant can't reach a TV, so it **queues a one-shot command** in the TV's state document, and the TV takes it
   with its next status answer: within about 2 seconds after it posts, at least every 2 minutes while it's on. The
   service answers (when asked for a response) `{"id", "device_id", "expires"}`. A TV that hasn't posted in 15 minutes
-  (not connected) is refused; a phone isn't a TV.
+  (not connected) is refused; a phone isn't a TV (a device whose caps say `commands.play` is played on as a TV is).
 - A new play for the same TV replaces one still waiting (only the last ask is played). A command waits 3 minutes,
   then it's dropped. Commands are kept while the household reloads (an options change), not over a restart.
 - `hearth_command_done` (`device_id`, `id`, `type: "play"`, `result`, `error`) tells how it went, once: `ok`, `failed`
@@ -1348,7 +1356,9 @@ status post.
 
 - **A topic per phone.** Each phone gets its own random topic when it pairs (32 characters of `A-Z a-z 0-9 _ -`,
   as long as a secret: on a public server, whoever knows the topic can listen to it and post to it). Pairing again
-  makes a new one; a phone paired before this got one when the household next loaded. TVs have none.
+  makes a new one; a phone paired before this got one when the household next loaded. TVs have none. (Who gets pings
+  follows caps, see [Device status](#device-status): a device that says `push` gets a topic when the household next
+  loads, and one that leaves it out of the caps it says gets no pings.)
 - **Where the phone hears it.** The approved pair answer and every status answer to a phone carry `"push":
   {"server": "https://ntfy.example.com", "topic": "<topic>"}`, or `"push": null` while there's no server (an added
   field: `contract` stays 1). The status answer is the one to follow: the server can be set, changed or removed at any
@@ -1501,12 +1511,12 @@ Status; 400 for a bad `timeout`. A TV holds one while it's paired and its screen
 answered request reaches it within seconds rather than at its next two-minute post; a phone holds one only while its
 ask waits. An older integration answers 404: keep posting as before.
 
-**Events** (a TV only). `POST /api/hearth/device/<device_id>/events` with the same header and
+**Events** (a TV, or a device whose caps say `events`). `POST /api/hearth/device/<device_id>/events` with the same header and
 `{"events": [...]}`, at most 50, each `{"type": "video_started", "profile_id", "t" (ms), "v" (video id), "title",
 "ch" (channel name), "cid" (channel id)}`. `profile_id` is the TV's own key for the profile (`user:10`), resolved
 with the TV it came from as in [TV profile keys](#tv-profile-keys). 200 `{"ok": true, "added": n}` once all are taken:
 an entry of a profile mapped to no one, or one that isn't valid, is dropped, and a resend is harmless, so the TV marks
-them all sent. 403 `not_a_tv` from a phone; 429 `too_often` past 10 posts a minute; 400 for more than 50 or a
+them all sent. 403 `not_a_tv` from a device without `events` (a phone, by default); 429 `too_often` past 10 posts a minute; 400 for more than 50 or a
 malformed body.
 
 **Parent PINs** (any paired device). Each adult on Hearth's page has their own (4 digits), set in Configure > Parent PINs or on Hearth's page, and kept as a salted

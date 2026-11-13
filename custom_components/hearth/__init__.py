@@ -36,7 +36,7 @@ from . import panel
 from .apps import ACTION_PREFIX
 from .asks import ACTION_PREFIX as ASK_ACTION_PREFIX
 from .commands import is_profile_id, what_to_play
-from .const import CONF_DEVICES, CONF_KIND, CONF_PROFILES, CONF_PUSH_TOPIC, DOMAIN, KIND_MOBILE, KIND_TV
+from .const import CAP_PLAY, CAP_PUSH, CONF_DEVICES, CONF_PROFILES, CONF_PUSH_TOPIC, DOMAIN
 from .profiles import ISSUE_PROFILE_KEYS, legacy_keys
 from .push import new_topic
 from .hub import HearthHub
@@ -610,7 +610,7 @@ def _register_play_on_tv(hass: HomeAssistant) -> None:
             )
         if device_id is None:
             raise ServiceValidationError(f"{given} isn't one of the household's Hearth devices")
-        if hub.kind(device_id) != KIND_TV:
+        if not hub.has_cap(device_id, CAP_PLAY):
             raise ServiceValidationError(f"{hub.devices[device_id].get('name') or device_id} isn't a TV")
         return device_id
 
@@ -735,26 +735,10 @@ def _register_watch_services(hass: HomeAssistant) -> None:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bool:
-    # Phones paired before push existed get their topic now (before the update listener, so it doesn't reload)
-    devices = entry.data.get(CONF_DEVICES, {})
-    if any(d.get(CONF_KIND) == KIND_MOBILE and not d.get(CONF_PUSH_TOPIC) for d in devices.values()):
-        hass.config_entries.async_update_entry(
-            entry,
-            data={
-                **entry.data,
-                CONF_DEVICES: {
-                    device_id: (
-                        {**d, CONF_PUSH_TOPIC: new_topic()}
-                        if d.get(CONF_KIND) == KIND_MOBILE and not d.get(CONF_PUSH_TOPIC)
-                        else d
-                    )
-                    for device_id, d in devices.items()
-                },
-            },
-        )
     _check_profile_keys(hass, entry)
     hub = HearthHub(hass, entry)
     await hub.async_load()
+    _give_push_topics(hass, entry, hub)
     entry.runtime_data = hub
     await hub.household.school.async_refresh()
     hub.household.recompute()
@@ -887,6 +871,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     # People and groups come from the entry: when it changes (options, a phone paired), its entities are made again
     entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
     return True
+
+
+def _give_push_topics(hass: HomeAssistant, entry: HearthConfigEntry, hub: HearthHub) -> None:
+    """Devices that get pings but have no topic (phones paired before push existed) get one now: after the hub
+    loaded what each device last said (its caps), before the update listener, so it doesn't reload."""
+    devices = entry.data.get(CONF_DEVICES, {})
+    missing = {d for d, device in devices.items() if not device.get(CONF_PUSH_TOPIC) and hub.has_cap(d, CAP_PUSH)}
+    if not missing:
+        return
+    hass.config_entries.async_update_entry(
+        entry,
+        data={
+            **entry.data,
+            CONF_DEVICES: {
+                device_id: ({**d, CONF_PUSH_TOPIC: new_topic()} if device_id in missing else d)
+                for device_id, d in devices.items()
+            },
+        },
+    )
 
 
 def _check_profile_keys(hass: HomeAssistant, entry: HearthConfigEntry) -> None:

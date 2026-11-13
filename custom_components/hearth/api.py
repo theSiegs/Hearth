@@ -27,6 +27,8 @@ from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.util.network import is_local
 
 from .const import (
+    CAP_EVENTS,
+    CAP_PUSH,
     CONF_PUSH_SERVER,
     CONF_ROLES,
     CONTRACT,
@@ -322,7 +324,7 @@ class StatusView(HomeAssistantView):
         if status.get("local_rules"):
             imported = hub.household.limits.data.imported
             answer["local_rules_taken"] = [p for p in status["local_rules"] if f"{device_id}:{p}" in imported]
-        if hub.kind(device_id) == KIND_MOBILE:
+        if hub.has_cap(device_id, CAP_PUSH):
             # The phone has this version now: it isn't pinged for it; and where to listen for the next (or null)
             hub.push.delivered(device_id, state["version"])
             answer["push"] = hub.push.answer_for(device_id)
@@ -349,7 +351,8 @@ class EventsView(HomeAssistantView):
             return _error(HTTPStatus.SERVICE_UNAVAILABLE, "not_set_up")
         if not hub.authorized(device_id, request.headers.get(HEADER_SECRET)):
             return _error(HTTPStatus.UNAUTHORIZED, "not_paired")
-        if hub.kind(device_id) != KIND_TV:
+        # HearthTube's started videos: a TV's, unless a device says otherwise in its caps
+        if not hub.has_cap(device_id, CAP_EVENTS):
             return _error(HTTPStatus.FORBIDDEN, "not_a_tv")
         if hub.too_many_events(device_id):
             return _error(HTTPStatus.TOO_MANY_REQUESTS, "too_often")

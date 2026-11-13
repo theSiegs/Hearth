@@ -37,6 +37,7 @@ from .const import (
     KIND_TV,
     MAX_TICKETS,
     TICKET_EXPIRES,
+    default_caps,
     SIGNAL_DEVICE_ADDED,
     SIGNAL_PAIRINGS,
     SIGNAL_STATUS,
@@ -175,6 +176,14 @@ class HearthHub:
         device = self.devices.get(device_id)
         return device.get(CONF_KIND) if device else None
 
+    def has_cap(self, device_id: str, cap: str) -> bool:
+        """Whether the device can be sent [cap] (const.CAPS): what it said in its status, once it has said; until
+        then its kind's (default_caps), so a device from before caps keeps what it had."""
+        declared = (self.state(device_id).status or {}).get("caps")
+        if declared is not None:
+            return cap in declared
+        return cap in default_caps(self.kind(device_id))
+
     def state(self, device_id: str) -> DeviceState:
         return self._states.setdefault(device_id, DeviceState())
 
@@ -240,6 +249,9 @@ class HearthHub:
             self.hass.bus.async_fire(
                 EVENT_PARENT_PIN_LOCKED_OUT, {"device_id": device_id, "lockouts": after - before, "retry_in": None}
             )
+        # A device that said its caps once keeps them while its later posts leave them out
+        if status.get("caps") is None and (state.status or {}).get("caps") is not None:
+            status = {**status, "caps": state.status["caps"]}
         state.status = status
         state.seen = dt_util.utcnow()
         # What the TV ran of its commands leaves the queue (its answer no longer carries them)
