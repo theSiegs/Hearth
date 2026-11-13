@@ -4,7 +4,8 @@ The page shows the household (websocket.py's summary) and sets everything the Co
 a kid and who's an adult, devices waiting to pair, TV profiles, screen time sources, groups, budgets, locks, other
 parental controls, school days and parent PINs. Administrators only. Settings go to the entry's options as the
 Configure menu writes them (the entry reloads); budgets and extra time go to the day's limits, as the services do.
-A kid's Switch has commands of its own (Nintendo's extra playing time, its cancel and the allow list), offered as the
+The integration also serves hearth-family-card.js, a Lovelace card for a TV's dashboard (any adult's), and adds it to
+every dashboard as noiwid's integrations add theirs. A kid's Switch has commands of its own (Nintendo's extra playing time, its cancel and the allow list), offered as the
 installed Nintendo integration allows (nintendo.py), and the page shows how each parental control integration is doing.
 """
 
@@ -16,6 +17,7 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant.components import frontend, panel_custom, websocket_api
+from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.core import HomeAssistant, SupportsResponse, callback
 from homeassistant.exceptions import HomeAssistantError
@@ -64,6 +66,7 @@ from .push import clean_server
 URL_PATH = "hearth"
 STATIC_URL = "/hearth_static"
 FRONTEND = Path(__file__).parent / "frontend"
+CARD = "hearth-family-card.js"
 ROLES = ("kid", "adult")
 
 # Integrations whose entities Hearth knows how to read or hold, offered first on the page
@@ -91,6 +94,7 @@ async def async_register_panel(hass: HomeAssistant) -> None:
     if not hass.data.get(f"{DOMAIN}_static"):
         await hass.http.async_register_static_paths([StaticPathConfig(STATIC_URL, str(FRONTEND), False)])
         hass.data[f"{DOMAIN}_static"] = True
+    async_register_card(hass)
     await panel_custom.async_register_panel(
         hass,
         frontend_url_path=URL_PATH,
@@ -102,6 +106,18 @@ async def async_register_panel(hass: HomeAssistant) -> None:
         config={},
     )
     hass.data[f"{DOMAIN}_panel"] = True
+
+
+@callback
+def async_register_card(hass: HomeAssistant) -> None:
+    """The family card (frontend/hearth-family-card.js) on every dashboard, once per run (it stays through a reload,
+    like the static path): its file date in the URL, so a changed card is fetched after the next restart."""
+    if hass.data.get(f"{DOMAIN}_card"):
+        return
+    card = FRONTEND / CARD
+    version = int(card.stat().st_mtime) if card.exists() else 0
+    add_extra_js_url(hass, f"{STATIC_URL}/{CARD}?v={version}")
+    hass.data[f"{DOMAIN}_card"] = True
 
 
 @callback
@@ -190,6 +206,17 @@ def _parental_controls(hass: HomeAssistant) -> list[dict[str, Any]]:
                 "reauth_required": bool(state.attributes.get("reauth_required")),
             }
         found.append(row)
+    return found
+
+
+def _screen_time_sensors(hass: HomeAssistant, hub) -> dict[str, str]:
+    """{person: entity id} of each person's Screen time today sensor (sensor.py's PersonScreenTime), by unique id."""
+    registry = er.async_get(hass)
+    found = {}
+    for person in hub.household.people():
+        entity_id = registry.async_get_entity_id("sensor", DOMAIN, f"{hub.entry.entry_id}_{person}_screen_time_today")
+        if entity_id is not None:
+            found[person] = entity_id
     return found
 
 
@@ -284,6 +311,8 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
             key=lambda z: z["name"].lower(),
         ),
         "places_now": {person: household.places.page(person) for person in household.places.people()},
+        # Each person's Screen time today sensor, whose hourly statistics draw Today's hour-by-hour chart
+        "screen_time_sensors": _screen_time_sensors(hass, hub),
         # What the installed integrations can do, found now: the page offers only those (nintendo.py)
         "capabilities": {"nintendo": nintendo.capabilities(hass)},
         "parental_controls": _parental_controls(hass),

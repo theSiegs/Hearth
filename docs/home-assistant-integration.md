@@ -1406,6 +1406,63 @@ whole summary, from a test (with a grant of Sam's from the Nintendo app added by
 Hearth's page opens on a tab from its link: `/hearth#today`, `#kids`, `#devices`, `#apps`, `#family`, and
 `#approvals` (Today, where requests for more time and devices waiting to pair are shown first).
 
+#### Today on Hearth's page
+
+Today follows the round 2 dashboard spec (its sections 2 and 3) and draws only what the summary decides; the page
+capitalizes the first letter of the server's text and nothing else.
+
+- **Suggested now**, a slot at the top that keeps its height: the household's `headline`, then each request for more
+  time (its text as the kid's `ask:<id>` line says it, with No and +15, +30, +45, +1 h), then `household.suggestions`
+  with their own buttons (each calls its action's service with exactly its data, after its `confirm`). With nothing
+  waiting, the headline reads "All clear".
+- The family pause, then devices waiting to pair and parental controls that need a look, then the kids.
+- Each **kid card**: the ring for All screen time and the big `2 h 10 / 2 h 30`, the `day_line`, the card and its dot
+  colored by the person's `state` (each bar by its group's `state`), one bar per group (All first, then fewest left
+  first; a group with `limited` false is muted, "No limit · 25 min"; a `+15` tag for extra time), and what's on from
+  `playing[].text`. The give button is the person's `bonus:<binding group>` action ("+15 games"); more of it, All
+  screen time and taking 15 back are under More. **Last 7 days** draws `week` oldest on the left in noiwid's bar
+  style: All (or the pool chip chosen) per day with the day's budget plus bonus as a tick, `+30` over a day with extra
+  time, a red dot under a day something ran out, and a hatched bar for a day with no record; a tap says `Tue · 2 h 40
+  of 3 h · games ran out · +30 given · 1 ask` (or `Tue · no record`). **Today, hour by hour** (opened) reads Home
+  Assistant's hourly statistics of the person's Screen time today sensor (`recorder/statistics_during_period`;
+  `hearth/config` names each person's sensor in `screen_time_sensors`) plus the sensor's live value for the current
+  hour, as noiwid's chart does. **Today by device and app**: `48 min today`, `25 left there`, `open there till 7:00`,
+  +15 there, and the top 8 apps with their pools (`Minecraft · 35 min · games`).
+- TVs and phones say what's on with the summary's `text` (`Alex · bluey · s2e4 · 8 min left`), and **Family today, by
+  pool** shows each group with a budget with a short bar per kid (with two kids or more).
+
+Every length of time on the page is in the one format (`45 min`, `2 h 10`), and times of day as `till 6:30`.
+
+#### The family card (a TV's dashboard)
+
+The integration serves a Lovelace card, `custom:hearth-family-card` (`frontend/hearth-family-card.js`), and adds it to
+every dashboard as noiwid's Family Link and Family Safety integrations add theirs, so there is no resource to add. It
+subscribes to the household summary and draws the spec's sections 2.1 to 2.6 for a TV across the room (big type,
+buttons a remote reaches, arrow keys that move between them): the household headline, requests waiting (their yes
+and no) and suggestions with their buttons, the family pause at the end of that row, one tile per kid (name, the All
+bar colored by state, `day_line`, what's on, 7 bars for the last 7 days with the budget tick and out dots, and the
+give button for the pool that binds), and each pool today with every kid's state in it. Groups without a budget today
+are left out (decision 6). The text is the summary's, lower case as it comes. Only an administrator or an adult sees
+it (the summary's own rule); a kid's sign-in gets "Hearth's family card is for adults." Buttons run as the signed-in
+user, after the action's `confirm`.
+
+To give a TV its view: Settings > Dashboards > Add dashboard > New dashboard from scratch, titled "Hearth TV" with the
+URL `hearth-tv` (it can be hidden from the sidebar), then in its raw configuration editor:
+
+```yaml
+views:
+  - title: Family
+    path: family
+    type: panel
+    cards:
+      - type: custom:hearth-family-card
+        title: Family        # optional
+        autofocus: true      # optional: focus the first button when it opens (the default)
+```
+
+Open `/hearth-tv/family` on the TV, signed in as an adult's user. After an update of Hearth, a restart of Home
+Assistant fetches the new card.
+
 #### Suggestions
 
 Each person in the summary also has `suggestions`, and `household.suggestions` lists everyone's (with `person` and

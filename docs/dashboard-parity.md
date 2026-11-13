@@ -113,7 +113,7 @@ follows core or the patched copy without a setting, and shows no Switch card wit
 | Daily limit and Bedtime toggles, Family Safety's screen time limits switch | The service's own rules: Hearth reads bedtime and School time as locks (Kids tab) and holds devices itself. "No School time today" is the today-only exception a parent needs |
 | Approve and Deny buttons per service | Hearth's page already answers every request, Family Safety's included, with the minutes chosen; Family Link exposes no requests |
 | Location map and refresh | Hearth keeps no coordinates by design and shows a place's name only (Places) |
-| Screen time per hour chart, statistics graphs | Needs Home Assistant statistics or helpers the integrations don't create; a parent can add a statistics graph from the README to any dashboard |
+| Statistics graphs of one service's sensors | Today's hour-by-hour chart and the last 7 days are on each kid's card now, from Hearth's own Screen time today sensor and the summary's `week`; a graph of one service's sensor can still be added from the README to any dashboard |
 | Installed, blocked and limited app counts | Counts of one service's lists; Hearth's Apps tab shows every app and its group across devices |
 | Websites visited, web filter, site lists | Not screen time; Hearth's website block list and `hearth.copy_sites` cover the block lists |
 | Battery, ring the device, who may call and text, ask to buy | One service's device features, not screen time; they stay on the integration's own entities |
