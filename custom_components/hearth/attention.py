@@ -80,13 +80,15 @@ class Item:
     actions: tuple[Action, ...] = ()
     # What replaces or clears it on a channel (the phone's tag, the bell's id); the key when not given
     tag: str | None = None
-    # Home Assistant's bell too (shown to every user of Home Assistant); and the audience's phones
+    # Home Assistant's bell too (shown to every user of Home Assistant, so only the household's own business: a
+    # pairing, a failure to fix, the new apps' list, the schedule's checks; never a kid's request, place or chore);
+    # and the audience's phones
     bell: bool = False
     phone: bool = True
     expires: datetime | None = None
     # {"person", "group"} it is about, for the views that read items
     about: Mapping[str, Any] = field(default_factory=dict)
-    # The bell's own text, when it says more than the phone (where to answer)
+    # The bell's own text, when it should say more than the phone
     bell_text: str | None = None
     # A request for more time a tap on the phone opens (phones.Phone.click)
     opens: str | None = None

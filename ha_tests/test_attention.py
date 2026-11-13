@@ -187,3 +187,33 @@ async def test_every_phone_push_is_tagged_hearth(
         "hearth_chore_chore-uid-1",
         "hearth_app_com.example.game",
     }
+
+
+async def test_news_about_a_kid_stays_off_the_bell(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """The bell shows to everyone who uses Home Assistant: a kid's request (with its note), place news and chores go
+    to the adults' phones only; the household's own business (the schedule's checks, a pairing) stays on the bell."""
+    from custom_components.hearth.notifications import notify_pairing
+
+    client, secret, _users, sent = await _household(hass, hass_client_no_auth)
+    hub = _hub(hass)
+    household = hub.household
+    request = (await (await _ask(client, secret, minutes=30, profile_id="user:10")).json())["request"]
+    hub.asks.tell("Sam: School", "Sam got to school.", "hearth_place_person.sam")
+    household.chores._tell(Chores("person.sam", "todo.sam", "all", 15), "chore-uid-1", "Dishes", 15)
+    household.scheduler.tell("Today's schedule", "Check Family Link.", "hearth_schedule_check")
+    notify_pairing(hass, "p-1", "Kitchen TV")
+    await hass.async_block_till_done()
+
+    bell = _bell(hass)
+    assert f"hearth_more_{request['id']}" not in bell
+    assert "hearth_place_person.sam" not in bell
+    assert "hearth_chore_chore-uid-1" not in bell
+    assert not any("Sam" in n["message"] or "Sam" in (n.get("title") or "") for n in bell.values())
+    assert {"hearth_schedule_check", "hearth_pairing_p-1"} <= set(bell)
+    # The adults' phones still hear of the request, with its buttons, and of the place news
+    tags = {call.data["data"]["tag"] for call in sent["alex_phone"]}
+    assert {f"hearth_more_{request['id']}", "hearth_place_person.sam"} <= tags
+    # Still answerable: the request is waiting for an adult
+    assert hub.asks.get(request["id"]).status == "pending"

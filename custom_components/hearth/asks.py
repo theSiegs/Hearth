@@ -461,8 +461,8 @@ class Asks:
                 urgency=NOTICE,
                 audience=ADULTS,
                 actions=tuple(actions),
-                bell=True,
-                bell_text=message + " Answer on Hearth's page or your phone.",
+                # Not on Home Assistant's bell: it shows to everyone who uses Home Assistant, and a kid's request
+                # (and its note) is the adults' business. Answered on the adults' phones and Hearth's page
                 expires=ask.expires,
                 about={"person": ask.person, "group": ask.group},
                 opens=ask.id,
@@ -470,11 +470,13 @@ class Asks:
         )
 
     def tell(self, title: str, message: str, tag: str) -> None:
-        """News for the adults, the way requests reach them: a notification here, and on the adults' phones."""
-        self.hub.attention.notify(Item(tag, message, title=title, audience=ADULTS, bell=True))
+        """News about a kid for the adults, the way requests reach them: on the adults' phones (not Home Assistant's
+        bell, which everyone who uses Home Assistant sees)."""
+        self.hub.attention.notify(Item(tag, message, title=title, audience=ADULTS))
 
     def _clear_notification(self, ask: Ask) -> None:
-        """An answered (or expired) request comes off Home Assistant's notifications and every adult's phone."""
+        """An answered (or expired) request comes off every adult's phone (and off Home Assistant's bell, where an
+        older Hearth put it)."""
         self.hub.attention.clear(f"hearth_more_{ask.id}", audience=ADULTS, bell_too=True, phone=True)
 
     @callback

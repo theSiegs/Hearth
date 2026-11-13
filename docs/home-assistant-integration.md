@@ -795,7 +795,7 @@ person; a TV for the profile's, the one in front when none is given). 200 `{"ok"
 `cooldown` with `retry_in` (10 minutes after "not now"); 404 `no_person`; 429 `too_often` past 10 asks and event posts a minute; 400 otherwise. A request is open 30 minutes.
 
 The adults are told: `hearth_more_time_requested` (`id`, `person`, `person_name`, `minutes`, `group`, `note`,
-`device_id`, `asked`, `expires`), a notification in Home Assistant, and an actionable one on the adults' phones (the
+`device_id`, `asked`, `expires`) and an actionable notification on the adults' phones (the
 asked amount, the next one up, Not now: `HEARTH_MORE|<id>|<minutes>`, 0 for not now; see [The adults'
 phones](#the-adults-phones)). The first answer wins, once: from a phone, Hearth's page, or `{"type": "hearth/approvals/answer", "request_id", "minutes" (1-600) |
 "deny": true}` on the WebSocket, or the service `hearth.answer_request` (`request_id`; `minutes` 1-600 or `deny:
@@ -840,7 +840,15 @@ Every notice Hearth gives goes through one layer (attention.py): an **item** wit
 `chosen_phone` (`ask_notify`), `schedule_phone` (the schedule's own notify service, else `ask_notify`), `admins` (the
 bell only, so far) and `person:<entity id>` (that person's companion apps). Delivery adapters take it out: the
 companion app (`delivery/companion.py`) and the bell (`delivery/bell.py`); an Echo later. An item with the same key or
-tag replaces the one before; clearing a key or tag takes it off every channel it went to. Items are kept while the
+tag replaces the one before; clearing a key or tag takes it off every channel it went to.
+
+**The bell is for the household's own business.** Home Assistant's bell shows to everyone who uses Home Assistant, so
+it gets only admin notices: a device waiting to pair or paired, a TV's rules taken, a Family Safety answer that failed,
+the new apps' list and the schedule's checks. Nothing about a kid goes there (a request or offer and its note, where a
+kid went, a chore done, a suggestion): those go to the adults' phones, and requests are answered there or on Hearth's
+page.
+
+Items are kept while the
 household reloads (an options change), not over a restart: their sources put them back (requests have their own
 store).
 
