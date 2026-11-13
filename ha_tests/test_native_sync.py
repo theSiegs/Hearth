@@ -347,6 +347,64 @@ async def test_an_app_a_parent_changed_in_family_link_is_a_grant(
     assert view["name"] == "Video Club" and view["target"]["value"] == "com.thesiegs.hearthtube"
 
 
+def _installed(hass: HomeAssistant, packages: list[str]) -> None:
+    """Sam's Family Link app lists (all four: installed apps are known), with [packages] as the apps without limits."""
+    for suffix in ("blocked_apps", "apps_with_time_limits", "always_allowed_apps"):
+        hass.states.async_set(f"sensor.sam_family_link_{suffix}", "0", {"child_id": CHILD, "apps": []})
+    hass.states.async_set(
+        "sensor.sam_family_link_apps_without_limits",
+        str(len(packages)),
+        {"child_id": CHILD, "apps": [{"package": p, "name": p} for p in packages]},
+    )
+
+
+async def test_only_apps_the_kid_has_are_paused(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    paused = async_mock_service(hass, "familylink", "pause_app")
+    async_mock_service(hass, "familylink", "resume_app")
+    await _household_with_sam(hass, hass_client_no_auth)
+    hass.states.async_set(FAMILY_LINK, "0", {"unit_of_measurement": "min", "child_id": CHILD})
+    _installed(hass, ["com.thesiegs.hearthtube"])
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    await _budget(hass, "video", 10)
+    assert paused[0].data["packages"] == ["com.thesiegs.hearthtube"]
+
+
+async def test_an_app_the_kid_doesn_t_have_is_never_a_parent_s_grant(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    paused = async_mock_service(hass, "familylink", "pause_app")
+    resumed = async_mock_service(hass, "familylink", "resume_app")
+    await _household_with_sam(hass, hass_client_no_auth)
+    hass.states.async_set(FAMILY_LINK, "0", {"unit_of_measurement": "min", "child_id": CHILD})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    grants = async_capture_events(hass, "hearth_parent_grant")
+    # Paused before the app lists were known: every app of the group
+    await _budget(hass, "video", 10)
+    assert "com.thesiegs.hearthtube" in paused[0].data["packages"]
+    await _settle(hass, freezer)
+
+    # Sam doesn't have it: its pause never shows (pause_intact false), which isn't a parent's change
+    _installed(hass, ["com.example.other"])
+    hass.states.async_set(
+        "sensor.sam_family_link_apps_with_time_limits",
+        "0",
+        {
+            "child_id": CHILD,
+            "apps": [],
+            "paused_apps": [{"package": "com.thesiegs.hearthtube", "pause_intact": False, "prior": -1}],
+        },
+    )
+    await _bonus(hass, "video", 0)
+    await _settle(hass, freezer)
+    await _bonus(hass, "video", 0)
+    assert grants == []
+    # Hearth lets go of what it shouldn't have held, its own resume no grant either
+    assert "com.thesiegs.hearthtube" in resumed[-1].data["packages"]
+    assert _household(hass).grants.of("person.sam") == []
+
+
 async def test_extra_time_from_family_safety_is_a_grant_until_it_ends(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:

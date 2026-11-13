@@ -209,6 +209,31 @@ def app_limits(hass: HomeAssistant, child: str) -> list[dict[str, Any]]:
     return []
 
 
+# The child's app lists that, together, are every app installed on their devices (Family Link's sensors split them:
+# blocked, with a time limit, without one, always allowed)
+INSTALLED_LISTS = ("_blocked_apps", "_apps_with_time_limits", "_apps_without_limits", "_always_allowed_apps")
+
+
+def installed_apps(hass: HomeAssistant, child: str) -> set[str] | None:
+    """The packages installed on the child's devices, from their Family Link app lists; None when that can't be told
+    (a list missing, or cut short to fit Home Assistant's attribute limit)."""
+    found: set[str] = set()
+    seen: set[str] = set()
+    for state in hass.states.async_all("sensor"):
+        suffix = next((s for s in INSTALLED_LISTS if state.entity_id.endswith(s)), None)
+        if suffix is None or str(state.attributes.get("child_id")) != child:
+            continue
+        apps = state.attributes.get("apps")
+        if not isinstance(apps, list) or state.attributes.get("truncated"):
+            return None
+        seen.add(suffix)
+        for app in apps:
+            package = app.get("package") if isinstance(app, dict) else app
+            if isinstance(package, str) and package:
+                found.add(package)
+    return found if seen == set(INSTALLED_LISTS) else None
+
+
 def app_minutes_today(hass: HomeAssistant, child: str, package: str) -> list[tuple[str, float]]:
     """An app's minutes today on each of the child's devices, from their Daily screen time sensors: (device, minutes)."""
     found: list[tuple[str, float]] = []

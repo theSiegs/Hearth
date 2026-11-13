@@ -492,6 +492,10 @@ class Enforcement:
                 paused |= paused_switch(e, set(paused_groups_of(e.person)), now, playing)
             device_lifted = device_lifted_of(e) if device_lifted_of else set()
             wanted_now[e.key] = (budget | school | paused) - granted - device_lifted
+            if e.kind == FAMILY_LINK:
+                # Only apps the child has: pausing one they don't would only cost a call (and read as a parent's
+                # change later, its pause never showing)
+                wanted_now[e.key] = self._installed_only(e.entity_id, wanted_now[e.key])
             # School time first, then an adult's pause, then a budget: the reason a parent would name
             why_now[e.key] = {
                 item: WHY_SCHOOL if item in school else WHY_PAUSE if item in paused else WHY_BUDGET
@@ -737,6 +741,14 @@ class Enforcement:
                     if isinstance(package, str) and package:
                         found.add(package)
         return found
+
+    def _installed_only(self, entity_id: str, items: set[str]) -> set[str]:
+        """[items] without the packages not installed on the child's devices (all of them when that isn't known)."""
+        child = fl.child_of(self.hass, entity_id)
+        installed = fl.installed_apps(self.hass, child) if child else None
+        if installed is None:
+            return items
+        return {item for item in items if item == DEVICES or item in installed}
 
     def _family_link_child(self, entity_id: str) -> tuple[str, str | None]:
         """The child's id (an attribute of their Family Link entities) and today's weekday limit entity."""
@@ -1118,7 +1130,11 @@ class Enforcement:
                     return
         packages = held.items - {DEVICES}
         if packages and child:
-            # A newer Family Link says which apps pause_app paused a parent changed since (pause_intact false)
+            # A newer Family Link says which apps pause_app paused a parent changed since (pause_intact false). An app
+            # the child doesn't have never shows its pause, so its pause_intact is false too: never a parent's change
+            installed = fl.installed_apps(self.hass, str(child))
+            if installed is not None:
+                packages &= installed
             for state in self.hass.states.async_all("sensor"):
                 paused = state.attributes.get("paused_apps")
                 if str(state.attributes.get("child_id")) != str(child) or not isinstance(paused, list):
