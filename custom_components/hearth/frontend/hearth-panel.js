@@ -604,6 +604,62 @@ class HearthPanel extends HTMLElement {
         await this._service(`unblock_${d.kind}`, { person: d.person, [d.kind]: d.item }, "Unblocked");
         this._loadWatch(d.person);
         return;
+      case "kid-pause": {
+        const minutes = Number(this._value(`#kid-pause-${CSS.escape(d.person)}`)) || 30;
+        await this._service("pause", { people: [d.person], minutes }, `${this._personName(d.person)} paused for ${fmtMinutes(minutes)}`);
+        return;
+      }
+      case "kid-pause-end":
+        await this._service("pause_end", { people: [d.person] }, `${this._personName(d.person)}'s pause ended`);
+        return;
+      case "app-pause-end":
+        await this._service(
+          "pause_end",
+          { people: [d.person], ...(d.app ? { app: d.app } : { group: d.group }) },
+          "Pause ended"
+        );
+        return;
+      case "device-bonus":
+        await this._service(
+          "add_bonus",
+          { person: d.person, minutes: Number(d.minutes), group: "all", device: d.target },
+          `+${d.minutes} min on ${d.name || "that device"}`
+        );
+        return;
+      case "school-off":
+        await this._service("school_time_off", { people: [d.person] }, "No School time today");
+        return;
+      case "school-off-cancel":
+        await this._service("school_time_off_cancel", { people: [d.person] }, "School time is back today");
+        return;
+      case "nin-bonus": {
+        const minutes = Number(d.minutes);
+        await this._ws(
+          { type: "hearth/nintendo/bonus", person: d.person, device_id: d.device, minutes },
+          minutes === -1 ? "Unlimited on the Switch for the rest of today" : `Nintendo: +${minutes} min on the Switch`
+        );
+        return;
+      }
+      case "nin-bonus-cancel":
+        if (!window.confirm("Cancel the Switch's extra playing time for today?")) return;
+        await this._ws({ type: "hearth/nintendo/bonus_cancel", person: d.person, device_id: d.device }, "Extra playing time cancelled");
+        return;
+      case "nin-apps":
+        await this._loadSwitchApps(d.person, d.device);
+        return;
+      case "nin-allow": {
+        const allowed = el.checked;
+        if (allowed && !window.confirm("An allowed game starts even past the Switch's age rating restriction. Allow it?")) {
+          el.checked = false;
+          return;
+        }
+        await this._ws(
+          { type: "hearth/nintendo/app_allowed", person: d.person, device_id: d.device, application_id: d.app, allowed },
+          allowed ? "Allowed on the Switch" : "Off the allow list"
+        );
+        await this._loadSwitchApps(d.person, d.device);
+        return;
+      }
       case "setup-open":
         this._setupStep = 0;
         this._render();
@@ -665,6 +721,19 @@ class HearthPanel extends HTMLElement {
     } catch (_err) {
       // No TV profile: no YouTube log
       this._watch[person] = null;
+    }
+    this._render();
+  }
+
+  // The games on a kid's Switch and its allow list (a patched Nintendo integration's list_applications)
+  async _loadSwitchApps(person, device) {
+    this._switchApps = this._switchApps || {};
+    try {
+      const result = await this._hass.callWS({ type: "hearth/nintendo/apps", person, device_id: device });
+      this._switchApps[device] = result.applications || [];
+    } catch (err) {
+      this._switchApps[device] = null;
+      this._notify(this._message(err));
     }
     this._render();
   }
@@ -782,7 +851,7 @@ class HearthPanel extends HTMLElement {
   _today() {
     const kids = this._kids();
     const devices = this._summary?.devices || [];
-    const parts = [this._pauseBar(), this._askCards(), this._pairingCards()];
+    const parts = [this._pauseBar(), this._askCards(), this._pairingCards(), this._controlsAttention()];
     if (!kids.length) {
       parts.push(`<div class="card empty"><ha-icon icon="mdi:account-child-outline"></ha-icon>
         <p>No kids in Hearth yet. The guided setup takes a few minutes.</p>
@@ -885,6 +954,8 @@ class HearthPanel extends HTMLElement {
         </div>
       </div>
       ${this._exceptionsAndApps(kid, s)}
+      ${this._todayDetail(kid, s)}
+      ${this._kidControls(kid, s)}
       ${left === null && !groups.some((g) => g.minutes_left !== null) ? `<div class="actions"><button class="btn" data-action="kid" data-kid="${esc(kid.id)}" data-go="kids">Set limits</button></div>` : `<div class="actions wrap">
         <button class="btn" data-action="bonus" data-person="${esc(kid.id)}" data-minutes="-15">−15</button>
         <button class="btn primary" data-action="bonus" data-person="${esc(kid.id)}" data-minutes="15">+15 min</button>
@@ -892,6 +963,53 @@ class HearthPanel extends HTMLElement {
         <button class="btn primary" data-action="bonus" data-person="${esc(kid.id)}" data-minutes="60">+1 h</button>
       </div>`}
     </div>`;
+  }
+
+  // One kid's own pause, their app and group pauses, and School time today: what the integrations' dashboards do with
+  // a lock switch, done through Hearth so every device of theirs (TVs, phones, Xbox, Switch) follows
+  _kidControls(kid, s) {
+    if (!s) return "";
+    const time = (iso) => new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    const chips = [];
+    for (const p of s.pauses || [])
+      chips.push(`<span class="chip warn"><ha-icon icon="mdi:pause"></ha-icon>${esc(p.name)} paused until ${esc(time(p.until))}<button class="x" data-action="app-pause-end" data-person="${esc(kid.id)}" ${p.app ? `data-app="${esc(p.app)}"` : `data-group="${esc(p.group)}"`} title="End this pause">×</button></span>`);
+    const off = (s.school_time_off || [])[0];
+    if (off)
+      chips.push(`<span class="chip"><ha-icon icon="mdi:school-outline"></ha-icon>No School time today${off.from ? ` from ${esc(off.from)}` : ""}${off.reason ? ` · ${esc(off.reason)}` : ""}<button class="x" data-action="school-off-cancel" data-person="${esc(kid.id)}" title="School time is back today">×</button></span>`);
+    const buttons = [];
+    if (s.pause) buttons.push(`<button class="chip-btn" data-action="kid-pause-end" data-person="${esc(kid.id)}">End ${esc(kid.name)}'s pause</button>`);
+    else
+      buttons.push(`<select id="kid-pause-${esc(kid.id)}" aria-label="How long">${[15, 30, 60, 120].map((m) => `<option value="${m}" ${m === 30 ? "selected" : ""}>${fmtMinutes(m)}</option>`).join("")}</select>
+        <button class="chip-btn" data-action="kid-pause" data-person="${esc(kid.id)}" title="Holds their TVs, phones, Xbox and Switch">Pause ${esc(kid.name)}</button>`);
+    if (s.school_time && !off)
+      buttons.push(`<button class="chip-btn" data-action="school-off" data-person="${esc(kid.id)}" title="${esc(`School time ${time(s.school_time.start)}–${time(s.school_time.end)}`)}">No School time today</button>`);
+    return `<div class="native">${chips.length ? `<div class="chips">${chips.join("")}</div>` : ""}<div class="inline small-controls">${buttons.join("")}</div></div>`;
+  }
+
+  // Today's minutes by device (with extra time on one device) and the apps used most, as the Family Link and Family
+  // Safety dashboards show them, across every device Hearth counts
+  _todayDetail(kid, s) {
+    const devices = s?.devices_today || [];
+    const apps = s?.apps_today || [];
+    if (!devices.length && !apps.length) return "";
+    const targets = new Map((s.targets || []).map((t) => [t.id, t]));
+    const extras = new Map((s.device_extras || []).map((x) => [x.target, x]));
+    const most = Math.max(1, ...apps.map((a) => a.minutes));
+    return `<details id="today-${esc(kid.id)}" class="today-detail"><summary>Today by device and app</summary>
+      ${devices.length ? `<ul class="list compact">${devices
+        .map((dv) => {
+          const extra = extras.get(dv.target);
+          const target = targets.get(dv.target);
+          return `<li><ha-icon icon="${{ tv: "mdi:television", phone: "mdi:cellphone", xbox: "mdi:microsoft-xbox", windows: "mdi:microsoft-windows", switch: "mdi:nintendo-switch" }[target?.kind] || "mdi:devices"}"></ha-icon>
+            <div class="grow"><div>${esc(dv.name)}</div><div class="muted small">${esc(fmtMinutes(dv.minutes))} today${extra ? ` · ${extra.kind === "allow" ? "open there" : `${esc(fmtMinutes(extra.minutes_left || 0))} extra left there`}` : ""}</div></div>
+            ${target ? `<button class="chip-btn" data-action="device-bonus" data-person="${esc(kid.id)}" data-target="${esc(target.id)}" data-name="${esc(dv.name)}" data-minutes="15" title="Only there, today">+15 there</button>` : ""}</li>`;
+        })
+        .join("")}</ul>` : ""}
+      ${apps.length ? `<div class="muted small">Apps used most</div>${apps
+        .slice(0, 8)
+        .map((a) => `<div class="bar-row"><span class="bar-label" title="${esc(a.package)}">${esc(a.name || a.package)}</span><div class="bar"><div style="width:${(a.minutes / most) * 100}%"></div></div><span class="bar-value">${esc(fmtMinutes(a.minutes))}</span></div>`)
+        .join("")}` : ""}
+    </details>`;
   }
 
   // Hearth's allows next to what a parent opened in their own apps (grants), Google's and Microsoft's own limits,
@@ -923,6 +1041,7 @@ class HearthPanel extends HTMLElement {
       const why = p.parent_lock ? ` · locked by a parent${p.override_until ? ` until ${time(p.override_until)}` : ""}` : p.blocking ? " · its own limit stops it" : "";
       rows.push(`<div class="small ${p.parent_lock || p.blocking ? "warn-text" : "muted"}">Microsoft · ${esc(p.platform)}: ${esc(allowance + left + why)}</div>`);
     }
+    for (const n of s.first_party?.nintendo || []) rows.push(`<div class="small ${n.blocking ? "warn-text" : "muted"}">Nintendo · ${esc(n.name)}: ${esc(this._switchLine(n))}</div>`);
     const names = { family_link: "Family Link", family_safety: "Family Safety", nintendo: "Switch" };
     for (const [kind, st] of Object.entries(s.sync || {})) {
       const last = st.last || {};
@@ -939,6 +1058,22 @@ class HearthPanel extends HTMLElement {
     }
     if (!chips.length && !rows.length) return "";
     return `<div class="native">${chips.length ? `<div class="chips">${chips.join("")}</div>` : ""}${rows.join("")}</div>`;
+  }
+
+  // One line of a Switch's day: "played 1 h 15 min (theirs 50 min) · limit 2 h · 45 min left · +30 extra"
+  _switchLine(n) {
+    if (!n.available) return "no recent word from the Switch";
+    const parts = [];
+    if (n.played_minutes !== null && n.played_minutes !== undefined)
+      parts.push(`played ${fmtMinutes(n.played_minutes)}${n.player_minutes !== null && n.player_minutes !== undefined ? ` (theirs ${fmtMinutes(n.player_minutes)})` : ""}`);
+    parts.push(n.limit_minutes === null || n.limit_minutes === undefined ? "no daily limit" : `limit ${fmtMinutes(n.limit_minutes)}`);
+    if (n.minutes_left !== null && n.minutes_left !== undefined) parts.push(`${fmtMinutes(n.minutes_left)} left`);
+    if (n.extra_minutes === -1) parts.push("unlimited extra today");
+    else if (n.extra_minutes > 0) parts.push(`+${fmtMinutes(n.extra_minutes)} extra`);
+    if (n.held_by_hearth) parts.push("held by Hearth");
+    else if (n.blocking) parts.push("its own limit stops it");
+    if (n.playing) parts.push("playing now");
+    return parts.join(" · ");
   }
 
   _deviceCard(dv) {
@@ -981,6 +1116,7 @@ class HearthPanel extends HTMLElement {
       ${this._sourcesCard(kid)}
       ${this._locksCard(kid)}
       ${this._enforceCard(kid)}
+      ${this._switchCard(kid)}
       ${this._youtubeCard(kid)}
       ${this._extraTimeCard(kid)}`;
   }
@@ -1097,6 +1233,72 @@ class HearthPanel extends HTMLElement {
     </section>`;
   }
 
+  // A kid's Nintendo Switch: today's play and its own limit, Hearth's extra time on it, Nintendo's own extra time and
+  // its cancel, and the allow list, each only when the installed Nintendo integration has it (config.capabilities)
+  _switchCard(kid) {
+    const caps = this._config.capabilities?.nintendo || {};
+    if (!caps.installed) return "";
+    const switches = this._summaryPerson(kid.id)?.first_party?.nintendo || [];
+    const head = `<h3><ha-icon icon="mdi:nintendo-switch"></ha-icon>Nintendo Switch</h3>`;
+    if (!switches.length)
+      return `<section class="card">${head}<p class="muted">Pick ${esc(kid.name)}'s Switch under <b>When time runs out elsewhere</b> (or add its played-time sensor as a source) to see it here.</p></section>`;
+    return switches.map((n) => this._oneSwitch(kid, n, caps, head)).join("");
+  }
+
+  _oneSwitch(kid, n, caps, head) {
+    const p = esc(kid.id);
+    const dev = esc(n.device_id);
+    const sections = [];
+    const facts = [
+      ["Played today", n.played_minutes === null || n.played_minutes === undefined ? "–" : fmtMinutes(n.played_minutes)],
+      ...(n.player_minutes !== null && n.player_minutes !== undefined ? [[`${kid.name}'s player`, fmtMinutes(n.player_minutes)]] : []),
+      ["Switch's own limit", n.limit_minutes === null || n.limit_minutes === undefined ? "None" : fmtMinutes(n.limit_minutes)],
+      ["Left on it", n.minutes_left === null || n.minutes_left === undefined ? "–" : fmtMinutes(n.minutes_left)],
+      ["Extra today", n.extra_minutes === -1 ? "Unlimited" : n.extra_minutes ? fmtMinutes(n.extra_minutes) : "None"],
+      ...(n.bedtime ? [["Bedtime alarm", n.bedtime]] : []),
+    ];
+    const status = [];
+    if (!n.available) status.push(`<span class="chip dim"><ha-icon icon="mdi:cloud-off-outline"></ha-icon>No recent word from it</span>`);
+    if (n.playing) status.push(`<span class="chip play"><ha-icon icon="mdi:gamepad-variant"></ha-icon>Playing now</span>`);
+    if (n.held_by_hearth) status.push(`<span class="chip warn"><ha-icon icon="mdi:lock"></ha-icon>Held by Hearth</span>`);
+    else if (n.blocking) status.push(`<span class="chip out"><ha-icon icon="mdi:timer-off"></ha-icon>Its own limit stops it</span>`);
+    if (n.suspended && !n.held_by_hearth) status.push(`<span class="chip warn"><ha-icon icon="mdi:pause"></ha-icon>Software suspended</span>`);
+    if (n.last_synced) status.push(`<span class="chip dim" title="When the Switch last took its settings"><ha-icon icon="mdi:sync"></ha-icon>Synced ${esc(new Date(n.last_synced).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}</span>`);
+    sections.push(`<div class="chips">${status.join("")}</div>
+      <div class="facts">${facts.map(([k, v]) => `<div><div class="muted small">${esc(k)}</div><div class="strong">${esc(v)}</div></div>`).join("")}</div>`);
+    // Hearth's extra time on this Switch alone: lets Hearth's hold go there (its own limit still applies)
+    if (n.target)
+      sections.push(`<div class="row wrap"><div class="grow muted small">Hearth's extra time on this Switch only (lets Hearth's hold go there, today)</div>
+        ${[15, 30, 60].map((m) => `<button class="btn" data-action="device-bonus" data-person="${p}" data-target="${esc(n.target)}" data-name="${esc(n.name)}" data-minutes="${m}">+${m}</button>`).join("")}</div>`);
+    // Nintendo's own extra playing time: past the Switch's own limit
+    if (caps.add_bonus) {
+      if (n.held_by_hearth) sections.push(`<p class="muted small">Nintendo's own extra time waits while Hearth holds the Switch: give Hearth's extra time above instead.</p>`);
+      else {
+        const amounts = [15, 30, 60, 120].filter((m) => m >= (caps.bonus_min || 5) && m <= (caps.bonus_max || 30));
+        sections.push(`<div class="row wrap"><div class="grow muted small">Nintendo's own extra playing time today (past the Switch's own limit${n.bedtime ? "; with a bedtime alarm it moves bedtime later" : ""})</div>
+          ${amounts.map((m) => `<button class="btn" data-action="nin-bonus" data-person="${p}" data-device="${dev}" data-minutes="${m}">+${m}</button>`).join("")}
+          ${caps.unlimited ? `<button class="btn" data-action="nin-bonus" data-person="${p}" data-device="${dev}" data-minutes="-1">Rest of today</button>` : ""}
+          ${caps.cancel_bonus && n.extra_minutes ? `<button class="btn" data-action="nin-bonus-cancel" data-person="${p}" data-device="${dev}">Cancel extra</button>` : ""}</div>`);
+      }
+    }
+    if (caps.list_apps) {
+      const apps = (this._switchApps || {})[n.device_id];
+      const list = apps
+        ? apps.length
+          ? `<ul class="list compact">${apps
+              .map((a) => `<li><div class="grow">${esc(a.name || a.application_id)}</div>${caps.set_app_allowed
+                ? `<label class="check"><input type="checkbox" data-change="nin-allow" data-person="${p}" data-device="${dev}" data-app="${esc(a.application_id)}" ${a.allowed ? "checked" : ""}> Allowed</label>`
+                : `<span class="muted small">${a.allowed ? "Allowed" : ""}</span>`}</li>`)
+              .join("")}</ul>`
+          : `<p class="muted small">No games reported.</p>`
+        : "";
+      sections.push(`<details id="nin-apps-${dev}"><summary>Games and the allow list</summary>
+        <p class="muted small">An allowed game starts even past the Switch's age rating restriction. Nintendo's own setting; Hearth's limits still count its time.</p>
+        ${list}<div class="actions"><button class="btn" data-action="nin-apps" data-person="${p}" data-device="${dev}">${apps ? "Read again" : "Show the games"}</button></div></details>`);
+    }
+    return `<section class="card">${head.replace("Nintendo Switch", () => esc(n.name))}${sections.join("")}</section>`;
+  }
+
   _youtubeCard(kid) {
     const watch = this._watch[kid.id];
     if (watch === undefined) return `<section class="card"><h3><ha-icon icon="mdi:youtube"></ha-icon>YouTube in HearthTube</h3><p class="muted">Loading…</p></section>`;
@@ -1140,6 +1342,7 @@ class HearthPanel extends HTMLElement {
       (seen[a] || a).localeCompare(seen[b] || b));
     const old = (id) => /^user:\d+/.test(id);
     return `${this._pairingCards()}
+      ${this._parentalControlsCard()}
       <section class="card">
         <h3><ha-icon icon="mdi:link-variant"></ha-icon>Pair a TV or phone</h3>
         <ol class="steps">
@@ -1177,6 +1380,39 @@ class HearthPanel extends HTMLElement {
           <button class="btn" data-action="profile-add">Add</button></div>
         </details>
       </section>`;
+  }
+
+  // Whether each parental control works now: its entries, and Family Safety's connection (the integrations' own
+  // dashboards show the same as a status pill). What's not right, for the Today tab and the dots below
+  _controlProblems() {
+    const problems = [];
+    for (const c of this._config?.parental_controls || []) {
+      for (const e of c.entries || [])
+        if (e.state !== "loaded") problems.push({ name: c.name, text: `${e.title || c.name}: ${e.state.replace(/_/g, " ")}${e.reason ? ` (${e.reason})` : ""}` });
+      if (c.connection && c.connection.state !== "connected")
+        problems.push({ name: c.name, text: `${c.name}: ${c.connection.reauth_required ? "needs you to sign in again" : `connection ${c.connection.state}`}` });
+    }
+    return problems;
+  }
+
+  _controlsAttention() {
+    const problems = this._controlProblems();
+    if (!problems.length) return "";
+    return `<div class="card attention"><div class="row"><ha-icon icon="mdi:alert-outline"></ha-icon><div class="grow">
+      <div class="strong">A parental control needs a look</div>${problems.map((p) => `<div class="muted small">${esc(p.text)}</div>`).join("")}
+      <div class="muted small">Until it's fixed, Hearth can't read or hold what goes through it. Open it in Settings → Devices & services.</div></div></div></div>`;
+  }
+
+  _parentalControlsCard() {
+    const controls = this._config.parental_controls || [];
+    const problems = new Set(this._controlProblems().map((p) => p.name));
+    return `<section class="card">
+      <h3><ha-icon icon="mdi:shield-check-outline"></ha-icon>Parental controls Hearth works through</h3>
+      ${controls.length ? `<ul class="list">${controls
+        .map((c) => `<li><span class="dot ${problems.has(c.name) ? "idle" : "on"}"></span><div class="grow"><div>${esc(c.name)}</div>
+          <div class="muted small">${esc((c.entries || []).map((e) => `${e.title}: ${e.state.replace(/_/g, " ")}`).join(", "))}${c.connection ? ` · connection ${esc(c.connection.state)}` : ""}</div></div></li>`)
+        .join("")}</ul>` : `<p class="muted">None installed. Family Link (phones and tablets), Microsoft Family Safety (Windows and Xbox) and Nintendo Switch Parental Controls each add their devices.</p>`}
+    </section>`;
   }
 
   _groupSelect(app, group) {
@@ -1509,6 +1745,11 @@ p.warn { color: var(--warning-color, #ffa600); }
 .chip.small { padding: 1px 6px; font-size: 11px; }
 .chip.dim { opacity: .6; }
 .native { margin-top: 8px; display: flex; flex-direction: column; gap: 2px; }
+.small-controls { margin-top: 4px; }
+.small-controls select { min-height: 30px; padding: 3px 8px; font-size: 12px; }
+.today-detail .bar-row { grid-template-columns: 120px 1fr auto; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin: 10px 0; }
+.card .row.wrap + .row.wrap { margin-top: 8px; }
 .warn-text { color: var(--warning-color, #b26a00); }
 .error-text { color: var(--error-color, #db4437); }
 .chip .x { border: 0; background: none; color: var(--secondary-text-color); cursor: pointer; font-size: 15px; padding: 0 0 0 4px; line-height: 1; }

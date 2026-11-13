@@ -50,6 +50,10 @@ jobs:
       - name: Test phone page encryption
         run: node test/js/phone_seal_test.js
 
+      # Hearth's page in Home Assistant, drawn without a browser
+      - name: Test Hearth's Home Assistant page
+        run: node --test test/js/hearth_panel_test.mjs
+
       # Compiles the Java side too, which nothing else checks before a release.
       - name: Build Debug APK
         run: flutter build apk --debug --target-platform=android-arm64

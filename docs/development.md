@@ -23,6 +23,7 @@ dart run drift_dev schema generate drift_schemas/ test/generated_migrations/
 flutter analyze --no-fatal-infos                                    # as CI runs it
 flutter test
 node test/js/phone_seal_test.js                                     # the phone pages' encryption
+node --test test/js/hearth_panel_test.mjs                           # Hearth's page in Home Assistant
 cd android && ./gradlew :app:testDebugUnitTest                      # the Java side's unit tests
 ```
 
