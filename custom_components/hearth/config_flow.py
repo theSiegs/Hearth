@@ -68,7 +68,7 @@ from .schedule import CONF_SCHEDULE, CONF_SITE_LIST
 from .chores import CONF_CHORES, DEFAULT_MINUTES
 from .asks import AMOUNTS, CONF_OFFER_MORE
 from .suggest_push import CONF_SUGGEST_PUSH, pairs as suggest_pairs
-from .sources import CONF_SOURCES, CONF_TITLES
+from .sources import CONF_SOURCES, CONF_TITLES, is_phone_app
 from . import parent_pin
 from . import phones as adult_phones
 from .push import clean_server
@@ -395,15 +395,18 @@ class HearthOptionsFlow(OptionsFlow):
                 source_id, n = base, 2
                 while any(s["id"] == source_id for s in sources):
                     source_id, n = f"{base}_{n}", n + 1
+                # A companion app's Last used app: a phone app source (live while the screen is on, not timed)
+                phone_app = is_phone_app(entity_id)
                 sources.append(
                     {
                         "id": source_id,
                         "entity_id": entity_id,
                         "person": user_input[CONF_PERSON],
                         "name": name,
-                        "live": user_input.get("live", False),
+                        "live": user_input.get("live", False) or phone_app,
                         "same_as": user_input.get("same_as") or None,
                         "group": user_input.get("group") or self._source_group(entity_id),
+                        **({"phone_app": True} if phone_app else {}),
                     }
                 )
                 return self.async_create_entry(data={**options, CONF_SOURCES: sources})

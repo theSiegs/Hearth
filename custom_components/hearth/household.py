@@ -26,6 +26,7 @@ from .const import (
     CAP_NOTICES,
     CONF_KIND,
     CONF_LOCKS,
+    CONF_MEDIA_PLAYERS,
     CONF_PERSON,
     CONF_PROFILES,
     CONF_ROLES,
@@ -48,7 +49,7 @@ from .apps import (
 )
 from .counting import ALL, DeviceUsage, Reading, group_seconds, merge
 from .limits import CONF_APP_GROUPS, OTHER, OTHER_DAY, SCHOOL_DAY, Group, GroupState, Limits, groups_from_options, groups_of
-from .enforce import FAMILY_LINK, FAMILY_SAFETY, Enforcement, enforcers_from_options, fs_account_of, fs_app, fs_app_platform
+from .enforce import FAMILY_LINK, FAMILY_SAFETY, NINTENDO, Enforcement, enforcers_from_options, fs_account_of, fs_app, fs_app_platform
 from .exceptions import Allows, Lifted, end_of_day
 from .history import BONUS, DEVICE_BONUS, History
 from .grants import Grants
@@ -65,12 +66,15 @@ from .media import media_rooms
 from .profiles import REF_PREFIX, is_ref, split_tv_key, tv_key
 from .schooldays import SchoolDays
 from .live import LiveTracker, Observation, Together
+from .nintendo import playing_entities, playing_title, switch_name
 from .sources import (
     Source,
     Title,
     device_key,
     fs_applications_of,
     now_playing,
+    phone_app_playing,
+    screen_entity,
     sources_from_options,
     title_key,
     titles_from_options,
@@ -81,6 +85,8 @@ if TYPE_CHECKING:
     from .hub import HearthHub
 
 SOURCE_HEARTH = "hearth"
+# What a kid on their Switch plays when Nintendo's integration doesn't say the game
+SWITCH_ITEM = "Switch"
 
 
 @dataclass
@@ -91,6 +97,23 @@ class Playing:
     state: str | None
     # The device as a target id (targets.py): hearth:<id>, fl:<id>, nintendo:<entity> or source:<id>
     target: str | None = None
+    # What's on, when known: a TV's show (its media player's series, else its title) and the episode; a Switch's game
+    title: str | None = None
+    episode: str | None = None
+    # When this play started (ISO, UTC; live.py)
+    since: str | None = None
+
+    def view(self) -> dict[str, Any]:
+        return {
+            "app": self.app,
+            "package": self.package,
+            "title": self.title,
+            "episode": self.episode,
+            "device": self.device,
+            "state": self.state,
+            "target": self.target,
+            "since": self.since,
+        }
 
 
 @dataclass
@@ -266,8 +289,14 @@ class Household:
         locks = [lock["entity_id"] for lock in self.options.get(CONF_LOCKS, [])]
         watched = list(self.options.get(CONF_APP_WATCH, []))
         # Who's playing a shared Switch: a change holds or lets it go
-        playing = [e for enforcer in enforcers_from_options(self.options) for e in enforcer.playing]
+        enforcers = enforcers_from_options(self.options)
+        playing = [
+            e for enforcer in enforcers if enforcer.kind == NINTENDO
+            for e in playing_entities(self.hass, enforcer, enforcers)
+        ]
         sources = sources_from_options(self.options)
+        # A phone app source is playing only while its screen is on
+        screens = [found for s in sources if s.phone_app and (found := screen_entity(self.hass, s))]
         # A Family Safety Screen Time's breakdown is its child's Applications sensor's
         applications = [
             found[0] for s in sources if not s.live and (found := fs_applications_of(self.hass, s.entity_id))
@@ -278,6 +307,7 @@ class Household:
             + locks
             + watched
             + playing
+            + screens
             + self.school.watched_entities()
             + self._school_time_sensors()
         )
@@ -503,6 +533,15 @@ class Household:
         categories: dict[str, str] = {}
         catalog: dict[str, str] = {}
         hints: dict[str, set[str]] = {}
+        # Each Playing with its play's key in live.py, for when it started
+        plays: list[tuple[Playing, tuple[str, str, str]]] = []
+
+        def observe(entry: Playing, person: str, device: str, item: str, source: str | None, label: str | None) -> None:
+            key = self._key(item)
+            observations.append(Observation(person, device, key, source, self._label(key, label)))
+            playing.setdefault(person, []).append(entry)
+            plays.append((entry, (person, device, key)))
+
         def add(person: str, device: str, reading: Reading, into: dict[str, dict[str, list[Reading]]] = readings) -> None:
             items = {}
             for item, seconds in reading.items.items():
@@ -543,24 +582,35 @@ class Household:
                                                    status.get("app_seconds_today") or {}), into)
             package = status.get("app_package")
             if person and status.get("screen") == "on" and self.hub.connected(device_id) and package:
-                playing.setdefault(person, []).append(Playing(status.get("app"), package, name, status.get("state"), f"hearth:{device_id}"))
-                key = self._key(package)
-                observations.append(Observation(person, device_id, key, None, self._label(key, status.get("app"))))
+                # A TV's media player says the show: it's what "together" matches on then
+                title, episode = (self._tv_media(device_id) if device.get(CONF_KIND) == KIND_TV else None) or (None, None)
+                observe(
+                    Playing(status.get("app"), package, name, status.get("state"), f"hearth:{device_id}", title, episode),
+                    person, device_id, title or package, None, title or status.get("app"),
+                )
 
         # Sources: totals now; live ones are looked at (and timed) below
         for source in self.sources:
             device = device_key(source, by_id)
-            if source.live:
-                item = now_playing(self.hass, source)
-                if item is not None:
-                    key = self._key(item)
-                    observations.append(
-                        Observation(source.person, device, key, source.reading_source, self._label(key, item))
-                    )
+            if source.phone_app:
+                # A phone's app in use, while its screen is: not timed (its own parental controls count it)
+                package = phone_app_playing(self.hass, source)
+                if package is not None:
                     from .targets import target_of_counted
 
                     target, _ = target_of_counted(self, source.person, f"source:{source.id}")
-                    playing.setdefault(source.person, []).append(Playing(item, None, source.name, "playing", target))
+                    app = self._app_name(package)
+                    observe(Playing(app, package, source.name, "playing", target), source.person, device, package, None, app)
+            elif source.live:
+                item = now_playing(self.hass, source)
+                if item is not None:
+                    from .targets import target_of_counted
+
+                    target, _ = target_of_counted(self, source.person, f"source:{source.id}")
+                    observe(
+                        Playing(item, None, source.name, "playing", target),
+                        source.person, device, item, source.reading_source, item,
+                    )
             else:
                 reading = totals_reading(self.hass, source)
                 if reading is not None:
@@ -570,7 +620,32 @@ class Household:
                 if reading is not None:
                     add(source.person, device, reading)
 
+        # A kid on their Switch (Nintendo's playing sensors): not timed (Nintendo's own minutes count), but together
+        enforcers = enforcers_from_options(options)
+        for enforcer in enforcers:
+            if enforcer.kind != NINTENDO:
+                continue
+            target = f"nintendo:{enforcer.entity_id}"
+            # A live source on the same Switch says it already
+            if any(p.target == target for p in playing.get(enforcer.person, [])):
+                continue
+            on = [
+                state for entity_id in playing_entities(self.hass, enforcer, enforcers)
+                if (state := self.hass.states.get(entity_id)) is not None and state.state == "on"
+            ]
+            if on:
+                game = next((t for state in on if (t := playing_title(state))), None)
+                observe(
+                    Playing(game or SWITCH_ITEM, None, switch_name(self.hass, enforcer.entity_id), "playing", target, game),
+                    enforcer.person, target, game or SWITCH_ITEM, None, game or SWITCH_ITEM,
+                )
+
         started, ended = self.live.look(now, today, observations)
+        for entry, key in plays:
+            entry.since = self.live.since_of(*key)
+        # What was played, once it ends: the week's top titles later (history.py, `played`)
+        for play in self.live.ended_plays:
+            self.history.log_played(play.person, play.label, play.device, play.minutes)
         for source in self.sources:
             if source.live and (timed := back_live.get(source.reading_source)):
                 add(source.person, device_key(source, by_id),
@@ -755,6 +830,26 @@ class Household:
                 for e in recent
             ],
         }
+
+    def _app_name(self, package: str) -> str:
+        entry = self.apps.apps.get(package)
+        return entry.name if entry is not None and entry.name else package
+
+    def _tv_media(self, device_id: str) -> tuple[str, str | None] | None:
+        """What a TV's media player (options' media_players) says is on: (the show, the episode), or None."""
+        entity_id = self.options.get(CONF_MEDIA_PLAYERS, {}).get(device_id)
+        state = self.hass.states.get(entity_id) if entity_id else None
+        if state is None or state.state not in ("playing", "paused", "buffering", "on"):
+            return None
+
+        def text(name: str) -> str | None:
+            value = state.attributes.get(name)
+            return value.strip()[:128] if isinstance(value, str) and value.strip() else None
+
+        series, title = text("media_series_title"), text("media_title")
+        if series:
+            return series, title if title != series else None
+        return (title, None) if title else None
 
     def _label(self, key: str, fallback: str | None) -> str:
         if key.startswith("title:"):
@@ -952,6 +1047,8 @@ class Household:
             "groups": groups,
             "locked": bool(day and day.locked),
             **self._locks_document(person, day),
+            # What they're playing now, anywhere (as the household summary's `playing`)
+            "playing": [p.view() for p in (day.playing if day else [])],
             # A parent let this person's phone share with the launcher's tile exchange (off unless chosen)
             "tile_exchange_share": person in self.options.get(CONF_TILE_EXCHANGE, []),
             # Their latest request for more time and its answer (asks.py), while it's still news

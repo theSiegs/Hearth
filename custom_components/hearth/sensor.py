@@ -245,21 +245,21 @@ class PersonMinutesLeft(HearthPersonEntity, SensorEntity):
 
 
 class PersonPlaying(HearthPersonEntity, SensorEntity):
-    """What the person is playing now, on a Hearth device; unknown when nothing."""
+    """What the person is playing now (a TV's show, a game, an app), anywhere Hearth sees; unknown when nothing."""
 
     _attr_translation_key = "person_playing"
 
     @property
     def native_value(self) -> str | None:
         playing = self.day.playing if self.day else []
-        return (playing[0].app or playing[0].package) if playing else None
+        return (playing[0].title or playing[0].app or playing[0].package) if playing else None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         playing = self.day.playing if self.day else []
         return {
             "playing": [
-                {"app": p.app, "package": p.package, "device": p.device, "state": p.state} for p in playing
+                {k: v for k, v in p.view().items() if k != "target"} for p in playing
             ]
         }
 

@@ -10,6 +10,11 @@ Two sorts:
   Screen Time sensor's takes only the Xbox's (x:...).
 - **Live**: a sensor whose state is what's being played now (Xbox's Now playing, a Switch presence Game sensor), or
   empty. The integration times it (live.py).
+- **Phone app** (`phone_app: true`, live): a phone's last used app, from the Home Assistant companion app
+  (`sensor.<device>_last_used_app`, Android). It's now playing only while the phone's screen is on and interactive
+  (`screen`: a binary sensor, by default the same device's `binary_sensor.<device>_interactive`), never a launcher, and
+  it isn't timed (the phone's own parental controls, or nothing, count its time). For phones without Hearth's app:
+  a kid's Family Link phone, an adult's.
 
 A source can be "the same device" as a Hearth device or another source, so their minutes are counted once.
 """
@@ -48,6 +53,9 @@ class Source:
     same_as: str | None = None
     # The group its time is in when it can't say which app (games, for a Switch or Xbox)
     group: str | None = None
+    # A companion app's last used app: playing only while [screen] (else the phone's Interactive sensor) is on; untimed
+    phone_app: bool = False
+    screen: str | None = None
 
     @property
     def reading_source(self) -> str:
@@ -64,9 +72,49 @@ def sources_from_options(options: dict[str, Any]) -> list[Source]:
             live=bool(s.get("live")),
             same_as=s.get("same_as") or None,
             group=s.get("group") or None,
+            phone_app=bool(s.get("phone_app")),
+            screen=s.get("screen") or None,
         )
         for s in options.get(CONF_SOURCES, [])
     ]
+
+
+LAST_USED_APP = "_last_used_app"
+INTERACTIVE = "_interactive"
+# What a phone shows between apps: its home screen and the system's own screens
+_NOT_APPS = ("launcher", "com.android.systemui", "com.google.android.permissioncontroller", "com.android.settings")
+
+
+def is_phone_app(entity_id: str) -> bool:
+    """A companion app's Last used app sensor, by its entity id."""
+    return entity_id.startswith("sensor.") and entity_id.endswith(LAST_USED_APP)
+
+
+def screen_entity(hass: HomeAssistant, source: Source) -> str | None:
+    """A phone app source's screen sensor: its own, else an Interactive binary sensor of the same device, else the
+    one named after the sensor (binary_sensor.<device>_interactive)."""
+    if source.screen:
+        return source.screen
+    registry = er.async_get(hass)
+    entry = registry.async_get(source.entity_id)
+    if entry is not None and entry.device_id:
+        for other in er.async_entries_for_device(registry, entry.device_id):
+            if other.domain == "binary_sensor" and other.entity_id.endswith(INTERACTIVE):
+                return other.entity_id
+    stem = source.entity_id.removeprefix("sensor.").removesuffix(LAST_USED_APP)
+    return f"binary_sensor.{stem}{INTERACTIVE}"
+
+
+def phone_app_playing(hass: HomeAssistant, source: Source) -> str | None:
+    """The app a phone app source says is in use now (a package), or None: the screen isn't on and interactive (or
+    can't be told), or it's the home screen."""
+    screen = hass.states.get(screen_entity(hass, source) or "")
+    if screen is None or screen.state != "on":
+        return None
+    package = now_playing(hass, source)
+    if package is None or any(part in package.lower() for part in _NOT_APPS):
+        return None
+    return package
 
 
 def device_key(source: Source, sources: dict[str, Source]) -> str:

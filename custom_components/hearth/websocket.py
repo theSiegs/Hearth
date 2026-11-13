@@ -112,10 +112,7 @@ def summary(hub) -> dict[str, Any]:
                 "answered_elsewhere": hub.asks.answered_elsewhere(person),
                 # pause, lock {by, until}, next_lock {at, by, kind}: as in the person's state document
                 **household._locks_document(person, day),
-                "playing": [
-                    {"app": p.app, "package": p.package, "device": p.device, "state": p.state, "target": p.target}
-                    for p in (day.playing if day else [])
-                ],
+                "playing": [p.view() for p in (day.playing if day else [])],
             }
         )
         # Today's minutes per counted device and per app or title (each device's time once, as counted)
@@ -193,6 +190,20 @@ def summary(hub) -> dict[str, Any]:
         ],
         # The house's media players by room, twins put together (media.py)
         "media_rooms": media_rooms(household.hass),
+        # Who's playing what now, everyone together, for a dashboard: oldest play first
+        "playing": sorted(
+            (
+                {
+                    "person": p["id"],
+                    "name": p["name"],
+                    "item": play["title"] or play["app"] or play["package"],
+                    **{k: play[k] for k in ("app", "title", "episode", "device", "target", "since")},
+                }
+                for p in people
+                for play in p["playing"]
+            ),
+            key=lambda row: (row["since"] or "", row["person"]),
+        ),
         # Contract 2: the household's headline and actions (glance.py)
         "household": household_glance(people, approvals),
     }

@@ -1,6 +1,7 @@
 """What happened with each person's time, day by day: a group running out, a request for more, an offer, an answer,
 a bonus (to a group or on one device), a suggestion an adult put off for the day and one pushed to the adults'
-phones, a TV notice's button an adult answered, and each local day's final minutes per group. See docs/home-assistant-integration.md, History.
+phones, a TV notice's button an adult answered, each local day's final minutes per group, and what each person
+played (a title, game or app, once a play ends). See docs/home-assistant-integration.md, History.
 
 The log is what suggestions are sized and silenced from: "usually gets 30 more games", "not today". It's kept with
 Home Assistant's storage helper for HISTORY_DAYS, so it survives a restart, and holds no names or notes: people are
@@ -36,7 +37,14 @@ NOTICE_ANSWER = "notice_answer"
 # A local day's final minutes per group ({"date": "YYYY-MM-DD", "minutes": {group: n}}), logged at the day's rollover
 # (or, when Home Assistant was down at midnight, on the first look after it starts): the household summary's `week`
 DAY = "day"
-KINDS = (OUT, ASK, OFFER, ANSWER, BONUS, DEVICE_BONUS, DISMISS, PUSHED, NOTICE_ANSWER, DAY)
+# What a person played, once a play ends (live.py): {"item": the title, game or app as shown, "device": where (a Hearth
+# device id, source:<id> or nintendo:<entity>), "minutes"}. One event per person, item and device a local day (a
+# play that ends again adds its minutes to it, `at` is the last end); at most MAX_PLAYED a person a day, kept
+# PLAYED_DAYS, and only plays of a minute or more
+PLAYED = "played"
+KINDS = (OUT, ASK, OFFER, ANSWER, BONUS, DEVICE_BONUS, DISMISS, PUSHED, NOTICE_ANSWER, DAY, PLAYED)
+MAX_PLAYED = 50
+PLAYED_DAYS = 28
 # How many local days the household summary's `week` holds, today included
 WEEK_DAYS = 7
 
@@ -71,8 +79,13 @@ class History:
         await self._store.async_save(self._data())
 
     def _prune(self) -> None:
-        since = (dt_util.utcnow() - timedelta(days=HISTORY_DAYS)).isoformat()
-        self.events = [e for e in self.events if str(e.get("at", "")) >= since][-MAX_EVENTS:]
+        now = dt_util.utcnow()
+        since = (now - timedelta(days=HISTORY_DAYS)).isoformat()
+        played_since = (now - timedelta(days=PLAYED_DAYS)).isoformat()
+        self.events = [
+            e for e in self.events
+            if str(e.get("at", "")) >= (played_since if e.get("kind") == PLAYED else since)
+        ][-MAX_EVENTS:]
 
     @callback
     def log(self, kind: str, person: str, at: datetime | None = None, **fields: Any) -> dict[str, Any]:
@@ -88,6 +101,33 @@ class History:
             self._prune()
         self._save()
         return event
+
+    @callback
+    def log_played(self, person: str, item: str, device: str, minutes: int, at: datetime | None = None) -> bool:
+        """A play that ended: added to the person's `played` event of the same item and device today, else a new one
+        (not past MAX_PLAYED a day). Says whether it was kept."""
+        if minutes < 1 or not item:
+            return False
+        at = at or dt_util.utcnow()
+        item = item[:128]
+        day = dt_util.as_local(at).date()
+        start = dt_util.start_of_local_day(day).isoformat()
+        today = 0
+        for event in reversed(self.events):
+            if str(event.get("at", "")) < start:
+                break
+            if event.get("kind") != PLAYED or event.get("person") != person:
+                continue
+            if event.get("item") == item and event.get("device") == device:
+                event["minutes"] = int(event.get("minutes") or 0) + minutes
+                event["at"] = at.isoformat()
+                self._save()
+                return True
+            today += 1
+        if today >= MAX_PLAYED:
+            return False
+        self.log(PLAYED, person, at, item=item, device=device, minutes=minutes)
+        return True
 
     # The bus events Hearth fires anyway
 

@@ -18,13 +18,14 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
 from .enforce import NINTENDO, NINTENDO_DOMAIN
 
 if TYPE_CHECKING:
+    from .enforce import Enforcer
     from .household import Household
 
 # The integration's entity keys (the end of their unique ids)
@@ -88,6 +89,48 @@ def capabilities(hass: HomeAssistant) -> dict[str, Any]:
 
 def _nintendo_id(device: dr.DeviceEntry) -> str | None:
     return next((value for domain, value in device.identifiers if domain == NINTENDO_DOMAIN), None)
+
+
+# Where a playing sensor may name the game (a patched integration's attributes, friend presence's)
+TITLE_ATTRIBUTES = ("title", "game", "game_title", "application_name", "app_name", "application", "media_title")
+
+
+def playing_title(state: State) -> str | None:
+    """The game a Switch's playing sensor names, when it names one."""
+    for attribute in TITLE_ATTRIBUTES:
+        value = state.attributes.get(attribute)
+        if isinstance(value, str) and value.strip() and value.strip().lower() not in ("none", "unknown", "unavailable"):
+            return value.strip()[:128]
+    return None
+
+
+def playing_entities(hass: HomeAssistant, enforcer: Enforcer, enforcers: list[Enforcer]) -> list[str]:
+    """What says the person is playing their Switch now: the enforcer's own playing entities (a shared Switch's
+    player sensors), else the Switch's Playing sensor when nobody else's enforcer is on the same Switch."""
+    if enforcer.playing:
+        return list(enforcer.playing)
+    registry = er.async_get(hass)
+    entry = registry.async_get(enforcer.entity_id)
+    if entry is None or entry.device_id is None:
+        return []
+    for other in enforcers:
+        if other.kind == NINTENDO and other.person != enforcer.person:
+            found = registry.async_get(other.entity_id)
+            if found is not None and found.device_id == entry.device_id:
+                return []
+    device = dr.async_get(hass).async_get(entry.device_id)
+    nintendo_id = _nintendo_id(device) if device else None
+    if nintendo_id is None:
+        return []
+    playing = registry.async_get_entity_id("binary_sensor", NINTENDO_DOMAIN, f"{nintendo_id}_{PLAYING}")
+    return [playing] if playing else []
+
+
+def switch_name(hass: HomeAssistant, entity_id: str) -> str:
+    """The name of the Switch an entity is on (as the adult named the device), else "Switch"."""
+    entry = er.async_get(hass).async_get(entity_id)
+    device = dr.async_get(hass).async_get(entry.device_id) if entry is not None and entry.device_id else None
+    return (device.name_by_user or device.name or "Switch") if device else "Switch"
 
 
 def _number(hass: HomeAssistant, entity_id: str | None) -> float | None:

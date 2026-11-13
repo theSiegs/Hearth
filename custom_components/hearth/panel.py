@@ -340,6 +340,9 @@ OPTION_SCHEMAS: dict[str, Any] = {
                 vol.Optional("live"): bool,
                 vol.Optional("same_as"): vol.Any(None, cv.string),
                 vol.Optional("group"): vol.Any(None, _ID),
+                # A companion app's Last used app: now playing only while [screen] (its Interactive sensor) is on
+                vol.Optional("phone_app"): bool,
+                vol.Optional("screen"): vol.Any(None, cv.entity_domain("binary_sensor")),
             }
         )
     ],

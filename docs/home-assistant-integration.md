@@ -153,6 +153,17 @@ entities; it never signs in to those services itself.
 | Nintendo Switch | [Nintendo Switch parental controls](https://www.home-assistant.io/integrations/nintendo_parental_controls) (built in) | Used screen time and Screen time remaining per Switch (minutes; added as a source, its time is games unless chosen otherwise). Whole-console: on a shared Switch, use each player's playing-time sensor as the source instead. Per-app minutes (its usage report service) aren't read yet | polled every 60 s; the Switch must be online; its values aren't marked unavailable when an update fails |
 | Nintendo Switch, live | Switch friend presence: HACS [Nintendo-Switch-Presence](https://github.com/itsfatlum/Nintendo-Switch-Presence), fed by a self-hosted [nxapi](https://github.com/samuelthomas2774/nxapi) presence server and a watcher account | what each kid's Switch is playing now | 30-60 s |
 | Xbox, live | Home Assistant's Xbox integration | now playing per gamer | about a minute |
+| Phones without Hearth's app, live | Home Assistant's companion app (Android): **Last used app** (`sensor.<device>_last_used_app`) and **Interactive** (`binary_sensor.<device>_interactive`), both disabled by default in the app | the app in use while the screen is on; not timed | when the sensor updates |
+
+**A phone's app as now playing** (kids' Family Link phones and tablets, an adult's own phone; anyone, adults
+included): in the companion app on that phone, Settings > Companion app > Manage sensors, turn on **Last used app**
+and **Interactive** (and, for prompt updates, let the app run in the background). Then add
+`sensor.<device>_last_used_app` as a screen time source for its person. Hearth sees the Last used app sensor by its
+name and makes it a **phone app** source (`phone_app: true`, live): it's now playing only while the same device's
+Interactive sensor is on (another binary sensor can be named as the source's `screen` on Hearth's page), never the
+home screen or the system's own screens, and it's **not timed**: Family Link counts a kid's phone, and an adult's
+phone isn't counted. It shows in Playing, the household's `playing`, together and the history's `played`. Without the
+Interactive sensor it's never playing (the last app stays put after the screen goes off).
 
 How a source is added: in the household's options, **Add a screen time source**: pick a `duration` sensor (or one in
 minutes or hours), whose it is (a person), whether it's live (what's playing now) or totals, whether it's the same
@@ -202,8 +213,9 @@ TVs, which drops the old entries when saved.
 
 ### Play sessions
 
-Where a source says what's playing **now** (Hearth TVs and phones, Xbox now playing, Switch friend presence), the
-integration looks at least once a minute and whenever the sensor changes. A live source's time accrues between two
+Where a source says what's playing **now** (Hearth TVs and phones, Xbox now playing, Switch friend presence, a kid's
+Switch's playing sensors, a phone app source), the integration looks at least once a minute and whenever the sensor
+changes. A live source's time accrues between two
 looks that both saw the same title (a skipped look loses that minute, never adds one; a gap of over 3 minutes, such as
 Home Assistant being stopped, adds nothing). Today's timed seconds per source and title are kept across restarts.
 (Built so far: today's totals. A 7-day timeline of sessions, to show and check a day, is still to do.)
@@ -259,6 +271,22 @@ at the same time (overlapping by a minute or more). The integration shows it as:
 
 Automations and dashboards can use it like any other state, and rules can depend on it. Only live sources can show
 it; minutes known only from totals are never "together".
+
+What counts as playing now, for Playing, `playing` and together:
+
+- **Hearth devices**: a TV's app in front for its current profile's person, a phone's for its person. When the TV
+  has a media player in the options (`media_players`, TV device id to `media_player`) that's playing or paused, its
+  `media_series_title` (else `media_title`) is the person's `title` and `media_title` the `episode`, and together
+  matches on the show rather than the app. Not timed here (the devices' own counts are).
+- **Live sources** (Xbox now playing, Switch friend presence): timed by the integration.
+- **A kid's Switch**: a Nintendo enforcer's `playing` entities (a shared Switch's player sensors; else the Switch's own
+  Playing sensor when no one else's enforcer is on it). While one is on, the person plays the game it names (a
+  `title`, `game` or `application_name` attribute, as a patched integration or presence gives it), else "Switch", on
+  the Switch's target (`nintendo:<entity>`). Not timed (Nintendo's own minutes count); counted for together. A live
+  source on the same Switch says it instead.
+- **Phone app sources**: above, in [Screen time from other integrations](#screen-time-from-other-integrations).
+
+Each such play is also logged when it ends, in the history's `played` (see [History](#history)).
 
 ## Limits
 
@@ -748,7 +776,9 @@ same meaning, from the integration instead of a template.
 
 A **phone** gets its person's part of the same document, in the answer to each post and pushed when it changes (see
 [Away from home](#away-from-home)). Each person's part also says `tile_exchange_share`: whether a parent let their
-phone share with its launcher's tile exchange (Configure > Tile exchange sharing; false unless chosen).
+phone share with its launcher's tile exchange (Configure > Tile exchange sharing; false unless chosen). And `playing`: what they're
+playing now, anywhere Hearth sees it, as in the household summary's `playing` (so a TV profile's part, a phone's and
+`hearth/me` all have it).
 
 **Pop-ups** (not built yet): `hearth.notify` (target: devices, a person's devices, or the household; `title`, `message`, `duration`,
 `position`, `image`, `camera`, up to three `actions`). On a TV it's Hearth TV's pop-up; on a phone, a notification.
@@ -977,7 +1007,10 @@ then sends the same object as an event whenever it changes, at most every 2 seco
 - `people`: `id`, `name`, `kind` (as set on Hearth's page, `kind_set` true; else `kid` when they have limits, otherwise
   `person`), `tv_profiles`, `all`
   (the shared pool: All screen time's `used_minutes` and `minutes_left`), `groups` (each with a budget or use today),
-  `locked` and `locked_by`, `playing` (each `{app, package, device, state, target}`; `target` as in `targets` below).
+  `locked` and `locked_by`, `playing` (each `{app, package, title, episode, device, state, target, since}`: `title`
+  a TV's show or a Switch's game when known, `since` when the play started (UTC); `target` as in `targets` below).
+- `playing`: everyone's plays now, for a dashboard, oldest first: `person`, `name`, `item` (the title, else the app or
+  package), `app`, `title`, `episode`, `device`, `target` and `since`.
 - `devices`: each Hearth TV and phone: `id`, `name`, `kind`, `connected`, `screen`, `app`, `media_title`, `media_app`,
   `profile` (a TV's), `kids_profile`, `media_player` and `person`.
 - `approvals`: requests for more time (`type: "more_time"`, as the event above) and devices waiting to pair
@@ -1347,7 +1380,11 @@ Hearth keeps 90 days of what happened with each person's time (history.py): a gr
 (`ask`), an offer (`offer`), an answer (`answer`, with its status), a bonus to a group (`bonus`) or on one device
 (`device_bonus`), a suggestion put off (`dismiss`), one pushed to the adults' phones (`pushed`, with its key) and a
 TV notice's button an adult answered (`notice_answer`: `via` `pin` or `phone`, `by` the adult's person, else `user`
-their user id, the notice's `key`, the button's `action` and the TV's `device`), and each local day's final minutes
+their user id, the notice's `key`, the button's `action` and the TV's `device`), what each person played (`played`:
+`item` the title, game or app as shown, `device` where (a Hearth device id, `source:<id>` or `nintendo:<entity>`) and
+`minutes`, once a play of a minute or more ends; one event per person, item and device a local day, a later play of
+the same adding its minutes; at most 50 a person a day, kept 28 days; a play in progress when Home Assistant stops is
+cut there), and each local day's final minutes
 (`day`: `date` and `minutes` {group id: minutes, seconds / 60 rounded}, every group of the household), logged for every
 person when the day turns. When Home Assistant was down at midnight, the first look after it starts records yesterday
 from what the Hearth devices last posted for it and the live sources' timings (a totals sensor has started the new day
