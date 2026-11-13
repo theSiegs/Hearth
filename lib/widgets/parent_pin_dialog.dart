@@ -20,6 +20,7 @@ import 'dart:math';
 
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/quiet_failure.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -247,6 +248,9 @@ class ParentPinDialog extends StatefulWidget {
   /// [PinPadClose].
   final Future<String?> Function()? askPhone;
 
+  /// A line under the title its caller may set while the pad is open (null: none), such as the phones asked later.
+  final ValueListenable<String?>? note;
+
   const ParentPinDialog(
       {super.key,
       required this.title,
@@ -256,6 +260,7 @@ class ParentPinDialog extends StatefulWidget {
       this.lockout,
       this.phone,
       this.askPhone,
+      this.note,
       this.length = digitCount});
 
   @override
@@ -447,6 +452,16 @@ class _ParentPinDialogState extends State<ParentPinDialog> {
                       Text(_phoneNote ?? (_phoneDenied ? l.parentPinPhoneDenied : l.parentPinPhoneAsked),
                           style: const TextStyle(color: _textDim, fontSize: 15)),
                     ],
+                    if (widget.note != null)
+                      ValueListenableBuilder<String?>(
+                        valueListenable: widget.note!,
+                        builder: (_, said, _) => said == null || said == _phoneNote
+                            ? const SizedBox.shrink()
+                            : Padding(
+                                padding: const EdgeInsets.only(top: 16),
+                                child: Text(said, style: const TextStyle(color: _textDim, fontSize: 15)),
+                              ),
+                      ),
                   ],
                 ),
               ),

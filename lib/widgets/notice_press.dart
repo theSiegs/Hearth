@@ -29,7 +29,8 @@ class NoticePress {
   final String title;
   final String button;
 
-  /// Whether the pad asks the adults' phones too (the integration picks the phones).
+  /// Whether an adult has phone approval on: the pad asks the adults' phones as it opens, as the Parent PIN pad
+  /// does elsewhere (the integration picks the phones).
   final bool phone;
 
   const NoticePress(
@@ -67,45 +68,63 @@ String? noticeMessage(AppLocalizations l, String? result) => switch (result) {
       _ => l.noticeFailed,
     };
 
+/// Whether a wrong PIN should ask the adults' phones instead: Home Assistant has no Parent PIN (so every PIN is
+/// wrong there, and only a phone's answer works), the integration didn't lock the pad, and the phones weren't asked
+/// yet on this pad.
+bool offerPhoneAfterWrongPin(Map<dynamic, dynamic> answer, {required bool asked}) =>
+    !asked && answer["noParentPin"] == true && (answer["retryAfter"] as int? ?? 0) == 0;
+
 /// The Parent PIN pad for a notice's button: the PIN goes to the Hearth integration, which checks it (its lockout is
-/// the pad's too) and runs the button as that adult; with phone approval on, the adults' phones are asked as the pad
-/// opens. A short message says how it went.
+/// the pad's too) and runs the button as that adult. As on Hearth's other Parent PIN pads, the adults' phones are
+/// asked as it opens when phone approval is on; and once after a wrong PIN when Home Assistant has no Parent PIN. At
+/// most one phone request per pad. A short message says how it went.
 Future<void> answerNotice(BuildContext context, FLauncherChannel channel, NoticePress press) async {
   final l = AppLocalizations.of(context)!;
   String? result;
+  var asked = false;
   var sentToPhone = false;
+  final note = ValueNotifier<String?>(null);
+
+  // Asks the phones (once): the note to show, or null; closes the pad when there's nothing left to ask
+  Future<String?> askPhones() async {
+    if (asked) return null;
+    asked = true;
+    final answer = await channel.pressIntegrationNotice(press.person, press.item, press.index);
+    final said = answer["result"] as String? ?? "failed";
+    if (said == "pending") {
+      sentToPhone = true;
+      return l.noticeSentToPhone;
+    }
+    if (said == "gone" || said == "unsupported" || said == "not_paired") {
+      result = said;
+      throw const PinPadClose();
+    }
+    // The phones couldn't be asked: the PIN still works
+    return null;
+  }
+
   await showDialog<String>(
     context: context,
     builder: (_) => ParentPinDialog(
       title: press.button.isEmpty ? l.parentPinTitle : press.button,
       subtitle: press.title.isEmpty ? null : press.title,
+      note: note,
       verify: (pin) async {
         final answer = await channel.pressIntegrationNotice(press.person, press.item, press.index, pin: pin);
         final said = answer["result"] as String? ?? "failed";
         // A wrong PIN is the pad's to count (and to wait, when the integration locked it out)
-        if (said == "wrong_pin") return false;
+        if (said == "wrong_pin") {
+          if (offerPhoneAfterWrongPin(answer, asked: asked)) note.value = await askPhones() ?? note.value;
+          return false;
+        }
         result = said;
         if (said == "done") return true;
         throw const PinPadClose();
       },
-      askPhone: press.phone
-          ? () async {
-              final answer = await channel.pressIntegrationNotice(press.person, press.item, press.index);
-              final said = answer["result"] as String? ?? "failed";
-              if (said == "pending") {
-                sentToPhone = true;
-                return l.noticeSentToPhone;
-              }
-              if (said == "gone" || said == "unsupported" || said == "not_paired") {
-                result = said;
-                throw const PinPadClose();
-              }
-              // The phones couldn't be asked: the PIN still works
-              return null;
-            }
-          : null,
+      askPhone: press.phone ? askPhones : null,
     ),
   );
+  note.dispose();
   if (!context.mounted) return;
   // Back after the phones were asked: it waits for them
   final message = noticeMessage(l, result ?? (sentToPhone ? "pending" : null));

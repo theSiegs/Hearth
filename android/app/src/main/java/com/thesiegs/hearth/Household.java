@@ -1882,9 +1882,9 @@ final class Household {
         press.put("index", index);
         press.put("title", n.title.isEmpty() ? n.text : n.title);
         press.put("button", n.actions.get(index).title);
-        // The adults' phones are always asked too: the integration picks them, and keeps one request per notice (a
-        // Home Assistant without a Parent PIN takes only a phone's answer)
-        press.put("phone", true);
+        // The Parent PIN pad's "ask a parent's phone", as on its other uses: when an adult has phone approval on (the
+        // integration picks the phones)
+        press.put("phone", !ParentApproval.parentPhones(context).isEmpty());
         MainActivity.openNoticePress(context, press);
     }
 
@@ -1919,6 +1919,8 @@ final class Household {
         }
         out.put("result", result.outcome.name().toLowerCase(java.util.Locale.ROOT));
         out.put("retryAfter", result.retryAfterS);
+        // Home Assistant names no Parent PIN (its last document): every PIN is wrong there, only a phone answers
+        if (result.outcome == HaNotices.Outcome.WRONG_PIN) out.put("noParentPin", !HaParentPins.managed(context));
         return out;
     }
 

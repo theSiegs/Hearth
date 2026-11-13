@@ -432,6 +432,27 @@ void main() {
       await tester.pumpAndSettle();
       expect(await outcome(), "2468");
     });
+
+    testWidgets("a note its caller sets later shows on the pad (the phones asked after a wrong PIN)", (tester) async {
+      final note = ValueNotifier<String?>(null);
+      final lock = PinLockout()..store = _FakeStore();
+      await open(
+          tester,
+          ParentPinDialog(
+              title: "Allow +15",
+              verify: (pin) async {
+                note.value = "Sent to your phone";
+                return false;
+              },
+              note: note,
+              lockout: lock));
+      await tester.tap(find.text("open"));
+      await tester.pumpAndSettle();
+      expect(find.text("Sent to your phone"), findsNothing);
+      await type(tester, "1111");
+      await tester.pumpAndSettle();
+      expect(find.text("Sent to your phone"), findsOneWidget);
+    });
   });
 }
 
