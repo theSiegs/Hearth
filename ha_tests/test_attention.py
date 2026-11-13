@@ -100,13 +100,13 @@ async def test_a_button_runs_its_action_as_the_adult(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
     _client, _secret, users, sent = await _household(hass, hass_client_no_auth)
-    ran = async_mock_service(hass, "script", "give_more")
+    ran = async_mock_service(hass, "hearth", "give_more_test")
     attention = _hub(hass).attention
     attention.notify(
         Item(
             "hearth_offer_sam",
             "Give Sam 15 more minutes?",
-            actions=(Action("give", "+15 min", "script.give_more", {"minutes": 15}),),
+            actions=(Action("give", "+15 min", "hearth.give_more_test", {"minutes": 15}),),
         )
     )
     await hass.async_block_till_done()
@@ -124,9 +124,9 @@ async def test_a_press_from_a_kid_or_someone_it_wasn_t_for_is_refused(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
     _client, _secret, users, _sent = await _household(hass, hass_client_no_auth)
-    ran = async_mock_service(hass, "script", "give_more")
+    ran = async_mock_service(hass, "hearth", "give_more_test")
     attention = _hub(hass).attention
-    action = (Action("give", "+15 min", "script.give_more"),)
+    action = (Action("give", "+15 min", "hearth.give_more_test"),)
     attention.notify(Item("hearth_for_adults", "For the adults", actions=action))
     attention.notify(Item("hearth_for_jordan", "For Jordan", audience=f"{PERSON}person.jordan", actions=action))
     await hass.async_block_till_done()
@@ -150,8 +150,8 @@ async def test_items_survive_the_entry_reloading(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
     _client, _secret, users, _sent = await _household(hass, hass_client_no_auth)
-    ran = async_mock_service(hass, "script", "give_more")
-    _hub(hass).attention.notify(Item("hearth_kept", "Kept", actions=(Action("give", "+15", "script.give_more"),)))
+    ran = async_mock_service(hass, "hearth", "give_more_test")
+    _hub(hass).attention.notify(Item("hearth_kept", "Kept", actions=(Action("give", "+15", "hearth.give_more_test"),)))
     entry = hass.config_entries.async_entries(DOMAIN)[0]
     assert await hass.config_entries.async_reload(entry.entry_id)
     await hass.async_block_till_done()
@@ -217,3 +217,26 @@ async def test_news_about_a_kid_stays_off_the_bell(
     assert {f"hearth_more_{request['id']}", "hearth_place_person.sam"} <= tags
     # Still answerable: the request is waiting for an adult
     assert hub.asks.get(request["id"]).status == "pending"
+
+
+async def test_a_button_runs_only_hearth_services(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """Defence in depth: an item's button runs a hearth service only, whatever an item was given."""
+    _client, _secret, users, _sent = await _household(hass, hass_client_no_auth)
+    script = async_mock_service(hass, "script", "give_more")
+    lock = async_mock_service(hass, "lock", "unlock")
+    attention = _hub(hass).attention
+    attention.notify(
+        Item(
+            "hearth_not_ours",
+            "Not ours",
+            actions=(Action("s", "Script", "script.give_more"), Action("l", "Unlock", "lock.unlock", {"entity_id": "lock.front"})),
+        )
+    )
+    await hass.async_block_till_done()
+    _press(hass, "HEARTH_ACT|hearth_not_ours|0", users["alex"])
+    _press(hass, "HEARTH_ACT|hearth_not_ours|1", users["alex"])
+    await hass.async_block_till_done()
+    assert not script
+    assert not lock

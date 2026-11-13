@@ -861,7 +861,8 @@ chore done), `hearth_app_<package>` (a new app). Bell-only notices keep their id
 **Buttons.** A button with a service goes to the phone as `HEARTH_ACT|<item key>|<n>`: the service and its data stay in
 Home Assistant. When it's pressed, the presser must be an adult (or an administrator), and one the item reached (a
 user whose companion app, or whose person's, got it; any administrator for `admins`); the action then runs as them
-(`Context(user_id)`), so a `hearth.*` service checks them as usual. A press for an item that's gone (cleared, expired,
+(`Context(user_id)`), so a `hearth.*` service checks them as usual. Only services in the `hearth` domain run this
+way; any other is refused (with a warning in the log). A press for an item that's gone (cleared, expired,
 or from before a restart) is ignored. The older `HEARTH_MORE|` and `HEARTH_APP|` buttons work as before.
 
 #### A kid's own Home Assistant user

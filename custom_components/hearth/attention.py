@@ -6,7 +6,7 @@ the companion app on the audience's phones, and Home Assistant's bell when the i
 with the item's source (when a request is told, when an offer is made); here is only the generic work: an item with
 the same key or tag replaces the one before, and clearing a key or tag takes it off every channel it went to.
 
-A phone button on an item runs a service as the adult who pressed it: the phone sends HEARTH_ACT|<item key>|<n>, and
+A phone button on an item runs a Hearth service (only the hearth domain) as the adult who pressed it: the phone sends HEARTH_ACT|<item key>|<n>, and
 the service and its data are looked up here, never carried in the string. The adult check comes first (in the
 action handler), then the presser must be someone the item reached. The older HEARTH_MORE| and HEARTH_APP| buttons are
 passed through as they are (phones already hold them).
@@ -228,6 +228,10 @@ class Attention:
             _LOGGER.warning("A Hearth notification button from someone it wasn't for was ignored")
             return True
         domain, service = chosen.service.split(".", 1)
+        if domain != DOMAIN:
+            # Only Hearth's own services: they check the adult and the person themselves
+            _LOGGER.warning("A Hearth notification button for %s was refused: only hearth services run", chosen.service)
+            return True
         try:
             await self.hass.services.async_call(
                 domain, service, dict(chosen.data), blocking=True, context=Context(user_id=user.id)
