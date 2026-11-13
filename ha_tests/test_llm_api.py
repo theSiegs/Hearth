@@ -286,3 +286,45 @@ async def test_a_parent_s_block_is_never_lifted(hass: HomeAssistant, hass_client
     # An app Hearth itself paused isn't a parent's block
     result = await _call(api, "hearth_allow", person="Sam", app="x:paused")
     assert result["id"]
+
+
+async def test_a_switch_game_off_its_allow_list_is_never_allowed(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    from homeassistant.core import ServiceCall, SupportsResponse
+
+    from test_enforce import NINTENDO_LIMIT, _add_enforcer, _nintendo_switch
+
+    _client, _secret, users, sent = await _household(hass, hass_client_no_auth)
+    _nintendo_switch(hass)
+    await _add_enforcer(hass, {"kind": "nintendo", "person": "person.sam", "entity_id": NINTENDO_LIMIT})
+    asked: list[ServiceCall] = []
+
+    async def list_applications(call: ServiceCall):
+        asked.append(call)
+        return {
+            "applications": [
+                {"application_id": "0100AAA", "name": "Blaster Arena", "allowed": False},
+                {"application_id": "0100BBB", "name": "Puzzle Pals", "allowed": True},
+            ]
+        }
+
+    hass.services.async_register(
+        "nintendo_parental_controls", "list_applications", list_applications, supports_response=SupportsResponse.ONLY
+    )
+    await _options(hass, voice_assistants=True)
+    api = await _api(hass, users["alex"])
+    for app in ("Blaster Arena", "blaster arena", "0100AAA"):
+        with pytest.raises(HomeAssistantError, match="allow list of Sam's Switch in the Nintendo app"):
+            await _call(api, "hearth_allow", person="Sam", app=app)
+    assert asked and asked[0].data["device_id"]
+    # Not by voice either: nothing goes to the phones
+    voice = await _api(hass, platform="openai_conversation")
+    with pytest.raises(HomeAssistantError, match="Nintendo app"):
+        await _call(voice, "hearth_allow", person="Sam", app="Blaster Arena")
+    assert not _sent_to(sent)
+    # A game on the allow list isn't refused for Nintendo (Hearth just doesn't know it as an app), and an app that
+    # isn't a Switch game goes ahead
+    with pytest.raises(HomeAssistantError, match="doesn't know an app called Puzzle Pals"):
+        await _call(api, "hearth_allow", person="Sam", app="Puzzle Pals")
+    assert (await _call(api, "hearth_allow", person="Sam", app="com.example.other"))["id"]
