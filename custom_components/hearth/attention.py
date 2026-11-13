@@ -305,7 +305,16 @@ class Attention:
         if chosen.dismiss:
             self.clear(item.key)
             return True
-        if await self.run(chosen, user.id) and item.about.get("notice"):
+        if item.about.get("via"):
+            # An assistant's action an adult approves (llm_api.py, voice): its history says how, and who tapped
+            from .llm_api import run_audited
+
+            about = item.about
+            await run_audited(
+                self.hub, about["via"], user.id, about.get("tool"), about.get("person"), dict(about.get("audit") or {}),
+                self.run(chosen, user.id),
+            )
+        elif await self.run(chosen, user.id) and item.about.get("notice"):
             # A phone approval of a TV notice's button: who answered it goes in the history
             from .notices import VIA_PHONE, log_answer
 

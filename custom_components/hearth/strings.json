@@ -145,6 +145,7 @@
           "not_screen_time": "Not screen time",
           "remove_group": "Remove a group",
           "tile_exchange": "Tile exchange sharing",
+          "voice_assistants": "Voice assistants",
           "parent_pin": "Parent PINs",
           "push": "Push to phones (ntfy)",
           "schedule": "Schedule (days off, half days)",
@@ -207,6 +208,13 @@
         "description": "People whose phone may share with the launcher's tile exchange: the layout of notifications from apps that have no tile yet, with every word and number blanked out (never chat, health or payment apps). Off for everyone not chosen here.",
         "data": {
           "people": "People"
+        }
+      },
+      "voice_assistants": {
+        "title": "Voice assistants",
+        "description": "Let voice assistants use Hearth: an Assist pipeline (a voice satellite) with Hearth among its LLM APIs answers questions about the kids' screen time, and its actions (more time, a pause, an allow) go to the adults' phones to approve first. Off: voice gets nothing from Hearth. Adults signed in to Home Assistant (Assist chat, the MCP Server) use Hearth either way.",
+        "data": {
+          "enabled": "Let voice assistants use Hearth"
         }
       },
       "remove_group": {

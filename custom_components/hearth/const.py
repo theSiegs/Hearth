@@ -77,6 +77,8 @@ CONF_GROUP_APPS = "group_apps"
 CONF_OUTSIDE_ALL = "outside_all"
 # People whose phone may share with a launcher's tile exchange (scrubbed layouts only): a parent's choice
 CONF_TILE_EXCHANGE = "tile_exchange_share"
+# Options: voice assistants (Assist calls without a Home Assistant user) may use Hearth's LLM API (llm_api.py); off
+CONF_VOICE_ASSISTANTS = "voice_assistants"
 # Options: {person: "kid" | "adult"}, set on Hearth's page
 CONF_ROLES = "roles"
 # Options: {device_id: media_player entity}: a TV's own media player (the androidtv or cast one), for apps' tiles

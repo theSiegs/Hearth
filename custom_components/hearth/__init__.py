@@ -32,7 +32,7 @@ from .auth import is_adult_user, register_service
 from .websocket import async_register_commands
 from .pause import end_app_pause, end_pause, set_app_pause, set_pause
 from .places import ARRIVE, LEAVE
-from . import panel, suggest_push
+from . import llm_api, panel, suggest_push
 from .apps import ACTION_PREFIX
 from .asks import ACTION_PREFIX as ASK_ACTION_PREFIX
 from .commands import is_profile_id, what_to_play
@@ -274,6 +274,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     _register_watch_services(hass)
     _register_play_on_tv(hass)
     _register_copy_sites(hass, loaded_household)
+    # Hearth for assistants: Home Assistant's MCP Server and Assist (llm_api.py)
+    llm_api.async_register(hass)
     return True
 
 

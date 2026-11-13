@@ -478,6 +478,9 @@ class HearthPanel extends HTMLElement {
         await this._setOption("enforce", kept, "Parental controls saved");
         return;
       }
+      case "voice-assistants":
+        await this._setOption("voice_assistants", el.checked, el.checked ? "Voice assistants on" : "Voice assistants off");
+        return;
       case "tile-share": {
         const set = new Set(cfg.tile_exchange || []);
         if (el.checked) set.add(d.person);
@@ -1559,6 +1562,7 @@ class HearthPanel extends HTMLElement {
       </section>
       ${this._pinsCard()}
       ${this._sharingCard()}
+      ${this._voiceCard()}
       ${this._schoolCard()}
       ${this._placesCard()}
       <section class="card">
@@ -1581,6 +1585,15 @@ class HearthPanel extends HTMLElement {
           <button class="btn primary" data-action="pin-save" data-person="${esc(a.id)}">${set.has(a.id) ? "Change" : "Set"}</button>
           ${set.has(a.id) ? `<button class="icon-btn" data-action="pin-remove" data-person="${esc(a.id)}" aria-label="Remove"><ha-icon icon="mdi:delete-outline"></ha-icon></button>` : ""}</li>`)
         .join("")}</ul>` : `<p class="muted small">Mark the adults above first.</p>`}
+    </section>`;
+  }
+
+  _voiceCard() {
+    const on = !!this._config.voice_assistants;
+    return `<section class="card">
+      <h3><ha-icon icon="mdi:microphone-outline"></ha-icon>Voice assistants</h3>
+      <p class="muted">Lets an Assist voice pipeline with Hearth among its LLM APIs answer questions about screen time. Anything it would change (more time, a pause, an allow) goes to the adults' phones first and runs only when one of you taps Allow. Off: voice gets nothing from Hearth.</p>
+      <label class="check"><input type="checkbox" data-change="voice-assistants" ${on ? "checked" : ""}> Let voice assistants use Hearth</label>
     </section>`;
   }
 

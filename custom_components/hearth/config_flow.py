@@ -41,6 +41,7 @@ from .const import (
     CONF_OUTSIDE_ALL,
     CONF_ROLES,
     CONF_TILE_EXCHANGE,
+    CONF_VOICE_ASSISTANTS,
     CONF_PERSON,
     CONF_PROFILES,
     CONF_PUSH_SERVER,
@@ -165,6 +166,7 @@ class HearthOptionsFlow(OptionsFlow):
                 "not_screen_time",
                 "remove_group",
                 "tile_exchange",
+                "voice_assistants",
                 "parent_pin",
                 "push",
             ],
@@ -280,6 +282,17 @@ class HearthOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="tile_exchange", data_schema=schema)
+
+    async def async_step_voice_assistants(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Voice assistants may use Hearth (llm_api.py): calls without a Home Assistant user (a voice satellite) get
+        Hearth's tools, and their actions ask an adult's phone first. Off by default."""
+        options = self._options()
+        if user_input is not None:
+            return self.async_create_entry(data={**options, CONF_VOICE_ASSISTANTS: bool(user_input.get("enabled"))})
+        schema = vol.Schema(
+            {vol.Optional("enabled", default=bool(options.get(CONF_VOICE_ASSISTANTS))): BooleanSelector()}
+        )
+        return self.async_show_form(step_id="voice_assistants", data_schema=schema)
 
     async def async_step_push(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """The ntfy server the phones are pinged through when their state changes (push.py); empty: no pings."""

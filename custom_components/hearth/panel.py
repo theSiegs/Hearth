@@ -36,6 +36,7 @@ from .const import (
     CONF_PUSH_SERVER,
     CONF_ROLES,
     CONF_TILE_EXCHANGE,
+    CONF_VOICE_ASSISTANTS,
     DOMAIN,
     KIND_MOBILE,
 )
@@ -260,6 +261,8 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
         "media_players": dict(options.get(CONF_MEDIA_PLAYERS, {})),
         **household.apps_overview(),
         "tile_exchange": list(options.get(CONF_TILE_EXCHANGE, [])),
+        # Voice assistants may use Hearth (llm_api.py): off unless chosen
+        "voice_assistants": bool(options.get(CONF_VOICE_ASSISTANTS)),
         "push_server": options.get(CONF_PUSH_SERVER),
         "parent_pins": sorted(parent_pin.stored_pins(options)),
         "school_days": dict(options.get(CONF_SCHOOL_DAYS) or {}),
@@ -330,6 +333,7 @@ OPTION_SCHEMAS: dict[str, Any] = {
     CONF_GROUP_APPS: vol.Schema({_ID: [cv.string]}),
     CONF_OUTSIDE_ALL: [_ID],
     CONF_TILE_EXCHANGE: [_PERSON],
+    CONF_VOICE_ASSISTANTS: bool,
     CONF_SOURCES: [
         vol.Schema(
             {
