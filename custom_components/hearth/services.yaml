@@ -380,6 +380,13 @@ dismiss_suggestion:
       example: "more:games"
       selector:
         text:
+chore_undo:
+  fields:
+    key:
+      required: true
+      example: "a1b2c3d4e5:2026-11-13#1"
+      selector:
+        text:
 copy_sites:
   fields:
     people:

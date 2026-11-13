@@ -369,13 +369,42 @@ minutes, group: All screen time by default; by title isn't built), whoever asks:
   minutes today?", with two amounts and Not today); see [Pushed to phones](#pushed-to-phones). Nothing is asked of the
   kid and their devices aren't told about it. (This was Offer more time, which made an offered request: its choices
   carry over.)
-- **Chores** (Configure > Chores earn time): per person, a to-do list, a group and what a chore is worth (15 minutes
-  by default, or the chore's own "+N": "Dishes +30"). Each item checked off adds its minutes once and is removed from
-  the list; `hearth_chore_done` (person, chore, group, minutes) and the adults' phone are told.
+- **Chores**: a reward on an item of a kid's to-do list, granted when it's checked off (see
+  [To-do lists](#to-do-lists)). Chore minutes aren't added to the bonus: they're counted with it.
 - **Automations, a dashboard button**: call `hearth.add_bonus`.
 
 Negative minutes take time away today (`minutes: -60`), even with no bonus given: Bonus today goes below 0 and the
 minutes left stop at none. It ends at midnight like any bonus.
+
+### To-do lists
+
+Every person marked kid on Hearth's page has a to-do list, `todo.hearth_<kid>` ("Sam's to-do"): the to-do card on a
+tablet, Assist's list intents ("mark feed the cat done on Sam's to-do") and `todo.item_completed` triggers. Adults set
+the list up in the Kids tab of Hearth's page (Chores): a task's name, how it repeats (once, every day, some weekdays,
+every N days, N days after it was last done), a time it's due, and optionally a reward: minutes in one of the kid's
+groups ("+15 min Games") or money ("+$2.00"). The list shows today's items of each task, one-off tasks until they're
+done, and what was done today until the day ends.
+
+- **No approval step.** A reward is granted when the item is checked off by the kid themselves (their own Home
+  Assistant user) or by an adult. The adults' phones are told ("Sam finished a chore: Feed the cat: +15 min of Games
+  today"), with **Undo**, which takes the whole reward back (the group can drop to none left, and holds then).
+  `hearth_chore_done` (person, chore, group, minutes or cents, key, by) fires on each grant, `hearth_chore_reversed`
+  on each take-back.
+- **Who may do what.** A sibling's user is refused on another kid's list. Any other user (a wall tablet signed in as a
+  household user with no person), voice and automations may check an item off, but nothing is granted; an adult can
+  give it from Hearth's page. Sign shared screens in as such a user, not an adult's: an adult's check-off grants. A
+  kid may add items of their own (homework: never rewarded) and change or remove those; on an adult's item they may
+  only tick and untick. Removing a done item (Clear checked items) only hides it: its reward stays.
+- **Untick** by the kid or an adult takes the reward back; a tick again grants it again, never twice. Each grant is a
+  ledger entry keyed `<item uid>#<n>`.
+- **Minutes** count today, in the day the item was checked off, as Bonus today does: the summary's group `bonus`
+  includes them and `bonus_chores` says how much. All screen time minutes also reach Family Link and Family Safety as
+  `hearth.add_bonus`'s do, and the history has them as a bonus `via: chore`. An optional cap per group
+  (`chore_caps`, the most chores earn a kid in a day) limits them; a grant past it gives what's left.
+- **Money** is a balance per kid (`balance_cents` in the summary): what was earned, less what an adult marked paid
+  out, plus adjustments. Hearth moves no money.
+- The old Configure > Chores earn time is gone: its lists' open items became one-off tasks with their rewards (a
+  "+N" in the text, else the row's minutes), once. The old to-do list is left as it was.
 
 **Who enforces.** When one of a person's groups is out of time, its apps are held everywhere the household chose,
 until the group has time again (a bonus, a higher budget, a new day):
@@ -1654,7 +1683,7 @@ too) carry `media_rooms`: `[{room, area_id, entity_id, also, kind, players}]`, r
 - Read from Home Assistant's registries and entity names only, never from what's playing, so it changes only when the
   house's setup does. Without Hearth's integration, a phone groups players its own way.
 
-Chore claims will join `approvals` when they exist.
+Chores never join `approvals`: there is no approval step (see [To-do lists](#to-do-lists)).
 
 ## Away from home
 
@@ -1726,7 +1755,7 @@ The Configure menu (Settings > Devices & services > Hearth > Configure) still ha
 
 **Who's who on the TVs**, **Add / Remove a screen time source**, **Add / Remove a title**, **Locks** (bedtime,
 school time), **Enforce limits** (Family Link, Family Safety, Nintendo), **School days**, **Schedule**, **Places**, **Website
-block list**, **Chores earn time**, **Suggest more time to phones**, **Sort new apps**, **Watch for new apps**, **Add a group**, **Add apps to Video or Games**, **Not screen time**, **Remove a group**, **Tile
+block list**, **Suggest more time to phones**, **Sort new apps**, **Watch for new apps**, **Add a group**, **Add apps to Video or Games**, **Not screen time**, **Remove a group**, **Tile
 exchange sharing** and **Parent PINs**. (Suggested title matches and rules aren't built.)
 
 Budgets aren't in the options: they're number entities, so a dashboard, a voice assistant or an automation can change
@@ -1761,7 +1790,7 @@ time are in the household summary and on Hearth's page, not an entity.
 Events: `hearth_budget_reached` (person, group, group_name), `hearth_more_time_requested` and
 `hearth_more_time_answered` (as in [Ask for more](#ask-for-more)), `hearth_playing_together` (title, people, started
 or ended), `hearth_enforced`, `hearth_new_app`, `hearth_parent_pin_used`, `hearth_parent_pin_locked_out`,
-`hearth_schedule`, `hearth_chore_done`, `hearth_place` (person, from, to).
+`hearth_schedule`, `hearth_chore_done`, `hearth_chore_reversed`, `hearth_place` (person, from, to).
 
 Per person with a TV profile: **Last video started** (see [A kids profile's YouTube](#a-kids-profiles-youtube)).
 
@@ -2020,7 +2049,7 @@ automations, and what replaces each (the names here are examples):
 | switches School time back on after a day off, every minute, inside each kid's window, with a 10:00 watchdog | Schedule (it puts School time back by itself) |
 | a one-shot "no School time on Wednesday from noon" | `hearth.school_time_off` {people, date, from: "12:00"} |
 | syncs a website list into Family Link every morning | Configure > Website block list |
-| adds bonus minutes when a chore is checked off | Configure > Chores earn time |
+| adds bonus minutes when a chore is checked off | a reward on the kid's to-do list item (Kids tab > Chores) |
 | offers an adult "give 30 more?" when a kid's time runs out | Kids tab > Suggest to phones (or Configure > Suggest more time to phones) |
 | resets bonus helpers at midnight | nothing: Bonus today starts at 0 each day |
 | ends a family pause at a set time | `hearth.pause` with `until` |

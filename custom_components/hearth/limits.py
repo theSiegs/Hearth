@@ -12,6 +12,7 @@ retire_video moves an older household's options once, and logs what it did.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
 import logging
@@ -295,7 +296,10 @@ def day_type(day: date) -> str:
 class GroupState:
     counted_min: float
     budget_min: int | None
+    # Today's bonus: an adult's (set_bonus) and chores' together
     bonus_min: int
+    # Of which chores earned today (todos.py)
+    bonus_chores: int = 0
 
     @property
     def minutes_left(self) -> int | None:
@@ -329,6 +333,8 @@ class Limits:
     def __init__(self, hass: HomeAssistant, entry_id: str) -> None:
         self._store: Store[dict[str, Any]] = Store(hass, 1, f"hearth.limits.{entry_id}")
         self.data = LimitsData()
+        # (person, group) -> the minutes chores earned today (todos.ChoreBook.minutes_today), folded into the bonus
+        self.chore_minutes: Callable[[str, str], int] | None = None
 
     async def async_load(self) -> None:
         stored = await self._store.async_load() or {}
@@ -428,4 +434,6 @@ class Limits:
 
     def state(self, person: str, group: str, counted_min: float, kind: str) -> GroupState:
         """The group's state today, with the budget for [kind] of day (SCHOOL_DAY or OTHER_DAY)."""
-        return GroupState(counted_min, self.budget(person, group, kind), self.bonus(person, group))
+        chores = max(0, self.chore_minutes(person, group)) if self.chore_minutes else 0
+        bonus = max(-MAX_BONUS, min(MAX_BONUS, self.bonus(person, group) + chores))
+        return GroupState(counted_min, self.budget(person, group, kind), bonus, chores)

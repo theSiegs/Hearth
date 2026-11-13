@@ -72,6 +72,8 @@ def summary(hub) -> dict[str, Any]:
                     # Today's budget (null: no limit) and the extra time given today, apart
                     "budget": state.budget_min if state else None,
                     "bonus": state.bonus_min if state else 0,
+                    # Of the bonus, what chores earned today (todos.py)
+                    "bonus_chores": state.bonus_chores if state else 0,
                 }
             )
         limited = any(g["minutes_left"] is not None for g in groups)
@@ -116,6 +118,10 @@ def summary(hub) -> dict[str, Any]:
                 "playing": [_playing_view(p, now, groups_of_item) for p in (day.playing if day else [])],
             }
         )
+        # A kid's to-do list today and their money balance (todos.py)
+        if person in household.todos.kids():
+            people[-1]["todo"] = household.todos.counts(person)
+            people[-1]["balance_cents"] = household.todos.balance_cents(person)
         # Today's minutes per counted device and per app or title (each device's time once, as counted)
         if day is not None:
             people[-1]["devices_today"], people[-1]["apps_today"] = _today_by_device_and_app(household, person, day)

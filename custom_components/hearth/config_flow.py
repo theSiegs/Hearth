@@ -66,7 +66,6 @@ from .enforce import (
 from .notifications import clear_pairing
 from .schooldays import CALENDAR_OFF, CALENDAR_SCHOOL, CONF_SCHOOL_DAYS, SCHOOL_BUDGET
 from .schedule import CONF_SCHEDULE, CONF_SITE_LIST
-from .chores import CONF_CHORES, DEFAULT_MINUTES
 from .asks import AMOUNTS, CONF_OFFER_MORE
 from .suggest_push import CONF_SUGGEST_PUSH, pairs as suggest_pairs
 from .sources import CONF_SOURCES, CONF_TITLES, is_phone_app
@@ -162,7 +161,6 @@ class HearthOptionsFlow(OptionsFlow):
                 "schedule",
                 "places",
                 "site_list",
-                "chores",
                 "suggest_push",
                 "sort_apps",
                 "new_apps",
@@ -767,36 +765,6 @@ class HearthOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="site_list", data_schema=schema, errors=errors)
-
-    async def async_step_chores(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """A person's chores list: each item checked off adds minutes to a group today. Choosing a person again
-        replaces theirs; no list stops it."""
-        options = self._options()
-        chores: list[dict[str, Any]] = list(options.get(CONF_CHORES, []))
-        if user_input is not None:
-            person = user_input[CONF_PERSON]
-            kept = [c for c in chores if c.get("person") != person]
-            if user_input.get("todo") and user_input.get("group"):
-                kept.append(
-                    {
-                        "person": person,
-                        "todo": user_input["todo"],
-                        "group": user_input["group"],
-                        "minutes": int(user_input.get("minutes") or DEFAULT_MINUTES),
-                    }
-                )
-            return self.async_create_entry(data={**options, CONF_CHORES: kept})
-        schema = vol.Schema(
-            {
-                vol.Required(CONF_PERSON): PERSON_SELECTOR,
-                vol.Optional("todo"): EntitySelector(EntitySelectorConfig(domain="todo")),
-                vol.Optional("group"): self._group_selector(),
-                vol.Optional("minutes", default=DEFAULT_MINUTES): NumberSelector(
-                    NumberSelectorConfig(min=1, max=240, step=1, unit_of_measurement="min", mode=NumberSelectorMode.BOX)
-                ),
-            }
-        )
-        return self.async_show_form(step_id="chores", data_schema=schema)
 
     async def async_step_places(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Places are zones (places.py): a kid's school zone and Family Link tracker (choosing a kid again replaces

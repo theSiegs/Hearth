@@ -328,31 +328,14 @@ async def test_the_website_list_must_be_https(
     assert result["errors"] == {"url": "not_https"}
 
 
-async def test_a_chore_checked_off_adds_its_minutes_once(
+async def test_configure_has_no_chores_step_any_more(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
-    async_mock_service(
-        hass,
-        "todo",
-        "get_items",
-        response={
-            "todo.sam_chores": {
-                "items": [
-                    {"uid": "1", "summary": "Dishes +30", "status": "completed"},
-                    {"uid": "2", "summary": "Bed", "status": "completed"},
-                ]
-            }
-        },
-        supports_response=SupportsResponse.ONLY,
-    )
-    removed = async_mock_service(hass, "todo", "remove_item")
+    """Chores earn time moved into the kids' to-do lists (todos.py, test_chores.py)."""
     await _household_with_sam(hass, hass_client_no_auth)
-    hass.states.async_set("todo.sam_chores", "2")
-    await _option(hass, "chores", {"person": "person.sam", "todo": "todo.sam_chores", "group": "video", "minutes": 15})
-    hass.states.async_set("todo.sam_chores", "0")
-    await hass.async_block_till_done()
-    assert sorted(c.data["item"] for c in removed) == ["1", "2"]
-    assert hass.states.get("number.hearth_sam_video_bonus_today").state == "45"
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert "chores" not in result["menu_options"]
 
 
 async def test_the_adults_get_a_suggestion_when_a_chosen_group_runs_out(

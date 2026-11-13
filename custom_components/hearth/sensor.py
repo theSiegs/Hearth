@@ -241,7 +241,12 @@ class PersonMinutesLeft(HearthPersonEntity, SensorEntity):
         state = self.day.limits.get(self.budget_group.id) if self.day else None
         if state is None:
             return {}
-        return {"budget": state.budget_min, "bonus": state.bonus_min, "counted": int(state.counted_min)}
+        return {
+            "budget": state.budget_min,
+            "bonus": state.bonus_min,
+            "bonus_chores": state.bonus_chores,
+            "counted": int(state.counted_min),
+        }
 
 
 class PersonPlaying(HearthPersonEntity, SensorEntity):
