@@ -744,6 +744,87 @@ async def test_all_screen_time_out_locks_the_family_link_devices(
     assert hass.states.get("sensor.hearth_sam_held_by_parental_controls").state == "0"
 
 
+FL_DAILY_LIMIT_SWITCH = "switch.sam_family_link_daily_limit"
+
+
+async def _family_link_lock_setup(hass: HomeAssistant, hass_client_no_auth, switch: str):
+    """Sam's Family Link child (42) with today's limit 120 and the child's Daily Limit switch in [switch]."""
+    from homeassistant.helpers import entity_registry as er
+
+    _family_link(hass)
+    limits = async_mock_service(hass, "familylink", "set_daily_limit")
+    turned_on = async_mock_service(hass, "switch", "turn_on")
+    turned_off = async_mock_service(hass, "switch", "turn_off")
+    er.async_get(hass).async_get_or_create(
+        "switch", "familylink", "familylink_42_daily_limit", suggested_object_id="sam_family_link_daily_limit"
+    )
+    hass.states.async_set(FL_DAILY_LIMIT_SWITCH, switch, {"child_id": "42"})
+    await _household_with_sam(hass, hass_client_no_auth)
+    hass.states.async_set(
+        FAMILY_LINK,
+        "20",
+        {"unit_of_measurement": "min", "child_id": "42", "apps": [{"package": "com.example.chat", "minutes": 20}]},
+    )
+    weekday = enforce.WEEKDAYS[dt_util.now().weekday()]
+    hass.states.async_set(f"number.sam_family_link_{weekday}_limit", "120", {"child_id": "42"})
+    await _option(hass, "add_source", {"entity_id": FAMILY_LINK, "person": "person.sam"})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    return limits, turned_on, turned_off, weekday
+
+
+async def test_a_lock_switches_family_link_s_daily_limit_on_and_off_again(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Daily limits switched off: set_daily_limit alone locks nothing, so Hearth switches them on for the hold."""
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0))
+    limits, turned_on, turned_off, weekday = await _family_link_lock_setup(hass, hass_client_no_auth, "off")
+    day = dt_util.now().isoweekday()
+
+    await _budget(hass, "all", 30)
+    assert [c.data for c in turned_on] == [{"entity_id": FL_DAILY_LIMIT_SWITCH}]
+    assert [c.data for c in limits] == [{"child_id": "42", "daily_minutes": 0, "day": day}]
+    hass.states.async_set(FL_DAILY_LIMIT_SWITCH, "on", {"child_id": "42"})
+    hass.states.async_set(f"number.sam_family_link_{weekday}_limit", "0", {"child_id": "42"})
+
+    await _bonus(hass, "all", 30)
+    assert limits[-1].data == {"child_id": "42", "daily_minutes": 120, "day": day}
+    assert [c.data for c in turned_off] == [{"entity_id": FL_DAILY_LIMIT_SWITCH}]
+
+
+async def test_a_daily_limit_already_on_stays_on(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0))
+    limits, turned_on, turned_off, weekday = await _family_link_lock_setup(hass, hass_client_no_auth, "on")
+
+    await _budget(hass, "all", 30)
+    assert turned_on == []
+    assert limits[-1].data["daily_minutes"] == 0
+    hass.states.async_set(f"number.sam_family_link_{weekday}_limit", "0", {"child_id": "42"})
+    await _bonus(hass, "all", 30)
+    assert limits[-1].data["daily_minutes"] == 120
+    assert turned_off == []
+
+
+async def test_the_switched_on_daily_limit_goes_off_after_a_restart(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0))
+    limits, turned_on, turned_off, weekday = await _family_link_lock_setup(hass, hass_client_no_auth, "off")
+    await _budget(hass, "all", 30)
+    assert len(turned_on) == 1
+    hass.states.async_set(FL_DAILY_LIMIT_SWITCH, "on", {"child_id": "42"})
+    hass.states.async_set(f"number.sam_family_link_{weekday}_limit", "0", {"child_id": "42"})
+
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    await _bonus(hass, "all", 30)
+    assert limits[-1].data["daily_minutes"] == 120
+    assert len(turned_on) == 1  # the switch was on: nothing to switch on again
+    assert [c.data for c in turned_off] == [{"entity_id": FL_DAILY_LIMIT_SWITCH}]
+
+
 async def test_a_group_outside_all_screen_time_isn_t_held_by_it(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:

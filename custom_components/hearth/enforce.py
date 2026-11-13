@@ -776,7 +776,18 @@ class Enforcement:
                     if d.attributes.get("lock_override_code") == FL_UNLOCK_CODE
                 ),
             }
+            # Daily limits switched off: Family Link then only rewrites the weekly row, nothing locks. Hearth switches
+            # them on for the hold, and says so, so letting go switches them off again
+            switch = fl.daily_limit_switch(self.hass, child)
+            switch_state = self.hass.states.get(switch) if switch else None
+            if switch_state is not None and switch_state.state == "off":
+                held.restore["lock_switched_on"] = True
             self._save()
+        if held.restore.get("lock_switched_on"):
+            switch = fl.daily_limit_switch(self.hass, held.restore["lock_child"])
+            switch_state = self.hass.states.get(switch) if switch else None
+            if switch_state is not None and switch_state.state == "off":
+                await self.hass.services.async_call("switch", "turn_on", {"entity_id": switch}, blocking=True)
         await self.hass.services.async_call(
             "familylink",
             "set_daily_limit",
@@ -826,6 +837,14 @@ class Enforcement:
                     blocking=True,
                 )
                 outcome = RESTORED
+                # The daily limits Hearth switched on for the hold go off again (unless a parent already did)
+                if restore.get("lock_switched_on"):
+                    switch = fl.daily_limit_switch(self.hass, str(restore["lock_child"]))
+                    switch_state = self.hass.states.get(switch) if switch else None
+                    if switch_state is not None and switch_state.state == "on":
+                        await self.hass.services.async_call(
+                            "switch", "turn_off", {"entity_id": switch}, blocking=True
+                        )
         held.restore = {k: v for k, v in restore.items() if not k.startswith("lock_")}
         return outcome
 

@@ -356,7 +356,8 @@ until the group has time again (a bonus, a higher budget, a new day):
     today's daily limit goes to 0 (`familylink.set_daily_limit`, every device of the child), so the apps a parent gave
     unlimited time in Family Link still work, as when Family Link's own limit is reached. The limit they had (the
     child's weekday limit entity) is kept and put back when there's time again, and just before midnight, since it's
-    the weekday's setting. An app with unlimited time is never paused for a group either. Calls, texts, the system and
+    the weekday's setting. With the child's Daily Limit switch off (Family Link then locks nothing), Hearth switches
+    it on for the lock and off again when it puts the limit back. An app with unlimited time is never paused for a group either. Calls, texts, the system and
     the parental controls' own apps are never paused for a group.
 
     **During School time, pause these apps** (Google Messages by default in the form): those apps are paused while
