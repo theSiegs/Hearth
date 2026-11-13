@@ -656,7 +656,43 @@ class HearthPanel extends HTMLElement {
       case "app-group": {
         const moved = { ...(cfg.app_groups || {}) };
         moved[d.app] = el.value;
-        await this._setOption("app_groups", moved, `Moved to ${el.value === "other" ? "Other" : this._groupName(el.value)}`);
+        // From Check these, with its tick: shared with the shared app catalog too (what the app is, never the pool)
+        const tick = d.idx != null ? this.shadowRoot.querySelector(`#catalog-suggest-${d.idx}`) : null;
+        let shared = "";
+        if (tick?.checked) {
+          try {
+            const r = await this._hass.callWS({ type: "hearth/catalog/correct", app: d.app, group: el.value });
+            shared = r?.queued ? ", and suggested for the shared catalog" : "";
+          } catch (err) {
+            this._notify(this._message(err));
+          }
+        }
+        await this._setOption("app_groups", moved, `Moved to ${el.value === "other" ? "Other" : this._groupName(el.value)}${shared}`);
+        return;
+      }
+      case "app-confirm": {
+        // Right where it is: it stays there whatever the catalog says later
+        const moved = { ...(cfg.app_groups || {}), [d.app]: d.group };
+        await this._setOption("app_groups", moved, `Kept in ${d.group === "other" ? "Other" : this._groupName(d.group)}`);
+        return;
+      }
+      case "catalog-fetch":
+        await this._setOption("catalog_fetch", el.checked, el.checked ? "Fetching the shared catalog" : "Not fetching it");
+        return;
+      case "catalog-share":
+        await this._setOption("catalog_share", el.checked, el.checked ? "Sharing with the shared catalog" : "Not sharing");
+        return;
+      case "catalog-share-on":
+      case "catalog-share-no":
+        // Asked once: either answer is remembered
+        await this._ws({ type: "hearth/config/set", key: "catalog_share_asked", value: true });
+        await this._setOption("catalog_share", action === "catalog-share-on", action === "catalog-share-on" ? "Sharing with the shared catalog" : "Not sharing");
+        return;
+      case "catalog-pool": {
+        const own = { ...(cfg.catalog?.own_pools || {}) };
+        if (el.value) own[d.value] = el.value;
+        else delete own[d.value];
+        await this._setOption("catalog_pools", own, "Saved");
         return;
       }
       case "app-filter":
@@ -2117,16 +2153,66 @@ class HearthPanel extends HTMLElement {
     </section>`;
   }
 
-  _groupSelect(app, group) {
+  _groupSelect(app, group, idx = null) {
     const groups = (this._config.groups || []).filter((g) => g.id !== "all");
-    return `<select data-change="app-group" data-app="${esc(app)}" aria-label="Group">
+    return `<select data-change="app-group" data-app="${esc(app)}"${idx != null ? ` data-idx="${idx}"` : ""} aria-label="Group">
       ${groups.map((g) => `<option value="${esc(g.id)}" ${g.id === group ? "selected" : ""}>${esc(g.name)}</option>`).join("")}
       <option value="other" ${group === "other" ? "selected" : ""}>Other</option></select>`;
   }
 
   _appRow(a, extra = "") {
+    const says = a.catalog_says ? ` · the shared catalog now says ${esc(a.catalog_says)}` : "";
     return `<li><div class="grow"><div>${esc(a.name || a.package)}${a.moved ? ` <span class="chip small">moved by you</span>` : ""}</div>
-      <div class="muted small">${esc(a.package)}${extra}</div></div>${this._groupSelect(a.package, a.group)}</li>`;
+      <div class="muted small">${esc(a.package)}${extra}${says}</div></div>${this._groupSelect(a.package, a.group)}</li>`;
+  }
+
+  // Apps the shared catalog only guessed, or where it and the device disagree: an adult keeps or moves each
+  _checkTheseCard() {
+    const rows = this._config.check_these || [];
+    if (!rows.length) return "";
+    const share = !!this._config.catalog?.share;
+    return `<section class="card">
+      <h3><ha-icon icon="mdi:help-circle-outline"></ha-icon>Check these</h3>
+      <p class="muted">Placed on the shared app catalog's guess, or where the catalog and the device disagree (Hearth goes by the catalog). Keep each where it is, or move it; your choice always wins.</p>
+      <ul class="list compact">${rows
+        .map((a, i) => `<li><div class="grow"><div>${esc(a.name || a.package)}</div>
+          <div class="muted small">${esc(a.why)}</div>
+          ${share && a.shareable ? `<label class="check small"><input type="checkbox" id="catalog-suggest-${i}"> Suggest my move for the shared catalog</label>` : ""}</div>
+          <button class="btn" data-action="app-confirm" data-app="${esc(a.package)}" data-group="${esc(a.group)}">Right</button>
+          ${this._groupSelect(a.package, a.group, i)}</li>`)
+        .join("")}</ul>
+    </section>`;
+  }
+
+  // Hearth's own tile exchange setting, for the shared app catalog: fetching (sends nothing) and sharing (asked once)
+  _catalogCard() {
+    const c = this._config.catalog;
+    if (!c) return "";
+    const groups = (this._config.groups || []).filter((g) => g.id !== "all");
+    const names = { other: "Other", ...Object.fromEntries(groups.map((g) => [g.id, g.name])) };
+    const status = c.keys
+      ? `${c.keys} app keys${c.issued ? `, published ${esc(new Date(c.issued).toLocaleDateString())}` : ""}${c.origin === "bundled" ? " (the copy Hearth came with)" : ""}`
+      : "No copy yet";
+    const ask = !c.share && !c.asked
+      ? `<p class="muted">Share with the shared app catalog? What Hearth sends: names and store ids of public apps the catalog lacks, and corrections you choose to share; never who uses them, no usage or times, never chat, health, money or sign-in apps. Once a week.</p>
+        <div class="actions"><button class="btn" data-action="catalog-share-no">Not now</button><button class="btn primary" data-action="catalog-share-on">Turn on</button></div>`
+      : `<label class="check"><input type="checkbox" data-change="catalog-share" ${c.share ? "checked" : ""}> Share with the shared app catalog</label>
+        ${c.share ? `<div class="muted small">Waiting for the weekly send: ${c.waiting?.keys || 0} apps, ${c.waiting?.corrections || 0} corrections</div>` : ""}`;
+    return `<section class="card">
+      <h3><ha-icon icon="mdi:book-open-variant"></ha-icon>Shared app catalog</h3>
+      <p class="muted">Glint's shared catalog says what an app is (a game, YouTube, streaming, a companion app) on phones, TVs, Xbox, Windows and Switch, so new apps land in the right group. Fetching it sends nothing.</p>
+      <label class="check"><input type="checkbox" data-change="catalog-fetch" ${c.fetch ? "checked" : ""}> Fetch the shared app catalog</label>
+      <div class="muted small">${status}${c.error ? ` · last try: ${esc(c.error)}` : ""}</div>
+      ${ask}
+      <details><summary>Which group each kind of app goes to</summary>
+        <ul class="list compact">${(c.values || [])
+          .map((v) => `<li><div class="grow">${esc(v)}</div><select data-change="catalog-pool" data-value="${esc(v)}" aria-label="${esc(v)}">
+            <option value="" ${c.own_pools?.[v] ? "" : "selected"}>Hearth's default (${esc(names[c.pools?.[v]] || "Other")})</option>
+            ${groups.map((g) => `<option value="${esc(g.id)}" ${c.own_pools?.[v] === g.id ? "selected" : ""}>${esc(g.name)}</option>`).join("")}
+            <option value="other" ${c.own_pools?.[v] === "other" ? "selected" : ""}>Other</option></select></li>`)
+          .join("")}</ul>
+      </details>
+    </section>`;
   }
 
   _appsTab() {
@@ -2135,7 +2221,7 @@ class HearthPanel extends HTMLElement {
     const filter = this._appFilter || "";
     const all = (cfg.apps || []).filter((a) => !filter || a.name.toLowerCase().includes(filter) || a.package.includes(filter));
     const recent = cfg.recent || [];
-    const appsCards = `
+    const appsCards = `${this._checkTheseCard()}
       <section class="card">
         <h3><ha-icon icon="mdi:new-box"></ha-icon>Sorted lately</h3>
         <p class="muted">New apps go to a group on their own: one that lists them, else their kind (games, video, social, messaging…), else Other. If one landed wrong, move it; your choice always wins.</p>
@@ -2221,6 +2307,7 @@ class HearthPanel extends HTMLElement {
       </section>
       ${this._pinsCard()}
       ${this._sharingCard()}
+      ${this._catalogCard()}
       ${this._voiceCard()}
       ${this._schoolCard()}
       ${this._placesCard()}

@@ -145,6 +145,7 @@
           "not_screen_time": "Not screen time",
           "remove_group": "Remove a group",
           "tile_exchange": "Tile exchange sharing",
+          "app_catalog": "Shared app catalog",
           "voice_assistants": "Voice assistants",
           "parent_pin": "Parent PINs",
           "push": "Push to phones (ntfy)",
@@ -206,6 +207,14 @@
         "description": "People whose phone may share with the launcher's tile exchange: the layout of notifications from apps that have no tile yet, with every word and number blanked out (never chat, health or payment apps). Off for everyone not chosen here.",
         "data": {
           "people": "People"
+        }
+      },
+      "app_catalog": {
+        "title": "Shared app catalog",
+        "description": "Glint's shared catalog says what an app is (a game, YouTube, a streaming service, a companion app) on phones, TVs, Xbox, Windows and Switch, so new apps land in the right pool. Fetching it sends nothing. Sharing sends, once a week, the names and store ids of public apps the catalog lacks and the corrections you choose to share; never who uses them, no usage, no times, never chat, health, money or sign-in apps.",
+        "data": {
+          "fetch": "Fetch the shared app catalog",
+          "share": "Share with the shared app catalog"
         }
       },
       "voice_assistants": {

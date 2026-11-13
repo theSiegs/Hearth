@@ -156,23 +156,156 @@ def groups_from_options(options: dict[str, Any]) -> list[Group]:
     return groups
 
 
-def groups_of(groups: list[Group], categories: dict[str, str], moved: dict[str, str] | None = None):
-    """The function counting needs: an app's groups, All and at most one pool. Where an adult moved it ([moved]:
-    package -> group or "other") beats all; then a list an adult put it in, then a starter list, then its Android
-    category, each in the groups' order."""
-    ids = {g.id for g in groups}
-    pools = [g for g in groups if g.id != ALL]
+def groups_of(
+    groups: list[Group],
+    categories: dict[str, str],
+    moved: dict[str, str] | None = None,
+    **resolver: Any,
+):
+    """The function counting needs: an app's groups, All and at most one pool (placer's answer)."""
+    place = placer(groups, categories, moved, **resolver)
 
     def of(item: str) -> set[str]:
+        pool = place(item).pool
+        return {ALL, pool} if pool else {ALL}
+
+    return of
+
+
+# Options: {catalog value: pool id or "other"}: an adult's own map from what the shared catalog (or the device) says an
+# app is to a pool; the rest come from pool_map's defaults
+CONF_CATALOG_POOLS = "catalog_pools"
+# The values a pool map knows: the shared catalog's finer values (`detail`) and the ten categories
+DETAIL_VALUES = ("youtube", "streaming", "education", "companion", "system")
+CATEGORY_VALUES = ("game", "video", "audio", "image", "social", "messaging", "news", "maps", "productivity", "accessibility")
+# The category each finer value sits under (glint.catalog/1)
+DETAIL_CATEGORY = {"youtube": "video", "streaming": "video", "education": "productivity", "companion": "productivity",
+                   "system": "productivity"}
+# Pools of an adult's own, found by name, for the finer values' defaults
+_DEFAULT_NAMES = {
+    "youtube": ("youtube",),
+    "streaming": ("streaming", "tv", "shows"),
+    "audio": ("music", "audio"),
+    "education": ("homework", "school", "education", "learning"),
+}
+
+
+def pool_map(groups: list[Group], adult: dict[str, str] | None = None) -> dict[str, str]:
+    """What each value the shared catalog or a device says an app is goes to in this household: a pool id, or "other"
+    (no pool). Hearth's defaults: a game to Games, social to Social, messaging to Messaging, a value a pool claims by its
+    category (the Video pool retire_video kept) to it, YouTube, streaming, music and education to a pool of the
+    household's own of that name (YouTube; Streaming or TV; Music; Homework or School) when there is one, companion apps
+    (a platform's hub or store) and system apps never to a pool; an adult's own map ([adult]) beats them. A value
+    missing from the map goes to no pool."""
+    ids = {g.id for g in groups if g.id != ALL}
+    out: dict[str, str] = {}
+    for g in groups:
+        if g.id != ALL and g.category is not None:
+            out.setdefault(g.category, g.id)
+    for value, pool in (("game", GAMES), ("social", SOCIAL), ("messaging", MESSAGING)):
+        if pool in ids:
+            out.setdefault(value, pool)
+    own = {**{slug(g.name): g.id for g in groups if not g.builtin}, **{g.id: g.id for g in groups if not g.builtin}}
+    for value, names in _DEFAULT_NAMES.items():
+        found = next((own[n] for n in names if n in own), None)
+        if found is not None:
+            out.setdefault(value, found)
+    out.setdefault("education", OTHER)
+    out.setdefault("companion", OTHER)
+    out.setdefault("system", OTHER)
+    for value, pool in (adult or {}).items():
+        if pool == OTHER or pool in ids:
+            out[value] = pool
+    return out
+
+
+def catalog_value(pools: dict[str, str], pool: str) -> dict[str, str] | None:
+    """What an adult's move to [pool] says the app is, in the catalog's terms ({category, detail?}), for sharing a
+    correction: the first value the household's map sends there; None for Other or a pool no value goes to."""
+    if pool == OTHER:
+        return None
+    for value in (*DETAIL_VALUES, *CATEGORY_VALUES):
+        if pools.get(value) == pool:
+            if value in DETAIL_CATEGORY:
+                return {"category": DETAIL_CATEGORY[value], "detail": value}
+            return {"category": value}
+    return None
+
+
+@dataclass(frozen=True)
+class Placement:
+    """Where an item counts, and why."""
+
+    # A pool's id, or None: Other (All screen time only)
+    pool: str | None
+    # moved (an adult's move), list (a list an adult keeps), starter (Hearth's curated lists), catalog (the shared
+    # catalog, confirmed), declared (the device's own category, or a Glint phone's copy of the catalog), suggested (the
+    # shared catalog, suggested), hint (where its time came from: a Switch's are games), other
+    why: str
+    # What the catalog or the device says it is (a detail or a category)
+    value: str | None = None
+    # The catalog's confirmed answer and the device's disagree on whether it's a game
+    disagree: bool = False
+    declared: str | None = None
+
+
+def placer(
+    groups: list[Group],
+    categories: dict[str, str],
+    moved: dict[str, str] | None = None,
+    *,
+    catalog: Callable[[str], Any] | None = None,
+    pools: dict[str, str] | None = None,
+    hints: dict[str, set[str]] | None = None,
+) -> Callable[[str], Placement]:
+    """Where an item counts: the first of these that answers, each in the groups' order.
+
+    1. Where an adult moved it ([moved]: item -> pool or "other").
+    2. A list an adult keeps it in.
+    3. Hearth's curated (starter) lists.
+    4. The shared catalog's confirmed answer ([catalog]: item -> catalog.Hit or None), by the household's map
+       ([pools], pool_map's); a confirmed value the map sends to no pool is Other, and stops here.
+    5. The device's own category ([categories]; a Glint phone's copy of the catalog is below the device's).
+    6. The shared catalog's suggested answer, only when it goes to a pool (a guess never takes an app out of one).
+    7. Where its time came from ([hints]: a Switch's or an Xbox's titles are games).
+    8. Other.
+    """
+    ids = {g.id for g in groups}
+    pools_list = [g for g in groups if g.id != ALL]
+    order = [g.id for g in pools_list]
+    value_pools = pools if pools is not None else pool_map(groups)
+
+    def to_pool(value: str | None) -> str | None:
+        pool = value_pools.get(value) if value else None
+        return pool if pool in ids and pool != ALL else None
+
+    def of(item: str) -> Placement:
         if moved and item in moved:
-            return {ALL} | ({moved[item]} if moved[item] in ids and moved[item] != ALL else set())
-        category = categories.get(item)
-        found = (
-            next((g for g in pools if item in g.apps and item not in g.starter), None)
-            or next((g for g in pools if item in g.starter), None)
-            or next((g for g in pools if g.category is not None and category == g.category), None)
-        )
-        return {ALL, found.id} if found else {ALL}
+            target = moved[item]
+            return Placement(target if target in ids and target != ALL else None, "moved")
+        found = next((g for g in pools_list if item in g.apps and item not in g.starter), None)
+        if found:
+            return Placement(found.id, "list")
+        found = next((g for g in pools_list if item in g.starter), None)
+        if found:
+            return Placement(found.id, "starter")
+        declared = categories.get(item)
+        hit = catalog(item) if catalog is not None else None
+        if hit is not None and hit.confirmed:
+            # Read the finer value first, then the category
+            value = hit.detail if hit.detail in value_pools else hit.category
+            disagree = declared is not None and (declared == "game") != (hit.category == "game")
+            return Placement(to_pool(value), "catalog", hit.value, disagree, declared)
+        if (pool := to_pool(declared)) is not None:
+            return Placement(pool, "declared", declared, declared=declared)
+        if hit is not None:
+            value = hit.detail if hit.detail in value_pools else hit.category
+            if (pool := to_pool(value)) is not None:
+                return Placement(pool, "suggested", hit.value, declared=declared)
+        hinted = sorted((hints or {}).get(item, set()) & set(order), key=order.index)
+        if hinted:
+            return Placement(hinted[0], "hint")
+        return Placement(None, "other")
 
     return of
 

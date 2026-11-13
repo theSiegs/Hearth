@@ -342,3 +342,45 @@ test("the Chores card says when the list couldn't be read", () => {
   p._todo = { "person.sam": null };
   assert.match(p._page(), /The to-do list couldn't be read/);
 });
+
+test("Check these: the shared catalog's guesses and disagreements, kept with Right or moved, with a tick to share", () => {
+  const p = panel();
+  p._config.groups.push({ id: "games", name: "Games", builtin: true, in_all: true, apps: [], added_apps: [] });
+  p._config.check_these = [
+    { package: "com.example.maybe", name: "Maybe Game", group: "games", why: "shared catalog suggests game", suggested: true, shareable: true },
+    { package: "x:xboxplt:0123456789abcdef", name: "Hub", group: "other", why: "shared catalog says companion, the device says game", suggested: false, shareable: false },
+  ];
+  p._config.apps = [{ package: "com.example.moved", name: "Moved", group: "games", moved: true, catalog_says: "companion" }];
+  p._config.catalog = { fetch: true, share: true, asked: true, keys: 380, values: ["game", "youtube"], pools: { game: "games" }, own_pools: {}, waiting: { keys: 2, corrections: 1 } };
+  const html = p._appsTab();
+  assert.match(html, /<h3><ha-icon icon="mdi:help-circle-outline"><\/ha-icon>Check these<\/h3>/);
+  assert.match(html, /data-action="app-confirm" data-app="com.example.maybe" data-group="games">Right/);
+  assert.match(html, /data-change="app-group" data-app="com.example.maybe" data-idx="0"/);
+  assert.match(html, /id="catalog-suggest-0"/);
+  // A key the catalog can't take (Family Safety's own id) has no tick
+  assert.doesNotMatch(html, /id="catalog-suggest-1"/);
+  assert.match(html, /the shared catalog now says companion/);
+  // Nothing to check: no card
+  p._config.check_these = [];
+  assert.doesNotMatch(p._appsTab(), /Check these/);
+});
+
+test("the shared catalog's setting asks once before sharing, and maps kinds of apps to groups", () => {
+  const p = panel();
+  p._config.groups.push({ id: "games", name: "Games", builtin: true, in_all: true, apps: [], added_apps: [] });
+  p._config.catalog = {
+    fetch: true, share: false, asked: false, keys: 380, origin: "bundled", values: ["game", "companion"],
+    pools: { game: "games", companion: "other" }, own_pools: { companion: "games" },
+  };
+  let html = p._catalogCard();
+  assert.match(html, /data-change="catalog-fetch" checked/);
+  assert.match(html, /data-action="catalog-share-on">Turn on/);
+  assert.match(html, /never who uses them/);
+  assert.match(html, /the copy Hearth came with/);
+  assert.match(html, /Hearth's default \(Games\)/);
+  assert.match(html, /<option value="games" selected>Games<\/option>/);
+  p._config.catalog = { ...p._config.catalog, asked: true };
+  html = p._catalogCard();
+  assert.doesNotMatch(html, /catalog-share-on/);
+  assert.match(html, /data-change="catalog-share" >/);
+});

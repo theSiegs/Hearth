@@ -816,6 +816,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
 
     entry.async_on_unload(async_track_time_change(hass, todos_new_day, hour=0, minute=0, second=5))
 
+    # The shared app catalog (catalog.py): fetched once a day at a random time, and soon after starting when the copy
+    # is over a day old; a newer copy places apps again. Sending upward, when an adult turned it on, once a week
+    catalog = hub.household.catalog
+    catalog.on_change = hub.household.recompute
+    catalog.start(lambda job: entry_task(hass, entry.entry_id, job, "hearth app catalog"))
+    entry.async_on_unload(catalog.stop)
+
     # A group running out no longer makes an offered request: where the household chose it, its suggestion goes to
     # the adults' phones instead (suggest_push.py), so one run-out is one notification
     hub.suggest_push.start()
