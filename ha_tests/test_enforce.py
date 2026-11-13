@@ -356,6 +356,36 @@ async def test_a_failure_is_shown_and_tried_again(
     assert len(calls) == 2
 
 
+async def test_a_sync_error_clears_once_there_s_nothing_to_hold(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    async def failing(call: ServiceCall) -> None:
+        raise HomeAssistantError("Google said no")
+
+    hass.services.async_register("familylink", "pause_app", failing)
+    async_mock_service(hass, "familylink", "resume_app")
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    await _budget(hass, "video", 10)
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    assert household.enforcement.status_of("person.sam")["family_link"]["last"]["error"] == "Google said no"
+
+    await _bonus(hass, "video", 30)  # time again: nothing to hold, nothing to retry
+    status = household.enforcement.status_of("person.sam")["family_link"]
+    assert status["error"] is None and "error" not in status["last"]
+    assert "error" not in hass.states.get("sensor.hearth_sam_held_by_parental_controls").attributes.get("family_link", {})
+
+
+def test_a_sync_error_older_than_a_day_isn_t_news() -> None:
+    from custom_components.hearth.glance import _sync_items
+
+    now = dt_util.now()
+    sync = {"family_safety": {"held": [], "error": None, "last": {"at": (now - timedelta(days=2)).isoformat(), "error": "Xbox said no"}}}
+    assert _sync_items(sync, now) == []
+    sync["family_safety"]["last"]["at"] = (now - timedelta(hours=2)).isoformat()
+    assert [i["text"] for i in _sync_items(sync, now)] == ["family safety · didn't take"]
+
+
 def test_essential_apps_are_never_held():
     assert essential("com.google.android.apps.messaging")
     assert essential("com.android.phone")

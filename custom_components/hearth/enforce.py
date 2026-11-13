@@ -506,8 +506,25 @@ class Enforcement:
             wanted_now.setdefault(key, set())
         self._wanted = wanted_now
         self._why = why_now
+        for key, want in wanted_now.items():
+            self._clear_stale_error(key, want)
         if any(self._differs(key) for key in wanted_now):
             self._run()
+
+    def _clear_stale_error(self, key: str, want: set[str]) -> None:
+        """An enforcer with nothing to hold and nothing held has nothing to retry: its last error is over (a sync error
+        otherwise stays on the kid's card until the next call, which may be days away). A successful call clears it
+        too (note)."""
+        held = self.held.get(key)
+        if want or (held is not None and _holding(held)):
+            return
+        if held is not None:
+            held.error, held.failed_at = None, None
+        last = self.last.get(key)
+        # A hold or let-go that failed (not another write's error: extra time Hearth couldn't give, say)
+        if last is not None and last.get("error") and (last.get("held") or last.get("let_go")):
+            self.last[key] = {**{k: v for k, v in last.items() if k != "error"}, "ok": True, "error_cleared": True}
+            self._save()
 
     def _playing(self, enforcer: Enforcer) -> bool | None:
         """Whether the person is the one playing a shared Switch (any of their playing entities on); None when the
