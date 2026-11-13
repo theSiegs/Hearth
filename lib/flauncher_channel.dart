@@ -760,6 +760,9 @@ class FLauncherChannel {
 
   Future<void> openHaPanel() async => await _methodChannel.invokeMethod("openHaPanel");
 
+  /// Closes Home Assistant's web page panel if it's open (a kids profile came on).
+  Future<void> closeHaPanel() async => await _methodChannel.invokeMethod("closeHaPanel");
+
   /// An adult is at the remote: their profile came on (or they entered the parent PIN) and the remote hasn't gone
   /// untouched for five minutes since. False when Hearth can't tell.
   Future<bool> isParentPresent() async {

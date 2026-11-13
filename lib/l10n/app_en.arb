@@ -711,6 +711,10 @@
     "@haPanelTitle": {
         "description": "Settings page title, also its row in the page that opens it"
     },
+    "haPanelKidsAskAdult": "The dashboard is for adults. Ask an adult.",
+    "@haPanelKidsAskAdult": {
+        "description": "Short message when something tries to open the Home Assistant dashboard panel in a kids profile, where it never opens"
+    },
     "lookTitle": "Look",
     "@lookTitle": {
         "description": "Settings page title, also its row in the page that opens it"

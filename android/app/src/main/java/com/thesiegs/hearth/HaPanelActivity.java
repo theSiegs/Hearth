@@ -56,6 +56,11 @@ public class HaPanelActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // The panel is for adults: in a kids profile it never opens, whatever started it
+        if (ProfileUsers.isKids(this)) {
+            finish();
+            return;
+        }
         sOpen = new java.lang.ref.WeakReference<>(this);
         Window window = getWindow();
         window.setLayout(Dp.px(this, PANEL_WIDTH_DP), WindowManager.LayoutParams.MATCH_PARENT);
@@ -124,6 +129,13 @@ public class HaPanelActivity extends Activity {
         java.lang.ref.WeakReference<HaPanelActivity> ref = sOpen;
         HaPanelActivity open = ref != null ? ref.get() : null;
         if (open != null) open.runOnUiThread(open::finish);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Left open when a kids profile came on: it goes
+        if (ProfileUsers.isKids(this)) finish();
     }
 
     @Override

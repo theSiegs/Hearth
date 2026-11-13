@@ -848,6 +848,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get haPanelTitle => 'Dashboard panel';
 
   @override
+  String get haPanelKidsAskAdult =>
+      'The dashboard is for adults. Ask an adult.';
+
+  @override
   String get lookTitle => 'Look';
 
   @override

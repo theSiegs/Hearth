@@ -592,7 +592,12 @@ public class MainActivity extends FlutterActivity {
                 }
             }
             case "openHaPanel" -> {
-                startActivity(new Intent(this, HaPanelActivity.class));
+                // The panel is for adults: never in a kids profile
+                if (!ProfileUsers.isKids(this)) startActivity(new Intent(this, HaPanelActivity.class));
+                result.success(null);
+            }
+            case "closeHaPanel" -> {
+                HaPanelActivity.closeIfOpen();
                 result.success(null);
             }
             // The Hearth integration for Home Assistant: pairing this TV (see HaIntegration)

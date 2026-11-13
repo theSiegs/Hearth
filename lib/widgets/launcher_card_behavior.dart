@@ -16,10 +16,9 @@
  */
 
 import 'package:flauncher/actions.dart';
-import 'package:flauncher/providers/settings_service.dart';
+import 'package:flauncher/widgets/ha_panel/ha_panel_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
 
 /// The row-edge keys and the press and bump animations of a home screen card.
 mixin LauncherCardBehavior<T extends StatefulWidget> on State<T>, TickerProvider {
@@ -54,7 +53,7 @@ mixin LauncherCardBehavior<T extends StatefulWidget> on State<T>, TickerProvider
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.arrowRight && isLastInRow) {
-      if (context.read<SettingsService>().haPanelEnabled) {
+      if (haPanelAvailable(context)) {
         Actions.maybeInvoke(context, const OpenHaPanelIntent());
       } else if (!_bumpController.isAnimating) {
         _bumpController.forward(from: 0.0);

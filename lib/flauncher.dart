@@ -48,6 +48,7 @@ import 'package:flauncher/widgets/search/search_results_row.dart';
 import 'package:flauncher/widgets/settings/settings_panel.dart';
 import 'package:flauncher/providers/ha_panel_service.dart';
 import 'package:flauncher/widgets/ha_panel/ha_panel.dart';
+import 'package:flauncher/widgets/ha_panel/ha_panel_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -130,6 +131,12 @@ class _FLauncherState extends State<FLauncher> {
   /// Hearth's own Home Assistant panel's connection, made the first time it opens and kept with the home.
   HaPanelService? _haPanel;
 
+  /// Hearth's own Home Assistant panel while it's open: a switch to a kids profile closes it.
+  Route<void>? _haPanelRoute;
+
+  // Whether a kids profile was on at the last profile change
+  bool _kidsProfileOn = false;
+
   @override
   void initState() {
     super.initState();
@@ -188,6 +195,9 @@ class _FLauncherState extends State<FLauncher> {
   void _onProfileChanged() {
     final profiles = _profileService;
     if (profiles == null) return;
+    // The Home Assistant panel is for adults: a kids profile coming on closes it, Hearth's own and the full dashboard
+    if (profiles.isKidsProfile && !_kidsProfileOn) _closeHaPanel();
+    _kidsProfileOn = profiles.isKidsProfile;
     final key = profiles.activeProfileKey;
     if (key != null && key != _lastProfile) {
       _lastProfile = key;
@@ -287,6 +297,12 @@ class _FLauncherState extends State<FLauncher> {
   void _openHaPanel() {
     final channel = context.read<FLauncherChannel>();
     final settings = context.read<SettingsService>();
+    // Never in a kids profile, whatever opened it (the edges don't offer it there; see haPanelAllowed)
+    if (isKidsProfileOn(context)) {
+      final l = AppLocalizations.of(context);
+      if (l != null) ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(l.haPanelKidsAskAdult)));
+      return;
+    }
     if (settings.haPanelFullDashboard) {
       channel.openHaPanel();
       return;
@@ -302,7 +318,19 @@ class _FLauncherState extends State<FLauncher> {
       },
       language: () => mounted ? Localizations.localeOf(context).languageCode : "en",
     );
-    HaPanel.open(context, service);
+    final route = HaPanel.open(context, service);
+    _haPanelRoute = route;
+    route.popped.whenComplete(() {
+      if (_haPanelRoute == route) _haPanelRoute = null;
+    });
+  }
+
+  /// Closes the Home Assistant panel if it's open: Hearth's own, and Home Assistant's web page.
+  void _closeHaPanel() {
+    final route = _haPanelRoute;
+    _haPanelRoute = null;
+    if (route != null && route.isActive) route.navigator?.removeRoute(route);
+    context.read<FLauncherChannel>().closeHaPanel().catchError((Object e) => noteFailure('flauncher', e));
   }
 
   void _openSearch(String mode) {

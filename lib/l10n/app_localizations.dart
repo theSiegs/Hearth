@@ -1504,6 +1504,12 @@ abstract class AppLocalizations {
   /// **'Dashboard panel'**
   String get haPanelTitle;
 
+  /// Short message when something tries to open the Home Assistant dashboard panel in a kids profile, where it never opens
+  ///
+  /// In en, this message translates to:
+  /// **'The dashboard is for adults. Ask an adult.'**
+  String get haPanelKidsAskAdult;
+
   /// Settings page title, also its row in the page that opens it
   ///
   /// In en, this message translates to:
