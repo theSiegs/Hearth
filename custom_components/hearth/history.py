@@ -1,6 +1,6 @@
 """What happened with each person's time, day by day: a group running out, a request for more, an offer, an answer,
 a bonus (to a group or on one device), a suggestion an adult put off for the day and one pushed to the adults'
-phones, and a TV notice's button an adult answered. See docs/home-assistant-integration.md, History.
+phones, a TV notice's button an adult answered, and each local day's final minutes per group. See docs/home-assistant-integration.md, History.
 
 The log is what suggestions are sized and silenced from: "usually gets 30 more games", "not today". It's kept with
 Home Assistant's storage helper for HISTORY_DAYS, so it survives a restart, and holds no names or notes: people are
@@ -33,7 +33,12 @@ PUSHED = "pushed"
 # (`by`: their person, else `user`: their Home Assistant user id), the notice's `key`, the button's `action` number
 # and the TV (`device`)
 NOTICE_ANSWER = "notice_answer"
-KINDS = (OUT, ASK, OFFER, ANSWER, BONUS, DEVICE_BONUS, DISMISS, PUSHED, NOTICE_ANSWER)
+# A local day's final minutes per group ({"date": "YYYY-MM-DD", "minutes": {group: n}}), logged at the day's rollover
+# (or, when Home Assistant was down at midnight, on the first look after it starts): the household summary's `week`
+DAY = "day"
+KINDS = (OUT, ASK, OFFER, ANSWER, BONUS, DEVICE_BONUS, DISMISS, PUSHED, NOTICE_ANSWER, DAY)
+# How many local days the household summary's `week` holds, today included
+WEEK_DAYS = 7
 
 HISTORY_DAYS = 90
 # A runaway automation mustn't grow this without end
@@ -188,3 +193,50 @@ class History:
                 key = event.get("group") or "all"
                 row["bonus"][key] = row["bonus"].get(key, 0) + event["minutes"]
         return [by_day[d] for d in sorted(by_day, reverse=True)]
+
+    def has_day(self, person: str, day: date) -> bool:
+        """Whether [day]'s minutes are recorded for the person."""
+        iso = day.isoformat()
+        return any(e.get("kind") == DAY and e.get("person") == person and e.get("date") == iso for e in self.events)
+
+    @callback
+    def log_day(self, person: str, day: date, minutes: dict[str, int]) -> bool:
+        """Records [day]'s final minutes per group for the person, once; says whether it did."""
+        if self.has_day(person, day):
+            return False
+        self.log(DAY, person, date=day.isoformat(), minutes=dict(minutes))
+        return True
+
+    def week(self, person: str, today_minutes: dict[str, int], now: datetime | None = None) -> list[dict[str, Any]]:
+        """The last WEEK_DAYS local days, newest first, today included: {date, minutes {group: n}, out [groups],
+        bonus {group: minutes}, asks}. Today's minutes are [today_minutes] (live); a past day's are its `day` record,
+        {} when there's none (unknown, not zero)."""
+        today = dt_util.as_local(now or dt_util.utcnow()).date()
+        dates = [today - timedelta(days=i) for i in range(WEEK_DAYS)]
+        rows = {d: {"date": d.isoformat(), "minutes": {}, "out": [], "bonus": {}, "asks": 0} for d in dates}
+        rows[today]["minutes"] = dict(today_minutes)
+        by_iso = {d.isoformat(): d for d in dates}
+        # A day's events are at most a day either side of it in UTC
+        since = (dt_util.start_of_local_day(dates[-1]) - timedelta(days=1)).isoformat()
+        for event in self.events:
+            if event.get("person") != person or str(event.get("at", "")) < since:
+                continue
+            kind = event.get("kind")
+            if kind == DAY:
+                day = by_iso.get(str(event.get("date")))
+                if day is not None and day != today and isinstance(event.get("minutes"), dict):
+                    rows[day]["minutes"] = dict(event["minutes"])
+                continue
+            if kind not in (OUT, ASK, BONUS, DEVICE_BONUS):
+                continue
+            row = rows.get(self._local_day(event))  # type: ignore[arg-type]
+            if row is None:
+                continue
+            if kind == OUT and event.get("group") and event["group"] not in row["out"]:
+                row["out"].append(event["group"])
+            elif kind == ASK:
+                row["asks"] += 1
+            elif kind in (BONUS, DEVICE_BONUS) and isinstance(event.get("minutes"), int):
+                key = event.get("group") or "all"
+                row["bonus"][key] = row["bonus"].get(key, 0) + event["minutes"]
+        return [rows[d] for d in dates]

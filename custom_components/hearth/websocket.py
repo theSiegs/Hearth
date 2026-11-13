@@ -121,6 +121,9 @@ def summary(hub) -> dict[str, Any]:
         # Today's minutes per counted device and per app or title (each device's time once, as counted)
         if day is not None:
             people[-1]["devices_today"], people[-1]["apps_today"] = _today_by_device_and_app(household, person, day)
+        # The last 7 local days, newest first: minutes per group (today's live; {} for a day not recorded), what ran
+        # out, bonus minutes and asks (history.py)
+        people[-1]["week"] = household.history.week(person, household.day_minutes(day) if day else {}, now)
         # Today's School time window, on a school or half day ({start, end}, local), for "no school time today"
         if (window := household.scheduler.window_today(person, now)) is not None:
             people[-1]["school_time"] = {"start": window[0].isoformat(), "end": window[1].isoformat()}

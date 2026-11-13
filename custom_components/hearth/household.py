@@ -486,6 +486,12 @@ class Household:
         self.hub.commands.prune()
         today = now.date()
         new_day = self.limits.new_day(today)
+        # Home Assistant was down at midnight: yesterday's minutes are still in the devices' last statuses and the live
+        # timings (kept across the restart), so they're recorded from those on the first look after it starts
+        yesterday = (today - timedelta(days=1)).isoformat()
+        backfill = self.today is None and self.live.day == yesterday
+        back_readings: dict[str, dict[str, list[Reading]]] = {}
+        back_live = self.live.seconds if backfill else {}
         options = self.options
         self.groups = groups_from_options(options)
         self.sources = sources_from_options(options)
@@ -497,7 +503,7 @@ class Household:
         categories: dict[str, str] = {}
         catalog: dict[str, str] = {}
         hints: dict[str, set[str]] = {}
-        def add(person: str, device: str, reading: Reading) -> None:
+        def add(person: str, device: str, reading: Reading, into: dict[str, dict[str, list[Reading]]] = readings) -> None:
             items = {}
             for item, seconds in reading.items.items():
                 key = self._key(item)
@@ -505,7 +511,7 @@ class Household:
                 if reading.rest_group:
                     hints.setdefault(key, set()).add(reading.rest_group)
             mapped = Reading(reading.source, reading.total_s, items, reading.rest_group)
-            readings.setdefault(person, {}).setdefault(device, []).append(mapped)
+            into.setdefault(person, {}).setdefault(device, []).append(mapped)
 
         # Hearth's own devices
         for device_id, device in self.hub.devices.items():
@@ -516,21 +522,25 @@ class Household:
             catalog.update(status.get("catalog_categories") or {})
             name = device.get("name") or device_id
             # Yesterday's counts from a device that hasn't posted since midnight don't count today
-            fresh = status.get("day") == today.isoformat()
+            into = (
+                readings if status.get("day") == today.isoformat()
+                else back_readings if backfill and status.get("day") == yesterday
+                else None
+            )
             if device.get(CONF_KIND) == KIND_TV:
                 profiles = self.device_profile_people(device_id)
-                if fresh:
+                if into is not None:
                     for profile_id, usage in (status.get("usage_today") or {}).items():
                         person = profiles.get(profile_id)
                         if person:
                             add(person, device_id, Reading(SOURCE_HEARTH, float(usage.get("seconds") or 0),
-                                                           usage.get("apps") or {}))
+                                                           usage.get("apps") or {}), into)
                 person = profiles.get(status.get("profile_id") or "")
             else:
                 person = device.get(CONF_PERSON)
-                if person and fresh:
+                if person and into is not None:
                     add(person, device_id, Reading(SOURCE_HEARTH, float(status.get("seconds_today") or 0),
-                                                   status.get("app_seconds_today") or {}))
+                                                   status.get("app_seconds_today") or {}), into)
             package = status.get("app_package")
             if person and status.get("screen") == "on" and self.hub.connected(device_id) and package:
                 playing.setdefault(person, []).append(Playing(status.get("app"), package, name, status.get("state"), f"hearth:{device_id}"))
@@ -562,6 +572,9 @@ class Household:
 
         started, ended = self.live.look(now, today, observations)
         for source in self.sources:
+            if source.live and (timed := back_live.get(source.reading_source)):
+                add(source.person, device_key(source, by_id),
+                    Reading(source.reading_source, sum(timed.values()), timed, source.group), back_readings)
             if source.live:
                 timed = self.live.seconds.get(source.reading_source, {})
                 if timed:
@@ -578,6 +591,17 @@ class Household:
         self._hints = hints
         self._look_for_new_apps(categories)
         membership = self.membership()
+        # The day turned: each person's final minutes of the day before, as last counted (history.py, `day`)
+        if self.today is not None and self.today != today:
+            for person, last in self.days.items():
+                self.history.log_day(person, self.today, self.day_minutes(last))
+        elif backfill:
+            back_day = today - timedelta(days=1)
+            # Only who had time counted on Hearth's devices or live sources: a totals sensor has started today since
+            for person in back_readings:
+                devices = {device: merge(r) for device, r in back_readings[person].items()}
+                seconds = group_seconds(devices, membership, self.outside_all())
+                self.history.log_day(person, back_day, self.day_minutes(PersonDay(person, groups=seconds)))
         # Today's answer as last worked out; if the day turned without a refresh yet, what's known now
         is_school = (
             self.school.school if self.school.day == today else self.school.budget_is_school(self.school.decide_type(today))
@@ -639,6 +663,11 @@ class Household:
         for together, what in [(t, "started") for t in started] + [(t, "ended") for t in ended]:
             self.hass.bus.async_fire(EVENT_PLAYING_TOGETHER, self._together_event(together, what))
         async_dispatcher_send(self.hass, SIGNAL_PEOPLE, new_day)
+
+    def day_minutes(self, day: PersonDay | None) -> dict[str, int]:
+        """A person's minutes per group of the household (seconds / 60, rounded), as the summary's `week` shows them."""
+        groups = day.groups if day is not None else {}
+        return {g.id: int(round(groups.get(g.id, 0.0) / 60)) for g in self.groups}
 
     # New apps
 

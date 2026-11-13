@@ -1021,6 +1021,11 @@ then sends the same object as an event whenever it changes, at most every 2 seco
   for All screen time give it on both if Family Link holds the phone too. And `device_extras` `[{id, target, name, via, kind (bonus | allow), group, until,
   minutes_left, reason}]`: that extra time now (`minutes_left`: a Hearth device's by its use, a Family Link bonus as
   given, the rest by the clock).
+- each person also has `week`: their last 7 local days, newest first, today included: `[{date, minutes {<group id>:
+  n}, out [group ids that ran out], bonus {<group id> (or `all` for extra time on one device): minutes}, asks}]`
+  (`date` is `YYYY-MM-DD`). Today's `minutes` are live (as `groups`, every group of the household); a past day's are
+  the day's `day` record in [History](#history). A day with no record (before Hearth kept them, or Home Assistant down
+  across more than one midnight) has `minutes` `{}`: unknown, not zero.
 - `groups`: every group of the household, budget or not today: `[{id, name, not_screen_time}]`.
 - `not_screen_time`, `contract`, and `version` (changes with any of it).
 - `media_rooms`: the house's media players by room, below.
@@ -1342,7 +1347,11 @@ Hearth keeps 90 days of what happened with each person's time (history.py): a gr
 (`ask`), an offer (`offer`), an answer (`answer`, with its status), a bonus to a group (`bonus`) or on one device
 (`device_bonus`), a suggestion put off (`dismiss`), one pushed to the adults' phones (`pushed`, with its key) and a
 TV notice's button an adult answered (`notice_answer`: `via` `pin` or `phone`, `by` the adult's person, else `user`
-their user id, the notice's `key`, the button's `action` and the TV's `device`). Events hold entity ids, group ids, device ids, minutes and times,
+their user id, the notice's `key`, the button's `action` and the TV's `device`), and each local day's final minutes
+(`day`: `date` and `minutes` {group id: minutes, seconds / 60 rounded}, every group of the household), logged for every
+person when the day turns. When Home Assistant was down at midnight, the first look after it starts records yesterday
+from what the Hearth devices last posted for it and the live sources' timings (a totals sensor has started the new day
+by then, so its time is missing; someone with only totals sources gets no record). Events hold entity ids, group ids, device ids, minutes and times,
 never names or notes. Suggestions are sized from it: the most common bonus for a kid and group over the last 28 days,
 once there are at least 3. Minutes per kid and group are already recorded by Home Assistant's statistics (each
 group's Today sensor is `total_increasing`).
