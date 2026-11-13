@@ -373,6 +373,12 @@ class HearthPanel extends HTMLElement {
         this._render();
         if (d.tab === "kids" && this._kid) this._loadWatch(this._kid);
         return;
+      case "kid-open":
+        // A kid's row on Today: their full card opens under the rows (tap again to close)
+        this._todayKid = this._todayKid === d.kid ? null : d.kid;
+        this._render();
+        if (this._todayKid) this._loadHours(this._todayKid);
+        return;
       case "kid":
         this._kid = d.kid;
         if (d.go) this._tab = d.go;
@@ -911,6 +917,12 @@ class HearthPanel extends HTMLElement {
       // An hourly chart left open reads the hour just finished
       if (el && el.dataset.hours) this._loadHours(el.dataset.hours);
     }
+    // The open kid's day strip shows the minutes used each hour once their statistics are read
+    if (this._tab === "today" && this._config && this._summary && this._setupStep === null) {
+      const kids = this._kids();
+      const open = kids.length === 1 ? kids[0].id : this._todayKid;
+      if (open) this._loadHours(open);
+    }
     if (focusId) {
       const again = root.getElementById(focusId);
       if (again) {
@@ -969,17 +981,6 @@ class HearthPanel extends HTMLElement {
       : `<div class="avatar initials" style="width:${size}px;height:${size}px">${esc(name.slice(0, 1).toUpperCase())}</div>`;
   }
 
-  _ring(left, budget) {
-    const pct = budget ? Math.max(0, Math.min(1, left / budget)) : 1;
-    const r = 34;
-    const c = 2 * Math.PI * r;
-    const tone = budget === null || budget === undefined ? "none" : left <= 0 ? "out" : left <= 15 ? "low" : "ok";
-    return `<svg class="ring ${tone}" viewBox="0 0 80 80" aria-hidden="true">
-      <circle class="track" cx="40" cy="40" r="${r}"></circle>
-      <circle class="fill" cx="40" cy="40" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - pct)}"></circle>
-    </svg>`;
-  }
-
   _pairingCards() {
     const pairings = this._config.pairings || [];
     if (!pairings.length) return "";
@@ -1014,7 +1015,10 @@ class HearthPanel extends HTMLElement {
         <p>No kids in Hearth yet. The guided setup takes a few minutes.</p>
         <button class="btn primary" data-action="setup-open">Start the guided setup</button></div>`);
     }
-    parts.push(`<div class="grid">${kids.map((k) => this._kidCard(k)).join("")}</div>`);
+    // Time-use decision 4a: a compact row per kid, the full card of the one tapped (with one kid, theirs at once)
+    if (kids.length > 1) parts.push(`<div class="card kid-rows">${kids.map((k) => this._kidRow(k)).join("")}</div>`);
+    const open = kids.length === 1 ? kids[0] : kids.find((k) => k.id === this._todayKid);
+    if (open) parts.push(this._kidCard(open));
     if (devices.length) {
       parts.push(`<h2>TVs and phones</h2><div class="grid devices">${devices.map((dv) => this._deviceCard(dv)).join("")}</div>`);
     }
@@ -1095,9 +1099,7 @@ class HearthPanel extends HTMLElement {
   // device and app
   _kidCard(kid) {
     const s = this._summaryPerson(kid.id);
-    const all = s?.all;
-    const budget = all && all.minutes_left !== null && all.minutes_left !== undefined ? (all.used_minutes || 0) + all.minutes_left : null;
-    const left = all?.minutes_left ?? null;
+    const left = s?.all?.minutes_left ?? null;
     const playing = (s?.playing || [])[0];
     const chips = [];
     // The kind of lock and when it ends, as the day line says it ("School time till 3:00"); what locks them (the
@@ -1126,29 +1128,18 @@ class HearthPanel extends HTMLElement {
       if (mins >= 0 && mins <= 120)
         chips.push(`<span class="chip"><ha-icon icon="mdi:${s.next_lock.kind === "bedtime" ? "weather-night" : "school-outline"}"></ha-icon>${what} ${mins <= 15 ? `in ${mins} min` : `at ${esc(clock(s.next_lock.at))}`}</span>`);
     }
-    // Spec 3.3: All first, then the pools with a budget, fewest left first, then the muted ones without (decision 6)
-    const groups = s?.groups || [];
-    const limited = (g) => g.limited !== false && g.minutes_left !== null && g.minutes_left !== undefined;
-    const pools = [
-      ...groups.filter((g) => g.id === "all"),
-      ...groups.filter((g) => g.id !== "all" && limited(g)).sort((a, b) => a.minutes_left - b.minutes_left),
-      ...groups.filter((g) => g.id !== "all" && !limited(g) && (g.used_minutes || 0) > 0),
-    ];
     const line = s?.day_line;
-    return `<div class="card kid role-${role(s?.state)}">
+    return `<div class="card kid role-${role(s?.state)}" id="kid-${esc(kid.id)}">
       <div class="kid-head">
         ${this._avatar(kid.id)}
         <div class="grow"><div class="name">${esc(kid.name)}</div><div class="chips">${chips.join("")}</div></div>
+        <div class="left-now">${left === null ? `<span class="muted">No limit</span>` : left === 0 ? "Out" : `${esc(amount(left))} left`}</div>
       </div>
       <div class="kid-main">
-        <div class="ring-wrap role-${role(all?.state)}">${this._ring(left ?? 0, budget)}
-          <div class="ring-text"><div class="big">${left === null ? "∞" : esc(amount(left))}</div><div class="muted small">${left === null ? "no limit" : left === 0 ? "out" : "left"}</div></div>
-        </div>
-        <div class="grow">
-          <div class="used"><span class="big-num">${esc(fmtMinutes(all?.used_minutes || 0))}</span>${budget === null ? `<span class="muted"> today</span>` : `<span class="muted"> / ${esc(fmtMinutes(budget))}</span>`}</div>
-          ${line ? `<div class="day-line lvl-${esc(line.level)}"><span class="dot-role"></span>${esc(cap(line.text))}</div>` : ""}
-          ${pools.map((g) => this._poolRow(g)).join("")}
-        </div>
+        ${line ? `<div class="day-line lvl-${esc(line.level)}"><span class="dot-role"></span>${esc(cap(line.text))}</div>` : ""}
+        ${this._allBar(s)}
+        ${this._dayStrip(kid, s)}
+        ${this._deviceTiles(s)}
       </div>
       ${this._exceptionsAndApps(kid, s)}
       ${this._weekChart(kid, s)}
@@ -1157,6 +1148,148 @@ class HearthPanel extends HTMLElement {
       ${this._kidControls(kid, s)}
       ${this._giveButtons(kid, s)}
     </div>`;
+  }
+
+  // Time-use decision 4a: one kid in a row (tap for the full card), with a button only when there's something to answer:
+  // their waiting request ("Yes 30") or a suggestion for them ("+15 youtube", the pool named)
+  _kidRow(kid) {
+    const s = this._summaryPerson(kid.id);
+    const all = s?.all;
+    const used = all?.used_minutes || 0;
+    const total = all && all.minutes_left !== null && all.minutes_left !== undefined ? used + Math.max(0, all.minutes_left) : null;
+    const text = s?.day_line?.text || s?.headline?.text || (total === null ? "no limit" : `${amount(all.minutes_left)} left`);
+    const open = this._todayKid === kid.id;
+    return `<div class="kid-row role-${role(s?.state)}${open ? " on" : ""}" data-action="kid-open" data-enter="kid-open" data-kid="${esc(kid.id)}" role="button" tabindex="0" aria-expanded="${open}">
+      ${this._avatar(kid.id, 32)}
+      <div class="grow"><div class="strong">${esc(kid.name)}</div><div class="muted small">${esc(cap(text))}</div></div>
+      <div class="row-bar">${total === null ? "" : `<div class="bar"><div style="width:${total ? Math.min(100, (used / total) * 100) : 100}%"></div></div>`}</div>
+      ${this._rowButton(kid)}
+    </div>`;
+  }
+
+  _rowButton(kid) {
+    const ask = (this._summary?.approvals || []).find((a) => a.type === "more_time" && a.person === kid.id && a.minutes);
+    if (ask)
+      return `<button class="btn primary" data-action="answer" data-request="${esc(ask.id)}" data-minutes="${esc(ask.minutes)}" title="${esc(cap(this._askText(ask)))}">Yes ${esc(amount(ask.minutes))}</button>`;
+    const sugg = (this._summary?.household?.suggestions || []).find((x) => x.person === kid.id && (x.actions || []).length);
+    if (sugg) {
+      const a = sugg.actions.find((x) => x.primary) || sugg.actions[0];
+      return this._actionButton({ ...a, primary: true }, kid.id);
+    }
+    return "";
+  }
+
+  // A pool's color on the All bar and its lane: by the household's order of groups, "other" grey
+  _poolColor(id) {
+    if (id === "other") return "other";
+    const order = (this._summary?.groups || []).map((g) => g.id).filter((g) => g !== "all");
+    const i = order.indexOf(id);
+    return `p${(i < 0 ? order.length : i) % 6}`;
+  }
+
+  // Time-use decisions 1a and 2c: All screen time as one bar split by pool plus "other" (an app is in one pool, so the
+  // parts add up), the limit as a mark, today's extra time as a hatched end, then each pool with a budget as a thin
+  // lane on the same minute scale (which cap comes first), and the pools without a budget in one muted line
+  _allBar(s) {
+    const all = s?.all;
+    if (!all) return "";
+    const used = all.used_minutes || 0;
+    const bonus = Math.max(0, all.bonus || 0);
+    const limited = (g) => g.limited !== false && g.minutes_left !== null && g.minutes_left !== undefined;
+    const capOf = (g) => (g.budget !== null && g.budget !== undefined ? g.budget + Math.max(0, g.bonus || 0) : (g.used_minutes || 0) + Math.max(0, g.minutes_left));
+    const budget = limited(all) ? capOf(all) - bonus : null;
+    const pools = (s.groups || []).filter((g) => g.id !== "all");
+    const lanes = pools.filter(limited).sort((a, b) => a.minutes_left - b.minutes_left);
+    const free = pools.filter((g) => !limited(g) && (g.used_minutes || 0) > 0);
+    const top = Math.max(1, used, budget === null ? 0 : budget + bonus, ...lanes.map((g) => Math.max(capOf(g), g.used_minutes || 0)));
+    const x = (m) => `${Math.max(0, Math.min(100, (m / top) * 100)).toFixed(2)}%`;
+    const parts = s.all_by_pool?.length ? s.all_by_pool : used ? [{ id: "all", name: "All screen time", minutes: used }] : [];
+    let at = 0;
+    const segs = parts
+      .map((p) => {
+        const html = `<span class="seg ${p.id === "all" ? "whole" : this._poolColor(p.id)}" style="left:${x(at)};width:${x(p.minutes)}" title="${esc(`${p.name}: ${fmtMinutes(p.minutes)}`)}"></span>`;
+        at += p.minutes;
+        return html;
+      })
+      .join("");
+    const marks = budget === null ? "" : `${bonus ? `<span class="bonus" style="left:${x(budget)};width:${x(bonus)}"></span>` : ""}<span class="limit" style="left:${x(budget)}"></span>`;
+    const head = budget === null ? `${fmtMinutes(used)} today · no limit` : `${amount(used)} of ${fmtMinutes(budget + bonus)}`;
+    const legend = parts.filter((p) => p.id !== "all" && p.minutes > 0);
+    const lane = (g) => {
+      const value = { out: "Out", allowed: "Allowed", paused: "Paused" }[g.state] || `${amount(g.minutes_left)} left`;
+      return `<div class="lane role-${role(g.state)}"><span class="bar-label">${esc(g.name)}</span>
+        <div class="lane-track"><span class="lane-fill ${this._poolColor(g.id)}" style="width:${x(g.used_minutes || 0)}"></span><span class="limit" style="left:${x(capOf(g))}"></span></div>
+        <span class="bar-value">${g.bonus > 0 ? `<span class="tag">+${esc(amount(g.bonus))}</span>` : ""}${esc(value)}</span></div>`;
+    };
+    return `<div class="allbar role-${role(all.state)}">
+      <div class="allbar-head"><span class="strong">All screen time</span><span class="grow"></span><span class="muted small">${esc(head)}</span>${bonus ? `<span class="tag">+${esc(amount(bonus))}</span>` : ""}</div>
+      <div class="all-track">${segs}${marks}</div>
+      ${legend.length ? `<div class="legend small">${legend.map((p) => `<span><i class="dot ${this._poolColor(p.id)}"></i>${esc(p.id === "other" ? "other" : p.name)} ${esc(amount(p.minutes))}</span>`).join("")}</div>` : ""}
+      ${lanes.map(lane).join("")}
+      ${free.length ? `<div class="muted small">No limit: ${esc(free.map((g) => `${String(g.name).toLowerCase()} ${fmtMinutes(g.used_minutes)}`).join(" · "))}</div>` : ""}
+    </div>`;
+  }
+
+  // Time-use decision 3a: the kid's waking day, from this morning's wake to tonight's bedtime (the summary's bedtime,
+  // from their lock entities; else 6:00 to 22:00): bedtime shaded at the ends, School time striped, a line at now, and
+  // the minutes used each hour once the hourly statistics are read
+  _dayStrip(kid, s) {
+    const midnight = new Date();
+    midnight.setHours(0, 0, 0, 0);
+    const hourOf = (iso) => (new Date(iso).getTime() - midnight.getTime()) / 3600000;
+    const wake = s?.bedtime ? hourOf(s.bedtime.end) : 6;
+    const bed = s?.bedtime ? hourOf(s.bedtime.start) : 22;
+    if (!(bed > wake) || Number.isNaN(bed) || Number.isNaN(wake)) return "";
+    const from = Math.max(0, Math.floor(wake));
+    const to = Math.min(24, Math.ceil(bed));
+    const span = to - from;
+    const pos = (h) => ((Math.min(to, Math.max(from, h)) - from) / span) * 100;
+    const block = (a, b, cls) => (pos(b) > pos(a) ? `<span class="${cls}" style="left:${pos(a).toFixed(2)}%;width:${(pos(b) - pos(a)).toFixed(2)}%"></span>` : "");
+    const parts = [block(from, wake, "night"), block(bed, to, "night")];
+    const words = [];
+    if (s?.school_time) {
+      parts.push(block(hourOf(s.school_time.start), hourOf(s.school_time.end), "school"));
+      words.push(`School time ${clock(s.school_time.start)}–${clock(s.school_time.end)}`);
+    }
+    if (s?.bedtime) words.push(`bedtime at ${clock(s.bedtime.start)}`);
+    const entity = this._config?.screen_time_sensors?.[kid.id];
+    const read = this._hours[kid.id];
+    if (read?.rows) {
+      const bars = hourBars(read.rows, midnight.getTime(), parseFloat(this._hass?.states?.[entity]?.state));
+      for (let h = from; h < to; h++)
+        if (bars[h] > 0)
+          parts.push(`<span class="use" style="left:${pos(h).toFixed(2)}%;width:${(100 / span).toFixed(2)}%;height:${Math.min(100, (bars[h] / 60) * 100).toFixed(0)}%" title="${esc(`${fmtMinutes(bars[h])} at ${h % 12 || 12}`)}"></span>`);
+    }
+    const now = (Date.now() - midnight.getTime()) / 3600000;
+    if (now >= from && now <= to) parts.push(`<span class="now" style="left:${pos(now).toFixed(2)}%"></span>`);
+    const step = span > 16 ? 3 : 2;
+    const hours = [];
+    for (let h = from; h <= to; h += step) hours.push(h);
+    if (hours[hours.length - 1] !== to) hours.push(to);
+    const ticks = hours.map((h) => `<span style="left:${pos(h).toFixed(2)}%">${h % 12 || 12}</span>`);
+    return `<div class="strip" aria-label="Today from wake to bedtime">
+      <div class="strip-track">${parts.join("")}</div>
+      <div class="strip-x">${ticks.join("")}</div>
+      ${words.length ? `<div class="muted small">${esc(cap(words.join(" · ")))}</div>` : ""}
+    </div>`;
+  }
+
+  // Time-use decision 5a: each device with the time actually left there, as the server works it out (targets'
+  // left, left_by, locked): "1 h 43 left · by google", "2 h left · games, by hearth", "Locked · school time"
+  _deviceTiles(s) {
+    const tiles = (s?.targets || []).filter((t) => !t.same_as && "left" in t);
+    if (!tiles.length) return "";
+    const icons = { tv: "mdi:television", phone: "mdi:cellphone", xbox: "mdi:microsoft-xbox", windows: "mdi:microsoft-windows", switch: "mdi:nintendo-switch" };
+    const why = { bedtime: "bedtime", school_time: "school time", pause: "paused", other: "locked", out: "out of time", device_limit: "its own limit", parent_lock: "a parent's lock" };
+    return `<div class="tiles">${tiles
+      .map((t) => {
+        const big = t.locked ? (t.locked_kind === "out" ? "Out" : "Locked") : t.left === null || t.left === undefined ? "No limit" : `${fmtMinutes(t.left)} left`;
+        const pool = t.left_by === "hearth" && t.left_pool && t.left_pool !== "all" ? `${shortGroup(t.left_pool, this._groupName(t.left_pool))}, ` : "";
+        const sub = t.locked ? why[t.locked_kind] || "" : t.left_by ? `${pool}by ${t.left_by}` : "";
+        return `<div class="tile${t.locked ? " locked" : ""}"><ha-icon icon="${icons[t.kind] || "mdi:devices"}"></ha-icon>
+          <div class="grow"><div class="small">${esc(t.name)}</div><div class="strong">${esc(big)}</div>${sub ? `<div class="muted small">${esc(sub)}</div>` : ""}</div></div>`;
+      })
+      .join("")}</div>`;
   }
 
   // One pool today (spec 3.3): fill used / (budget + bonus), the state's color, "40 left", "out", or muted
@@ -2165,15 +2298,45 @@ p { margin: 6px 0 12px; line-height: 1.45; }
 .kid .name { font-size: 18px; font-weight: 500; }
 .avatar { border-radius: 50%; object-fit: cover; flex: none; }
 .avatar.initials { display: flex; align-items: center; justify-content: center; background: var(--primary-color); color: var(--text-primary-color, #fff); font-weight: 500; }
-.kid-main { display: flex; gap: 16px; align-items: center; }
-.ring-wrap { position: relative; width: 112px; height: 112px; flex: none; }
-.ring { width: 112px; height: 112px; transform: rotate(-90deg); }
-.ring circle { fill: none; stroke-width: 7; }
-.ring .track { stroke: var(--divider-color, #e0e0e0); }
-.ring .fill { stroke: var(--role); stroke-linecap: round; transition: stroke-dashoffset .6s ease; }
-.ring.none .fill { opacity: .35; }
-.ring-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-.ring-text .big { font-size: 17px; font-weight: 500; line-height: 1.1; }
+.kid-main { display: flex; flex-direction: column; gap: 10px; }
+.left-now { font-size: 17px; font-weight: 500; white-space: nowrap; }
+.kid-rows { padding: 4px 8px; }
+.kid-row { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; cursor: pointer; border-left: 4px solid var(--role); }
+.kid-row + .kid-row { margin-top: 2px; }
+.kid-row:hover, .kid-row.on { background: rgba(var(--rgb-primary-color, 3, 169, 244), .08); }
+.kid-row:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+.kid-row .row-bar { width: 96px; flex: none; }
+.kid-row .grow { min-width: 0; }
+.kid-row .grow > div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.p0 { --pool: #0f6b74; } .p1 { --pool: #b85c00; } .p2 { --pool: #6a4c93; } .p3 { --pool: #2d7a3e; } .p4 { --pool: #c2185b; } .p5 { --pool: #1565c0; }
+.other { --pool: var(--disabled-text-color, #9e9e9e); }
+.allbar-head { display: flex; align-items: baseline; gap: 6px; }
+.all-track { position: relative; height: 16px; margin: 6px 0 4px; border-radius: 4px; background: var(--divider-color, #e0e0e0); }
+.all-track .seg { position: absolute; top: 0; bottom: 0; background: var(--pool, var(--role)); }
+.all-track .seg.whole { background: var(--role, var(--primary-color)); }
+.all-track .bonus { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, transparent 0 3px, var(--role, var(--primary-color)) 3px 5px); opacity: .6; }
+.limit { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--primary-text-color); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--secondary-text-color); }
+.legend .dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; background: var(--pool); }
+.lane { display: grid; grid-template-columns: 80px 1fr auto; gap: 8px; align-items: center; margin: 6px 0; font-size: 13px; }
+.lane-track { position: relative; height: 6px; border-radius: 3px; background: var(--divider-color, #e0e0e0); }
+.lane-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--pool); }
+.lane.role-out .lane-fill { background: var(--error-color, #db4437); }
+.lane .limit { top: -3px; bottom: -3px; }
+.strip-track { position: relative; height: 34px; border-radius: 6px; background: var(--divider-color, #e0e0e0); overflow: hidden; }
+.strip-track .night { position: absolute; top: 0; bottom: 0; background: var(--primary-text-color); opacity: .7; }
+.strip-track .school { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, transparent 0 4px, rgba(var(--rgb-primary-text-color, 128, 128, 128), .35) 4px 6px); }
+.strip-track .use { position: absolute; bottom: 0; background: var(--accent-color, var(--primary-color)); border-radius: 2px 2px 0 0; box-shadow: inset 1px 0 0 var(--card-background-color, #fff); }
+.strip-track .now { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--error-color, #db4437); }
+.strip-x { position: relative; height: 16px; font-size: 10px; color: var(--secondary-text-color); }
+.strip-x span { position: absolute; transform: translateX(-50%); }
+.strip-x span:first-child { transform: none; }
+.strip-x span:last-child { transform: translateX(-100%); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.tile { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--divider-color, #e0e0e0); border-radius: 10px; min-width: 0; }
+.tile .grow { min-width: 0; }
+.tile.locked { border-color: var(--warning-color, #ffa600); }
+.tile ha-icon { --mdc-icon-size: 20px; color: var(--secondary-text-color); }
 .bar-row { display: grid; grid-template-columns: 80px 1fr auto; gap: 8px; align-items: center; margin: 6px 0; font-size: 13px; }
 .bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bar { height: 6px; border-radius: 3px; background: var(--divider-color, #e0e0e0); overflow: hidden; }
@@ -2337,8 +2500,7 @@ details.more summary::-webkit-details-marker { display: none; }
 @media (max-width: 600px) {
   .content { padding: 12px; }
   .grid { grid-template-columns: 1fr; }
-  .kid-main { flex-direction: column; align-items: stretch; }
-  .ring-wrap { margin: 0 auto; }
+  .kid-row .row-bar { width: 56px; }
   .tab span:not(.badge) { display: none; }
   .tab { padding: 10px 12px; }
   table.limits input { width: 92px; }

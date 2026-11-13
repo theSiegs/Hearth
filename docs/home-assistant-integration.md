@@ -295,14 +295,26 @@ Each such play is also logged when it ends, in the history's `played` (see [Hist
 A budget is set on a **group**: a set of apps and titles whose minutes count together. Built in:
 
 - **All screen time**: everything not excluded by a rule.
-- **Video**: video apps (Android's video category, plus any an adult adds).
-- **Games**: as above.
+- **Games**: games (Android's game category, plus any an adult adds).
 - **Social** and **Messaging**: social and messaging apps (a starter list, Android's category, plus any an adult adds).
   Messaging is Not screen time (below) unless an adult puts it in.
 
-An adult can add groups: **YouTube** (YouTube and HearthTube, on every device) is the household's pool today. A
-minute counts toward every group its app or title is in, so a YouTube minute is taken from YouTube, Video and All
-screen time. A device's time is up when **any** group it's playing from is used up.
+An adult can add groups (pools): **YouTube** (YouTube and HearthTube, on every device) and **Streaming** (the
+streaming apps), say. **An app is in one pool at most**, besides All screen time, so the pools' minutes and "other"
+(apps in no pool) add up to All screen time's: where an adult moved the app (Hearth's page, Sort new apps) wins, then
+a pool whose list an adult put it in, then a built-in starter list, then its Android category. Settings keep it so:
+an app put in one pool's list (the options flow, Hearth's page, sorting a new app) leaves every other list. A
+YouTube minute is taken from YouTube and All screen time. A device's time is up when **any** group it's playing from
+is used up.
+
+The built-in **Video** pool is retired: it held YouTube and the streaming apps alike, so their minutes counted twice.
+On its first start after the update Hearth moves an older household's settings once (`pools: 2` in the options) and
+logs what it did. If anyone had a Video budget, or an adult had moved an app to Video, Video stays as a pool of the
+household's own with the same id (`video`) and name, so its budgets, bonuses, entities, pauses and history carry on:
+it holds the old starter list and the apps an adult added, less any app another pool lists, and the apps Android
+marks as video (its `category`, kept when Hearth's page saves the pools). Remove it in the settings once YouTube and
+streaming have pools of their own. Otherwise Video goes, with the apps added to it; those count in All screen time
+only until put in a pool (the log names them). Configure > Add apps to Games replaces Add apps to Video or Games.
 
 **Not screen time** (Configure > Not screen time): a group whose minutes don't count toward All screen time, music
 say. Its minutes still count in the group itself (and its own budget, if it has one, still applies), but not in All
@@ -1060,6 +1072,14 @@ then sends the same object as an event whenever it changes, at most every 2 seco
 - each person with Family Link also has `school_time` {`start`, `end`} (local times) on a school or half day: today's
   School time window (a half day's ends early as configured). And `school_time_off` (only while there is one): School
   time taken off for them today (`hearth.school_time_off`), `[{id, date, from, reason, applied, ...}]`.
+- each person whose locks (Configure > Locks) say `bedtime_start` and `bedtime_end` (Family Link's bedtime does) has
+  `bedtime` {`start`, `end`}: tonight's bedtime and this morning's wake, local times on today's date (with more than
+  one lock, the earliest bedtime and the latest wake). Hearth's page draws the day from wake to bedtime (6:00 to 22:00
+  without it).
+- each person also has `all_by_pool` `[{id, name, minutes}]`: All screen time's used minutes today split by pool, in
+  the household's order of groups, then `{id: "other", name: "Other"}` for apps in no pool; they add up to
+  `all.used_minutes` (a pool that isn't screen time is left out; empty when nothing is used). An app is in one pool,
+  so nothing counts twice.
 - each person also has `targets` `[{id, name, kind, via, groups}]`: their devices, for extra time on one device
   (above). `kind`: `tv`, `phone`, `xbox`, `windows` or `switch`; `via`: `hearth` (a Hearth TV with one of their
   profiles, or their Hearth phone), `family_link` (each Family Link device, `fl:<device id>`), `family_safety` (each
@@ -1068,7 +1088,16 @@ then sends the same object as an event whenever it changes, at most every 2 seco
   (Hearth's own devices). A TV's `name` is as shown ("Kitchen" is "Kitchen TV"). One handset that's both a Hearth phone and
   a Family Link device of theirs (the same name) is both: the Family Link one says `same_as` (the Hearth phone's id)
   and the Hearth phone `also` (`["fl:<id>"]`); show it once. Extra time there for one group goes on the Hearth phone;
-  for All screen time give it on both if Family Link holds the phone too. And `device_extras` `[{id, target, name, via, kind (bonus | allow), group, until,
+  for All screen time give it on both if Family Link holds the phone too. Each target also says the time actually
+  left there, worked out once for every surface (the page, the TV, Glint): `left` (minutes, the smaller of Hearth's
+  limit there and the device's own; null when neither limits it), `left_by` (`hearth`, `google`, `microsoft` or
+  `nintendo`: whose limit that is), `left_pool` (with `hearth`: the pool that binds, `all`, or `games` on an Xbox or
+  Switch whose enforcer holds Games), `locked` (nothing runs there now) and `locked_kind` (`bedtime`, `school_time`,
+  `pause`, `other`: a lock or pause of theirs; `out`: Hearth's time is up; `device_limit`: the device's own limit;
+  `parent_lock`: a parent's own Family Safety lock; null when not locked). Hearth's limit is All screen time's
+  minutes left, and on an Xbox or Switch also each pool its enforcer holds; extra time on that device adds to it (an
+  allow there lifts it). The device's own is Family Link's daily limit, Microsoft's allowance or the Switch's limit
+  (`first_party`), unless that number is Hearth's own hold. And `device_extras` `[{id, target, name, via, kind (bonus | allow), group, until,
   minutes_left, reason}]`: that extra time now (`minutes_left`: a Hearth device's by its use, a Family Link bonus as
   given, the rest by the clock).
 - each person also has `week`: their last 7 local days, newest first, today included: `[{date, minutes {<group id>:
@@ -1429,10 +1458,22 @@ capitalizes the first letter of the server's text and nothing else.
   with their own buttons (each calls its action's service with exactly its data, after its `confirm`). With nothing
   waiting, the headline reads "All clear".
 - The family pause, then devices waiting to pair and parental controls that need a look, then the kids.
-- Each **kid card**: the ring for All screen time and the big `2 h 10 / 2 h 30`, the `day_line`, the card and its dot
-  colored by the person's `state` (each bar by its group's `state`), one bar per group (All first, then fewest left
-  first; a group with `limited` false is muted, "No limit · 25 min"; a `+15` tag for extra time), and what's on from
-  `playing[].text`. The give button is the person's `bonus:<binding group>` action ("+15 games"); more of it, All
+- With two kids or more, a **compact row** per kid (the time-use design, decision 4a): avatar, name, the `day_line`
+  (else the headline), a short bar of All screen time, and a button only when there's something to answer: their
+  waiting request (`Yes 30`, the minutes asked) or a suggestion for them (its own primary action, `+15 youtube`, the
+  pool named). A tap on the row opens that kid's full card under the rows (again to close it); with one kid, the card
+  shows at once.
+- Each **kid card**: the minutes left of All screen time beside the name, the `day_line`, the card and its dot colored
+  by the person's `state`, then (decisions 1a and 2c) **All screen time as one bar** split by `all_by_pool` (a color
+  per pool, grey for other; one plain bar from an older summary), the day's limit as a mark and today's extra time as a
+  hatched end after it, with a legend (`games 10 · youtube 7 · other 6`); under it **a thin lane per pool with a
+  budget** on the same minute scale (fewest left first, each with its limit mark and `53 left`, `Out`, `Allowed` or
+  `Paused`), so it shows which cap comes first, and the pools without one in a muted line (`No limit: messaging 2
+  min`). Then **the day strip** (decision 3a) from this morning's wake to tonight's `bedtime` (6:00 to 22:00 without
+  it): bedtime shaded at the ends, School time striped, a line at now, and the minutes used each hour once the hourly
+  statistics are read; then **a tile per device** (decision 5a) from `targets`: `1 h 43 left · by google`, `2 h left ·
+  games, by hearth`, `Locked · school time` (one handset shown once). What's on comes from `playing[].text`. The give
+  button is the person's `bonus:<binding group>` action ("+15 games"); more of it, All
   screen time and taking 15 back are under More. **Last 7 days** draws `week` oldest on the left in noiwid's bar
   style: All (or the pool chip chosen) per day with the day's budget plus bonus as a tick, `+30` over a day with extra
   time, a red dot under a day something ran out, and a hatched bar for a day with no record; a tap says `Tue · 2 h 40
