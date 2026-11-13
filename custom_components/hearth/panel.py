@@ -52,6 +52,7 @@ from .limits import (
     OTHER,
     OTHER_DAY,
     SCHOOL_DAY,
+    one_pool_per_app,
     slug,
 )
 from .notifications import clear_pairing
@@ -358,7 +359,9 @@ _ID = vol.All(cv.string, vol.Match(r"^[a-z0-9_]{1,64}$"))
 OPTION_SCHEMAS: dict[str, Any] = {
     CONF_ROLES: vol.Schema({_PERSON: vol.In(ROLES)}),
     CONF_PROFILES: vol.Schema({vol.Match(OPTION_KEY): _PERSON}),
-    CONF_GROUPS: [vol.Schema({vol.Required("id"): _ID, vol.Required("name"): cv.string, "apps": [cv.string]})],
+    CONF_GROUPS: [
+        vol.Schema({vol.Required("id"): _ID, vol.Required("name"): cv.string, "apps": [cv.string], "category": cv.string})
+    ],
     CONF_GROUP_APPS: vol.Schema({_ID: [cv.string]}),
     CONF_OUTSIDE_ALL: [_ID],
     CONF_TILE_EXCHANGE: [_PERSON],
@@ -456,6 +459,16 @@ def ws_config_set(hass: HomeAssistant, connection: websocket_api.ActiveConnectio
         connection.send_error(msg["id"], "invalid", str(err))
         return
     options = {**hub.entry.options, key: value}
+    if key == CONF_GROUPS:
+        # A pool's category (the Video pool retire_video kept) stays when the page sends the pool without it
+        categories = {g["id"]: g["category"] for g in hub.entry.options.get(CONF_GROUPS, []) if g.get("category")}
+        options[CONF_GROUPS] = [
+            {**g, "category": categories[g["id"]]} if g["id"] in categories and "category" not in g else g
+            for g in options[CONF_GROUPS]
+        ]
+    if key in (CONF_GROUPS, CONF_GROUP_APPS):
+        # An app is in one pool: one just put in a pool's list leaves the others
+        options = one_pool_per_app(hub.entry.options, options)
     if key == CONF_SUGGEST_PUSH:
         # The older offer_more (moved into suggest_push when the household loads) mustn't come back with it
         options.pop(CONF_OFFER_MORE, None)

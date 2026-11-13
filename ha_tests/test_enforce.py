@@ -15,6 +15,7 @@ from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 from custom_components.hearth import enforce
 from custom_components.hearth.const import DOMAIN
 from custom_components.hearth.enforce import essential, hours_to_midnight
+from test_init import _video_apps
 from test_people import _household_with_sam
 from test_sources import _option
 
@@ -259,7 +260,7 @@ async def test_a_group_s_xbox_apps_are_paused_through_family_safety(
     hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
     await _household_with_sam(hass, hass_client_no_auth)
     # Video lists an Xbox app and a Windows one; Sam's Family Safety holds Xbox only
-    await _option(hass, "group_apps", {"video": ["x:videoapp", "win32:player"], "games": []})
+    await _video_apps(hass, ["x:videoapp", "win32:player"])
     await _option(
         hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY, "family_link": FAMILY_LINK}
     )
@@ -281,7 +282,7 @@ async def test_an_app_on_a_locked_platform_isn_t_paused_too(
     paused, _ = _family_safety_apps(hass)
     hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
     await _household_with_sam(hass, hass_client_no_auth)
-    await _option(hass, "group_apps", {"video": [], "games": ["x:gameapp"]})
+    await _option(hass, "group_apps", {"games": ["x:gameapp"]})
     await _option(hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY})
     await _budget(hass, "games", 5)
     held = hass.states.get("sensor.hearth_sam_held_by_parental_controls")
@@ -296,7 +297,7 @@ async def test_an_older_family_safety_holds_platforms_only(
     async_mock_service(hass, "microsoft_family_safety", "unlock_platform")
     hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
     await _household_with_sam(hass, hass_client_no_auth)
-    await _option(hass, "group_apps", {"video": ["x:videoapp"], "games": []})
+    await _video_apps(hass, ["x:videoapp"])
     await _option(hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY})
     await _budget(hass, "video", 10)
     held = hass.states.get("sensor.hearth_sam_held_by_parental_controls")

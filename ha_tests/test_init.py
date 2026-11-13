@@ -12,6 +12,9 @@ from pytest_homeassistant_custom_component.common import async_fire_time_changed
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
 from custom_components.hearth.const import DOMAIN
+from custom_components.hearth.limits import STARTER_VIDEO_APPS
+
+VIDEO_POOL = {"id": "video", "name": "Video", "apps": sorted(STARTER_VIDEO_APPS), "category": "video"}
 
 TV_ID = "tv-0123456789abcdef"
 PHONE_ID = "phone-0123456789abcd"
@@ -39,7 +42,22 @@ async def _set_up(hass: HomeAssistant):
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {"name": "Home"})
     assert result["type"] is FlowResultType.CREATE_ENTRY
     await hass.async_block_till_done()
-    return hass.config_entries.async_entries(DOMAIN)[0]
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    # The built-in Video pool is retired; the tests' household keeps a Video pool of its own, as a household that
+    # budgeted Video does after retire_video (the old starter list and Android's video apps)
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "groups": [dict(VIDEO_POOL)]})
+    await hass.async_block_till_done()
+    return entry
+
+
+async def _video_apps(hass: HomeAssistant, apps: list[str]) -> None:
+    """Adds apps to the tests' own Video pool (as an adult would in its list)."""
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    groups = [
+        {**g, "apps": [*g["apps"], *apps]} if g["id"] == "video" else g for g in entry.options.get("groups", [])
+    ]
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "groups": groups})
+    await hass.async_block_till_done()
 
 
 async def _pair(hass: HomeAssistant, client, device_id: str = TV_ID, kind: str = "tv", name: str = "Kitchen") -> str:

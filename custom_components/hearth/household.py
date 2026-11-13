@@ -10,7 +10,7 @@ from here.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 import hashlib
 import json
 from typing import TYPE_CHECKING, Any
@@ -48,7 +48,18 @@ from .apps import (
     update_notification,
 )
 from .counting import ALL, DeviceUsage, Reading, group_seconds, merge
-from .limits import CONF_APP_GROUPS, OTHER, OTHER_DAY, SCHOOL_DAY, Group, GroupState, Limits, groups_from_options, groups_of
+from .limits import (
+    CONF_APP_GROUPS,
+    OTHER,
+    OTHER_DAY,
+    SCHOOL_DAY,
+    Group,
+    GroupState,
+    Limits,
+    groups_from_options,
+    groups_of,
+    without_app,
+)
 from .enforce import FAMILY_LINK, FAMILY_SAFETY, NINTENDO, Enforcement, enforcers_from_options, fs_account_of, fs_app, fs_app_platform
 from .exceptions import Allows, Lifted, end_of_day
 from .history import BONUS, DEVICE_BONUS, History
@@ -355,6 +366,29 @@ class Household:
     def _lock_entities(self, person: str) -> list[str]:
         return [lock["entity_id"] for lock in self.options.get(CONF_LOCKS, []) if lock.get("person") == person]
 
+    def bedtime_today(self, person: str, now: datetime | None = None) -> dict[str, str] | None:
+        """Today's bedtime from the person's lock entities in Hearth's settings (those that say bedtime_start and
+        bedtime_end, as Family Link's bedtime does): {start: tonight's, end: this morning's wake}, local ISO times on
+        today's date. With more than one, the earliest start and the latest end; None when none says."""
+        today = dt_util.as_local(now or dt_util.now()).date()
+        starts: list[time] = []
+        ends: list[time] = []
+        for entity_id in self._lock_entities(person):
+            state = self.hass.states.get(entity_id)
+            if state is None:
+                continue
+            for key, into in (("bedtime_start", starts), ("bedtime_end", ends)):
+                if (clock := _clock_of(state.attributes.get(key))) is not None:
+                    into.append(clock)
+        if not starts or not ends:
+            return None
+        zone = dt_util.get_default_time_zone()
+        start = datetime.combine(today, min(starts), zone)
+        end = datetime.combine(today, max(ends), zone)
+        if end >= start:  # not a night: nothing to draw
+            return None
+        return {"start": start.isoformat(), "end": end.isoformat()}
+
     def _locks_document(self, person: str, day: PersonDay | None) -> dict[str, Any]:
         """Why and until when the person is held ("lock" {by, until}), a family pause ("pause" {until, reason}), and
         the next bedtime or school time ("next_lock" {at, by, kind}), for winding down before it."""
@@ -513,18 +547,27 @@ class Household:
         return title_key(self.titles, item)
 
     def membership(self):
-        """An item's groups: from the group lists, Android's category, where its time came from, and for a title
-        its apps'."""
+        """An item's groups, All and at most one pool: from the group lists and Android's category, else where its
+        time came from (a Switch's: games), and for a title its apps' (the first that has one)."""
         base = groups_of(self.groups, self.categories, self.options.get(CONF_APP_GROUPS, {}))
         hints = self._hints
         titles = {f"title:{t.id}": t for t in self.titles}
+        order = [g.id for g in self.groups if g.id != ALL]
+
+        def one(item: str) -> set[str]:
+            found = base(item)
+            if len(found) > 1:
+                return found
+            hinted = sorted(hints.get(item, set()) & set(order), key=order.index)
+            return {ALL, hinted[0]} if hinted else {ALL}
 
         def of(item: str) -> set[str]:
-            found = base(item) | hints.get(item, set())
+            found = one(item)
             title = titles.get(item)
-            if title is not None:
+            if title is not None and len(found) == 1:
                 for raw in title.raw:
-                    found |= base(raw) | hints.get(raw, set())
+                    if len(found := one(raw)) > 1:
+                        break
             return found
 
         return of
@@ -837,7 +880,9 @@ class Household:
             return False
         self.apps.sort(package, group)
         moved = {**self.options.get(CONF_APP_GROUPS, {}), package: group}
-        self.hass.config_entries.async_update_entry(self.hub.entry, options={**self.hub.entry.options, CONF_APP_GROUPS: moved})
+        # An app is in one pool: it leaves any other pool's list
+        options = without_app(dict(self.hub.entry.options), package, keep=None if group == OTHER else group)
+        self.hass.config_entries.async_update_entry(self.hub.entry, options={**options, CONF_APP_GROUPS: moved})
         return True
 
     def app_group(self, package: str, membership=None) -> str:
@@ -1642,3 +1687,17 @@ def _timing(duration: Any, position: Any, at: datetime | None) -> dict[str, Any]
 
 def person_identifier(person: str) -> tuple[str, str]:
     return (DOMAIN, f"person:{person}")
+
+
+def _clock_of(value: Any) -> time | None:
+    """A lock entity's bedtime_start or bedtime_end as a clock time: an ISO time with a date (its local clock), or a
+    time of day ("21:00:00")."""
+    if not isinstance(value, str) or not value:
+        return None
+    if (parsed := dt_util.parse_datetime(value)) is not None:
+        if parsed.tzinfo is not None:
+            parsed = dt_util.as_local(parsed)
+        return parsed.time().replace(second=0, microsecond=0)
+    if (clock := dt_util.parse_time(value)) is not None:
+        return clock.replace(second=0, microsecond=0)
+    return None

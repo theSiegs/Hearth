@@ -49,7 +49,7 @@ from .const import (
     KIND_MOBILE,
 )
 from .counting import ALL
-from .limits import BUILTIN_GROUPS, GAMES, VIDEO, slug
+from .limits import BUILTIN_GROUPS, CONF_POOLS, GAMES, POOLS_VERSION, one_pool_per_app, slug
 from .apps import CONF_APP_WATCH, CONF_ASK_NOTIFY, OTHER, options_with_app_in_group, update_notification
 from .enforce import (
     CONF_ENFORCE,
@@ -99,7 +99,12 @@ class HearthConfigFlow(ConfigFlow, domain=DOMAIN):
         if self._async_current_entries(include_ignore=False):
             return self.async_abort(reason="single_instance_allowed")
         if user_input is not None:
-            return self.async_create_entry(title=user_input[CONF_NAME], data={CONF_NAME: user_input[CONF_NAME]})
+            # A new household starts with one pool per app and no built-in Video pool: nothing to retire
+            return self.async_create_entry(
+                title=user_input[CONF_NAME],
+                data={CONF_NAME: user_input[CONF_NAME]},
+                options={CONF_POOLS: POOLS_VERSION},
+            )
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({vol.Required(CONF_NAME, default="Home"): str}),
@@ -228,23 +233,22 @@ class HearthOptionsFlow(OptionsFlow):
                 errors[CONF_NAME] = "name_taken"
             else:
                 groups.append({"id": group_id, "name": name, "apps": list(user_input.get("apps", []))})
-                return self.async_create_entry(data={**options, CONF_GROUPS: groups})
+                # An app is in one pool: the apps chosen here leave the others
+                return self.async_create_entry(data=one_pool_per_app(options, {**options, CONF_GROUPS: groups}))
         schema = vol.Schema(
             {vol.Required(CONF_NAME): TextSelector(), vol.Optional("apps", default=[]): self._app_selector([])}
         )
         return self.async_show_form(step_id="add_group", data_schema=schema, errors=errors)
 
     async def async_step_group_apps(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Apps an adult adds to Video or Games (Android's categories miss some)."""
+        """Apps an adult adds to Games (Android's categories miss some); they leave any other pool."""
         options = self._options()
         added: dict[str, list[str]] = {k: list(v) for k, v in options.get(CONF_GROUP_APPS, {}).items()}
         if user_input is not None:
-            added[VIDEO] = list(user_input.get(VIDEO, []))
             added[GAMES] = list(user_input.get(GAMES, []))
-            return self.async_create_entry(data={**options, CONF_GROUP_APPS: added})
+            return self.async_create_entry(data=one_pool_per_app(options, {**options, CONF_GROUP_APPS: added}))
         schema = vol.Schema(
             {
-                vol.Optional(VIDEO, default=added.get(VIDEO, [])): self._app_selector(added.get(VIDEO, [])),
                 vol.Optional(GAMES, default=added.get(GAMES, [])): self._app_selector(added.get(GAMES, [])),
             }
         )

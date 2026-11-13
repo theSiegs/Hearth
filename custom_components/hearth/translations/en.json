@@ -141,7 +141,7 @@
           "sort_apps": "Sort new apps",
           "new_apps": "Watch for new apps",
           "add_group": "Add a group",
-          "group_apps": "Add apps to Video or Games",
+          "group_apps": "Add apps to Games",
           "not_screen_time": "Not screen time",
           "remove_group": "Remove a group",
           "tile_exchange": "Tile exchange sharing",
@@ -172,10 +172,9 @@
         }
       },
       "group_apps": {
-        "title": "Add apps to Video or Games",
-        "description": "Apps Android marks as video or games are in these already. Add the ones it misses.",
+        "title": "Add apps to Games",
+        "description": "Apps Android marks as games are in Games already. Add the ones it misses. An app is in one pool: an app added here leaves any other.",
         "data": {
-          "video": "Video",
           "games": "Games"
         }
       },

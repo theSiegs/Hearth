@@ -98,6 +98,99 @@ def targets_of(household: Household, person: str) -> list[dict[str, Any]]:
     return found
 
 
+# Who sets a device's own limit, as `left_by` says it
+LEFT_BY_HEARTH = "hearth"
+_LEFT_BY = {VIA_FAMILY_LINK: "google", VIA_FAMILY_SAFETY: "microsoft", VIA_NINTENDO: "nintendo"}
+
+
+def with_time_left(household: Household, person: str, view: dict[str, Any]) -> list[dict[str, Any]]:
+    """The person's targets (view["targets"]) each with the time actually left on it, worked out once for every
+    surface (the panel, the TV, Glint):
+
+        left         minutes, the smaller of Hearth's and the device's own limit (null: neither limits it)
+        left_by      hearth | google | microsoft | nintendo: whose limit that is (null with left null)
+        left_pool    with left_by hearth, the pool that binds there (all, or games on an Xbox or Switch Hearth holds
+                     to games)
+        locked       nothing runs there now: a lock or pause of theirs, no time left, or the device's own limit or a
+                     parent's own lock
+        locked_kind  bedtime | school_time | pause | other (a lock), out (no time left), device_limit, parent_lock
+
+    Hearth's limit on a device is All screen time's minutes left, and on an Xbox or Switch also each pool its enforcer
+    holds there; extra time on that one device (device_extras) adds to it, or lifts it till its end. The device's own
+    is Family Link's daily limit, Microsoft's allowance, or the Switch's own limit, from view["first_party"], unless
+    that number is Hearth's own hold."""
+    groups = {g["id"]: g for g in view.get("groups") or []}
+    first = view.get("first_party") or {}
+    extras = view.get("device_extras") or []
+    lock = view.get("lock") or {}
+    enforced: dict[str, tuple[str, ...]] = {}
+    for enforcer in household.enforcement.enforcers:
+        if enforcer.person != person:
+            continue
+        if enforcer.kind == FAMILY_SAFETY:
+            for platform in ("xbox", "windows"):
+                enforced[f"fs:{platform}"] = enforcer.groups
+        elif enforcer.kind == NINTENDO:
+            enforced[f"nintendo:{enforcer.entity_id}"] = enforcer.groups
+    out = []
+    for target in view.get("targets") or []:
+        tid = target["id"]
+        # Hearth's: All, and the pools held on this device
+        hearth: tuple[int, str] | None = None
+        for gid in ("all", *(g for g in enforced.get(tid, ()) if g != "all")):
+            left = (groups.get(gid) or {}).get("minutes_left")
+            if left is not None and (hearth is None or max(0, left) < hearth[0]):
+                hearth = (max(0, left), gid)
+        for extra in extras:
+            if extra.get("target") != tid or extra.get("group") not in (None, "all"):
+                continue
+            if extra.get("kind") == "allow":
+                hearth = None
+                break
+            if hearth is not None and extra.get("minutes_left"):
+                hearth = (hearth[0] + extra["minutes_left"], hearth[1])
+        # The device's own
+        own, own_blocking, parent_lock = None, False, False
+        via = target.get("via")
+        row = _own_row(first, target)
+        if row is not None and not row.get("held_by_hearth"):
+            own = row.get("minutes_left")
+            own_blocking = bool(row.get("blocking") or row.get("suspended"))
+            parent_lock = bool(row.get("parent_lock"))
+        left, by, pool = None, None, None
+        if hearth is not None:
+            left, by, pool = hearth[0], LEFT_BY_HEARTH, hearth[1]
+        if own is not None and (left is None or max(0, own) < left):
+            left, by, pool = max(0, own), _LEFT_BY.get(via), None
+        if view.get("locked") or view.get("pause"):
+            kind = lock.get("kind") or ("pause" if view.get("pause") else "other")
+        elif parent_lock:
+            kind = "parent_lock"
+        elif left == 0:
+            kind = "out" if by == LEFT_BY_HEARTH else "device_limit"
+        elif own_blocking:
+            kind = "device_limit"
+        else:
+            kind = None
+        out.append(
+            {**target, "left": left, "left_by": by, "left_pool": pool, "locked": kind is not None, "locked_kind": kind}
+        )
+    return out
+
+
+def _own_row(first: dict[str, Any], target: dict[str, Any]) -> dict[str, Any] | None:
+    """The first-party row (native_sync.first_party) of a target: its Family Link device, Family Safety platform or
+    Switch."""
+    via, _, rest = target["id"].partition(":")
+    if via == "fl":
+        return next((r for r in first.get(VIA_FAMILY_LINK) or [] if str(r.get("device_id")) == rest), None)
+    if via == "fs":
+        return next((r for r in first.get(VIA_FAMILY_SAFETY) or [] if str(r.get("platform")).lower() == rest), None)
+    if via == "nintendo":
+        return next((r for r in first.get(VIA_NINTENDO) or [] if r.get("target") == target["id"]), None)
+    return None
+
+
 # A source's integration, for the kind of device it counts
 _SOURCE_KINDS = {"xbox": "xbox", "nintendo_parental_controls": "switch", "mobile_app": "phone", "familylink": "phone"}
 

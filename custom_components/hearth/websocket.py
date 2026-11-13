@@ -35,7 +35,7 @@ from .auth import is_adult_user
 from .glance import app_name_guess, duration, household_glance, person_glance
 from .grants import APP
 from .places import SIGNAL_PLACES
-from .targets import kind_of_target, target_of_counted, targets_of
+from .targets import kind_of_target, target_of_counted, targets_of, with_time_left
 
 SEND_EVERY = timedelta(seconds=2)
 
@@ -127,6 +127,15 @@ def summary(hub) -> dict[str, Any]:
         # Today's School time window, on a school or half day ({start, end}, local), for "no school time today"
         if (window := household.scheduler.window_today(person, now)) is not None:
             people[-1]["school_time"] = {"start": window[0].isoformat(), "end": window[1].isoformat()}
+        # Today's bedtime from their lock entities ({start: tonight, end: this morning's wake}, local): the day strip
+        # runs from wake to bed (6:00 to 22:00 without it)
+        if (bedtime := household.bedtime_today(person, now)) is not None:
+            people[-1]["bedtime"] = bedtime
+        # All screen time today as one part per pool plus "other" (apps in no pool): an app is in one pool, so the
+        # parts add up to All's used minutes
+        people[-1]["all_by_pool"] = _all_by_pool(household, people[-1])
+        # Each device with the time actually left there: Hearth's or the device's own limit, whichever is less
+        people[-1]["targets"] = with_time_left(household, person, people[-1])
         # Where a kid is, by name only (no coordinates): every reader of the summary is an adult (_may_read)
         if (place := household.places.summary(person)) is not None:
             people[-1]["place"] = place
@@ -264,6 +273,30 @@ def _suggest_hints(hub, person: str, view: dict[str, Any], now) -> dict[str, Any
             if (minutes := history.usual_bonus(person, group["id"], now)) is not None:
                 usual[group["id"]] = minutes
     return {"dismissed": history.dismissed(person, dt_util.as_local(now).date()), "minutes": chosen, "usual": usual}
+
+
+def _all_by_pool(household, view: dict[str, Any]) -> list[dict[str, Any]]:
+    """[{id, name, minutes}]: each pool counted in All screen time with minutes today, in the household's order, then
+    {id: "other"} for the rest; together All's used minutes. Nothing when All has none."""
+    used = (view.get("all") or {}).get("used_minutes") or 0
+    if used <= 0:
+        return []
+    outside = household.outside_all()
+    minutes = {g["id"]: g.get("used_minutes") or 0 for g in view.get("groups") or []}
+    parts = [
+        {"id": g.id, "name": g.name, "minutes": minutes[g.id]}
+        for g in household.groups
+        if g.id != ALL and g.in_all and g.id not in outside and minutes.get(g.id, 0) > 0
+    ]
+    counted = sum(p["minutes"] for p in parts)
+    if counted > used:
+        # Rounding each part may pass the whole by a minute or two: the largest gives it back
+        biggest = max(parts, key=lambda p: p["minutes"])
+        biggest["minutes"] -= counted - used
+        counted = used
+    if used - counted > 0:
+        parts.append({"id": OTHER, "name": "Other", "minutes": used - counted})
+    return parts
 
 
 def _grant_views(household, person: str) -> list[dict[str, Any]]:

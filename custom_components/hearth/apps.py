@@ -19,7 +19,9 @@ from homeassistant.util import dt as dt_util
 
 from .const import CONF_GROUP_APPS, CONF_GROUPS, DOMAIN
 from .counting import ALL
-from .limits import GAMES, VIDEO, Group
+from .limits import BUILTIN_GROUPS, GAMES, Group, one_pool_per_app, without_app
+
+BUILTIN_IDS = frozenset(g.id for g in BUILTIN_GROUPS if g.id != ALL)
 
 CONF_APP_WATCH = "app_watch"
 CONF_ASK_NOTIFY = "ask_notify"
@@ -144,20 +146,22 @@ class AppCatalog:
 
 
 def options_with_app_in_group(options: dict[str, Any], package: str, group_id: str) -> dict[str, Any]:
-    """The options with [package] added to group [group_id]'s apps (Video and Games keep theirs in group_apps)."""
+    """The options with [package] added to group [group_id]'s apps (the built-in groups keep theirs in group_apps),
+    and out of every other group's list: an app is in one pool."""
+    before = options
     options = dict(options)
-    if group_id in (VIDEO, GAMES):
+    if group_id in BUILTIN_IDS:
         added = {k: list(v) for k, v in options.get(CONF_GROUP_APPS, {}).items()}
         if package not in added.setdefault(group_id, []):
             added[group_id].append(package)
         options[CONF_GROUP_APPS] = added
-        return options
-    groups = [dict(g, apps=list(g.get("apps", []))) for g in options.get(CONF_GROUPS, [])]
-    for group in groups:
-        if group["id"] == group_id and package not in group["apps"]:
-            group["apps"].append(package)
-    options[CONF_GROUPS] = groups
-    return options
+    else:
+        groups = [dict(g, apps=list(g.get("apps", []))) for g in options.get(CONF_GROUPS, [])]
+        for group in groups:
+            if group["id"] == group_id and package not in group["apps"]:
+                group["apps"].append(package)
+        options[CONF_GROUPS] = groups
+    return without_app(one_pool_per_app(before, options), package, keep=group_id)
 
 
 def update_notification(hass: HomeAssistant, waiting: list[AppEntry], groups: list[Group]) -> None:
@@ -189,7 +193,7 @@ def phone_actions(entry: AppEntry, groups: list[Group]) -> list[dict[str, str]]:
     shows three at most; every group is a choice in the options' Sort new apps.)"""
     custom = [g.id for g in groups if not g.builtin]
     # One's own groups other than the YouTube one are the likeliest homes for an app that isn't a game
-    preferred = [entry.suggested] + [g for g in custom if "youtube" not in g] + [GAMES] + custom + [VIDEO]
+    preferred = [entry.suggested] + [g for g in custom if "youtube" not in g] + [GAMES] + custom
     choices: list[str] = []
     for candidate in preferred:
         if candidate and candidate not in choices and len(choices) < 2:

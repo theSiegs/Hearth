@@ -41,7 +41,7 @@ from .profiles import ISSUE_PROFILE_KEYS, legacy_keys
 from .push import new_topic
 from .hub import HearthHub
 from .attention import ACT_PREFIX
-from .limits import DAY_TYPES
+from .limits import DAY_TYPES, retire_video
 from .asks import EVENT_MORE_TIME_ANSWERED, EVENT_MORE_TIME_REQUESTED, AskError
 from .const import EVENT_BUDGET_REACHED
 from .counting import ALL
@@ -743,6 +743,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     hub = HearthHub(hass, entry)
     await hub.async_load()
     _give_push_topics(hass, entry, hub)
+    _retire_video(hass, entry, hub)
     entry.runtime_data = hub
     await hub.household.school.async_refresh()
     hub.household.recompute()
@@ -900,6 +901,13 @@ def _migrate_offer_more(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
     """Configure > Offer more time's pairs (offer_more) become pushed suggestions with their amounts (suggest_push):
     before the update listener, so it doesn't reload."""
     if (options := suggest_push.migrated(entry.options)) is not None:
+        hass.config_entries.async_update_entry(entry, options=options)
+
+
+def _retire_video(hass: HomeAssistant, entry: HearthConfigEntry, hub: HearthHub) -> None:
+    """The built-in Video pool goes and each app is in one pool (limits.retire_video), once: after the budgets are
+    loaded (a Video budget keeps a pool of that name), before the update listener, so it doesn't reload."""
+    if (options := retire_video(dict(entry.options), hub.household.limits.data.budgets)) is not None:
         hass.config_entries.async_update_entry(entry, options=options)
 
 
