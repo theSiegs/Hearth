@@ -3,7 +3,8 @@ own TVs and phones, Family Link's devices, Family Safety's platforms and a Ninte
 
     hearth:<device_id>     a Hearth TV or phone        holds one group on that device alone (groups: true)
     fl:<FL device id>      a Family Link device        Family Link's app pauses are the child's, every device's
-    fs:xbox, fs:windows    a Family Safety platform    Family Safety's app blocks are the account's
+    fs:xbox, fs:windows    a Family Safety platform    Family Safety's app blocks are the account's (any platform
+                                                       their Family Safety reports, held by Hearth or not)
     nintendo:<entity_id>   a Switch (Hearth's Nintendo enforcer entity)
 
 The ids are what hearth.add_bonus and hearth.allow take as `device`, and what devices_today names.
@@ -70,8 +71,11 @@ def targets_of(household: Household, person: str) -> list[dict[str, Any]]:
         if enforcer.person != person:
             continue
         if enforcer.kind == FAMILY_SAFETY:
-            for platform in enforcer.platforms:
-                if platform in ("Xbox", "Windows"):
+            from .native_sync import fs_platform_state
+
+            for platform in ("Xbox", "Windows"):
+                # A platform Hearth doesn't hold still takes extra time (Microsoft's, and its allowed hours moved)
+                if platform in enforcer.platforms or fs_platform_state(hass, enforcer.entity_id, platform) is not None:
                     found.append(
                         {
                             "id": f"fs:{platform.lower()}",

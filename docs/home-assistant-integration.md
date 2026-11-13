@@ -438,7 +438,12 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
     ending it early resets it (unless a parent's bonus came on top).
   - a Family Safety platform: Hearth's lock of that platform is let go, and Microsoft's own allowance gets extra
     time where it would stop it (`add_time_bonus`, until then; on Windows only where Family Safety takes it); by the
-    clock, from now. When it ends, Hearth locks
+    clock, from now. Microsoft's extra time doesn't lift the platform's allowed hours, so extra time that runs past
+    the end of today's allowed hours moves that end to cover it, rounded up to the next half hour
+    (`set_screentime_intervals` with `today_only`: Family Safety puts the day back at midnight; only a day with one
+    allowed window, and on the Xbox only with the Xbox Family Settings sign-in). Ended early, the end it found goes
+    back, unless a parent changed it since or other extra time of theirs still needs it. Any platform their Family
+    Safety reports is a target, whether or not Hearth's enforcer holds it. When it ends, Hearth locks
     the platform again if the pool is still out.
   - a Switch: Hearth's hold of the Switch is let go (its own limit and Suspend software put back, which still
     apply); by the clock, from now.
@@ -617,8 +622,9 @@ the people chosen):
   never taken as done (it's logged and tried again while it's still today, and nothing is put back for it), doesn't
   hold up Family Link or another kid, and the 06:00 check tells the adults about a platform still not raised. A Family
   Safety without `set_screentime_limit` is skipped quietly. School time has no Family Safety equivalent, and Hearth's
-  day types don't change bedtime, so the allowed hours (`set_screentime_intervals`) aren't touched. Hearth doesn't use
-  Family Safety's today-only changes (`today_only`, `restore_today_only`) at all. Nor does it use Family Safety's
+  day types don't change bedtime, so the allowed hours (`set_screentime_intervals`) aren't touched. The schedule
+  doesn't use Family Safety's today-only changes (`today_only`, `restore_today_only`); only extra time that runs past
+  today's allowed hours does (Extra time on one device, above). Nor does it use Family Safety's
   account lock switch (`lock_account`), which saves the limits it finds as its restore point: switched on on a bonus
   day, it would save (and later put back) the raised value. If a parent uses it then, Hearth's put-back still only
   fires while the limit reads Hearth's value.
@@ -951,7 +957,7 @@ then sends the same object as an event whenever it changes, at most every 2 seco
 - each person also has `targets` `[{id, name, kind, via, groups}]`: their devices, for extra time on one device
   (above). `kind`: `tv`, `phone`, `xbox`, `windows` or `switch`; `via`: `hearth` (a Hearth TV with one of their
   profiles, or their Hearth phone), `family_link` (each Family Link device, `fl:<device id>`), `family_safety` (each
-  platform Hearth's Family Safety enforcer of theirs holds, `fs:xbox`, `fs:windows`) or `nintendo` (their Switch,
+  platform their Family Safety reports, whether or not Hearth's enforcer holds it, `fs:xbox`, `fs:windows`) or `nintendo` (their Switch,
   `nintendo:<the enforcer's entity>`); `groups` true where one group can be held or given on that device alone
   (Hearth's own devices). A TV's `name` is as shown ("Kitchen" is "Kitchen TV"). One handset that's both a Hearth phone and
   a Family Link device of theirs (the same name) is both: the Family Link one says `same_as` (the Hearth phone's id)

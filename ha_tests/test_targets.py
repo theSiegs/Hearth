@@ -278,3 +278,74 @@ async def test_one_handset_as_a_hearth_phone_and_a_family_link_device_is_marked(
     targets = {t["id"]: t for t in _sam(hass)["targets"]}
     assert targets["fl:dev1"]["same_as"] == f"hearth:{PHONE_ID}"
     assert targets[f"hearth:{PHONE_ID}"]["also"] == ["fl:dev1"]
+
+
+def _windows(hass: HomeAssistant, end: str = "22:00:00", used: int = 48) -> None:
+    hass.states.async_set(
+        "sensor.sam_windows_time_remaining",
+        "14",
+        {"user_id": 123456, "allowance_minutes": 900, "used_minutes": used,
+         "allowed_ranges": [{"begin": "07:00:00", "end": end}]},
+    )
+
+
+async def _sam_on_family_safety_xbox_only(hass: HomeAssistant, hass_client_no_auth) -> tuple[list, list]:
+    """Sam with Family Safety, held by Hearth on the Xbox only, and a Windows PC Family Safety reports."""
+    bonus = async_mock_service(hass, "microsoft_family_safety", "add_time_bonus")
+    intervals = async_mock_service(hass, "microsoft_family_safety", "set_screentime_intervals")
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    _windows(hass)
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY})
+    await hass.async_block_till_done()
+    return bonus, intervals
+
+
+async def test_extra_time_on_windows_past_its_allowed_hours_moves_today_s_end(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=21, minute=46, second=0, microsecond=0))
+    bonus, intervals = await _sam_on_family_safety_xbox_only(hass, hass_client_no_auth)
+    # Windows isn't held by Hearth, but Family Safety reports it: a target all the same
+    assert "fs:windows" in {t["id"] for t in _sam(hass)["targets"]}
+
+    await _device_bonus(hass, "fs:windows", 30)
+    # Minutes are plenty (852 left): no extra time, but 22:16 is past 22:00, so today ends at 22:30
+    assert bonus == []
+    assert [c.data for c in intervals] == [
+        {"entity_id": FAMILY_SAFETY, "platform": "Windows", "today_only": True, "start_hour": 7, "start_minute": 0,
+         "end_hour": 22, "end_minute": 30}
+    ]
+
+    # Ended early: the 22:00 end goes back (while it still reads Hearth's 22:30)
+    _windows(hass, end="22:30:00")
+    await hass.services.async_call(
+        DOMAIN, "allow_end", {"people": ["person.sam"], "device": "fs:windows"}, blocking=True
+    )
+    await hass.async_block_till_done()
+    assert [(c.data["end_hour"], c.data["end_minute"]) for c in intervals] == [(22, 30), (22, 0)]
+
+
+async def test_extra_time_within_the_allowed_hours_leaves_them(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=15, minute=0, second=0, microsecond=0))
+    _, intervals = await _sam_on_family_safety_xbox_only(hass, hass_client_no_auth)
+    await _device_bonus(hass, "fs:windows", 30)
+    assert intervals == []
+
+
+async def test_a_parent_s_change_to_the_allowed_hours_stays_when_extra_time_ends(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=21, minute=50, second=0, microsecond=0))
+    _, intervals = await _sam_on_family_safety_xbox_only(hass, hass_client_no_auth)
+    await _device_bonus(hass, "fs:windows", 30)
+    assert len(intervals) == 1
+    # A parent set 23:00 since
+    _windows(hass, end="23:00:00")
+    await hass.services.async_call(
+        DOMAIN, "allow_end", {"people": ["person.sam"], "device": "fs:windows"}, blocking=True
+    )
+    await hass.async_block_till_done()
+    assert len(intervals) == 1
