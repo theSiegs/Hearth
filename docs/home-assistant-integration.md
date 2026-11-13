@@ -1659,6 +1659,69 @@ per-app, playing and (on a TV) per-profile attributes kept out of history. All b
 first post and once the device has been quiet for 15 minutes; the last status is kept across restarts. Deleting the
 device removes it from the household.
 
+## MCP and voice
+
+Hearth registers a Home Assistant **LLM API**, `hearth` ("Hearth", `llm_api.py`), so a language model can read the
+household and act on it with the same rules as Hearth's page. Home Assistant offers it in two places:
+
+- **MCP Server** (Settings > Devices & services > Add integration > Model Context Protocol Server). In its options,
+  tick **Hearth** among the LLM APIs (with Assist, if you want both). A client (Claude, say) then uses
+  `https://<home assistant>/api/mcp` with a long-lived access token or Home Assistant's OAuth; the token's user is
+  who acts. `/api/mcp/hearth` serves Hearth's tools alone, for administrators only (Home Assistant's rule).
+- **Assist** (Settings > Voice assistants > an assistant > its conversation agent's options, **Control Home
+  Assistant**): tick **Hearth** among the LLM APIs. A chat in the Home Assistant app runs as the signed-in user; a
+  voice satellite runs with no user.
+
+**Who may use it.** Every call is checked, and the tools a model is offered follow from it:
+
+- An **adult** (an administrator, or a user whose person is an adult on Hearth's page, as for the services): every
+  tool. Actions act at once, run as that user (`Context(user_id)`), and answer with exactly what changed so the adult
+  can correct it.
+- **No user** (a voice satellite: Home Assistant can't tell who's speaking): nothing, unless **Let voice assistants
+  use Hearth** is on (Hearth's page, People tab, or Configure > Voice assistants; `voice_assistants` in the options,
+  off by default). With it on, the read tools answer, and an action is **not run**: the adults' phones get "Approve:
+  give Sam 30 more minutes of Video today?" (asked by voice, and on which satellite) with the action's button and
+  Don't allow, and the tool answers "Sent to your phone for approval". The first adult to tap it runs it as
+  themselves, once; it comes off every phone then, on Don't allow, or after 10 minutes (key `voice:<id>`, tag
+  `hearth_voice:<id>`, never on the bell). A spoken PIN isn't used: a kid in the room would hear it. Turning the
+  option off takes every tool away from voice at once.
+- **Anyone else** (a kid with a Home Assistant user of their own): no tools, and each tool refuses them anyway.
+
+**Read tools** (from the household summary and `hearth.explain`; no pairing codes, TV profile keys or coordinates):
+
+| Tool | What it answers |
+|---|---|
+| `hearth_get_household` | Each person today: All screen time and each group (used, left, budget, bonus), locked and by what, pause, bedtime and School time, playing, the headline; requests waiting; the Hearth devices |
+| `hearth_get_person` | One person: the above with minutes per device and per app, allows, pauses, grants, extra time on one device, Google's and Microsoft's own limits, the last 7 days, and their devices' ids |
+| `hearth_explain` | Why an app or group is (not) allowed now, until when, what holds it; says when a parent blocked the app in Family Link or Family Safety |
+| `hearth_get_suggestions` | Hearth's suggestions (key, text, minutes, amounts) |
+| `hearth_get_requests` | Requests for more time waiting, with their ids; those answered in a parent's own app lately |
+
+**Action tools** (each a `hearth.*` service; people, groups, apps and devices by name or id):
+
+| Tool | Service | Answers with |
+|---|---|---|
+| `hearth_add_bonus` | `add_bonus` (person, minutes -240 to 240, group, device) | the pool or group, minutes left now, today's budget and bonus; the device's extra id |
+| `hearth_pause` / `hearth_pause_end` | `pause` / `pause_end` (people, minutes or until, app or group) | each person's pause now |
+| `hearth_allow` / `hearth_allow_end` | `allow` / `allow_end` (one person, app or group, until, device) | the allow's id and end, and `explain` after it |
+| `hearth_answer_request` | `answer_request` (request id, minutes or deny) | the answer, and minutes left |
+| `hearth_dismiss_suggestion` | `dismiss_suggestion` | the suggestion put off today |
+| `hearth_school_time_off` / `_cancel` | `school_time_off` / `school_time_off_cancel` | the ids, and the person's School time off |
+
+Every answer also has `done` (in words), the service and its data, how to undo it, and `logged` (the history events
+it made).
+
+**What it never does.** There is no budget tool: lasting changes stay on Hearth's page. And Hearth never lets a kid
+into an app or game a parent blocked: `hearth_allow` of an app listed in the kid's Family Link **Blocked Apps** sensor,
+or reported blocked by Family Safety (other than an app Hearth's own pause blocked), is refused, and so is approving a
+Family Safety request for a particular game or app (deny it, or answer it in the Family Safety app). These checks are
+in the tools, not in what the model is told.
+
+**Audit.** History events an action logs carry `via` (`mcp` or `voice`) and `user` (the Home Assistant user who acted,
+or who tapped Allow). An action that logs nothing of its own (a pause, an allow, School time off) logs an `assist`
+event: the `tool` and what it did (app, group, minutes, device, until, date), never a reason. Home Assistant's
+logbook also has the service call's user.
+
 ## Security
 
 - A device's secret works on Hearth's endpoints only. A leaked one can post that device's status, events and
@@ -1683,6 +1746,8 @@ device removes it from the household.
   their own) gets Home Assistant's Unauthorized error, for the read-only ones too (`explain`, `get_watch_log`,
   `watch_digest`): a kid doesn't read the watch log. A script a kid starts from a dashboard runs as the kid, so it's
   refused as well.
+- **Assistants** (MCP Server, Assist) get Hearth's tools only for an adult, or for a voice satellite while Let voice
+  assistants use Hearth is on, and then every action waits for an adult's tap on their phone (MCP and voice).
 - **A kid's own user** may use `hearth/me`, `hearth/me/subscribe` and `hearth/ask`, which take no person: each is
   the caller's own person (whose `user_id` is theirs), so a kid reads and asks for themselves only.
 
