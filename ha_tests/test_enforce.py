@@ -9,7 +9,7 @@ import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util import dt as dt_util
-from pytest_homeassistant_custom_component.common import async_capture_events, async_mock_service
+from pytest_homeassistant_custom_component.common import async_capture_events, async_fire_time_changed, async_mock_service
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
 from custom_components.hearth import enforce
@@ -83,6 +83,38 @@ async def test_family_link_pauses_the_group_s_apps_and_resumes_them(
     assert sorted(resumed[0].data["packages"]) == sorted(paused[0].data["packages"])
     await _bonus(hass, "video", 15)  # nothing more to do
     assert len(paused) == 1 and len(resumed) == 1
+
+
+async def test_what_s_held_shows_at_once_and_the_integration_is_read_again_soon(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    paused, resumed = _family_link(hass)
+    refreshed = async_mock_service(hass, "homeassistant", "update_entity")
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    hass.states.async_set(FAMILY_LINK, "0", {"unit_of_measurement": "min"})
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    writes: list[str] = []
+    sensor = "sensor.hearth_sam_held_by_parental_controls"
+    household.enforcement.on_applied = lambda: writes.append(hass.states.get(sensor).state)
+
+    await _budget(hass, "video", 10)
+    # The held sensor said so when the call returned, before anything else recomputed
+    assert writes and int(writes[0]) == len(paused[0].data["packages"])
+    assert refreshed == []
+    freezer.tick(timedelta(seconds=11))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert [c.data["entity_id"] for c in refreshed] == [FAMILY_LINK]
+
+    # Let go: the sensor empties at once, one more refresh, and no more after it
+    await _bonus(hass, "video", 30)
+    assert int(writes[-1]) == 0
+    for _ in range(3):
+        freezer.tick(timedelta(seconds=11))
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
+    assert len(refreshed) == 2
 
 
 async def test_a_negative_bonus_takes_time_away(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:

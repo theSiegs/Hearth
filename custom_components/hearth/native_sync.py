@@ -201,11 +201,13 @@ class NativeSync:
             await self.hass.services.async_call(
                 FL_DOMAIN, "reset_bonus", {"entity_id": device.entity_id}, blocking=True
             )
+            self.household.enforcement.refresh_soon(device.entity_id)
             return
         button = fl.reset_bonus_button(self.hass, child, str(device.attributes.get("device_id")), device.entity_id)
         if button is None:
             raise ValueError(f"Family Link can't reset the bonus of {device.entity_id} (update it)")
         await self.hass.services.async_call("button", "press", {"entity_id": button}, blocking=True)
+        self.household.enforcement.refresh_soon(device.entity_id)
 
     # Hearth -> the first-party apps: an adult's "all screen time" opens Google's and Microsoft's own limits too
 
@@ -317,6 +319,7 @@ class NativeSync:
                 _LOGGER.warning("Hearth couldn't add Family Link bonus time on %s: %s", device.entity_id, err)
                 error = str(err)[:200]
                 continue
+            self.household.enforcement.refresh_soon(device.entity_id)
             added[info["device"]] = bonus
             record["devices"][info["device_id"]] = record["devices"].get(info["device_id"], 0) + bonus
             mine = self.fl_added.setdefault(person, {"day": record["day"], "devices": {}})
@@ -379,6 +382,7 @@ class NativeSync:
                 _LOGGER.info("Family Safety extra time on %s for %s unavailable: %s", platform, person, err)
                 error = f"Family Safety extra time unavailable: {err}"[:200]
                 continue
+            self.household.enforcement.refresh_soon(enforcer.entity_id)
             given[platform] = (
                 response.get("applied_until") or response.get("until") if isinstance(response, dict) else None
             )
@@ -430,6 +434,7 @@ class NativeSync:
             return None
         before = self._cutoff_elsewhere(person, platform, record) or {"begin": begin, "end": end}
         await self.hass.services.async_call(FS_DOMAIN, "set_screentime_intervals", data, blocking=True)
+        self.household.enforcement.refresh_soon(entity_id)
         record.setdefault("cutoffs", {})[platform] = {"begin": before["begin"], "end": before["end"], "set": wanted}
         self._save()
         return _hhmm(wanted)
@@ -456,6 +461,7 @@ class NativeSync:
                     blocking=True,
                 )
                 back.append(platform)
+                self.household.enforcement.refresh_soon(entity_id)
             except (HomeAssistantError, vol.Invalid) as err:  # Family Safety puts the day back at midnight anyway
                 error = f"Family Safety's allowed hours left until midnight: {err}"[:200]
         return back, error
@@ -551,6 +557,7 @@ class NativeSync:
         if not fs_accepts(self.hass, "cancel_time_bonus", data):
             raise ValueError(f"Family Safety can't cancel extra time on {platform} (update it)")
         await self.hass.services.async_call(FS_DOMAIN, "cancel_time_bonus", data, blocking=True)
+        self.household.enforcement.refresh_soon(entity_id)
 
     # What the first-party apps say now (Hearth's page, the household summary, explain)
 

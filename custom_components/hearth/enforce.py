@@ -57,13 +57,15 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, SupportsResponse, callback
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, SupportsResponse, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import DOMAIN, SIGNAL_PEOPLE
 from .entry_tasks import entry_task
 from . import family_link as fl
 from .counting import ALL
@@ -116,6 +118,9 @@ WHY_SCHOOL = "school_time"
 WHY_PAUSE = "pause"
 # A change seen this soon after Hearth's own call is taken as Hearth's (the integration catching up), not a parent's
 QUIET_AFTER_CALL = timedelta(minutes=1)
+# After a write to Family Link, Family Safety or Nintendo, their entities are refreshed once this much later (their own
+# polling is a minute to five): what Hearth locked or let go shows within seconds
+REFRESH_AFTER_WRITE = timedelta(seconds=10)
 MAX_PACKAGES = 150
 
 # Never paused, whatever group they're in: calls, texts, the system, and the apps that hold the rest
@@ -366,6 +371,8 @@ class Enforcement:
         self._quiet_until: dict[str, datetime] = {}
         # Why each wanted item is held, by enforcer key: {item: budget, school_time or pause} (for Hearth's page)
         self._why: dict[str, dict[str, str]] = {}
+        # The refreshes waiting after a write, by entity: one each at a time
+        self._refresh: dict[str, CALLBACK_TYPE] = {}
 
     async def async_load(self) -> None:
         stored = await self._store.async_load() or {}
@@ -391,6 +398,9 @@ class Enforcement:
 
     async def async_flush(self) -> None:
         self._closed = True
+        for cancel in self._refresh.values():
+            cancel()
+        self._refresh.clear()
         task = self._task
         if task is not None and not task.done():
             task.cancel()
@@ -615,6 +625,10 @@ class Enforcement:
             finally:
                 self._busy.discard(key)
                 self._quiet_until[key] = dt_util.utcnow() + QUIET_AFTER_CALL
+                # What's held shows now (the held sensor, Hearth's page), not at the next recompute; the parental
+                # control's own entities are read again shortly
+                async_dispatcher_send(self.hass, SIGNAL_PEOPLE, False)
+                self.refresh_soon(held.entity_id or entity_id)
             if not _holding(held) and not held.error and enforcer is None:
                 self.held.pop(key, None)
             self._save()
@@ -622,6 +636,32 @@ class Enforcement:
             self._run()
         elif self.on_applied is not None:
             self.on_applied()
+
+    @callback
+    def refresh_soon(self, entity_id: str | None) -> None:
+        """Asks the integration of [entity_id] (Family Link, Family Safety, Nintendo) for fresh data once, a few
+        seconds after a write of Hearth's (homeassistant.update_entity: a coordinator's entity refreshes it). One
+        waiting refresh per entity: writes meanwhile don't add more, and the refresh writes nothing."""
+        if self._closed or not entity_id or "." not in entity_id or entity_id in self._refresh:
+            return
+
+        @callback
+        def _due(_now: datetime) -> None:
+            self._refresh.pop(entity_id, None)
+            if not self._closed and self.hass.states.get(entity_id) is not None:
+                entry_task(self.hass, self._entry_id, self._update_entity(entity_id), "hearth refresh after a write")
+
+        self._refresh[entity_id] = async_call_later(self.hass, REFRESH_AFTER_WRITE, _due)
+
+    async def _update_entity(self, entity_id: str) -> None:
+        if not self.hass.services.has_service("homeassistant", "update_entity"):
+            return
+        try:
+            await self.hass.services.async_call(
+                "homeassistant", "update_entity", {"entity_id": entity_id}, blocking=True
+            )
+        except Exception as err:  # noqa: BLE001 - only a refresh: the integration's own polling still comes
+            _LOGGER.debug("Couldn't refresh %s after a write: %s", entity_id, err)
 
     async def _call(self, kind: str, entity_id: str, items: set[str], hold: bool, held: Held) -> dict[str, Any]:
         """Holds or lets go of [items]; says what letting go did, by item (restored, kept_current, ...), where the
