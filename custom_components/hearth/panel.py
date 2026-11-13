@@ -4,6 +4,8 @@ The page shows the household (websocket.py's summary) and sets everything the Co
 a kid and who's an adult, devices waiting to pair, TV profiles, screen time sources, groups, budgets, locks, other
 parental controls, school days and parent PINs. Administrators only. Settings go to the entry's options as the
 Configure menu writes them (the entry reloads); budgets and extra time go to the day's limits, as the services do.
+A kid's Switch has commands of its own (Nintendo's extra playing time, its cancel and the allow list), offered as the
+installed Nintendo integration allows (nintendo.py), and the page shows how each parental control integration is doing.
 """
 
 from __future__ import annotations
@@ -15,7 +17,8 @@ import voluptuous as vol
 
 from homeassistant.components import frontend, panel_custom, persistent_notification, websocket_api
 from homeassistant.components.http import StaticPathConfig
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant, SupportsResponse, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 
@@ -52,7 +55,7 @@ from .places import CONF_PLACES, FAVORITES, MAX_FAVORITES, MAX_NAME, RESERVED, S
 from .schooldays import CONF_SCHOOL_DAYS
 from .sources import CONF_SOURCES, CONF_TITLES
 from .profiles import OPTION_KEY
-from . import parent_pin, phones
+from . import nintendo, parent_pin, phones
 from .push import clean_server
 
 URL_PATH = "hearth"
@@ -62,6 +65,12 @@ ROLES = ("kid", "adult")
 
 # Integrations whose entities Hearth knows how to read or hold, offered first on the page
 SCREEN_TIME_PLATFORMS = ("familylink", "microsoft_family_safety", NINTENDO_DOMAIN, "xbox")
+# The parental controls Hearth works through, as the page names them
+PARENTAL_CONTROLS = (
+    ("familylink", "Family Link"),
+    ("microsoft_family_safety", "Microsoft Family Safety"),
+    (NINTENDO_DOMAIN, "Nintendo Switch"),
+)
 
 
 def _hub(hass: HomeAssistant):
@@ -143,6 +152,42 @@ def _entity_choices(hass: HomeAssistant) -> dict[str, list[dict[str, Any]]]:
     for found in out.values():
         found.sort(key=lambda i: i["name"].lower())
     return out
+
+
+def _parental_controls(hass: HomeAssistant) -> list[dict[str, Any]]:
+    """Each parental control integration that's installed, and whether it works now: its entries' states (loaded, a
+    failed setup, waiting to retry) and, for Family Safety, its Connection sensor (connected, degraded, disconnected).
+    The page tells a parent when one needs them, as the integrations' own dashboards do."""
+    registry = er.async_get(hass)
+    found = []
+    for domain, name in PARENTAL_CONTROLS:
+        entries = hass.config_entries.async_entries(domain)
+        if not entries:
+            continue
+        row: dict[str, Any] = {
+            "domain": domain,
+            "name": name,
+            "entries": [
+                {"entry_id": e.entry_id, "title": e.title, "state": e.state.value, "reason": e.reason}
+                for e in entries
+            ],
+        }
+        connection = next(
+            (
+                e.entity_id
+                for e in registry.entities.values()
+                if e.platform == domain and e.domain == "sensor" and e.entity_id.endswith("_connection")
+            ),
+            None,
+        )
+        if connection is not None and (state := hass.states.get(connection)) is not None:
+            row["connection"] = {
+                "entity_id": connection,
+                "state": state.state,
+                "reauth_required": bool(state.attributes.get("reauth_required")),
+            }
+        found.append(row)
+    return found
 
 
 def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
@@ -232,6 +277,9 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
             key=lambda z: z["name"].lower(),
         ),
         "places_now": {person: household.places.page(person) for person in household.places.people()},
+        # What the installed integrations can do, found now: the page offers only those (nintendo.py)
+        "capabilities": {"nintendo": nintendo.capabilities(hass)},
+        "parental_controls": _parental_controls(hass),
     }
 
 
@@ -432,6 +480,136 @@ async def ws_parent_pin(hass: HomeAssistant, connection: websocket_api.ActiveCon
     connection.send_result(msg["id"])
 
 
+def _switch_or_error(hass: HomeAssistant, connection, msg: dict[str, Any], service: str) -> dict[str, Any] | None:
+    """The kid's Switch the message names, when the Nintendo integration has [service]; else an error is sent."""
+    hub = _hub(hass)
+    if hub is None:
+        connection.send_error(msg["id"], "not_set_up", "Hearth isn't set up")
+        return None
+    if not hass.services.has_service(NINTENDO_DOMAIN, service):
+        connection.send_error(msg["id"], "not_supported", "The installed Nintendo integration can't do that")
+        return None
+    switch = nintendo.switch_of(hub.household, msg["person"], msg["device_id"])
+    if switch is None:
+        connection.send_error(msg["id"], "not_found", "That isn't one of their Switches")
+        return None
+    return switch
+
+
+async def _call_nintendo(hass: HomeAssistant, service: str, data: dict[str, Any]) -> dict[str, Any] | None:
+    responds = hass.services.supports_response(NINTENDO_DOMAIN, service) != SupportsResponse.NONE
+    return await hass.services.async_call(NINTENDO_DOMAIN, service, data, blocking=True, return_response=responds)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hearth/nintendo/bonus",
+        vol.Required("person"): _PERSON,
+        vol.Required("device_id"): cv.string,
+        vol.Required("minutes"): vol.All(
+            int, vol.Any(nintendo.UNLIMITED, vol.All(int, vol.Range(min=nintendo.BONUS_MIN, max=1440)))
+        ),
+    }
+)
+@websocket_api.async_response
+async def ws_nintendo_bonus(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Nintendo's own extra playing time on a kid's Switch (add_bonus_time), past the Switch's own limit. Not while
+    Hearth holds the Switch: Hearth's extra time on it (hearth.add_bonus with its device) lets the hold go instead, and
+    Nintendo's extra on a held Switch would read as a parent's change in the Nintendo app."""
+    switch = _switch_or_error(hass, connection, msg, nintendo.ADD_BONUS)
+    if switch is None:
+        return
+    if switch["held_by_hearth"]:
+        connection.send_error(msg["id"], "held", "Hearth holds this Switch: give Hearth's extra time on it instead")
+        return
+    data = {"device_id": msg["device_id"], "bonus_time": msg["minutes"]}
+    if not nintendo.accepts(hass, nintendo.ADD_BONUS, data):
+        connection.send_error(
+            msg["id"], "not_supported", "The installed Nintendo integration doesn't take that many minutes"
+        )
+        return
+    try:
+        response = await _call_nintendo(hass, nintendo.ADD_BONUS, data)
+    except (HomeAssistantError, vol.Invalid) as err:
+        connection.send_error(msg["id"], "failed", str(err))
+        return
+    connection.send_result(msg["id"], response or {})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hearth/nintendo/bonus_cancel",
+        vol.Required("person"): _PERSON,
+        vol.Required("device_id"): cv.string,
+    }
+)
+@websocket_api.async_response
+async def ws_nintendo_bonus_cancel(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Cancels today's extra playing time on a kid's Switch (cancel_bonus_time, a patched Nintendo integration's)."""
+    if _switch_or_error(hass, connection, msg, nintendo.CANCEL_BONUS) is None:
+        return
+    try:
+        response = await _call_nintendo(hass, nintendo.CANCEL_BONUS, {"device_id": msg["device_id"]})
+    except HomeAssistantError as err:
+        connection.send_error(msg["id"], "failed", str(err))
+        return
+    connection.send_result(msg["id"], response or {})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {vol.Required("type"): "hearth/nintendo/apps", vol.Required("person"): _PERSON, vol.Required("device_id"): cv.string}
+)
+@websocket_api.async_response
+async def ws_nintendo_apps(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """The games on a kid's Switch and whether each is on its allow list (list_applications), by name."""
+    if _switch_or_error(hass, connection, msg, nintendo.LIST_APPS) is None:
+        return
+    try:
+        response = await _call_nintendo(hass, nintendo.LIST_APPS, {"device_id": msg["device_id"]})
+    except HomeAssistantError as err:
+        connection.send_error(msg["id"], "failed", str(err))
+        return
+    apps = [
+        {"application_id": a.get("application_id"), "name": a.get("name"), "allowed": bool(a.get("allowed"))}
+        for a in (response or {}).get("applications") or []
+        if isinstance(a, dict) and a.get("application_id")
+    ]
+    apps.sort(key=lambda a: str(a["name"] or a["application_id"]).casefold())
+    connection.send_result(msg["id"], {"applications": apps})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hearth/nintendo/app_allowed",
+        vol.Required("person"): _PERSON,
+        vol.Required("device_id"): cv.string,
+        vol.Required("application_id"): cv.string,
+        vol.Required("allowed"): bool,
+    }
+)
+@websocket_api.async_response
+async def ws_nintendo_app_allowed(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Puts a game on a kid's Switch's allow list, or takes it off (set_app_allowed): an allowed game starts past the
+    Switch's age rating restriction."""
+    if _switch_or_error(hass, connection, msg, nintendo.SET_APP_ALLOWED) is None:
+        return
+    data = {"device_id": msg["device_id"], "application_id": msg["application_id"], "allowed": msg["allowed"]}
+    try:
+        response = await _call_nintendo(hass, nintendo.SET_APP_ALLOWED, data)
+    except HomeAssistantError as err:
+        connection.send_error(msg["id"], "failed", str(err))
+        return
+    connection.send_result(msg["id"], response or {})
+
+
 @callback
 def new_group_id(name: str, taken: set[str]) -> str:
     base = slug(name) or "group"
@@ -443,5 +621,15 @@ def new_group_id(name: str, taken: set[str]) -> str:
 
 @callback
 def async_register_commands(hass: HomeAssistant) -> None:
-    for command in (ws_config, ws_config_set, ws_budget, ws_pairing, ws_parent_pin):
+    for command in (
+        ws_config,
+        ws_config_set,
+        ws_budget,
+        ws_pairing,
+        ws_parent_pin,
+        ws_nintendo_bonus,
+        ws_nintendo_bonus_cancel,
+        ws_nintendo_apps,
+        ws_nintendo_app_allowed,
+    ):
         websocket_api.async_register_command(hass, command)

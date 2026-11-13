@@ -129,13 +129,17 @@ def summary(hub) -> dict[str, Any]:
             people[-1]["place"] = place
         if people[-1].get("pause") and (ends_on := household.pause_view(person)):
             people[-1]["pause"] = {**people[-1]["pause"], "ends_on": ends_on}
+        # School time taken off for them today (hearth.school_time_off), for the page's "School time is back"
+        offs_today = [o for o in household.off_views(person) if o["date"] == today]
+        if offs_today:
+            people[-1]["school_time_off"] = offs_today
         # Contract 2: what an adult's app shows of them, by Hearth's rules (glance.py)
         people[-1].update(
             person_glance(
                 people[-1],
                 [a for a in asks if a["person"] == person],
                 people[-1]["allows"],
-                [o for o in household.off_views(person) if o["date"] == today],
+                offs_today,
                 now,
                 people[-1]["grants"],
                 people[-1]["answered_elsewhere"],

@@ -30,6 +30,7 @@ from .enforce import (
     FS_HOLD_BONUS_OURS,
     FS_HOLD_OURS,
     FS_HOLD_PARENT,
+    NINTENDO,
     fs_accepts,
     fs_account_of,
     fs_hold_state,
@@ -468,8 +469,8 @@ class NativeSync:
     # What the first-party apps say now (Hearth's page, the household summary, explain)
 
     def first_party(self, person: str) -> dict[str, Any]:
-        """Google's own daily limit per Family Link device, and Microsoft's allowance per Family Safety platform,
-        as their entities say now (only those there). blocking: the device's or platform's own limit stops it now,
+        """Google's own daily limit per Family Link device, Microsoft's allowance per Family Safety platform and each
+        Switch's own limit and play today (nintendo.py), as their entities say now (only those there). blocking: the device's or platform's own limit stops it now,
         not a hold of Hearth's; parent_lock: a parent's own Family Safety lock."""
         from . import family_link as fl
         from .enforce import DEVICES, FS_BLOCK_UNTIL, FS_HOLD_PARENT
@@ -521,6 +522,10 @@ class NativeSync:
                 )
             if rows:
                 found[FAMILY_SAFETY] = rows
+        from .nintendo import switches
+
+        if rows := switches(self.household, person):
+            found[NINTENDO] = rows
         return found
 
     def app_limits_reached(self, person: str, packages: set[str], midnight: str) -> list[dict[str, Any]]:

@@ -212,7 +212,8 @@ def _grant_items(grants: list[dict[str, Any]], names: dict[str, str]) -> tuple[l
 
 
 def _first_party_items(first_party: dict[str, Any]) -> list[dict[str, str]]:
-    """Google's or Microsoft's own limit stopping a device of theirs now, and a parent's own Family Safety lock."""
+    """Google's, Microsoft's or Nintendo's own limit stopping a device of theirs now, and a parent's own Family Safety
+    lock."""
     found = []
     for row in first_party.get("family_link", []):
         if row.get("blocking"):
@@ -229,6 +230,12 @@ def _first_party_items(first_party: dict[str, Any]) -> list[dict[str, str]]:
             )
         elif row.get("blocking"):
             found.append(_item(f"{platform} · microsoft's own limit", NOTICE, "device_limit", platform))
+    for row in first_party.get("nintendo", []):
+        if row.get("blocking"):
+            found.append(
+                _item(f"{str(row.get('name') or 'switch').lower()} · nintendo's own limit", NOTICE, "device_limit",
+                      row.get("device_id"))
+            )
     return found
 
 
