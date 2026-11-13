@@ -301,8 +301,20 @@ A budget is set on a **group**: a set of apps and titles whose minutes count tog
 
 An adult can add groups (pools): **YouTube** (YouTube and HearthTube, on every device) and **Streaming** (the
 streaming apps), say. **An app is in one pool at most**, besides All screen time, so the pools' minutes and "other"
-(apps in no pool) add up to All screen time's: where an adult moved the app (Hearth's page, Sort new apps) wins, then
-a pool whose list an adult put it in, then a built-in starter list, then its Android category. Settings keep it so:
+(apps in no pool) add up to All screen time's. Where it goes is the first of these that answers:
+
+1. where an adult moved it (Hearth's page, Sort new apps; "Right" in Check these is a move to where it is);
+2. a pool whose list an adult put it in;
+3. Hearth's curated starter lists;
+4. the shared app catalog's **confirmed** answer (below), by the household's map; a confirmed value the map sends to
+   no pool (a companion app, say) is Other, and nothing further down moves it;
+5. the device's own category (Android's, from a Hearth device), with a Glint phone's copy of the catalog
+   (`catalog_categories`) below it;
+6. the shared catalog's **suggested** answer, only when it goes to a pool: a guess never takes an app out of one;
+7. where its time came from (a Switch's or an Xbox's titles are games);
+8. Other.
+
+Settings keep it so:
 an app put in one pool's list (the options flow, Hearth's page, sorting a new app) leaves every other list. A
 YouTube minute is taken from YouTube and All screen time. A device's time is up when **any** group it's playing from
 is used up.
@@ -315,6 +327,52 @@ it holds the old starter list and the apps an adult added, less any app another 
 marks as video (its `category`, kept when Hearth's page saves the pools). Remove it in the settings once YouTube and
 streaming have pools of their own. Otherwise Video goes, with the apps added to it; those count in All screen time
 only until put in a pool (the log names them). Configure > Add apps to Games replaces Add apps to Video or Games.
+
+#### Shared app catalog
+
+Glint's catalog (glint-recipes) says what an app **is**, on every platform; the household says which pool that goes
+to. Hearth fetches it itself (catalog.py), so it works without a Glint phone.
+
+- **What it reads.** The signed index at `https://thesiegs.github.io/glint-recipes/` (`catalog_url` in the options)
+  and its shards (`glint.catalog/1`, one per platform: android, msstore, xbox, pfn, steam, switch, web, name). Per key:
+  `category` (the ten Android categories), `detail` (youtube, streaming, education, companion, system; read first),
+  the app's slug `app` (the same app's keys on other platforms share it), `name` and `state` (`confirmed`, else
+  suggested). Unknown fields, values, shards and namespaces are ignored.
+- **Keys.** An Android package (or Family Safety's `a:<package>`) is looked up as `android:<package>`, `appx:<pfn>` as
+  `pfn:<pfn lower case>`, `x:<platform>:<hex>` as `fs:<platform>:<hex>` (the catalog has none yet), a Nintendo
+  application id as `switch:<id>`, and a played title's name (Xbox's Now playing, a Switch's) as `name:xbox:`,
+  `name:switch:`, `name:msstore:` then `name:steam:` with the catalog's normalizer. `win32:` programs and a
+  household's own titles never are. A key's own confirmed answer comes first, then another key of the same app's.
+- **When.** Once a day at a random time, and a minute or ten after starting when the copy is over a day old; never
+  per app. The index is asked with its ETag, and a shard only when its SHA-256 changed. Nothing identifying is sent:
+  a generic user agent, no household or device id.
+- **Checks**, any failure keeping the last good copy: the index's Ed25519 signature over its exact bytes with one of
+  the two pinned keys (`catalog_data/keys`, the same `exchange-1` and `exchange-2` Glint ships), its format, its `seq`
+  (lower than the copy's is a rollback and refused), and each shard's SHA-256, format and platform.
+- **Kept** in Home Assistant's storage (`hearth.catalog.<entry>`) with no expiry: offline, the copy is used for good.
+  Before the first fetch, the snapshot bundled with the integration (`catalog_data/snapshot`) is checked the same
+  way and used. A newer copy places apps again at once.
+- **The household's map** (Hearth's page > Settings > Shared app catalog > Which group each kind of app goes to;
+  `catalog_pools`, value -> pool or `other`): by default a game goes to Games, social to Social, messaging to
+  Messaging, a value a pool claims by its category (the kept Video pool) to it, YouTube to a pool of the household's
+  called YouTube, streaming to one called Streaming, TV or Shows, audio to Music, education to Homework or School (else
+  Other), and companion and system apps to Other, never Games. These are Hearth's policy; the catalog holds facts.
+- **Check these** (Hearth's page > Apps): apps placed only on the catalog's suggestion, then apps where the catalog's
+  confirmed answer and the device disagree on whether it's a game (Hearth goes by the catalog). **Right** keeps one
+  where it is; moving it is an adult's move. Either way it leaves the list, and a later catalog change never moves
+  it: Every app shows "the shared catalog now says X" instead.
+
+**Sending upward** (the tile exchange, as Glint's). Hearth has its own setting with Glint's defaults: fetching is on
+(it sends nothing); sending is off until an HA administrator turns it on, on Hearth's page (asked once, with what
+it sends) or Configure > Shared app catalog. While it's on, once a week at a random time, Hearth sends the relay
+(`catalog_relay`, by default Glint's) a challenge and then `POST /propose` (`glint.catalog-propose/1`): at most 20
+public store ids the catalog lacks (today `pfn:` keys from Family Safety's Windows apps; never Android packages,
+`win32:`, `fs:`, names or titles) and at most 10 corrections an adult chose to share (the tick under a row in Check
+these: the catalog's key and value for the pool, never the pool). No household, person or device id, no per-install
+key, no usage, times or counts; keys sorted. A key seen only on kids whose tile sharing is off is never sent, and a
+messaging app never is. A key sent isn't sent again for 30 days. Until the relay has `/propose` (a 404), nothing
+changes and the queue waits; a refusal (400, 403) drops the batch; busy (429) or offline waits a week. Turning
+sharing off drops anything waiting.
 
 **Not screen time** (Configure > Not screen time): a group whose minutes don't count toward All screen time, music
 say. Its minutes still count in the group itself (and its own budget, if it has one, still applies), but not in All
