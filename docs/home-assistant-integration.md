@@ -386,7 +386,10 @@ until the group has time again (a bonus, a higher budget, a new day):
     child's weekday limit entity) is kept and put back when there's time again, and just before midnight, since it's
     the weekday's setting. With the child's Daily Limit switch off (Family Link then locks nothing), Hearth switches
     it on for the lock and off again when it puts the limit back. An app with unlimited time is never paused for a group either. Calls, texts, the system and
-    the parental controls' own apps are never paused for a group.
+    the parental controls' own apps are never paused for a group. Only apps the child has are paused (for a group, a
+    pause or School time): the child's four Family Link app lists (Blocked apps, Apps with time limits, Apps without
+    limits, Always allowed apps) together are every app on their devices; while one is missing or cut short
+    (`truncated`), every app of the group is paused as before.
 
     **During School time, pause these apps** (Google Messages by default in the form): those apps are paused while
     the child's Family Link School time is on (any of their devices' School time sensors), and resumed when it ends,
@@ -533,13 +536,19 @@ attribute present), so an older Family Link or Family Safety keeps working as be
     device (its `bonus_minutes` beyond what Hearth itself added), until the bonus is used up (the Active bonus sensor's
     `remaining_minutes` reaches 0 or it clears) or midnight; a device unlocked (`lock_override_code` 4), until midnight;
     an app a parent changed after Hearth paused it (the Apps with time limits sensor's `paused_apps`, `pause_intact`
-    false), until midnight.
+    false), until midnight. An app the child doesn't have (not in their app lists) never shows its pause, so its
+    `pause_intact` is false too: that's never a grant.
   - Nintendo: the Switch's Max screentime today raised, or bonus time (`time_extended`), until midnight (adopted).
   - Family Safety (its Allowed Now sensors' and lock switches' `hold`, `override`, `allow_until`): `hold: parent` with
     extra time (`allowUntil`) is a grant until `allow_until`; with no override left (a parent cancelled Hearth's lock),
     until midnight. A parent's own lock (`blockUntil`) is no grant but a **parent lock** (below).
   - A change right after Hearth's own call (a minute), or a limit that still shows what it was before Hearth's 0
     arrived, is Hearth's own and not a grant. Hearth's own bonuses are remembered, so they never count as a parent's.
+  - After any write Hearth makes to Family Link, Family Safety or Nintendo (a hold or release, extra time, a bonus
+    reset, moved allowed hours), that entity is refreshed once about 10 seconds later (`homeassistant.update_entity`,
+    which asks the integration's coordinator), so what Hearth did shows within seconds rather than at the
+    integration's next poll (a minute to five). One waiting refresh per entity; the refresh writes nothing. The Held
+    by parental controls sensor and the summary change as soon as a hold or release call returns.
   - Event `hearth_parent_grant` (the grant) when one starts.
 - **Ending a grant early.** `hearth.allow_end` with the grant's `id`. Hearth's page and the summary offer it only when
   it maps to a write in the parent's app (`endable`): a Family Link bonus (`familylink.reset_bonus`, else the device's
@@ -1026,9 +1035,13 @@ then sends the same object as an event whenever it changes, at most every 2 seco
   on) `device_id`, `name`, `target`, `available`, `played_minutes`, `player_minutes` (their own player's on a shared
   Switch), `limit_minutes` (null: no limit), `minutes_left`, `extra_minutes` (-1: unlimited today), `suspended`,
   `playing`, `bedtime`, `last_synced`, `held_by_hearth`, `blocking` and `entities` (the Switch's entities by key);
-  only what the integrations' entities give), `sync` (per parental control: `held`,
-  `error`, `failed_at`, and `last`, what Hearth last did and whether it took: `{at, ok, held, let_go, outcomes
-  {item: restored | kept_current | ...}, bonus_added, extra_time, parent_grant, reason, error}`) and
+  only what the integrations' entities give), `sync` (per parental control: `held`, `why` (each held item's reason:
+  `budget`, `school_time` or `pause`), `names` (how to show each app held or let go of: its name, a guess from the
+  package when none is known, never the package), `error`, `failed_at`, and `last`, what Hearth last did and whether
+  it took: `{at, ok, held, let_go, outcomes {item: restored | kept_current | ...}, bonus_added, extra_time,
+  parent_grant, reason, error}`; a failed hold or let-go's error is dropped once the parental control has nothing to
+  hold and holds nothing, and any error once a call through it succeeds; the summary's lines skip an error over a day
+  old) and
   `answered_elsewhere` (requests answered in the Family Safety app lately).
 - each kid also has `place` {`name`, `fresh`} (where they are, by name only; [Places](#places)): every reader of the
   summary is an administrator or an adult. An allow and a pause that end on a place carry `ends_on` (above).
@@ -1427,7 +1440,13 @@ capitalizes the first letter of the server's text and nothing else.
   Assistant's hourly statistics of the person's Screen time today sensor (`recorder/statistics_during_period`;
   `hearth/config` names each person's sensor in `screen_time_sensors`) plus the sensor's live value for the current
   hour, as noiwid's chart does. **Today by device and app**: `48 min today`, `25 left there`, `open there till 7:00`,
-  +15 there, and the top 8 apps with their pools (`Minecraft · 35 min · games`).
+  +15 there, and the top 8 apps with their pools (`Minecraft · 35 min · games`). A lock's chip names its kind and end
+  as the day line does (`School time till 3:00`, `Bedtime till 7:00`, `Locked till ...`), the entities that lock them
+  in its tooltip. A parent's app grants are one chip per parent's app and end, by name (`Pandora and Spotify open ·
+  Family Link till midnight`, more as `9 apps open · ...`), every name in the tooltip. Google's, Microsoft's and
+  Nintendo's own limits and what Hearth last did through each parental control fold under **Device limits** (its
+  summary says what didn't take or what stops them), apps by name and why (`Family Link: holding Google Messages for
+  School time · put back YouTube Music`).
 - TVs and phones say what's on with the summary's `text` (`Alex · bluey · s2e4 · 8 min left`), and **Family today, by
   pool** shows each group with a budget with a short bar per kid (with two kids or more).
 
@@ -1686,6 +1705,9 @@ Per person (a device of its own in Home Assistant, "Hearth: <person>"):
 | <group> budget on school days / on other days | number (minutes, -1 for no limit) |
 | <group> minutes left, for each group | duration |
 | <group> bonus today | number (minutes) |
+
+The budget and bonus numbers can be changed by an automation, an administrator or an adult on Hearth's page (as
+Hearth's services, [Security](#security)); anyone else's change is refused with an error.
 | Playing | sensor: the title or app now, and where |
 | Playing together today | duration |
 | Held by parental controls | sensor: what Family Link, Family Safety or Nintendo holds now |
@@ -1884,8 +1906,11 @@ it made).
 **What it never does.** There is no budget tool: lasting changes stay on Hearth's page. And Hearth never lets a kid
 into an app or game a parent blocked: `hearth_allow` of an app listed in the kid's Family Link **Blocked Apps** sensor,
 or reported blocked by Family Safety (other than an app Hearth's own pause blocked), is refused, and so is approving a
-Family Safety request for a particular game or app (deny it, or answer it in the Family Safety app). These checks are
-in the tools, not in what the model is told.
+Family Safety request for a particular game or app (deny it, or answer it in the Family Safety app). Where the
+Nintendo integration can list a Switch's games (`list_applications`), `hearth_allow` of a game on one of the kid's
+Switches (by name or id) that isn't on that Switch's allow list is refused too: Nintendo blocks a game by its age
+rating unless a parent allow-lists it, and Hearth can't see the rating. These checks are in the tools, not in what the
+model is told.
 
 **Audit.** History events an action logs carry `via` (`mcp` or `voice`) and `user` (the Home Assistant user who acted,
 or who tapped Allow). An action that logs nothing of its own (a pause, an allow, School time off) logs an `assist`
@@ -1915,7 +1940,7 @@ logbook also has the service call's user.
   page (the rule that lets them read the household summary, auth.py). Anyone else (a kid with a Home Assistant user of
   their own) gets Home Assistant's Unauthorized error, for the read-only ones too (`explain`, `get_watch_log`,
   `watch_digest`): a kid doesn't read the watch log. A script a kid starts from a dashboard runs as the kid, so it's
-  refused as well.
+  refused as well. The same goes for changing a person's budget and bonus number entities (`number.set_value`).
 - **Assistants** (MCP Server, Assist) get Hearth's tools only for an adult, or for a voice satellite while Let voice
   assistants use Hearth is on, and then every action waits for an adult's tap on their phone (MCP and voice).
 - **A kid's own user** may use `hearth/me`, `hearth/me/subscribe` and `hearth/ask`, which take no person: each is

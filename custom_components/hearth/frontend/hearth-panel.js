@@ -54,6 +54,9 @@ const cap = (text) => {
   return s.charAt(0).toUpperCase() + s.slice(1);
 };
 
+// "a", "a and b", "a, b and c"
+const listWords = (words) => (words.length <= 1 ? words.join("") : `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`);
+
 // A pool's short name, as the glance writes it: "screen time" for All, else the group's name in lower case
 const shortGroup = (id, name) => (id === "all" ? "screen time" : String(name || id).toLowerCase());
 
@@ -1097,8 +1100,15 @@ class HearthPanel extends HTMLElement {
     const left = all?.minutes_left ?? null;
     const playing = (s?.playing || [])[0];
     const chips = [];
-    if (s?.locked && !s.pause)
-      chips.push(`<span class="chip warn"><ha-icon icon="mdi:lock"></ha-icon>Locked${s.locked_by?.length ? `: ${esc(s.locked_by.filter((e) => e !== "pause").map((e) => this._entityName(e)).join(", "))}` : ""}${s.lock?.until ? ` till ${esc(clock(s.lock.until))}` : ""}</span>`);
+    // The kind of lock and when it ends, as the day line says it ("School time till 3:00"); what locks them (the
+    // School time and bedtime entities) only in the tooltip
+    if (s?.locked && !s.pause) {
+      const kind = s.lock?.kind;
+      const word = { bedtime: "Bedtime", school_time: "School time" }[kind] || "Locked";
+      const icon = { bedtime: "weather-night", school_time: "school-outline" }[kind] || "lock";
+      const by = (s.locked_by || []).filter((e) => e !== "pause").map((e) => this._entityName(e));
+      chips.push(`<span class="chip warn"${by.length ? ` title="${esc(`Locked by ${by.join(", ")}`)}"` : ""}><ha-icon icon="mdi:${icon}"></ha-icon>${esc(word)}${s.lock?.until ? ` till ${esc(clock(s.lock.until))}` : ""}</span>`);
+    }
     if (s?.pause) chips.push(`<span class="chip warn"><ha-icon icon="mdi:pause"></ha-icon>${esc(cap(s.pause.reason || "paused"))}</span>`);
     const place = s?.place;
     if (place) {
@@ -1344,52 +1354,117 @@ class HearthPanel extends HTMLElement {
     </details>`;
   }
 
-  // Hearth's allows next to what a parent opened in their own apps (grants), Google's and Microsoft's own limits,
-  // what Hearth last did through each parental control, and requests answered in a parent's app
+  // Hearth's allows next to what a parent opened in their own apps (grants), requests answered in a parent's app, and,
+  // folded under "Device limits", Google's, Microsoft's and Nintendo's own limits and what Hearth last did through
+  // each parental control (apps by name, never their packages)
   _exceptionsAndApps(kid, s) {
     if (!s) return "";
     const time = clock;
     const chips = [];
     for (const a of s.allows || [])
       chips.push(`<span class="chip"><ha-icon icon="mdi:check-circle-outline"></ha-icon>${esc(a.group === "all" ? "All screen time" : a.group || a.app)} allowed${a.ends_on ? ` until ${esc(this._endsOn(a.ends_on))}${a.until ? ` or ${esc(time(a.until))}` : ""}` : a.until ? ` till ${esc(time(a.until))}` : ""}</span>`);
-    for (const g of s.grants || []) {
-      const what = { device: "Devices", switch: "Switch", app: g.target?.value, platform: g.target?.value }[g.target?.kind] || g.target?.value;
-      chips.push(`<span class="chip warn" title="${esc(g.reason || "")}"><ha-icon icon="mdi:account-key"></ha-icon>${esc(what)} open ${esc(g.source)}${g.until ? ` till ${esc(time(g.until))}` : ""}${
-        g.endable ? `<button class="x" data-action="grant-end" data-grant="${esc(g.id)}" title="End it in the parent's app">×</button>` : ""
-      }</span>`);
-    }
+    chips.push(...this._grantChips(s.grants || []));
     for (const a of s.answered_elsewhere || [])
       chips.push(`<span class="chip"><ha-icon icon="mdi:message-reply-text-outline"></ha-icon>Request ${esc(a.text)}</span>`);
     const rows = [];
+    let stopping = 0;
+    let failed = 0;
     for (const d of s.first_party?.family_link || []) {
       const limit = d.daily_limit === null || d.daily_limit === undefined ? "no daily limit" : `limit ${fmtMinutes(d.daily_limit)}`;
       const left = d.minutes_left === null || d.minutes_left === undefined ? "" : ` · ${fmtMinutes(d.minutes_left)} left`;
       const bonus = d.bonus_left > 0 ? ` · bonus ${fmtMinutes(d.bonus_left)}` : "";
-      rows.push(`<div class="small ${d.blocking ? "warn-text" : "muted"}">Google · ${esc(d.device)}: ${esc(limit + left + bonus)}${d.blocking ? " · its own limit stops it" : ""}</div>`);
+      if (d.blocking) stopping++;
+      rows.push(`<div class="small ${d.blocking ? "warn-text" : "muted"}">${esc(d.device)} · Google: ${esc(limit + left + bonus)}${d.blocking ? " · its own limit stops it" : ""}</div>`);
     }
     for (const p of s.first_party?.family_safety || []) {
       const allowance = p.allowance_minutes === null || p.allowance_minutes === undefined ? "" : `allowance ${fmtMinutes(p.allowance_minutes)}`;
       const left = p.minutes_left === null || p.minutes_left === undefined ? "" : ` · ${fmtMinutes(p.minutes_left)} left`;
       const why = p.parent_lock ? ` · locked by a parent${p.override_until ? ` till ${time(p.override_until)}` : ""}` : p.blocking ? " · its own limit stops it" : "";
-      rows.push(`<div class="small ${p.parent_lock || p.blocking ? "warn-text" : "muted"}">Microsoft · ${esc(p.platform)}: ${esc(allowance + left + why)}</div>`);
+      if (p.parent_lock || p.blocking) stopping++;
+      rows.push(`<div class="small ${p.parent_lock || p.blocking ? "warn-text" : "muted"}">${esc(p.platform)} · Microsoft: ${esc(allowance + left + why)}</div>`);
     }
-    for (const n of s.first_party?.nintendo || []) rows.push(`<div class="small ${n.blocking ? "warn-text" : "muted"}">Nintendo · ${esc(n.name)}: ${esc(this._switchLine(n))}</div>`);
-    const names = { family_link: "Family Link", family_safety: "Family Safety", nintendo: "Switch" };
+    for (const n of s.first_party?.nintendo || []) {
+      if (n.blocking) stopping++;
+      rows.push(`<div class="small ${n.blocking ? "warn-text" : "muted"}">${esc(n.name)} · Nintendo: ${esc(this._switchLine(n))}</div>`);
+    }
+    const services = { family_link: "Family Link", family_safety: "Family Safety", nintendo: "Nintendo" };
     for (const [kind, st] of Object.entries(s.sync || {})) {
       const last = st.last || {};
       const error = st.error || last.error;
+      const names = st.names || {};
       const did = [];
-      if (st.held?.length) did.push(`holding ${st.held.join(", ")}`);
+      const held = this._heldWords(st.held || [], st.why || {}, names);
+      if (held) did.push(`holding ${held}`);
       const outcomes = Object.entries(last.outcomes || {});
-      if (outcomes.length) did.push(outcomes.map(([item, o]) => `${item} ${o === "kept_current" ? "kept the parent's setting" : o}`).join(", "));
+      const back = outcomes.filter(([, o]) => o === "restored").map(([item]) => this._itemName(item, names));
+      const kept = outcomes.filter(([, o]) => o === "kept_current").map(([item]) => this._itemName(item, names));
+      if (back.length) did.push(`put back ${listWords(back)}`);
+      if (kept.length) did.push(`kept the parent's setting for ${listWords(kept)}`);
       if (last.bonus_added && Object.keys(last.bonus_added).length) did.push(`bonus ${Object.entries(last.bonus_added).map(([d, m]) => `${d} +${m} min`).join(", ")}`);
       if (last.extra_time && Object.keys(last.extra_time).length) did.push(`extra time on ${Object.keys(last.extra_time).join(", ")}`);
       if (last.parent_grant) did.push(`let go: ${last.reason || "a parent's change"}`);
       if (!did.length && !error) continue;
-      rows.push(`<div class="small ${error ? "error-text" : "muted"}">${esc(names[kind] || kind)}: ${esc(did.join(" · ") || "nothing held")}${error ? ` · didn't take: ${esc(error)}` : ""}</div>`);
+      if (error) failed++;
+      rows.push(`<div class="small ${error ? "error-text" : "muted"}">${esc(services[kind] || kind)}: ${esc(did.join(" · ") || "nothing held")}${error ? ` · didn't take: ${esc(error)}` : ""}</div>`);
     }
     if (!chips.length && !rows.length) return "";
-    return `<div class="native">${chips.length ? `<div class="chips">${chips.join("")}</div>` : ""}${rows.join("")}</div>`;
+    // Folded: the summary says only what needs a look (a control that didn't take, a device's own limit stopping it)
+    const flags = [failed ? `${failed} didn't take` : "", stopping ? `${stopping} stopping them` : ""].filter(Boolean).join(" · ");
+    const limits = rows.length
+      ? `<details id="device-limits-${esc(kid.id)}" class="device-limits"><summary>Device limits${flags ? ` <span class="${failed ? "error-text" : "warn-text"}">· ${esc(flags)}</span>` : ""}</summary>${rows.join("")}</details>`
+      : "";
+    return `<div class="native">${chips.length ? `<div class="chips">${chips.join("")}</div>` : ""}${limits}</div>`;
+  }
+
+  // A parent's grants as chips, as the glance puts them: one per device lock, Switch or platform; an app's put together
+  // by where they came from and when they end, by name ("Spotify and Pandora open", then "9 apps open"), every name in
+  // the tooltip
+  _grantChips(grants) {
+    const where = { family_link: "Family Link", family_safety: "Family Safety", nintendo: "the Nintendo app" };
+    const tail = (g) => `${where[g.via] || g.source || "their app"}${g.until ? ` till ${clock(g.until)}` : ""}`;
+    const appName = (g) => g.name || g.target?.value || "an app";
+    const chips = [];
+    const together = new Map();
+    for (const g of grants) {
+      if (g.target?.kind === "app" && !g.endable) {
+        const key = `${g.via}|${g.until}`;
+        together.set(key, [...(together.get(key) || []), g]);
+        continue;
+      }
+      const what = { device: "Devices", switch: "Switch", app: appName(g) }[g.target?.kind] || g.target?.value;
+      chips.push(`<span class="chip warn" title="${esc(g.reason || "")}"><ha-icon icon="mdi:account-key"></ha-icon>${esc(what)} open · ${esc(tail(g))}${
+        g.endable ? `<button class="x" data-action="grant-end" data-grant="${esc(g.id)}" title="End it in the parent's app">×</button>` : ""
+      }</span>`);
+    }
+    for (const group of together.values()) {
+      const names = [...new Set(group.map(appName))].sort((a, b) => a.localeCompare(b));
+      const what = group.length <= 3 ? listWords(names) : `${group.length} apps`;
+      const title = `${names.join(", ")}: ${group[0].reason || "changed in the parent's app"}`;
+      chips.push(`<span class="chip warn" title="${esc(title)}"><ha-icon icon="mdi:account-key"></ha-icon>${esc(what)} open · ${esc(tail(group[0]))}</span>`);
+    }
+    return chips;
+  }
+
+  // An item a parental control holds, by name: an app's (never its package), "their devices", "the Switch"
+  _itemName(item, names) {
+    if (item === "Devices") return "their devices";
+    if (item === "Switch") return "the Switch";
+    return names[item] || item;
+  }
+
+  // What a parental control holds and why: "Google Messages for School time", "Spotify, YouTube and 3 more for the
+  // budget"
+  _heldWords(items, why, names) {
+    const reasons = { school_time: "School time", pause: "a pause", budget: "the budget" };
+    const byWhy = new Map();
+    for (const item of items) byWhy.set(why[item] || "", [...(byWhy.get(why[item] || "") || []), this._itemName(item, names)]);
+    return [...byWhy.entries()]
+      .map(([r, list]) => {
+        const sorted = list.sort((a, b) => a.localeCompare(b));
+        const what = sorted.length <= 3 ? listWords(sorted) : `${sorted.slice(0, 2).join(", ")} and ${sorted.length - 2} more`;
+        return reasons[r] ? `${what} for ${reasons[r]}` : what;
+      })
+      .join("; ");
   }
 
   // One line of a Switch's day: "played 1 h 15 min (theirs 50 min) · limit 2 h · 45 min left · +30 extra"
@@ -2116,6 +2191,8 @@ p.warn { color: var(--warning-color, #ffa600); }
 .chip.small { padding: 1px 6px; font-size: 11px; }
 .chip.dim { opacity: .6; }
 .native { margin-top: 8px; display: flex; flex-direction: column; gap: 2px; }
+.device-limits summary { font-size: 13px; margin-top: 4px; }
+.device-limits > div { padding-left: 16px; }
 .small-controls { margin-top: 4px; }
 .small-controls select { min-height: 30px; padding: 3px 8px; font-size: 12px; }
 .today-detail .bar-row { grid-template-columns: 120px 1fr auto; }

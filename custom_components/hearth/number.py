@@ -1,13 +1,18 @@
-"""Per person and group: the daily budget (weekday and weekend) and today's bonus, as numbers anyone can set."""
+"""Per person and group: the daily budget (weekday and weekend) and today's bonus, as numbers an adult can set.
+
+As Hearth's services (auth.py): an administrator, a user whose person is an adult on Hearth's page, or an automation
+(no user) may change them; anyone else (a kid with a Home Assistant user of their own) is refused with an error."""
 
 from __future__ import annotations
 
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import HearthConfigEntry
+from .auth import is_adult_user
 from .entity import HearthPersonEntity
 from .hub import HearthHub
 from .limits import DAY_TYPES, Group
@@ -30,6 +35,20 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
+async def _check_writer(entity: HearthPersonEntity) -> None:
+    """Raises unless the change is an automation's (no user), an administrator's or an adult's."""
+    context = entity._context
+    user_id = context.user_id if context is not None else None
+    if user_id is None:
+        return
+    user = await entity.hass.auth.async_get_user(user_id)
+    if user is None or not is_adult_user(entity.hass, entity.hub, user):
+        raise ServiceValidationError(
+            "Only an adult can change Hearth's budgets and bonus time (an administrator, or a user whose person is an "
+            "adult on Hearth's page)"
+        )
+
+
 class Budget(HearthPersonEntity, NumberEntity):
     """A group's daily budget on weekdays or at weekends (-1: no limit)."""
 
@@ -50,6 +69,7 @@ class Budget(HearthPersonEntity, NumberEntity):
         return NO_LIMIT if minutes is None else minutes
 
     async def async_set_native_value(self, value: float) -> None:
+        await _check_writer(self)
         minutes = None if value < 0 else int(value)
         self.hub.household.set_budget(self.person, self.budget_group.id, self.kind, minutes)
 
@@ -72,4 +92,5 @@ class Bonus(HearthPersonEntity, NumberEntity):
         return self.hub.household.limits.bonus(self.person, self.budget_group.id)
 
     async def async_set_native_value(self, value: float) -> None:
+        await _check_writer(self)
         self.hub.household.set_bonus(self.person, self.budget_group.id, int(value))

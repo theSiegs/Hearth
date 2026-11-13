@@ -277,6 +277,43 @@ async def test_only_adults_and_automations_call_hearth_s_services(
     assert hub.household.limits.bonus("person.sam", "all") == 45
 
 
+async def test_only_adults_and_automations_change_the_budget_and_bonus_numbers(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_admin_user
+) -> None:
+    await _household_with_sam(hass, hass_client_no_auth)
+    bonus = next(s.entity_id for s in hass.states.async_all("number") if s.entity_id.endswith("_all_screen_time_bonus_today"))
+    budget = next(s.entity_id for s in hass.states.async_all("number") if "_all_screen_time_budget_" in s.entity_id)
+    hub = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
+
+    async def set_value(entity_id: str, value: int, context: Context | None = None) -> None:
+        await hass.services.async_call(
+            "number", "set_value", {"entity_id": entity_id, "value": value}, blocking=True, context=context
+        )
+
+    # An automation (no user) and an administrator
+    await set_value(bonus, 10)
+    await set_value(bonus, 20, Context(user_id=hass_admin_user.id))
+    assert hub.household.limits.bonus("person.sam", "all") == 20
+
+    # A kid with a Home Assistant user of their own: refused, nothing changes
+    kid = await hass.auth.async_create_user("Sam", group_ids=["system-users"])
+    hass.states.async_set("person.sam", "home", {"friendly_name": "Sam", "user_id": kid.id})
+    for entity_id in (bonus, budget):
+        with pytest.raises(ServiceValidationError, match="Only an adult"):
+            await set_value(entity_id, 600, Context(user_id=kid.id))
+    assert hub.household.limits.bonus("person.sam", "all") == 20
+    assert float(hass.states.get(budget).state) != 600
+
+    # The same user as an adult on Hearth's page may
+    from test_parent_pin import _adults
+
+    hass.states.async_set("person.alex", "home", {"friendly_name": "Alex", "user_id": kid.id})
+    await _adults(hass, "person.alex")
+    await set_value(bonus, 30, Context(user_id=kid.id))
+    hub = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
+    assert hub.household.limits.bonus("person.sam", "all") == 30
+
+
 async def test_an_adult_who_isn_t_an_administrator_gets_contract_2_without_pairing(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client, hass_admin_user, freezer
 ) -> None:

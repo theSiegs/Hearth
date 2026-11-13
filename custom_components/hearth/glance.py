@@ -269,11 +269,19 @@ def _first_party_items(first_party: dict[str, Any]) -> list[dict[str, str]]:
     return found
 
 
-def _sync_items(sync: dict[str, Any]) -> list[dict[str, str]]:
-    """A parental control Hearth couldn't hold or let go through (its last error)."""
+# A sync error older than this isn't news any more (Hearth's page still shows it, under Device limits)
+STALE_ERROR = timedelta(days=1)
+
+
+def _sync_items(sync: dict[str, Any], now: datetime | None = None) -> list[dict[str, str]]:
+    """A parental control Hearth couldn't hold or let go through (its last error), within the last day."""
     found = []
     for kind, status in sorted(sync.items()):
-        error = status.get("error") or (status.get("last") or {}).get("error")
+        last = status.get("last") or {}
+        error = status.get("error") or last.get("error")
+        when = dt_util.parse_datetime(str(status.get("failed_at") or last.get("at") or ""))
+        if error and now is not None and when is not None and now - when > STALE_ERROR:
+            continue
         if error:
             found.append(_item(f"{SERVICE_WORDS.get(kind, kind)} · didn't take", NOTICE, "sync_error", kind))
     return found
@@ -621,7 +629,7 @@ def person_glance(
     grant_news, standing = _grant_items(grants or [], app_names)
     news += grant_news
     news += _first_party_items(person.get("first_party") or {})
-    news += _sync_items(person.get("sync") or {})
+    news += _sync_items(person.get("sync") or {}, now)
     for ask in answered or []:
         news.append(_item(f"request {ask.get('text') or 'answered in the app'}", CALM, "answered", ask["id"]))
 

@@ -57,13 +57,15 @@ from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, SupportsResponse, callback
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, SupportsResponse, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import DOMAIN, SIGNAL_PEOPLE
 from .entry_tasks import entry_task
 from . import family_link as fl
 from .counting import ALL
@@ -110,8 +112,15 @@ FS_BLOCK_UNTIL = "blockUntil"
 # What letting go did: put back what was there before, or kept what a parent set meanwhile
 RESTORED = "restored"
 KEPT_CURRENT = "kept_current"
+# Why an item is held (status_of's why)
+WHY_BUDGET = "budget"
+WHY_SCHOOL = "school_time"
+WHY_PAUSE = "pause"
 # A change seen this soon after Hearth's own call is taken as Hearth's (the integration catching up), not a parent's
 QUIET_AFTER_CALL = timedelta(minutes=1)
+# After a write to Family Link, Family Safety or Nintendo, their entities are refreshed once this much later (their own
+# polling is a minute to five): what Hearth locked or let go shows within seconds
+REFRESH_AFTER_WRITE = timedelta(seconds=10)
 MAX_PACKAGES = 150
 
 # Never paused, whatever group they're in: calls, texts, the system, and the apps that hold the rest
@@ -360,6 +369,10 @@ class Enforcement:
         # Called after each run (native_sync.py watches what's held then)
         self.on_applied = None
         self._quiet_until: dict[str, datetime] = {}
+        # Why each wanted item is held, by enforcer key: {item: budget, school_time or pause} (for Hearth's page)
+        self._why: dict[str, dict[str, str]] = {}
+        # The refreshes waiting after a write, by entity: one each at a time
+        self._refresh: dict[str, CALLBACK_TYPE] = {}
 
     async def async_load(self) -> None:
         stored = await self._store.async_load() or {}
@@ -385,6 +398,9 @@ class Enforcement:
 
     async def async_flush(self) -> None:
         self._closed = True
+        for cancel in self._refresh.values():
+            cancel()
+        self._refresh.clear()
         task = self._task
         if task is not None and not task.done():
             task.cancel()
@@ -426,8 +442,11 @@ class Enforcement:
             last = self.last.get(key)
             if was is not None and was["last"] is not None and (last is None or was["last"]["at"] > last["at"]):
                 last = was["last"]
+            why = {**(was["why"] if was else {}), **{i: r for i, r in self._why.get(key, {}).items() if i in held.items}}
             found[kind] = {
                 "held": sorted(set(was["held"] if was else []) | held.items),
+                # Why each held item is held: budget, school_time or pause
+                "why": why,
                 "error": (was["error"] if was else None) or held.error,
                 "failed_at": (was["failed_at"] if was else None)
                 or (held.failed_at.isoformat() if held.failed_at else None),
@@ -458,6 +477,7 @@ class Enforcement:
         self.enforcers = enforcers
         now = dt_util.now()
         wanted_now: dict[str, set[str]] = {}
+        why_now: dict[str, dict[str, str]] = {}
         for e in enforcers:
             lifted = lifted_of(e.person) if lifted_of else None
             playing = self._playing(e)
@@ -482,12 +502,39 @@ class Enforcement:
                 paused |= paused_switch(e, set(paused_groups_of(e.person)), now, playing)
             device_lifted = device_lifted_of(e) if device_lifted_of else set()
             wanted_now[e.key] = (budget | school | paused) - granted - device_lifted
+            if e.kind == FAMILY_LINK:
+                # Only apps the child has: pausing one they don't would only cost a call (and read as a parent's
+                # change later, its pause never showing)
+                wanted_now[e.key] = self._installed_only(e.entity_id, wanted_now[e.key])
+            # School time first, then an adult's pause, then a budget: the reason a parent would name
+            why_now[e.key] = {
+                item: WHY_SCHOOL if item in school else WHY_PAUSE if item in paused else WHY_BUDGET
+                for item in wanted_now[e.key]
+            }
         # What an enforcer no longer configured held is let go
         for key in self.held:
             wanted_now.setdefault(key, set())
         self._wanted = wanted_now
+        self._why = why_now
+        for key, want in wanted_now.items():
+            self._clear_stale_error(key, want)
         if any(self._differs(key) for key in wanted_now):
             self._run()
+
+    def _clear_stale_error(self, key: str, want: set[str]) -> None:
+        """An enforcer with nothing to hold and nothing held has nothing to retry: its last error is over (a sync error
+        otherwise stays on the kid's card until the next call, which may be days away). A successful call clears it
+        too (note)."""
+        held = self.held.get(key)
+        if want or (held is not None and _holding(held)):
+            return
+        if held is not None:
+            held.error, held.failed_at = None, None
+        last = self.last.get(key)
+        # A hold or let-go that failed (not another write's error: extra time Hearth couldn't give, say)
+        if last is not None and last.get("error") and (last.get("held") or last.get("let_go")):
+            self.last[key] = {**{k: v for k, v in last.items() if k != "error"}, "ok": True, "error_cleared": True}
+            self._save()
 
     def _playing(self, enforcer: Enforcer) -> bool | None:
         """Whether the person is the one playing a shared Switch (any of their playing entities on); None when the
@@ -578,6 +625,10 @@ class Enforcement:
             finally:
                 self._busy.discard(key)
                 self._quiet_until[key] = dt_util.utcnow() + QUIET_AFTER_CALL
+                # What's held shows now (the held sensor, Hearth's page), not at the next recompute; the parental
+                # control's own entities are read again shortly
+                async_dispatcher_send(self.hass, SIGNAL_PEOPLE, False)
+                self.refresh_soon(held.entity_id or entity_id)
             if not _holding(held) and not held.error and enforcer is None:
                 self.held.pop(key, None)
             self._save()
@@ -585,6 +636,32 @@ class Enforcement:
             self._run()
         elif self.on_applied is not None:
             self.on_applied()
+
+    @callback
+    def refresh_soon(self, entity_id: str | None) -> None:
+        """Asks the integration of [entity_id] (Family Link, Family Safety, Nintendo) for fresh data once, a few
+        seconds after a write of Hearth's (homeassistant.update_entity: a coordinator's entity refreshes it). One
+        waiting refresh per entity: writes meanwhile don't add more, and the refresh writes nothing."""
+        if self._closed or not entity_id or "." not in entity_id or entity_id in self._refresh:
+            return
+
+        @callback
+        def _due(_now: datetime) -> None:
+            self._refresh.pop(entity_id, None)
+            if not self._closed and self.hass.states.get(entity_id) is not None:
+                entry_task(self.hass, self._entry_id, self._update_entity(entity_id), "hearth refresh after a write")
+
+        self._refresh[entity_id] = async_call_later(self.hass, REFRESH_AFTER_WRITE, _due)
+
+    async def _update_entity(self, entity_id: str) -> None:
+        if not self.hass.services.has_service("homeassistant", "update_entity"):
+            return
+        try:
+            await self.hass.services.async_call(
+                "homeassistant", "update_entity", {"entity_id": entity_id}, blocking=True
+            )
+        except Exception as err:  # noqa: BLE001 - only a refresh: the integration's own polling still comes
+            _LOGGER.debug("Couldn't refresh %s after a write: %s", entity_id, err)
 
     async def _call(self, kind: str, entity_id: str, items: set[str], hold: bool, held: Held) -> dict[str, Any]:
         """Holds or lets go of [items]; says what letting go did, by item (restored, kept_current, ...), where the
@@ -721,6 +798,14 @@ class Enforcement:
                     if isinstance(package, str) and package:
                         found.add(package)
         return found
+
+    def _installed_only(self, entity_id: str, items: set[str]) -> set[str]:
+        """[items] without the packages not installed on the child's devices (all of them when that isn't known)."""
+        child = fl.child_of(self.hass, entity_id)
+        installed = fl.installed_apps(self.hass, child) if child else None
+        if installed is None:
+            return items
+        return {item for item in items if item == DEVICES or item in installed}
 
     def _family_link_child(self, entity_id: str) -> tuple[str, str | None]:
         """The child's id (an attribute of their Family Link entities) and today's weekday limit entity."""
@@ -1102,7 +1187,11 @@ class Enforcement:
                     return
         packages = held.items - {DEVICES}
         if packages and child:
-            # A newer Family Link says which apps pause_app paused a parent changed since (pause_intact false)
+            # A newer Family Link says which apps pause_app paused a parent changed since (pause_intact false). An app
+            # the child doesn't have never shows its pause, so its pause_intact is false too: never a parent's change
+            installed = fl.installed_apps(self.hass, str(child))
+            if installed is not None:
+                packages &= installed
             for state in self.hass.states.async_all("sensor"):
                 paused = state.attributes.get("paused_apps")
                 if str(state.attributes.get("child_id")) != str(child) or not isinstance(paused, list):

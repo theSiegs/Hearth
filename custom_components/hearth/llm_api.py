@@ -12,7 +12,8 @@ Who may use it:
 
 What it never does: change a budget (no set_budget; lasting changes stay on Hearth's page), or let a kid use an app
 or game a parent blocked in Family Link or Family Safety (hearth_allow of such an app, and approving a request for
-one, are refused here in code, whatever the model is told).
+one, are refused here in code, whatever the model is told), nor hearth_allow of a Switch game that isn't on its
+Switch's allow list in the Nintendo app (its age rating may block it there).
 
 Audit: every history event an action logs carries `via` (mcp or voice) and `user` (the Home Assistant user who acted
 or tapped Allow); an action that logs nothing of its own (a pause, an allow, School time off) logs an `assist` event.
@@ -23,6 +24,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+import logging
 import secrets
 from typing import TYPE_CHECKING, Any, TypeVar
 
@@ -51,6 +53,8 @@ from .pause import pause_of
 if TYPE_CHECKING:
     from .household import Household
     from .hub import HearthHub
+
+_LOGGER = logging.getLogger(__name__)
 
 API_ID = "hearth"
 API_NAME = "Hearth"
@@ -264,6 +268,49 @@ def parent_block_of(household: Household, person: str, *names: Any) -> dict[str,
         if _fold(block["app"]) in wanted or _fold(block["name"]) in wanted:
             return block
     return None
+
+
+async def nintendo_block_of(household: Household, person: str, *names: Any) -> dict[str, str] | None:
+    """A game on one of the person's Switches, by its name or id, that isn't on that Switch's allow list in the
+    Nintendo app (list_applications of a Nintendo integration that has it), else None. Nintendo blocks a game by its
+    age rating unless a parent put it on the allow list, and Hearth can't see the rating: a game off the list is taken
+    as one a parent may have blocked. A Switch that can't be asked is skipped."""
+    from . import nintendo
+
+    hass = household.hass
+    wanted = {_fold(n) for n in names if n}
+    if not wanted or not hass.services.has_service(nintendo.NINTENDO_DOMAIN, nintendo.LIST_APPS):
+        return None
+    for switch in nintendo.switches(household, person):
+        try:
+            response = await hass.services.async_call(
+                nintendo.NINTENDO_DOMAIN,
+                nintendo.LIST_APPS,
+                {"device_id": switch["device_id"]},
+                blocking=True,
+                return_response=True,
+            )
+        except Exception as err:  # noqa: BLE001 - one Switch not answering mustn't stop the rest
+            _LOGGER.debug("Couldn't list the games on %s: %s", switch["name"], err)
+            continue
+        for app in (response or {}).get("applications") or []:
+            if not isinstance(app, dict) or app.get("allowed"):
+                continue
+            if _fold(app.get("name")) in wanted or _fold(app.get("application_id")) in wanted:
+                return {
+                    "app": str(app.get("application_id") or ""),
+                    "name": str(app.get("name") or app.get("application_id")),
+                    "in": "the Nintendo app",
+                    "switch": switch["name"],
+                }
+    return None
+
+
+def _refuse_nintendo(block: dict[str, str], who: str) -> HomeAssistantError:
+    return HomeAssistantError(
+        f"{block['name']} isn't on the allow list of {block['switch']} in the Nintendo app, so the Switch's own "
+        f"restrictions may block it for {who}. Hearth won't open it: only a parent can, in the Nintendo app."
+    )
 
 
 def _refuse_blocked(block: dict[str, str], who: str) -> HomeAssistantError:
@@ -773,8 +820,8 @@ class AllowTool(ActionTool):
     name = "hearth_allow"
     description = (
         "Let one person use an app or a group until a time (the end of the day by default) whatever Hearth holds "
-        "(budget, pause). It lifts Hearth's own holds only: never an app or game a parent blocked in Family Link or "
-        "Family Safety (refused). With a device (a group only), only on that device."
+        "(budget, pause). It lifts Hearth's own holds only: never an app or game a parent blocked in Family Link, "
+        "Family Safety or the Nintendo app (refused). With a device (a group only), only on that device."
     )
     parameters = vol.Schema(
         {
@@ -786,6 +833,16 @@ class AllowTool(ActionTool):
             vol.Optional("reason"): str,
         }
     )
+
+    async def call(self, hass, hub, caller, args, llm_context):
+        # A game a parent may have blocked in the Nintendo app (off its Switch's allow list): asked of the Switch,
+        # so before the plan (which only reads states)
+        if args.get("app"):
+            household = hub.household
+            person = find_person(household, args["person"])
+            if (block := await nintendo_block_of(household, person, args["app"])) is not None:
+                raise _refuse_nintendo(block, household.person_name(person))
+        return await super().call(hass, hub, caller, args, llm_context)
 
     def plan(self, household, args):
         person = find_person(household, args["person"])
