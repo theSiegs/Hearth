@@ -100,6 +100,17 @@ def targets_of(household: Household, person: str) -> list[dict[str, Any]]:
     return found
 
 
+def _hearth_device(devices: Any, household: Household, identifier: tuple[str, str]) -> Any:
+    """A device of Hearth's entry by its identifier: async_get_device_by_identifier where Home Assistant has it
+    (async_get_device with identifiers stops working in 2027.8), else async_get_device on an older one."""
+    by_identifier = getattr(devices, "async_get_device_by_identifier", None)
+    hub = getattr(household, "hub", None)
+    entry_id = getattr(getattr(hub, "entry", None), "entry_id", None)
+    if by_identifier is not None and entry_id:
+        return by_identifier(identifier, entry_id)
+    return devices.async_get_device(identifiers={identifier})
+
+
 def display_name(household: Household, person: str, target: dict[str, Any]) -> str:
     """How a person reads a device's name (never a model id like "SM-X230" when a better one is known): the name a
     person gave its device in Home Assistant, else the name of the person's source counting it (Hearth's page), else
@@ -114,7 +125,7 @@ def display_name(household: Household, person: str, target: dict[str, Any]) -> s
     via, _, rest = target["id"].partition(":")
     ha_devices: set[str] = set()
     if via == HEARTH:
-        device = devices.async_get_device(identifiers={(DOMAIN, rest)})
+        device = _hearth_device(devices, household, (DOMAIN, rest))
         if device is not None:
             ha_devices.add(device.id)
     elif via == "nintendo":
