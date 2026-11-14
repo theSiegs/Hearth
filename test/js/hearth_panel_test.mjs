@@ -1,5 +1,5 @@
-// Hearth's sidebar page, drawn without a browser: what it shows of a kid (their own pause, School time today, today by
-// device and app, their Switch) and how it follows what the installed Nintendo integration can do.
+// Hearth's sidebar page, drawn without a browser: Today (the redesign: For you, a row per kid, the kid's sheet, Undo),
+// the Kids tab's Switch card and how it follows what the installed Nintendo integration can do, chores and the catalog.
 // Run: node --test test/js/hearth_panel_test.mjs
 
 import { test } from "node:test";
@@ -79,28 +79,6 @@ function panel({ nintendo = {}, sam = {}, controls = [] } = {}) {
   return p;
 }
 
-test("a kid's card has their own pause, School time today and today by device and app", () => {
-  const html = panel()._page();
-  assert.match(html, /data-action="kid-pause" data-person="person.sam"/);
-  assert.match(html, /data-action="school-off"/);
-  assert.match(html, /Today by device and app/);
-  assert.match(html, /data-action="device-bonus"[^>]*data-target="hearth:tv1"/);
-  assert.match(html, /A Game/);
-  assert.match(html, /<summary>Device limits<\/summary>/);
-  assert.match(html, /Sam&#39;s Switch · Nintendo: played 1 h 15 \(theirs 50 min\) · limit 2 h · 45 min left · \+30 min extra · playing now/);
-});
-
-test("a paused kid ends their pause; School time taken off shows and comes back", () => {
-  const html = panel({
-    sam: { pause: { reason: "Dinner", until: "2026-11-12T19:00:00-05:00" }, school_time_off: [{ date: "2026-11-12", from: null, reason: "Trip" }] },
-  })._page();
-  assert.match(html, /data-action="kid-pause-end"/);
-  assert.doesNotMatch(html, /data-action="kid-pause" /);
-  assert.match(html, /No School time today · Trip/);
-  assert.match(html, /data-action="school-off-cancel"/);
-  assert.doesNotMatch(html, /data-action="school-off" /);
-});
-
 test("the Switch card offers only what core's Nintendo integration has", () => {
   const p = panel({ nintendo: { add_bonus: true, bonus_min: 5, bonus_max: 30, unlimited: false, cancel_bonus: false, list_apps: false } });
   p._tab = "kids";
@@ -154,155 +132,276 @@ test("a parental control that isn't working shows on Today", () => {
   assert.doesNotMatch(panel()._page(), /needs a look/);
 });
 
-test("a lock chip names its kind and end; what locks them is only in the tooltip", () => {
+// Today (the redesign): a header line, For you (with the held-back fold), a row per kid with a ring and one line, the
+// kid's sheet, Screens now, the adults' line, and Undo instead of confirm
+
+const at = (h, m = 0) => {
+  const t = new Date();
+  t.setHours(h, m, 0, 0);
+  return t;
+};
+const iso = (h, m = 0) => at(h, m).toISOString();
+
+// Sam out of Games, Alex in bedtime; an adult with 40 minutes today; the clock at [hour]
+function today(hour = 16, { sam = {}, alex = {}, household = {}, approvals = [] } = {}) {
   const p = panel({
-    sam: { locked: true, locked_by: ["binary_sensor.phone_school_time_active"], lock: { kind: "school_time", until: "2026-11-12T15:00:00-05:00" } },
-  });
-  p._hass.states["binary_sensor.phone_school_time_active"] = { attributes: { friendly_name: "Sam's Phone School Time Active" } };
-  const html = p._page();
-  assert.match(html, /title="Locked by Sam&#39;s Phone School Time Active"><ha-icon icon="mdi:school-outline"><\/ha-icon>School time till \d+:00<\/span>/);
-  assert.doesNotMatch(html, />Locked: /);
-});
-
-test("a parent's app grants are put together by name, never by package", () => {
-  const app = (value, name) => ({ id: value, via: "family_link", source: "from the Family Link app", target: { kind: "app", value }, until: "2026-11-13T00:00:00-05:00", reason: "the app's limit was changed in the Family Link app", endable: false, ...(name ? { name } : {}) });
-  const few = panel({ sam: { grants: [app("com.spotify.music", "Spotify"), app("com.pandora.android", "Pandora")] } })._page();
-  assert.match(few, /Pandora and Spotify open · Family Link till midnight/);
-  const many = Array.from({ length: 9 }, (_, i) => app(`com.example.app${i}`, `App ${i}`));
-  const html = panel({ sam: { grants: many } })._page();
-  assert.match(html, /9 apps open · Family Link till midnight/);
-  assert.match(html, /title="App 0, App 1, App 2/);
-  assert.doesNotMatch(html, />com\.example/);
-});
-
-test("what Hearth holds reads by app name and why, under Device limits", () => {
-  const html = panel({
     sam: {
-      sync: {
-        family_link: {
-          held: ["com.google.android.apps.messaging"],
-          why: { "com.google.android.apps.messaging": "school_time" },
-          names: { "com.google.android.apps.messaging": "Google Messages", "com.example.music": "Music" },
-          error: null,
-          last: { at: "2026-11-12T10:00:00Z", outcomes: { "com.example.music": "restored" } },
-        },
-      },
+      kind: "kid",
+      all: { id: "all", name: "All screen time", used_minutes: 149, minutes_left: 31, budget: 180, bonus: 0, state: "ok" },
+      groups: [
+        { id: "all", name: "All screen time", used_minutes: 149, minutes_left: 31, budget: 180, bonus: 0, state: "ok" },
+        { id: "games", name: "Games", used_minutes: 125, minutes_left: 0, budget: 120, bonus: 0, state: "out" },
+        { id: "youtube", name: "YouTube", used_minutes: 10, minutes_left: 49, budget: 60, bonus: 0, state: "ok" },
+        { id: "messaging", name: "Messaging", used_minutes: 8, minutes_left: null, budget: null, bonus: 0, state: "none" },
+      ],
+      binding: { group: "games", minutes_left: 0 },
+      all_by_pool: [
+        { id: "games", name: "Games", minutes: 125 },
+        { id: "youtube", name: "YouTube", minutes: 10 },
+        { id: "other", name: "Other", minutes: 14 },
+      ],
+      targets: [
+        { id: "hearth:tv1", name: "Kitchen TV", display_name: "Kitchen TV", kind: "tv", via: "hearth", left: 31, left_by: "hearth", left_pool: "all", locked: false, locked_kind: null },
+        { id: "hearth:tv2", name: "Playroom TV", display_name: "Playroom TV", kind: "tv", via: "hearth", left: 31, left_by: "hearth", left_pool: "all", locked: false, locked_kind: null },
+        { id: "fl:d1", name: "SM-X230", display_name: "Sam's tablet", kind: "phone", via: "family_link", left: 31, left_by: "hearth", left_pool: "all", locked: false, locked_kind: null },
+        { id: "fs:xbox", name: "Xbox", display_name: "Xbox", kind: "xbox", via: "family_safety", left: 0, left_by: "hearth", left_pool: "games", locked: true, locked_kind: "out" },
+        { id: "nintendo:number.s2", name: "Home Switch 2", display_name: "Sam's Switch 2", kind: "switch", via: "nintendo", left: 0, left_by: "hearth", left_pool: "games", locked: true, locked_kind: "out" },
+      ],
+      devices_today: [
+        { target: "nintendo:number.s2", name: "Sam's Switch 2", kind: "switch", minutes: 125 },
+        { target: "fl:d1", name: "Sam's tablet", kind: "phone", minutes: 24 },
+      ],
+      apps_today: [{ package: "com.example.game", name: "A Game", minutes: 25, groups: ["games"] }],
+      week: [
+        { date: at(12).toISOString().slice(0, 10), minutes: { all: 149, games: 125, youtube: 10 }, out: ["games"], bonus: {}, asks: 0, budget: { all: 180 } },
+        { date: "2026-01-01", minutes: {}, out: [], bonus: {}, asks: 0, budget: { all: 180 } },
+      ],
+      suggestions: [],
+      suggestions_held: [],
+      ...sam,
     },
-  })._page();
-  assert.match(html, /Family Link: holding Google Messages for School time · put back Music/);
-  assert.doesNotMatch(html, /holding com\./);
-});
-
-// The time-use design (fix-list item 10)
-
-function twoKids() {
-  const p = panel();
-  p._config.persons.push({ id: "person.alex", name: "Alex" });
-  p._config.roles["person.alex"] = "kid";
-  p._summary.people.push({
-    id: "person.alex",
-    name: "Alex",
-    all: { id: "all", name: "All screen time", used_minutes: 23, minutes_left: 172, budget: 180, bonus: 15 },
-    groups: [],
   });
+  p._config.persons.push({ id: "person.alex", name: "Alex" }, { id: "person.robin", name: "Robin" });
+  p._config.roles["person.alex"] = "kid";
+  p._config.roles["person.robin"] = "adult";
+  p._summary.people.push(
+    {
+      id: "person.alex",
+      name: "Alex",
+      kind: "kid",
+      all: { id: "all", name: "All screen time", used_minutes: 74, minutes_left: 105, budget: 180, bonus: 0, state: "ok" },
+      groups: [{ id: "all", name: "All screen time", used_minutes: 74, minutes_left: 105, budget: 180, bonus: 0, state: "ok" }],
+      lock: { kind: "bedtime", until: iso(7), by: ["binary_sensor.alex_tablet_bedtime_active"] },
+      locked: true,
+      bedtime: { start: iso(21), end: iso(7) },
+      targets: [
+        { id: "hearth:tv1", name: "Kitchen TV", display_name: "Kitchen TV", kind: "tv", via: "hearth", left: 105, locked: true, locked_kind: "bedtime" },
+        { id: "fs:xbox", name: "Xbox", display_name: "Xbox", kind: "xbox", via: "family_safety", left: 105, locked: true, locked_kind: "bedtime" },
+      ],
+      suggestions: [],
+      suggestions_held: [],
+      ...alex,
+    },
+    { id: "person.robin", name: "Robin", kind: "adult", all: { id: "all", used_minutes: 40, minutes_left: null }, groups: [] }
+  );
+  p._summary.approvals = approvals;
+  p._summary.devices = [{ id: "tv1", name: "Kitchen TV", kind: "tv", connected: true, screen: "off", app: "Hearth TV", profile: "Sam" }];
+  p._summary.household = { suggestions: [], suggestions_held: [], counts: {}, ...household };
+  p._now = () => at(hour);
   return p;
 }
 
-test("Today shows a compact row per kid; the full card opens on a tap", () => {
-  const p = twoKids();
-  let html = p._page();
-  assert.match(html, /class="kid-row[^"]*" data-action="kid-open" data-enter="kid-open" data-kid="person.alex"/);
-  assert.match(html, /data-kid="person.sam"/);
-  // No ring, and no full card until a row is tapped
-  assert.doesNotMatch(html, /class="ring/);
-  assert.doesNotMatch(html, /id="kid-person.sam"/);
-  // No give button on a row without something to answer
-  assert.doesNotMatch(html, /kid-row[^]*?data-action="bonus"/);
-  p._todayKid = "person.sam";
-  html = p._page();
-  assert.match(html, /id="kid-person.sam"/);
-  assert.doesNotMatch(html, /id="kid-person.alex"/);
+const GAMES_OUT = {
+  key: "more:games",
+  reason: "group_out",
+  group: "games",
+  minutes: 15,
+  sentence: "Sam's Games time is up",
+  detail: "Used 2 h 05 of 2 h · 31 min of screen time left",
+  text: "games ran out · give 15?",
+  actions: [
+    { id: "suggest:more:games:15", label: "+15", service: "hearth.add_bonus", data: { person: "person.sam", minutes: 15, group: "games" }, primary: true },
+    { id: "suggest:more:games:30", label: "+30", service: "hearth.add_bonus", data: { person: "person.sam", minutes: 30, group: "games" } },
+    { id: "suggest_dismiss:more:games", label: "not today", service: "hearth.dismiss_suggestion", data: { person: "person.sam", key: "more:games" } },
+  ],
+};
+
+test("Today: one line per kid, bedtime last and faded, a ring around the initial and no +15 in a lock", () => {
+  const html = today(16)._page();
+  assert.match(html, /<h1>Today<\/h1>/);
+  assert.match(html, /4:00 pm · 1 of 2 in bedtime/);
+  const kids = html.split('class="card kid').slice(1);
+  assert.equal(kids.length, 2);
+  assert.match(kids[0], /data-kid="person.sam"[^]*Games ran out<\/b> · 31 min left overall/);
+  assert.match(kids[1], /^ asleep"[^]*data-kid="person.alex"[^]*Bedtime till 7:00/);
+  assert.match(kids[1], /class="ring tone-night"/);
+  assert.match(kids[0], /class="ring tone-low"/);
+  // Sam's row offers +15 Games (time is what stops him, before his cutoff); Alex's none
+  assert.match(kids[0], /data-action="give" data-person="person.sam" data-group="games" data-minutes="15"/);
+  assert.doesNotMatch(kids[1], /data-action="give"/);
+  // The old Today is gone: no family by pool, no "Suggested now", no confirm
+  assert.doesNotMatch(html, /Family today, by pool|Suggested now|kid-row/);
 });
 
-test("a row has a button only for a waiting request or a suggestion", () => {
-  const p = twoKids();
-  p._summary.approvals = [{ type: "more_time", id: "q1", person: "person.alex", person_name: "Alex", minutes: 30, group: "all" }];
-  p._summary.household = {
-    suggestions: [
-      { key: "more:youtube", person: "person.sam", person_name: "Sam", text: "youtube ran out", actions: [{ id: "bonus:youtube", label: "+15 youtube", service: "hearth.add_bonus", data: {} }] },
-    ],
-  };
-  p._summary.people[0].actions = [];
+test("For you is honest when it's empty, and folds what's held back with why", () => {
+  const held = [
+    { ...GAMES_OUT, person: "person.sam", person_name: "Sam", held: "after_cutoff", why: "after 9:00 pm" },
+    { key: "more:youtube", person: "person.alex", person_name: "Alex", held: "lock", why: "in bedtime till 7:00", sentence: "Alex's YouTube time is up" },
+    { key: "x", person: "person.alex", held: "more", why: "another for them shows first", sentence: "Behind another one" },
+  ];
+  const html = today(23, { household: { suggestions_held: held } })._page();
+  assert.match(html, /<h1>Tonight<\/h1>/);
+  assert.match(html, /Sam still up/);
+  assert.match(html, /Nothing needs you tonight/);
+  assert.match(html, /2 suggestions held back · why/);
+  assert.match(html, /<li><span>Alex&#39;s YouTube time is up<\/span><span>in bedtime till 7:00<\/span><\/li>/);
+  assert.doesNotMatch(html, /Behind another one/);
+  // After 9 pm Sam's row has no +15 either
+  assert.doesNotMatch(html.split('class="card kid')[1], /data-action="give"/);
+  assert.match(today(16)._page(), /Nothing needs you<\/div>/);
+});
+
+test("a suggestion shows as a sentence with +15, 30 and Not today; a request comes first with its own buttons", () => {
+  let html = today(16, { sam: { suggestions: [GAMES_OUT] } })._page();
+  assert.match(html, /1 thing for you/);
+  assert.match(html, /<div class="t">Sam&#39;s Games time is up<\/div><div class="d">Used 2 h 05 of 2 h · 31 min of screen time left<\/div>/);
+  assert.match(html, /data-action="sugg-give" data-person="person.sam" data-id="suggest:more:games:15">[^]*?15 min<\/button>/);
+  assert.match(html, /data-action="sugg-dismiss" data-person="person.sam" data-key="more:games"[^>]*>Not today/);
+  // The row covers Sam: no second +15 on his kid row
+  assert.doesNotMatch(html.split('class="card kid')[1], /data-action="give"/);
+  const ask = { type: "more_time", id: "q1", person: "person.sam", person_name: "Sam", minutes: 30, group: "games", asked: iso(15, 59) };
+  html = today(16, { approvals: [ask], sam: { suggestions: [], suggestions_held: [{ ...GAMES_OUT, held: "more", why: "a request from them comes first" }] } })._page();
+  assert.match(html, /Sam asks for 30 more min/);
+  assert.match(html, /Games · just now/);
+  assert.match(html, /data-action="ask-give" data-request="q1"[^>]*data-minutes="30"[^>]*>Give 30 min/);
+  assert.match(html, /data-action="ask-no" data-request="q1"/);
+  assert.match(html, /\+1 more for Sam · <button class="lnk" data-action="kid-sheet" data-kid="person.sam">See/);
+});
+
+test("the kid's sheet: a lock box during bedtime, Allow an app instead of Give time, and the devices as one row", () => {
+  const p = today(23);
+  p._hass.entities = { "binary_sensor.alex_tablet_bedtime_active": { platform: "familylink" } };
+  p._sel = "person.alex";
+  p._sheetOpen = true;
   const html = p._page();
-  const rows = html.split('class="kid-row').slice(1);
-  const alex = rows.find((r) => r.includes('data-kid="person.alex"'));
-  const sam = rows.find((r) => r.includes('data-kid="person.sam"'));
-  assert.match(alex, /data-action="answer" data-request="q1" data-minutes="30"[^>]*>Yes 30</);
-  assert.match(sam, /data-action="glance" data-id="bonus:youtube"[^>]*>\+15 youtube</);
+  const sheet = html.slice(html.indexOf('class="detail on"'));
+  assert.match(sheet, /Bedtime till 7:00<\/div>[^]*Set in Family Link\. Every screen is off for Alex until then, so extra time wouldn&#39;t help\./);
+  assert.match(sheet, /data-action="allow-open"/);
+  assert.doesNotMatch(sheet, /data-action="give-open" aria/);
+  assert.doesNotMatch(sheet, /data-action="kid-pause"/);
+  assert.match(sheet, /All 2 screens|Kitchen TV, Xbox/);
+  assert.match(sheet, /Everything follows the lock/);
+  // More: Give time anyway
+  p._moreOpen = true;
+  assert.match(p._page(), /Give time anyway<small>Counts after bedtime ends/);
 });
 
-test("All screen time is one bar split by pool plus other, with the limit, the bonus and a lane per pool", () => {
-  const html = panel({
+test("the kid's sheet: today split by pool, lanes that open to apps and consoles, devices grouped by state", () => {
+  const p = today(16);
+  p._sel = "person.sam";
+  p._sheetOpen = true;
+  p._exp = new Set(["person.sam|pool|games"]);
+  const html = p._page();
+  const sheet = html.slice(html.indexOf('class="detail on"'));
+  assert.match(sheet, /2 h 29 <small>used · 31 min left<\/small>/);
+  assert.equal((sheet.match(/<div class="stack"[^]*?<\/div>/)[0].match(/<i /g) || []).length, 3);
+  assert.match(sheet, /<span class="nm"><i [^>]*><\/i>Games<\/span>[^]*?class="v t-out">Out/);
+  assert.match(sheet, /A Game<\/span><span>25 min/);
+  assert.match(sheet, /On Switch 2<\/span><span>2 h 05/);
+  assert.match(sheet, /data-action="give" data-person="person.sam" data-group="games" data-minutes="15">\+15 Games/);
+  assert.match(sheet, /Not counted|No limit: Messaging 8 min/);
+  // Devices: the two out together, the TVs and the tablet together; names without "Sam's", never the model id
+  assert.match(sheet, /<div class="t">Xbox, Switch 2<\/div>[^]*?Games ran out/);
+  assert.match(sheet, /<div class="t">2 TVs, Tablet<\/div>[^]*?Follows screen time[^]*?31 min left/);
+  assert.doesNotMatch(sheet, />SM-X230</);
+  // The week: only the recorded day, and the note that history is short
+  assert.equal((sheet.match(/class="wb"/g) || []).length, 1);
+  assert.match(sheet, /Hearth started counting today/);
+  assert.match(sheet, /ran out at some point: Games/);
+});
+
+test("exceptions read as sentences: who allowed what, and what Hearth is blocking and why", () => {
+  const app = (value, name) => ({ id: value, via: "family_link", target: { kind: "app", value }, until: iso(23, 59), endable: false, name });
+  const p = today(16, {
     sam: {
-      all: { id: "all", name: "All screen time", used_minutes: 23, minutes_left: 172, budget: 180, bonus: 15, state: "ok" },
-      groups: [
-        { id: "youtube", name: "YouTube", used_minutes: 7, minutes_left: 53, budget: 60, bonus: 0, state: "ok" },
-        { id: "games", name: "Games", used_minutes: 10, minutes_left: 110, budget: 120, bonus: 0, state: "ok" },
-        { id: "messaging", name: "Messaging", used_minutes: 2, minutes_left: null, budget: null, bonus: 0 },
-      ],
-      all_by_pool: [
-        { id: "games", name: "Games", minutes: 10 },
-        { id: "youtube", name: "YouTube", minutes: 7 },
-        { id: "other", name: "Other", minutes: 6 },
-      ],
+      grants: Array.from({ length: 9 }, (_, i) => app(`com.example.app${i}`, `App ${i}`)),
+      sync: { family_link: { held: ["com.a", "com.b", "com.c", "com.d"], why: { "com.a": "budget", "com.b": "budget", "com.c": "budget", "com.d": "budget" }, names: {} } },
+      allows: [{ id: "a1", group: "youtube", until: iso(18) }],
     },
-  })._page();
-  assert.match(html, /<span class="strong">All screen time<\/span>.*23 of 3 h 15/s);
-  assert.equal((html.match(/class="seg /g) || []).length, 3);
-  assert.match(html, /class="seg other"[^>]*title="Other: 6 min"/);
-  // The limit at 180 of 195 minutes, the bonus hatched after it
-  assert.match(html, /class="bonus" style="left:92.31%;width:7.69%"/);
-  assert.match(html, /class="limit" style="left:92.31%"/);
-  // A lane per budgeted pool, fewest left first, on the same scale; the rest in one muted line
-  assert.match(html, /class="lane role-ok"><span class="bar-label">YouTube<\/span>[^]*?class="limit" style="left:30.77%"[^]*?53 left/);
-  assert.match(html, /<span class="bar-label">Games<\/span>/);
-  assert.ok(html.indexOf(">YouTube</span>") < html.indexOf(">Games</span>"));
-  assert.match(html, /No limit: messaging 2 min/);
+  });
+  p._sel = "person.sam";
+  p._sheetOpen = true;
+  const html = p._page();
+  assert.match(html, /9 apps are allowed without a limit till 11:59\. Someone changed their limits in the Family Link app\./);
+  assert.doesNotMatch(html, />com\.example/);
+  assert.match(html, /Hearth is blocking 4 apps on Sam&#39;s Family Link devices because Games ran out\./);
+  assert.match(html, /You allowed YouTube till 6:00\. <button class="lnk" data-action="allow-end"/);
 });
 
-test("the day strip runs from wake to bedtime, else 6 to 10", () => {
-  const today = new Date();
-  const at = (h, m = 0) => new Date(today.getFullYear(), today.getMonth(), today.getDate(), h, m).toISOString();
-  let html = panel({ sam: { bedtime: { start: at(20, 30), end: at(7) }, school_time: { start: at(8), end: at(15) } } })._page();
-  assert.match(html, /class="strip"/);
-  const ticks = (h) => [...h.matchAll(/<div class="strip-x">(.*?)<\/div>/gs)][0][1].match(/>(\d+)</g).map((t) => t.slice(1, -1));
-  assert.deepEqual(ticks(html), ["7", "9", "11", "1", "3", "5", "7", "9"]);
-  // The half hour after bedtime is shaded; School time is striped
-  assert.match(html, /class="night" style="left:96.43%;width:3.57%"/);
-  assert.match(html, /class="school"/);
-  assert.match(html, /bedtime at 8:30/);
-  html = panel()._page();
-  assert.deepEqual(ticks(html), ["6", "8", "10", "12", "2", "4", "6", "8", "10"]);
+test("Screens now collapses to one row when nothing plays; the adults get one line", () => {
+  const p = today(16);
+  let html = p._page();
+  assert.match(html, /Nothing playing<\/div><div class="d">1 TV off · no console or Switch in use/);
+  assert.doesNotMatch(html, />Sam<\/span>/);
+  assert.match(html, /Adults today: Robin 40 min · no limits/);
+  p._summary.devices[0].screen = "on";
+  p._summary.devices[0].app = "Hearth TV";
+  html = p._page();
+  assert.match(html, /Kitchen TV<\/div><div class="d">Home screen · Sam/);
 });
 
-test("each device shows the time left there as the server worked it out", () => {
-  const html = panel({
-    sam: {
-      targets: [
-        { id: "fl:d1", name: "Phone", kind: "phone", via: "family_link", left: 103, left_by: "google", left_pool: null, locked: false, locked_kind: null },
-        { id: "fs:xbox", name: "Xbox", kind: "xbox", via: "family_safety", left: 120, left_by: "hearth", left_pool: "games", locked: false, locked_kind: null },
-        { id: "hearth:tv1", name: "Kitchen TV", kind: "tv", via: "hearth", left: 157, left_by: "hearth", left_pool: "all", locked: true, locked_kind: "school_time" },
-        { id: "hearth:p1", name: "Phone", kind: "phone", via: "hearth", same_as: null, left: 157, left_by: "hearth", locked: false },
-      ],
-    },
-  })._page();
-  const tiles = html.split(/class="tile[" ]/).slice(1);
-  assert.equal(tiles.length, 4);
-  assert.match(tiles[0], /Phone<\/div><div class="strong">1 h 43 left<\/div><div class="muted small">by google</);
-  assert.match(tiles[1], /2 h left<\/div><div class="muted small">games, by hearth</);
-  assert.match(tiles[2], /^locked"[^]*Locked<\/div><div class="muted small">school time</);
-  // An older summary without the fields: no tiles
-  assert.doesNotMatch(panel()._page(), /class="tiles"/);
+test("a gift applies at once and offers Undo, which takes back just that", async () => {
+  const p = today(16);
+  const calls = [];
+  p._hass.callService = async (domain, service, data) => calls.push([service, data]);
+  p._render = () => {};
+  await p._act("give", { dataset: { person: "person.sam", group: "games", minutes: "15" } });
+  assert.deepEqual(calls, [["add_bonus", { person: "person.sam", minutes: 15, group: "games" }]]);
+  assert.equal(p._undo.text, "Gave Sam 15 min of Games");
+  assert.match(p._page(), /<button data-action="undo">Undo<\/button>/);
+  await p._act("undo", { dataset: {} });
+  assert.deepEqual(calls[1], ["remove_bonus", { person: "person.sam", minutes: 15, group: "games" }]);
+  clearTimeout(p._undoTimer);
+});
+
+test("Not today hides the row at once and runs only when its Undo is gone; Undo brings it back", async () => {
+  const p = today(16, { sam: { suggestions: [GAMES_OUT] } });
+  const calls = [];
+  p._hass.callService = async (domain, service, data) => calls.push([service, data]);
+  p._render = () => {};
+  await p._act("sugg-dismiss", { dataset: { person: "person.sam", key: "more:games", id: "suggest_dismiss:more:games" } });
+  assert.doesNotMatch(p._page(), /Sam&#39;s Games time is up/);
+  assert.deepEqual(calls, []);
+  await p._act("undo", { dataset: {} });
+  assert.match(p._page(), /Sam&#39;s Games time is up/);
+  assert.deepEqual(calls, []);
+  // Again, and the page closes before the Undo is gone: it runs then
+  await p._act("sugg-dismiss", { dataset: { person: "person.sam", key: "more:games", id: "suggest_dismiss:more:games" } });
+  p.disconnectedCallback();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(calls, [["dismiss_suggestion", { person: "person.sam", key: "more:games" }]]);
+  clearTimeout(p._undoTimer);
+  for (const w of p._deferred.values()) clearTimeout(w.timer);
+});
+
+test("the other tabs: names first with ids in tooltips, Home Assistant's other users folded away", () => {
+  const p = panel();
+  p._config.apps = [
+    { package: "com.example.game", name: "A Game", group: "games" },
+    { package: "com.example.app.ardtest", name: "Test build", group: "other" },
+  ];
+  p._config.groups.push({ id: "games", name: "Games", builtin: true, in_all: true, apps: [], added_apps: [] });
+  let html = p._appsTab();
+  assert.match(html, /<div title="com.example.game">A Game/);
+  assert.doesNotMatch(html, /<div class="muted small">com\.example\.game/);
+  assert.doesNotMatch(html, /Test build/);
+  p._config.persons.push({ id: "person.helper", name: "helper" });
+  html = p._familyTab();
+  assert.match(html, /Others in Home Assistant \(1\)/);
+  assert.ok(html.indexOf(">Sam<") < html.indexOf("Others in Home Assistant"));
+  p._config.sources = [{ id: "s1", entity_id: "sensor.sam_tablet_screen_time", person: "person.sam", name: "Sam's tablet", group: "games" }];
+  html = p._sourcesCard({ id: "person.sam", name: "Sam" });
+  assert.match(html, /title="sensor.sam_tablet_screen_time"><div>Sam&#39;s tablet<\/div><div class="muted small">Counts in Games</);
 });
 
 test("the Chores card: today's list with tick, Give and Undo, the tasks and the balance", () => {
