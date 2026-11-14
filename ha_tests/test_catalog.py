@@ -225,6 +225,47 @@ def test_a_guess_never_takes_an_app_out_of_a_pool() -> None:
     assert place("com.example.x").why == "hint"
 
 
+def test_only_a_confirmed_answer_puts_an_app_in_messaging_or_accessibility() -> None:
+    data = CatalogData({"android": {
+        "android:com.example.chat": {"category": "messaging", "state": "suggested"},
+        "android:com.example.mail": {"category": "messaging", "state": "confirmed"},
+        "android:com.example.reader": {"category": "accessibility", "state": "confirmed"},
+        "android:com.example.helper": {"category": "accessibility", "state": "suggested"},
+        "android:com.example.lens": {"category": "accessibility", "state": "confirmed"},
+        "android:com.example.misfiled": {"category": "game", "state": "suggested"},
+        "android:com.discord": {"category": "messaging", "state": "suggested"},
+    }})
+    # Any app declares its own category: a game calling itself accessibility or messaging
+    categories = {"com.example.sneaky": "accessibility", "com.example.texty": "messaging",
+                  "com.example.misfiled": "accessibility", "com.example.game": "game"}
+    moved = {"com.example.own": "accessibility", "com.example.reader": "games"}
+    place = placer(_groups(), categories, moved, catalog=data.lookup)
+
+    # Confirmed: in the pool
+    assert (place("com.example.mail").pool, place("com.example.mail").why) == ("messaging", "catalog")
+    assert (place("com.example.lens").pool, place("com.example.lens").why) == ("accessibility", "catalog")
+    voice = place("com.google.android.apps.accessibility.voiceaccess")
+    assert (voice.pool, voice.why) == ("accessibility", "starter")
+    # Suggested only: Other, and asked about (Check these)
+    chat = place("com.example.chat")
+    assert (chat.pool, chat.why, chat.value) == (None, "suggested", "messaging")
+    assert (place("com.example.helper").pool, place("com.example.helper").why) == (None, "suggested")
+    # A device's own category never loosens anything
+    assert place("com.example.sneaky").pool is None and place("com.example.texty").pool is None
+    assert place("com.example.game").pool == "games"
+    # The declared category is passed over, so the catalog's guess of a game holds it
+    assert place("com.example.misfiled").pool == "games"
+    # Hearth's starter list keeps Discord in Messaging, whatever the catalog suggests
+    assert (place("com.discord").pool, place("com.discord").why) == ("messaging", "starter")
+    # An adult's move wins both ways
+    assert (place("com.example.own").pool, place("com.example.own").why) == ("accessibility", "moved")
+    assert place("com.example.reader").pool == "games"
+    # Counting: Messaging and Accessibility are outside All screen time by default
+    assert {g.id for g in _groups() if not g.in_all} == {"messaging", "accessibility"}
+    # A confirmed accessibility answer goes to Accessibility by the household's map
+    assert pool_map(_groups())["accessibility"] == "accessibility"
+
+
 def test_the_household_s_pool_map() -> None:
     groups = _groups([{"id": "tv", "name": "TV", "apps": []}, {"id": "homework", "name": "Homework", "apps": []}])
     pools = pool_map(groups)

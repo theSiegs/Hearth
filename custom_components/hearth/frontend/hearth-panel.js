@@ -2754,7 +2754,7 @@ class HearthPanel extends HTMLElement {
   }
 
   _limitsCard(kid) {
-    const groups = this._config.groups || [];
+    const groups = (this._config.groups || []).filter((g) => !g.never_held);
     const b = this._config.budgets?.[kid.id] || {};
     return `<section class="card">
       <h3><ha-icon icon="mdi:timer-sand"></ha-icon>Daily limits</h3>
@@ -3239,7 +3239,7 @@ class HearthPanel extends HTMLElement {
     const appsCards = `${this._checkTheseCard()}
       <section class="card">
         <h3><ha-icon icon="mdi:new-box"></ha-icon>Sorted lately</h3>
-        <p class="muted">New apps go to a group on their own: one that lists them, else their kind (games, video, social, messaging…), else Other. If one landed wrong, move it; your choice always wins.</p>
+        <p class="muted">New apps go to a group on their own: one that lists them, else their kind (games, video, social…; Messaging and Accessibility only when the shared catalog confirms it), else Other. Accessibility apps are never paused. If one landed wrong, move it; your choice always wins.</p>
         ${recent.length ? `<ul class="list compact">${recent.map((a) => this._appRow(a, `${a.who ? ` · ${esc(a.who)}` : ""} · ${esc(new Date(a.seen).toLocaleDateString())}`)).join("")}</ul>` : `<p class="muted small">Nothing new lately.</p>`}
       </section>
       <section class="card">

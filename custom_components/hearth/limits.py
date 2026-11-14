@@ -32,9 +32,15 @@ VIDEO = "video"
 GAMES = "games"
 SOCIAL = "social"
 MESSAGING = "messaging"
+# Apps a kid may rely on (Voice Access, Lookout, Live Transcribe): never paused, whatever runs out or holds
+ACCESSIBILITY = "accessibility"
 # Built-in groups outside All screen time unless an adult puts them in (options "inside_all"): chatting isn't screen
-# time by default
-DEFAULT_OUTSIDE_ALL = frozenset({MESSAGING})
+# time by default, nor is an accessibility app
+DEFAULT_OUTSIDE_ALL = frozenset({MESSAGING, ACCESSIBILITY})
+# The pools that loosen limits (outside All screen time by default; Accessibility is never paused): only a confirmed
+# answer puts an app in one (an adult's move or list, Hearth's starter lists, the shared catalog's confirmed answer),
+# never a guess (a device's own category, which any app declares for itself, or the catalog's suggestion)
+CONFIRMED_ONLY = frozenset({MESSAGING, ACCESSIBILITY})
 # Options: {package: group id or "other"}: where an adult moved an app; beats every list and category
 CONF_APP_GROUPS = "app_groups"
 CONF_INSIDE_ALL = "inside_all"
@@ -72,6 +78,16 @@ STARTER_MESSAGING_APPS = frozenset(
         "jp.naver.line.android",
         "com.viber.voip",
         "kik.android",
+    }
+)
+# Google's own accessibility apps, so they're spared before the shared catalog is read
+STARTER_ACCESSIBILITY_APPS = frozenset(
+    {
+        "com.google.android.apps.accessibility.voiceaccess",
+        "com.google.android.apps.accessibility.reveal",
+        "com.google.audio.hearing.visualization.accessibility.scribe",
+        "com.google.android.accessibility.soundamplifier",
+        "com.google.android.marvin.talkback",
     }
 )
 
@@ -127,7 +143,14 @@ BUILTIN_GROUPS = (
     Group(GAMES, "Games", frozenset(), "game", builtin=True),
     Group(SOCIAL, "Social", STARTER_SOCIAL_APPS, "social", builtin=True),
     Group(MESSAGING, "Messaging", STARTER_MESSAGING_APPS, "messaging", builtin=True),
+    # No category: a device's own (any app can declare itself one) never puts an app here
+    Group(ACCESSIBILITY, "Accessibility", STARTER_ACCESSIBILITY_APPS, builtin=True),
 )
+
+
+def never_held_group(group: Group) -> bool:
+    """The built-in Accessibility pool: nothing pauses its apps, so it has no budget or bonus to set."""
+    return group.builtin and group.id == ACCESSIBILITY
 
 
 def slug(name: str) -> str:
@@ -138,9 +161,12 @@ def groups_from_options(options: dict[str, Any]) -> list[Group]:
     """The built-in groups (with apps an adult added to them) and the adult's own groups."""
     added: dict[str, list[str]] = options.get("group_apps", {})
     outside = (set(options.get("outside_all", [])) | (DEFAULT_OUTSIDE_ALL - set(options.get(CONF_INSIDE_ALL, [])))) - {ALL}
+    # A household's own pool that already has a newer built-in's id (accessibility) keeps it
+    own_ids = {custom.get("id") for custom in options.get("groups", [])}
     groups = [
         Group(g.id, g.name, g.apps | frozenset(added.get(g.id, [])), g.category, True, g.id not in outside, g.apps)
         for g in BUILTIN_GROUPS
+        if g.id not in own_ids or g.id in (ALL, GAMES, SOCIAL, MESSAGING)
     ]
     for custom in options.get("groups", []):
         groups.append(
@@ -192,7 +218,8 @@ _DEFAULT_NAMES = {
 
 def pool_map(groups: list[Group], adult: dict[str, str] | None = None) -> dict[str, str]:
     """What each value the shared catalog or a device says an app is goes to in this household: a pool id, or "other"
-    (no pool). Hearth's defaults: a game to Games, social to Social, messaging to Messaging, a value a pool claims by its
+    (no pool). Hearth's defaults: a game to Games, social to Social, messaging to Messaging, accessibility to
+    Accessibility (placer lets only a confirmed answer put an app in those two), a value a pool claims by its
     category (the Video pool retire_video kept) to it, YouTube, streaming, music and education to a pool of the
     household's own of that name (YouTube; Streaming or TV; Music; Homework or School) when there is one, companion apps
     (a platform's hub or store) and system apps never to a pool; an adult's own map ([adult]) beats them. A value
@@ -202,7 +229,7 @@ def pool_map(groups: list[Group], adult: dict[str, str] | None = None) -> dict[s
     for g in groups:
         if g.id != ALL and g.category is not None:
             out.setdefault(g.category, g.id)
-    for value, pool in (("game", GAMES), ("social", SOCIAL), ("messaging", MESSAGING)):
+    for value, pool in (("game", GAMES), ("social", SOCIAL), ("messaging", MESSAGING), ("accessibility", ACCESSIBILITY)):
         if pool in ids:
             out.setdefault(value, pool)
     own = {**{slug(g.name): g.id for g in groups if not g.builtin}, **{g.id: g.id for g in groups if not g.builtin}}
@@ -267,6 +294,8 @@ def placer(
        ([pools], pool_map's); a confirmed value the map sends to no pool is Other, and stops here.
     5. The device's own category ([categories]; a Glint phone's copy of the catalog is below the device's).
     6. The shared catalog's suggested answer, only when it goes to a pool (a guess never takes an app out of one).
+       Neither 5 nor 6 puts an app in Messaging or Accessibility (CONFIRMED_ONLY): a suggestion that would is Other,
+       with why "suggested" so an adult is asked (Check these).
     7. Where its time came from ([hints]: a Switch's or an Xbox's titles are games).
     8. Other.
     """
@@ -296,16 +325,22 @@ def placer(
             value = hit.detail if hit.detail in value_pools else hit.category
             disagree = declared is not None and (declared == "game") != (hit.category == "game")
             return Placement(to_pool(value), "catalog", hit.value, disagree, declared)
-        if (pool := to_pool(declared)) is not None:
+        # A guess never puts an app in a pool that loosens limits (Messaging, Accessibility): any app can declare
+        # itself a category, and a suggestion isn't checked
+        if (pool := to_pool(declared)) is not None and pool not in CONFIRMED_ONLY:
             return Placement(pool, "declared", declared, declared=declared)
+        held_back = None
         if hit is not None:
             value = hit.detail if hit.detail in value_pools else hit.category
             if (pool := to_pool(value)) is not None:
-                return Placement(pool, "suggested", hit.value, declared=declared)
+                if pool not in CONFIRMED_ONLY:
+                    return Placement(pool, "suggested", hit.value, declared=declared)
+                # Other, but an adult sees it in Check these and can move it there
+                held_back = Placement(None, "suggested", hit.value, declared=declared)
         hinted = sorted((hints or {}).get(item, set()) & set(order), key=order.index)
         if hinted:
             return Placement(hinted[0], "hint")
-        return Placement(None, "other")
+        return held_back or Placement(None, "other")
 
     return of
 

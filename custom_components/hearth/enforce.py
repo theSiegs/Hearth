@@ -43,6 +43,10 @@ An adult's allow (hearth.allow, exceptions.py) takes its app or group out of eve
 parent's grant (a change in the Family Link, Nintendo or Family Safety app, grants.py) takes out only the hold it came
 from.
 
+An app in the built-in Accessibility pool (Voice Access, Lookout, Live Transcribe) is never paused by any of these:
+a budget, a pause, School time's apps or the schedule (household.never_held). Family Link's whole-device lock (All
+screen time out of time) is Google's and spares only the apps a parent gave unlimited time there.
+
 What's held is kept with Home Assistant's storage helper, so only what Hearth held is let go, after a restart too. A
 group gets time again (a bonus, a new day, a higher budget) and its apps are let go. Right after Home Assistant starts,
 nothing is let go for a few minutes: the sources haven't all reported yet, and the counts would look low.
@@ -514,6 +518,7 @@ class Enforcement:
         device_lifted_of=None,
         paused_groups_of=None,
         closed_of=None,
+        spared=frozenset(),
     ) -> None:
         """[apps_of]: a group id's packages for a person (for All screen time, every app of theirs). [lifted_of]: what
         a person's allows lift (Lifted); [school_time_of]: whether an enforcer's child is in School time now;
@@ -521,7 +526,8 @@ class Enforcement:
         held items: grants.py); [paused_of]: the packages an adult paused for a person; [device_lifted_of]: what extra
         time on one device lifts of an enforcer's holds (a Family Safety platform, a Switch: device_extra.py);
         [paused_groups_of]: the groups an adult paused for a person, All screen time for a family pause (a Switch);
-        [closed_of]: the groups the weekly schedule closes for a person now, All screen time in Sleep and School."""
+        [closed_of]: the groups the weekly schedule closes for a person now, All screen time in Sleep and School;
+        [spared]: packages never paused, for any reason (the accessibility apps: household.never_held)."""
         self.enforcers = enforcers
         now = dt_util.now()
         wanted_now: dict[str, set[str]] = {}
@@ -565,7 +571,7 @@ class Enforcement:
             if e.kind == FAMILY_LINK:
                 scheduled -= self._always_allowed(e.entity_id)
             device_lifted = device_lifted_of(e) if device_lifted_of else set()
-            wanted_now[e.key] = (budget | school | paused | scheduled) - granted - device_lifted
+            wanted_now[e.key] = (budget | school | paused | scheduled) - granted - device_lifted - set(spared)
             if e.kind == FAMILY_LINK:
                 # Only apps the child has: pausing one they don't would only cost a call (and read as a parent's
                 # change later, its pause never showing)

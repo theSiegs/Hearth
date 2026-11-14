@@ -296,8 +296,24 @@ A budget is set on a **group**: a set of apps and titles whose minutes count tog
 
 - **All screen time**: everything not excluded by a rule.
 - **Games**: games (Android's game category, plus any an adult adds).
-- **Social** and **Messaging**: social and messaging apps (a starter list, Android's category, plus any an adult adds).
-  Messaging is Not screen time (below) unless an adult puts it in.
+- **Social** and **Messaging**: social and messaging apps (a starter list, plus any an adult adds; Social also takes
+  Android's category). Messaging is Not screen time (below) unless an adult puts it in.
+- **Accessibility**: apps a kid may rely on (Voice Access, Lookout, Live Transcribe, Sound Amplifier, TalkBack: a
+  starter list, plus the shared catalog's confirmed `accessibility` and any an adult moves there). Not screen time
+  unless an adult puts it in, and **never paused**: not All screen time (or any group) running out, an adult's pause
+  of the app or a group, School time's apps, nor the weekly schedule. Family Link and Family Safety are never asked to
+  pause them, and the state document lists them in All screen time's `except` and in the person's `never_held`, for
+  a device that can spare them from a lock too. It has no budget or bonus (no number entities, no minutes left).
+  Family Link's own whole-device lock (All screen time out of time) is Google's: it spares only the apps a parent gave
+  unlimited time in Family Link.
+
+**Only a confirmed answer loosens a limit.** Messaging and Accessibility are outside All screen time (and
+Accessibility is never paused), so a guess never puts an app in them: only an adult's move or list, Hearth's starter
+lists, or the shared catalog's confirmed answer does. A device's own category (any app may declare one in its
+manifest, so a misfiled game would escape limits) and the catalog's suggestion pass over them: an app the catalog
+only suggests is messaging or accessibility (Proton Mail or Yahoo Mail, say) counts in Other and shows in Check
+these, unless a starter list or an adult already puts it somewhere (Snapchat is on Social's starter list, Discord on
+Messaging's).
 
 An adult can add groups (pools): **YouTube** (YouTube and HearthTube, on every device) and **Streaming** (the
 streaming apps), say. **An app is in one pool at most**, besides All screen time, so the pools' minutes and "other"
@@ -311,6 +327,7 @@ streaming apps), say. **An app is in one pool at most**, besides All screen time
 5. the device's own category (Android's, from a Hearth device), with a Glint phone's copy of the catalog
    (`catalog_categories`) below it;
 6. the shared catalog's **suggested** answer, only when it goes to a pool: a guess never takes an app out of one;
+   neither 5 nor 6 ever puts an app in Messaging or Accessibility (above);
 7. where its time came from (a Switch's or an Xbox's titles are games);
 8. Other.
 
@@ -354,7 +371,7 @@ to. Hearth fetches it itself (catalog.py), so it works without a Glint phone.
   way and used. A newer copy places apps again at once.
 - **The household's map** (Hearth's page > Settings > Shared app catalog > Which group each kind of app goes to;
   `catalog_pools`, value -> pool or `other`): by default a game goes to Games, social to Social, messaging to
-  Messaging, a value a pool claims by its category (the kept Video pool) to it, YouTube to a pool of the household's
+  Messaging and accessibility to Accessibility (those two on a confirmed answer only), a value a pool claims by its category (the kept Video pool) to it, YouTube to a pool of the household's
   called YouTube, streaming to one called Streaming, TV or Shows, audio to Music, education to Homework or School (else
   Other), and companion and system apps to Other, never Games. These are Hearth's policy; the catalog holds facts.
 - **Check these** (Hearth's page > Apps): apps placed only on the catalog's suggestion, then apps where the catalog's
@@ -960,7 +977,8 @@ The answer to each status post carries the person's (or, on a TV, each profile's
 `groups` lists only groups with a budget, and an adult's pauses of one app or group as groups with no time left and
 `paused` (see [Pause and locks](#pause-and-locks)): hold them like any group out of time, but say it's paused and
 **never offer to ask for more time for one**; `minutes_left` null is no limit; All screen time may carry `except`, the apps
-it never holds (a Not screen time group's). Each person's part is described under [Ask for more](#ask-for-more) and
+it never holds (a Not screen time group's, and the accessibility apps). `never_held` (only when there are any) lists
+the accessibility apps, which no group's `apps` holds: a device may spare them from a lock or a pause too. Each person's part is described under [Ask for more](#ask-for-more) and
 [Pause and locks](#pause-and-locks); an allow of theirs that ends on a place is in `allow_ends` [{id, app, group,
 until, text: "ends when you get home"}] (never where they are); a TV's also has every mapped profile's `youtube_blocks`, `people` (each mapped
 profile of that TV by its own key, with its person: a notification's `for` may name a person, and the TV finds their

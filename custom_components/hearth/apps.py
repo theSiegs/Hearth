@@ -19,7 +19,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import CONF_GROUP_APPS, CONF_GROUPS, DOMAIN
 from .counting import ALL
-from .limits import BUILTIN_GROUPS, GAMES, Group, one_pool_per_app, without_app
+from .limits import BUILTIN_GROUPS, CONFIRMED_ONLY, GAMES, Group, one_pool_per_app, without_app
 
 BUILTIN_IDS = frozenset(g.id for g in BUILTIN_GROUPS if g.id != ALL)
 
@@ -68,7 +68,8 @@ def suggest(package: str, category: str | None, groups: list[Group]) -> str | No
         if group.builtin and group.id != ALL and package in group.apps:
             return group.id
     for group in groups:
-        if group.category is not None and category == group.category:
+        # A device's own category never puts an app in Messaging or Accessibility (limits.placer)
+        if group.category is not None and category == group.category and group.id not in CONFIRMED_ONLY:
             return group.id
     return None
 

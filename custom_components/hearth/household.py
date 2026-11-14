@@ -52,6 +52,7 @@ from .catalog import CatalogKeeper, correctable_key
 from .limits import (
     CONF_APP_GROUPS,
     CONF_CATALOG_POOLS,
+    ACCESSIBILITY,
     MESSAGING,
     OTHER,
     OTHER_DAY,
@@ -62,6 +63,7 @@ from .limits import (
     Placement,
     catalog_value,
     groups_from_options,
+    never_held_group,
     placer,
     pool_map,
     without_app,
@@ -217,6 +219,8 @@ class Household:
         # known_apps() for one document build: every builder makes one membership() and hands it to each
         # _group_apps() call, so the walk over devices, sources and every sensor runs once per build, not per group
         self._known_for: tuple[Any, dict[str, str]] | None = None
+        # never_held() for one membership(), the same way
+        self._never_held_for: tuple[Any, frozenset[str]] | None = None
 
     async def async_load(self) -> None:
         await self.limits.async_load()
@@ -758,6 +762,7 @@ class Household:
     @callback
     def recompute(self) -> None:
         self._known_for = None
+        self._never_held_for = None
         now = dt_util.now()
         # A TV's commands that waited too long are told as expired
         self.hub.commands.prune()
@@ -979,13 +984,15 @@ class Household:
         self._tell_modes()
         groups_by_id = {g.id: g for g in self.groups}
 
+        spared = self.never_held(membership)
+
         def apps_of(group_id: str, person: str) -> list[str]:
             if group_id == ALL:
                 return self._person_apps(days.get(person), membership)
             if group_id not in groups_by_id:
                 return []
-            # With the Xbox and Windows apps a group lists, for Family Safety
-            return self._group_apps(groups_by_id[group_id], membership, with_fs=True)
+            # With the Xbox and Windows apps a group lists, for Family Safety; never an accessibility app
+            return [p for p in self._group_apps(groups_by_id[group_id], membership, with_fs=True) if p not in spared]
 
         self.allows.prune()
         self.grants.prune()
@@ -1001,6 +1008,7 @@ class Household:
             groups_of_app=membership,
             granted_of=self.grants.lifted,
             paused_of=lambda person: self.paused_packages(person, membership, with_fs=True),
+            spared=spared,
             device_lifted_of=self._device_lifted,
             paused_groups_of=lambda person: self.paused_groups(person, now),
             closed_of=self.schedule_holds,
@@ -1311,7 +1319,7 @@ class Household:
                 found.add(pause["app"])
             elif (group := self.group(pause["group"])) is not None:
                 found |= set(self._group_apps(group, membership, with_fs=with_fs))
-        return found
+        return found - self.never_held(membership)
 
     def paused_groups(self, person: str, now: datetime | None = None) -> set[str]:
         """The groups an adult paused for the person while those pauses last, All screen time for a family pause (a
@@ -1328,6 +1336,8 @@ class Household:
         out = []
         for pause in app_pauses_of(self.hass, person):
             if pause["app"] is not None:
+                if pause["app"] in self.never_held(membership):
+                    continue
                 apps = [pause["app"]]
                 known = self.apps.apps.get(pause["app"])
                 key, name = f"app:{pause['app']}", (known.name if known else None) or pause["app"]
@@ -1335,7 +1345,7 @@ class Household:
                 group = self.group(pause["group"])
                 if group is None:
                     continue
-                apps = self._group_apps(group, membership)
+                apps = self._held_apps(group, membership)
                 key, name = f"group:{group.id}", group.name
             out.append(
                 {
@@ -1368,7 +1378,7 @@ class Household:
             group = self.group(group_id)
             if group is None or (lifted and lifted.group(group_id)):
                 continue
-            apps = self._group_apps(group, membership)
+            apps = self._held_apps(group, membership)
             if lifted:
                 apps = [p for p in apps if not lifted.app(p, membership(p))]
             out.append(
@@ -1413,12 +1423,29 @@ class Household:
         return {g.id for g in self.groups if not g.in_all and g.id != ALL}
 
     def _spared(self, membership) -> set[str]:
-        """The packages All screen time never holds: those of the groups outside it."""
-        found: set[str] = set()
+        """The packages All screen time never holds: those of the groups outside it, and the accessibility apps."""
+        found: set[str] = set(self.never_held(membership))
         for group in self.groups:
             if group.id in self.outside_all():
                 found |= set(self._group_apps(group, membership))
         return found
+
+    def never_held(self, membership) -> frozenset[str]:
+        """The packages nothing of Hearth's ever pauses: the built-in Accessibility pool's (Voice Access, Lookout, Live
+        Transcribe: an app a kid may rely on). Not a budget running out, an adult's pause of an app or group, School
+        time's apps nor the weekly schedule. Only a confirmed answer puts an app there (limits.placer)."""
+        cached = self._never_held_for
+        if cached is not None and cached[0] is membership:
+            return cached[1]
+        group = self.group(ACCESSIBILITY)
+        found = frozenset(self._group_apps(group, membership)) if group and never_held_group(group) else frozenset()
+        self._never_held_for = (membership, found)
+        return found
+
+    def _held_apps(self, group: Group, membership) -> list[str]:
+        """The packages a device holds to [group]: its apps but the accessibility ones."""
+        spared = self.never_held(membership)
+        return [p for p in self._group_apps(group, membership) if p not in spared]
 
     def group_packages(self) -> dict[str, list[str]]:
         """Each group's packages (not All's: every app), as devices are held to them."""
@@ -1471,7 +1498,7 @@ class Household:
             state = day.limits.get(group.id) if day else None
             if state is None or state.budget_min is None or lifted.group(group.id) or group.id in allowed_here:
                 continue
-            apps = self._group_apps(group, membership)
+            apps = self._held_apps(group, membership)
             entry = {
                 "id": group.id,
                 "name": group.name,
@@ -1494,6 +1521,8 @@ class Household:
             "groups": groups,
             "locked": bool(day and day.locked),
             **self._locks_document(person, day),
+            # The accessibility apps no group above holds, for a device that can spare them from a lock too
+            **({"never_held": sorted(never)} if (never := self.never_held(membership)) else {}),
             # What they're playing now, anywhere (as the household summary's `playing`)
             "playing": [p.view() for p in (day.playing if day else [])],
             # The weekly schedule now: the mode, the next change, tonight's bedtime (weekly.py)
@@ -1694,6 +1723,8 @@ class Household:
         day = self.days.get(person)
         lifted = self.allows.lifted(person)
         outside = self.outside_all()
+        # An accessibility app: no budget, pause or School time of Hearth's holds it (a lock still does)
+        spared = app is not None and app in self.never_held(membership)
         if app is not None:
             groups = membership(app)
             if groups & outside:
@@ -1710,7 +1741,7 @@ class Household:
         lifted_holds: list[dict[str, Any]] = []
         for group_id in sorted(groups):
             state = day.limits.get(group_id) if day else None
-            if state is not None and state.minutes_left == 0:
+            if state is not None and state.minutes_left == 0 and not spared:
                 hold = {"kind": "budget", "by": group_id, "until": midnight}
                 (lifted_holds if excepted or lifted.group(group_id) else blocked).append(hold)
         for entity_id in (day.locked_by if day else []):
@@ -1740,7 +1771,7 @@ class Household:
                 )
             else:
                 hit = pause["app"] is not None and (pause["app"] in asked)
-            if hit:
+            if hit and not spared:
                 blocked.append(
                     {
                         "kind": "pause",
@@ -1774,7 +1805,12 @@ class Household:
         blocked += self.sync.app_limits_reached(person, packages, midnight)
         if app is not None:
             for enforcer in enforcers_from_options(self.options):
-                if enforcer.person == person and app in enforcer.school_apps and self.in_school_time(enforcer):
+                if (
+                    enforcer.person == person
+                    and not spared
+                    and app in enforcer.school_apps
+                    and self.in_school_time(enforcer)
+                ):
                     child = fl.child_of(self.hass, enforcer.entity_id)
                     end = fl.school_time_end(self.hass, child) if child else None
                     hold = {

@@ -15,7 +15,7 @@ from . import HearthConfigEntry
 from .auth import is_adult_user
 from .entity import HearthPersonEntity
 from .hub import HearthHub
-from .limits import DAY_TYPES, Group
+from .limits import DAY_TYPES, Group, never_held_group
 
 # -1 is "no limit" (as Nintendo's own does): a number entity can't be left empty
 NO_LIMIT = -1
@@ -30,6 +30,9 @@ async def async_setup_entry(
     entities: list[NumberEntity] = []
     for person in household.people():
         for group in household.groups:
+            # Nothing pauses an accessibility app: a budget or bonus would do nothing
+            if never_held_group(group):
+                continue
             entities.extend(Budget(hub, person, group, kind) for kind in DAY_TYPES)
             entities.append(Bonus(hub, person, group))
     async_add_entities(entities)
