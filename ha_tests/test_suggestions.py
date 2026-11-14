@@ -146,3 +146,16 @@ async def test_the_summary_suggests_and_not_today_puts_it_off(
     assert history.of("person.alex", kinds=("bonus",))[-1] | {"at": None} == {
         "at": None, "kind": "bonus", "person": "person.alex", "group": "video", "minutes": 15
     }
+
+
+def test_a_group_already_over_offers_enough_to_catch_up() -> None:
+    person = _person(all=65, games=0, youtube=12)
+    for g in person["groups"]:
+        if g["id"] == "games":
+            g.update({"budget": 120, "bonus": 30, "used_minutes": 160})
+    games = suggestions(person, [], [])[0]
+    # 10 over after the 30 given: +25 leaves 15, +40 leaves 30
+    assert games["minutes"] == 25
+    amounts = [a["data"]["minutes"] for a in games["actions"] if a["service"] == "hearth.add_bonus"]
+    assert amounts == [25, 40]
+    assert "still up" in games["sentence"] and "10 min over" in games["detail"] and "30 min extra" in games["detail"]

@@ -706,7 +706,7 @@ class HearthPanel extends HTMLElement {
       case "sugg-dismiss": {
         const a = this._glanceAction(d.id, d.person);
         const data = a?.data || { person: d.person, key: d.key };
-        this._defer(`${d.person}|${d.key}`, `Not today for ${this._personName(d.person)}`, () => this._call("dismiss_suggestion", data));
+        this._defer(`${d.person}|${d.key}`, `Dismissed for ${this._personName(d.person)}`, () => this._call("dismiss_suggestion", data));
         return;
       }
       case "allow": {
@@ -2305,7 +2305,7 @@ class HearthPanel extends HTMLElement {
       acts = gives
         .map((a, i) => `<button class="b ${i === 0 ? "primary" : ""}" data-action="sugg-give" data-person="${esc(item.person)}" data-id="${esc(a.id)}">${i === 0 ? `${icon("plus", "sm")}${esc(amount(a.data?.minutes))} min` : `${esc(amount(a.data?.minutes))} min`}</button>`)
         .join("");
-      if (dismiss) acts += `<button class="b ghost" data-action="sugg-dismiss" data-person="${esc(item.person)}" data-key="${esc(x.key)}" data-id="${esc(dismiss.id)}">Not today</button>`;
+      if (dismiss) acts += `<button class="b ghost" data-action="sugg-dismiss" data-person="${esc(item.person)}" data-key="${esc(x.key)}" data-id="${esc(dismiss.id)}" title="Hides it until tomorrow">Dismiss</button>`;
     }
     const moreLine = more ? `<div class="more">+${more} more for ${esc(name)} · <button class="lnk" data-action="kid-sheet" data-kid="${esc(item.person)}">See</button></div>` : "";
     return `<div class="need ${item.type === "ask" ? "ask" : ""} ${inSheet ? "insheet" : ""}" ${item.type === "ask" && !inSheet ? `id="ask-${esc(item.ask.id)}"` : ""}>

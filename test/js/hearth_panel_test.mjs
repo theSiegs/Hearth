@@ -266,7 +266,7 @@ test("a suggestion shows as a sentence with +15, 30 and Not today; a request com
   assert.match(html, /1 thing for you/);
   assert.match(html, /<div class="t">Sam&#39;s Games time is up<\/div><div class="d">Used 2 h 05 of 2 h · 31 min of screen time left<\/div>/);
   assert.match(html, /data-action="sugg-give" data-person="person.sam" data-id="suggest:more:games:15">[^]*?15 min<\/button>/);
-  assert.match(html, /data-action="sugg-dismiss" data-person="person.sam" data-key="more:games"[^>]*>Not today/);
+  assert.match(html, /data-action="sugg-dismiss" data-person="person.sam" data-key="more:games"[^>]*>Dismiss/);
   // The row covers Sam: no second +15 on his kid row
   assert.doesNotMatch(html.split('class="card kid')[1], /data-action="give"/);
   const ask = { type: "more_time", id: "q1", person: "person.sam", person_name: "Sam", minutes: 30, group: "games", asked: iso(15, 59) };
