@@ -141,16 +141,16 @@
           "sort_apps": "Sort new apps",
           "new_apps": "Watch for new apps",
           "add_group": "Add a group",
-          "group_apps": "Add apps to Video or Games",
+          "group_apps": "Add apps to Games",
           "not_screen_time": "Not screen time",
           "remove_group": "Remove a group",
           "tile_exchange": "Tile exchange sharing",
+          "app_catalog": "Shared app catalog",
           "voice_assistants": "Voice assistants",
           "parent_pin": "Parent PINs",
           "push": "Push to phones (ntfy)",
           "schedule": "Schedule (days off, half days)",
           "site_list": "Website block list",
-          "chores": "Chores earn time",
           "suggest_push": "Suggest more time to phones",
           "places": "Places (home, school, favorite places)"
         }
@@ -172,10 +172,9 @@
         }
       },
       "group_apps": {
-        "title": "Add apps to Video or Games",
-        "description": "Apps Android marks as video or games are in these already. Add the ones it misses.",
+        "title": "Add apps to Games",
+        "description": "Apps Android marks as games are in Games already. Add the ones it misses. An app is in one pool: an app added here leaves any other.",
         "data": {
-          "video": "Video",
           "games": "Games"
         }
       },
@@ -208,6 +207,14 @@
         "description": "People whose phone may share with the launcher's tile exchange: the layout of notifications from apps that have no tile yet, with every word and number blanked out (never chat, health or payment apps). Off for everyone not chosen here.",
         "data": {
           "people": "People"
+        }
+      },
+      "app_catalog": {
+        "title": "Shared app catalog",
+        "description": "Glint's shared catalog says what an app is (a game, YouTube, a streaming service, a companion app) on phones, TVs, Xbox, Windows and Switch, so new apps land in the right pool. Fetching it sends nothing. Sharing sends, once a week, the names and store ids of public apps the catalog lacks and the corrections you choose to share; never who uses them, no usage, no times, never chat, health, money or sign-in apps.",
+        "data": {
+          "fetch": "Fetch the shared app catalog",
+          "share": "Share with the shared app catalog"
         }
       },
       "voice_assistants": {
@@ -269,7 +276,7 @@
       },
       "new_apps": {
         "title": "Watch for new apps",
-        "description": "Apps the kids start using on Hearth's devices are noticed by themselves. Add sensors that list a kid's allowed apps (Family Link's Apps without limits and Apps with time limits) to notice an app as soon as it's allowed. Requests for more time, offers and chores go to every adult's Home Assistant companion app, and to the phone chosen here, if any.",
+        "description": "Apps the kids start using on Hearth's devices are noticed by themselves. Add sensors that list a kid's allowed apps (Family Link's Apps without limits and Apps with time limits) to notice an app as soon as it's allowed. Requests for more time, offers and chores done go to every adult's Home Assistant companion app, and to the phone chosen here, if any.",
         "data": {
           "entities": "App lists",
           "notify": "Also tell this phone",
@@ -352,16 +359,6 @@
           "url": "The list's address (https)",
           "time": "Every day at",
           "people": "Who (empty: everyone with Family Link or Family Safety in Enforce)"
-        }
-      },
-      "chores": {
-        "title": "Chores earn time",
-        "description": "Each chore checked off on the person's to-do list adds minutes to a group today, then goes from the list. A chore can say its own worth: \"Dishes +30\". Choosing a person again replaces theirs; no list stops it.",
-        "data": {
-          "person": "Person",
-          "todo": "Their chores list",
-          "group": "Adds to",
-          "minutes": "Minutes a chore is worth"
         }
       },
       "suggest_push": {
@@ -799,6 +796,16 @@
         "dry_run": {
           "name": "Dry run",
           "description": "Only say what would be added, without adding anything."
+        }
+      }
+    },
+    "chore_undo": {
+      "name": "Undo a chore's reward",
+      "description": "Takes back, whole, the reward a checked-off item on a kid's to-do list gave (the Undo on its notice). The item stays done.",
+      "fields": {
+        "key": {
+          "name": "Reward",
+          "description": "The reward's ledger key, as the notice and the panel have it."
         }
       }
     },

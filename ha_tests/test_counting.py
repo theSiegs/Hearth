@@ -31,18 +31,20 @@ def test_a_source_s_rest_counts_in_its_group():
     assert seconds == {ALL: 1800, "games": 1800}
 
 
-def test_a_minute_counts_in_every_group_its_app_is_in():
+def test_a_minute_counts_in_its_one_pool_and_all():
     groups = groups_from_options({"groups": [{"id": "youtube", "name": "YouTube", "apps": ["com.thesiegs.hearthtube"]}]})
-    membership = groups_of(groups, {"com.example.game": "game"})
+    membership = groups_of(groups, {"com.example.game": "game", "com.example.stream": "video"})
     devices = {
-        "tv": merge([Reading("hearth", 900, {"com.thesiegs.hearthtube": 600, "com.example.game": 300})]),
+        "tv": merge([Reading("hearth", 960, {"com.thesiegs.hearthtube": 600, "com.example.game": 300, "com.example.stream": 60})]),
         "phone": merge([Reading("hearth", 300, {"com.thesiegs.hearthtube": 300})]),
     }
     seconds = group_seconds(devices, membership)
-    assert seconds[ALL] == 1200
+    assert seconds[ALL] == 1260
     assert seconds["youtube"] == 900
-    assert seconds["video"] == 900  # HearthTube is a starter video app
     assert seconds["games"] == 300
+    # No built-in Video pool: a video app in no pool counts in All only, so the pools and "other" add up to All
+    assert "video" not in seconds
+    assert sum(v for k, v in seconds.items() if k != ALL) + 60 == seconds[ALL]
 
 
 def test_apps_added_to_a_built_in_group():
@@ -72,14 +74,15 @@ def test_a_group_outside_all_screen_time_counts_only_in_itself():
     assert [g.id for g in groups if not g.in_all] == ["messaging", "music"]
     assert [g.id for g in groups_from_options({"inside_all": ["messaging"]}) if not g.in_all] == []
     devices = {
-        "phone": merge([Reading("hearth", 1500, {"com.example.music": 600, "com.thesiegs.hearthtube": 600})]),
+        "phone": merge([Reading("hearth", 1500, {"com.example.music": 600, "com.example.game": 600})]),
         "speaker": merge([Reading("tablet", 300, {}, rest_group="music")]),
     }
-    seconds = group_seconds(devices, groups_of(groups, {}), [g.id for g in groups if not g.in_all])
+    membership = groups_of(groups, {"com.example.game": "game"})
+    seconds = group_seconds(devices, membership, [g.id for g in groups if not g.in_all])
     # The phone's 300 s not put on an app still counts; the music, on an app or a source's rest, doesn't
     assert seconds[ALL] == 900
     assert seconds["music"] == 900
-    assert seconds["video"] == 600
+    assert seconds["games"] == 600
 
 
 def test_all_screen_time_never_goes_outside_itself():

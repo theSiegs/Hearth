@@ -10,7 +10,7 @@ from here.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 import hashlib
 import json
 from typing import TYPE_CHECKING, Any
@@ -48,7 +48,24 @@ from .apps import (
     update_notification,
 )
 from .counting import ALL, DeviceUsage, Reading, group_seconds, merge
-from .limits import CONF_APP_GROUPS, OTHER, OTHER_DAY, SCHOOL_DAY, Group, GroupState, Limits, groups_from_options, groups_of
+from .catalog import CatalogKeeper, correctable_key
+from .limits import (
+    CONF_APP_GROUPS,
+    CONF_CATALOG_POOLS,
+    MESSAGING,
+    OTHER,
+    OTHER_DAY,
+    SCHOOL_DAY,
+    Group,
+    GroupState,
+    Limits,
+    Placement,
+    catalog_value,
+    groups_from_options,
+    placer,
+    pool_map,
+    without_app,
+)
 from .enforce import FAMILY_LINK, FAMILY_SAFETY, NINTENDO, Enforcement, enforcers_from_options, fs_account_of, fs_app, fs_app_platform
 from .exceptions import Allows, Lifted, end_of_day
 from .history import BONUS, DEVICE_BONUS, History
@@ -56,7 +73,7 @@ from .grants import Grants
 from .device_extra import ALLOW as EXTRA_ALLOW, BONUS as EXTRA_BONUS, DeviceExtra, DeviceExtras
 from .native_sync import NativeSync
 from . import family_link as fl
-from .chores import ChoreWatcher
+from .todos import ChoreBook
 from .schedule import Scheduler
 from .watch import WatchLog
 from .pause import PAUSE, app_pauses_of, end_pause, lock_kinds, lock_until, next_lock, pause_ends_on, pause_of
@@ -161,6 +178,8 @@ class Household:
         self.limits = Limits(hass, hub.entry.entry_id)
         self.live = LiveTracker(hass, hub.entry.entry_id)
         self.apps = AppCatalog(hass, hub.entry.entry_id)
+        # The shared app catalog (Glint's): what an app is, by its keys on every platform (catalog.py)
+        self.catalog = CatalogKeeper(hass, hub.entry.entry_id, dict(hub.entry.options))
         self.school = SchoolDays(hass)
         self.school.configure(dict(hub.entry.options))
         self.enforcement = Enforcement(hass, hub.entry.entry_id)
@@ -171,7 +190,9 @@ class Household:
         self.history = History(hass, hub.entry.entry_id)
         self.sync = NativeSync(hass, self, hub.entry.entry_id)
         self.scheduler = Scheduler(hass, self, hub.entry.entry_id)
-        self.chores = ChoreWatcher(hass, self)
+        self.todos = ChoreBook(hass, self, hub.entry.entry_id)
+        # Chore minutes earned today count as bonus (todos.py)
+        self.limits.chore_minutes = self.todos.minutes_today
         self.places = Places(hass, self)
         self.days: dict[str, PersonDay] = {}
         # The day [days] is of
@@ -192,6 +213,7 @@ class Household:
         await self.limits.async_load()
         await self.live.async_load()
         await self.apps.async_load()
+        await self.catalog.async_load()
         await self.enforcement.async_load()
         await self.watch.async_load()
         await self.allows.async_load()
@@ -200,9 +222,11 @@ class Household:
         await self.history.async_load()
         await self.sync.async_load()
         await self.scheduler.async_load()
+        await self.todos.async_load()
 
     async def async_flush(self) -> None:
         await self.limits.async_flush()
+        await self.catalog.async_flush()
         await self.live.async_flush()
         await self.enforcement.async_flush()
         await self.watch.async_flush()
@@ -212,6 +236,7 @@ class Household:
         await self.history.async_flush()
         await self.sync.async_flush()
         await self.scheduler.async_flush()
+        await self.todos.async_flush()
 
     # The mapping
 
@@ -354,6 +379,29 @@ class Household:
 
     def _lock_entities(self, person: str) -> list[str]:
         return [lock["entity_id"] for lock in self.options.get(CONF_LOCKS, []) if lock.get("person") == person]
+
+    def bedtime_today(self, person: str, now: datetime | None = None) -> dict[str, str] | None:
+        """Today's bedtime from the person's lock entities in Hearth's settings (those that say bedtime_start and
+        bedtime_end, as Family Link's bedtime does): {start: tonight's, end: this morning's wake}, local ISO times on
+        today's date. With more than one, the earliest start and the latest end; None when none says."""
+        today = dt_util.as_local(now or dt_util.now()).date()
+        starts: list[time] = []
+        ends: list[time] = []
+        for entity_id in self._lock_entities(person):
+            state = self.hass.states.get(entity_id)
+            if state is None:
+                continue
+            for key, into in (("bedtime_start", starts), ("bedtime_end", ends)):
+                if (clock := _clock_of(state.attributes.get(key))) is not None:
+                    into.append(clock)
+        if not starts or not ends:
+            return None
+        zone = dt_util.get_default_time_zone()
+        start = datetime.combine(today, min(starts), zone)
+        end = datetime.combine(today, max(ends), zone)
+        if end >= start:  # not a night: nothing to draw
+            return None
+        return {"start": start.isoformat(), "end": end.isoformat()}
 
     def _locks_document(self, person: str, day: PersonDay | None) -> dict[str, Any]:
         """Why and until when the person is held ("lock" {by, until}), a family pause ("pause" {until, reason}), and
@@ -512,20 +560,43 @@ class Household:
     def _key(self, item: str) -> str:
         return title_key(self.titles, item)
 
-    def membership(self):
-        """An item's groups: from the group lists, Android's category, where its time came from, and for a title
-        its apps'."""
-        base = groups_of(self.groups, self.categories, self.options.get(CONF_APP_GROUPS, {}))
-        hints = self._hints
+    def pools(self) -> dict[str, str]:
+        """What each catalog (or device) value goes to in this household: a pool, or "other" (limits.pool_map)."""
+        return pool_map(self.groups, self.options.get(CONF_CATALOG_POOLS))
+
+    def placement(self):
+        """Where an item counts and why (limits.placer): an adult's move, the household's lists, Hearth's curated
+        lists, the shared catalog's confirmed answer, the device's category (a Glint phone's copy of the catalog
+        below it), the catalog's suggested answer, where its time came from (a Switch's: games), else Other; for a
+        title its apps' (the first that has one)."""
+        place = placer(
+            self.groups,
+            self.categories,
+            self.options.get(CONF_APP_GROUPS, {}),
+            catalog=self.catalog.data.lookup,
+            pools=self.pools(),
+            hints=self._hints,
+        )
         titles = {f"title:{t.id}": t for t in self.titles}
 
-        def of(item: str) -> set[str]:
-            found = base(item) | hints.get(item, set())
+        def of(item: str) -> Placement:
+            found = place(item)
             title = titles.get(item)
-            if title is not None:
+            if title is not None and found.pool is None and found.why not in ("moved", "catalog"):
                 for raw in title.raw:
-                    found |= base(raw) | hints.get(raw, set())
+                    if (raw_found := place(raw)).pool is not None:
+                        return raw_found
             return found
+
+        return of
+
+    def membership(self):
+        """An item's groups: All and at most one pool (placement)."""
+        place = self.placement()
+
+        def of(item: str) -> set[str]:
+            pool = place(item).pool
+            return {ALL, pool} if pool else {ALL}
 
         return of
 
@@ -693,6 +764,8 @@ class Household:
             categories.setdefault(package, category)
         self.categories = categories
         self._hints = hints
+        if self.catalog.share_on:
+            self._note_for_catalog(readings, categories)
         self._look_for_new_apps(categories)
         membership = self.membership()
         # The day turned: each person's final minutes of the day before, as last counted (history.py, `day`)
@@ -809,14 +882,86 @@ class Household:
                 )
         fresh = self.apps.observe(observed, categories, self.groups, sources)
         # Sorted on their own (a group that lists them, their category, the catalog's, else Other): nobody is asked;
-        # an adult moves one on Hearth's page if it landed wrong
+        # an adult moves one on Hearth's page if it landed wrong. Where it went is where it counts (the shared catalog
+        # included)
+        place = self.placement() if fresh else None
         for entry in fresh:
+            entry.group = entry.suggested = place(entry.package).pool
             self.hass.bus.async_fire(
                 EVENT_NEW_APP,
                 {"package": entry.package, "name": entry.name, "who": entry.who, "group": entry.group or OTHER},
             )
         if fresh:
             update_notification(self.hass, [], self.groups)
+
+    def _note_for_catalog(self, readings: dict[str, dict[str, list[Reading]]], categories: dict[str, str]) -> None:
+        """While sharing with the shared catalog is on: the public store ids counted today that it lacks, unless the
+        only ones they were seen on are kids whose sharing is off (tile_exchange_share), or it's a messaging app."""
+        seen: dict[str, set[str]] = {}
+        for person, devices in readings.items():
+            for device_readings in devices.values():
+                for reading in device_readings:
+                    for item in reading.items:
+                        seen.setdefault(item, set()).add(person)
+        roles = self.options.get(CONF_ROLES, {})
+        sharing = set(self.options.get(CONF_TILE_EXCHANGE, []))
+
+        def never(item: str) -> bool:
+            hit = self.catalog.data.lookup(item)
+            return categories.get(item) == MESSAGING or (hit is not None and hit.category == MESSAGING)
+
+        self.catalog.note_seen(seen, lambda p: roles.get(p) == "adult" or p in sharing, never)
+
+    def correct_app(self, item: str, group: str) -> bool:
+        """An adult moved [item] to [group] and ticked "suggest this for the shared catalog": the catalog's key and
+        value for that pool join the next weekly send (never the pool). False when sharing is off, the item has no
+        public key, the pool says nothing the catalog knows, or it's about a messaging app."""
+        key = correctable_key(item)
+        value = catalog_value(self.pools(), group)
+        if key is None or value is None or value["category"] == MESSAGING:
+            return False
+        hit = self.catalog.data.lookup(item)
+        if self.categories.get(item) == MESSAGING or (hit is not None and hit.category == MESSAGING):
+            return False
+        return self.catalog.queue_correction(key, value["category"], value.get("detail"))
+
+    def check_these(self, known: dict[str, str] | None = None) -> list[dict[str, Any]]:
+        """Apps an adult should look at: placed only on the shared catalog's suggestion, or where the catalog's
+        confirmed answer and the device disagree on whether it's a game (Hearth goes by the catalog). Gone once an
+        adult moves or confirms one (app_groups)."""
+        known = known if known is not None else self.known_apps()
+        place = self.placement()
+        found = []
+        for item, name in known.items():
+            p = place(item)
+            if p.why == "suggested":
+                why = f"shared catalog suggests {p.value}"
+            elif p.why == "catalog" and p.disagree:
+                why = f"shared catalog says {p.value}, the device says {p.declared}"
+            else:
+                continue
+            found.append({
+                "package": item,
+                "name": name,
+                "group": p.pool or OTHER,
+                "why": why,
+                "suggested": p.why == "suggested",
+                "shareable": correctable_key(item) is not None,
+            })
+        # Suggestions first, then disagreements, each by name
+        return sorted(found, key=lambda a: (not a["suggested"], str(a["name"]).lower()))[:50]
+
+    def catalog_note(self, item: str, group: str) -> str | None:
+        """For an app an adult moved: what the shared catalog's confirmed answer now says, when it'd put it elsewhere
+        (shown quietly; the adult's choice stands)."""
+        hit = self.catalog.data.lookup(item)
+        if hit is None or not hit.confirmed:
+            return None
+        pools = self.pools()
+        value = hit.detail if hit.detail in pools else hit.category
+        pool = pools.get(value) if value else None
+        pool = pool if pool and self.group(pool) is not None else OTHER
+        return None if pool == group else hit.value
 
     def _ask_on_phone(self, entry) -> None:
         self.hub.attention.notify(
@@ -837,7 +982,9 @@ class Household:
             return False
         self.apps.sort(package, group)
         moved = {**self.options.get(CONF_APP_GROUPS, {}), package: group}
-        self.hass.config_entries.async_update_entry(self.hub.entry, options={**self.hub.entry.options, CONF_APP_GROUPS: moved})
+        # An app is in one pool: it leaves any other pool's list
+        options = without_app(dict(self.hub.entry.options), package, keep=None if group == OTHER else group)
+        self.hass.config_entries.async_update_entry(self.hub.entry, options={**options, CONF_APP_GROUPS: moved})
         return True
 
     def app_group(self, package: str, membership=None) -> str:
@@ -851,15 +998,18 @@ class Household:
         membership = self.membership()
         moved = self.options.get(CONF_APP_GROUPS, {})
         known = self.known_apps()
-        apps = [
-            {"package": p, "name": name, "group": self.app_group(p, membership), "moved": p in moved}
-            for p, name in sorted(known.items(), key=lambda kv: kv[1].lower())
-        ]
+        apps = []
+        for p, name in sorted(known.items(), key=lambda kv: kv[1].lower()):
+            row = {"package": p, "name": name, "group": self.app_group(p, membership), "moved": p in moved}
+            if p in moved and (note := self.catalog_note(p, row["group"])):
+                row["catalog_says"] = note
+            apps.append(row)
         recent = sorted(
             (e for e in self.apps.apps.values() if e.state != "known"), key=lambda e: e.seen, reverse=True
         )[:25]
         return {
             "apps": apps,
+            "check_these": self.check_these(known),
             "recent": [
                 {
                     "package": e.package,
@@ -1642,3 +1792,17 @@ def _timing(duration: Any, position: Any, at: datetime | None) -> dict[str, Any]
 
 def person_identifier(person: str) -> tuple[str, str]:
     return (DOMAIN, f"person:{person}")
+
+
+def _clock_of(value: Any) -> time | None:
+    """A lock entity's bedtime_start or bedtime_end as a clock time: an ISO time with a date (its local clock), or a
+    time of day ("21:00:00")."""
+    if not isinstance(value, str) or not value:
+        return None
+    if (parsed := dt_util.parse_datetime(value)) is not None:
+        if parsed.tzinfo is not None:
+            parsed = dt_util.as_local(parsed)
+        return parsed.time().replace(second=0, microsecond=0)
+    if (clock := dt_util.parse_time(value)) is not None:
+        return clock.replace(second=0, microsecond=0)
+    return None

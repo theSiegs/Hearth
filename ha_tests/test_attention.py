@@ -16,13 +16,17 @@ from custom_components.hearth.attention import (
     Action,
     Item,
 )
-from custom_components.hearth.chores import Chores
 from custom_components.hearth.const import DOMAIN
 from custom_components.hearth.phones import phones
 from test_asks import _ask
 from test_parent_pin import _adults
 from test_people import _household_with_sam
 from test_phones import _companion_app, _options
+
+_CHORE = {
+    "occurrence": "chore-uid-1", "key": "chore-uid-1#1", "title": "Dishes", "person": "person.sam", "pool": "all",
+    "minutes": 15, "asked": 15,
+}
 
 
 def _hub(hass: HomeAssistant):
@@ -173,7 +177,7 @@ async def test_every_phone_push_is_tagged_hearth(
     request = (await (await _ask(client, secret, minutes=30, profile_id="user:10")).json())["request"]
     hub.asks.tell("Sam: School", "Sam got to school.", "hearth_place_person.sam")
     household.scheduler.tell("Today's schedule", "Check Family Link.", "hearth_schedule_check")
-    household.chores._tell(Chores("person.sam", "todo.sam", "all", 15), "chore-uid-1", "Dishes", 15)
+    hub.attention.notify(household.todos._notice(dict(_CHORE)))
     household._ask_on_phone(AppEntry("com.example.game", "Example Game", "2026-11-13", "new", who="Sam"))
     await hass.async_block_till_done()
 
@@ -201,7 +205,7 @@ async def test_news_about_a_kid_stays_off_the_bell(
     household = hub.household
     request = (await (await _ask(client, secret, minutes=30, profile_id="user:10")).json())["request"]
     hub.asks.tell("Sam: School", "Sam got to school.", "hearth_place_person.sam")
-    household.chores._tell(Chores("person.sam", "todo.sam", "all", 15), "chore-uid-1", "Dishes", 15)
+    hub.attention.notify(household.todos._notice(dict(_CHORE)))
     household.scheduler.tell("Today's schedule", "Check Family Link.", "hearth_schedule_check")
     notify_pairing(hass, "p-1", "Kitchen TV")
     await hass.async_block_till_done()

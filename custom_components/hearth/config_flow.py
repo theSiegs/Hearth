@@ -49,7 +49,8 @@ from .const import (
     KIND_MOBILE,
 )
 from .counting import ALL
-from .limits import BUILTIN_GROUPS, GAMES, VIDEO, slug
+from .limits import BUILTIN_GROUPS, CONF_POOLS, GAMES, POOLS_VERSION, one_pool_per_app, slug
+from .catalog import CONF_CATALOG_ASKED, CONF_CATALOG_FETCH, CONF_CATALOG_SHARE
 from .apps import CONF_APP_WATCH, CONF_ASK_NOTIFY, OTHER, options_with_app_in_group, update_notification
 from .enforce import (
     CONF_ENFORCE,
@@ -66,7 +67,6 @@ from .enforce import (
 from .notifications import clear_pairing
 from .schooldays import CALENDAR_OFF, CALENDAR_SCHOOL, CONF_SCHOOL_DAYS, SCHOOL_BUDGET
 from .schedule import CONF_SCHEDULE, CONF_SITE_LIST
-from .chores import CONF_CHORES, DEFAULT_MINUTES
 from .asks import AMOUNTS, CONF_OFFER_MORE
 from .suggest_push import CONF_SUGGEST_PUSH, pairs as suggest_pairs
 from .sources import CONF_SOURCES, CONF_TITLES, is_phone_app
@@ -99,7 +99,12 @@ class HearthConfigFlow(ConfigFlow, domain=DOMAIN):
         if self._async_current_entries(include_ignore=False):
             return self.async_abort(reason="single_instance_allowed")
         if user_input is not None:
-            return self.async_create_entry(title=user_input[CONF_NAME], data={CONF_NAME: user_input[CONF_NAME]})
+            # A new household starts with one pool per app and no built-in Video pool: nothing to retire
+            return self.async_create_entry(
+                title=user_input[CONF_NAME],
+                data={CONF_NAME: user_input[CONF_NAME]},
+                options={CONF_POOLS: POOLS_VERSION},
+            )
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({vol.Required(CONF_NAME, default="Home"): str}),
@@ -157,7 +162,6 @@ class HearthOptionsFlow(OptionsFlow):
                 "schedule",
                 "places",
                 "site_list",
-                "chores",
                 "suggest_push",
                 "sort_apps",
                 "new_apps",
@@ -166,6 +170,7 @@ class HearthOptionsFlow(OptionsFlow):
                 "not_screen_time",
                 "remove_group",
                 "tile_exchange",
+                "app_catalog",
                 "voice_assistants",
                 "parent_pin",
                 "push",
@@ -228,23 +233,22 @@ class HearthOptionsFlow(OptionsFlow):
                 errors[CONF_NAME] = "name_taken"
             else:
                 groups.append({"id": group_id, "name": name, "apps": list(user_input.get("apps", []))})
-                return self.async_create_entry(data={**options, CONF_GROUPS: groups})
+                # An app is in one pool: the apps chosen here leave the others
+                return self.async_create_entry(data=one_pool_per_app(options, {**options, CONF_GROUPS: groups}))
         schema = vol.Schema(
             {vol.Required(CONF_NAME): TextSelector(), vol.Optional("apps", default=[]): self._app_selector([])}
         )
         return self.async_show_form(step_id="add_group", data_schema=schema, errors=errors)
 
     async def async_step_group_apps(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Apps an adult adds to Video or Games (Android's categories miss some)."""
+        """Apps an adult adds to Games (Android's categories miss some); they leave any other pool."""
         options = self._options()
         added: dict[str, list[str]] = {k: list(v) for k, v in options.get(CONF_GROUP_APPS, {}).items()}
         if user_input is not None:
-            added[VIDEO] = list(user_input.get(VIDEO, []))
             added[GAMES] = list(user_input.get(GAMES, []))
-            return self.async_create_entry(data={**options, CONF_GROUP_APPS: added})
+            return self.async_create_entry(data=one_pool_per_app(options, {**options, CONF_GROUP_APPS: added}))
         schema = vol.Schema(
             {
-                vol.Optional(VIDEO, default=added.get(VIDEO, [])): self._app_selector(added.get(VIDEO, [])),
                 vol.Optional(GAMES, default=added.get(GAMES, [])): self._app_selector(added.get(GAMES, [])),
             }
         )
@@ -282,6 +286,28 @@ class HearthOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="tile_exchange", data_schema=schema)
+
+    async def async_step_app_catalog(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Hearth's own tile exchange setting, for the shared app catalog (catalog.py): fetching it (on by default; it
+        sends nothing) and sending it public store ids and the corrections an adult shares (off until turned on).
+        Options are for Home Assistant's administrators only, as the page is."""
+        options = self._options()
+        if user_input is not None:
+            return self.async_create_entry(
+                data={
+                    **options,
+                    CONF_CATALOG_FETCH: bool(user_input.get("fetch", True)),
+                    CONF_CATALOG_SHARE: bool(user_input.get("share", False)),
+                    CONF_CATALOG_ASKED: True,
+                }
+            )
+        schema = vol.Schema(
+            {
+                vol.Optional("fetch", default=options.get(CONF_CATALOG_FETCH, True) is not False): BooleanSelector(),
+                vol.Optional("share", default=bool(options.get(CONF_CATALOG_SHARE))): BooleanSelector(),
+            }
+        )
+        return self.async_show_form(step_id="app_catalog", data_schema=schema)
 
     async def async_step_voice_assistants(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Voice assistants may use Hearth (llm_api.py): calls without a Home Assistant user (a voice satellite) get
@@ -763,36 +789,6 @@ class HearthOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="site_list", data_schema=schema, errors=errors)
-
-    async def async_step_chores(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """A person's chores list: each item checked off adds minutes to a group today. Choosing a person again
-        replaces theirs; no list stops it."""
-        options = self._options()
-        chores: list[dict[str, Any]] = list(options.get(CONF_CHORES, []))
-        if user_input is not None:
-            person = user_input[CONF_PERSON]
-            kept = [c for c in chores if c.get("person") != person]
-            if user_input.get("todo") and user_input.get("group"):
-                kept.append(
-                    {
-                        "person": person,
-                        "todo": user_input["todo"],
-                        "group": user_input["group"],
-                        "minutes": int(user_input.get("minutes") or DEFAULT_MINUTES),
-                    }
-                )
-            return self.async_create_entry(data={**options, CONF_CHORES: kept})
-        schema = vol.Schema(
-            {
-                vol.Required(CONF_PERSON): PERSON_SELECTOR,
-                vol.Optional("todo"): EntitySelector(EntitySelectorConfig(domain="todo")),
-                vol.Optional("group"): self._group_selector(),
-                vol.Optional("minutes", default=DEFAULT_MINUTES): NumberSelector(
-                    NumberSelectorConfig(min=1, max=240, step=1, unit_of_measurement="min", mode=NumberSelectorMode.BOX)
-                ),
-            }
-        )
-        return self.async_show_form(step_id="chores", data_schema=schema)
 
     async def async_step_places(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Places are zones (places.py): a kid's school zone and Family Link tracker (choosing a kid again replaces

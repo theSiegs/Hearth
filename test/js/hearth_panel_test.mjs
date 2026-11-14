@@ -192,3 +192,195 @@ test("what Hearth holds reads by app name and why, under Device limits", () => {
   assert.match(html, /Family Link: holding Google Messages for School time · put back Music/);
   assert.doesNotMatch(html, /holding com\./);
 });
+
+// The time-use design (fix-list item 10)
+
+function twoKids() {
+  const p = panel();
+  p._config.persons.push({ id: "person.alex", name: "Alex" });
+  p._config.roles["person.alex"] = "kid";
+  p._summary.people.push({
+    id: "person.alex",
+    name: "Alex",
+    all: { id: "all", name: "All screen time", used_minutes: 23, minutes_left: 172, budget: 180, bonus: 15 },
+    groups: [],
+  });
+  return p;
+}
+
+test("Today shows a compact row per kid; the full card opens on a tap", () => {
+  const p = twoKids();
+  let html = p._page();
+  assert.match(html, /class="kid-row[^"]*" data-action="kid-open" data-enter="kid-open" data-kid="person.alex"/);
+  assert.match(html, /data-kid="person.sam"/);
+  // No ring, and no full card until a row is tapped
+  assert.doesNotMatch(html, /class="ring/);
+  assert.doesNotMatch(html, /id="kid-person.sam"/);
+  // No give button on a row without something to answer
+  assert.doesNotMatch(html, /kid-row[^]*?data-action="bonus"/);
+  p._todayKid = "person.sam";
+  html = p._page();
+  assert.match(html, /id="kid-person.sam"/);
+  assert.doesNotMatch(html, /id="kid-person.alex"/);
+});
+
+test("a row has a button only for a waiting request or a suggestion", () => {
+  const p = twoKids();
+  p._summary.approvals = [{ type: "more_time", id: "q1", person: "person.alex", person_name: "Alex", minutes: 30, group: "all" }];
+  p._summary.household = {
+    suggestions: [
+      { key: "more:youtube", person: "person.sam", person_name: "Sam", text: "youtube ran out", actions: [{ id: "bonus:youtube", label: "+15 youtube", service: "hearth.add_bonus", data: {} }] },
+    ],
+  };
+  p._summary.people[0].actions = [];
+  const html = p._page();
+  const rows = html.split('class="kid-row').slice(1);
+  const alex = rows.find((r) => r.includes('data-kid="person.alex"'));
+  const sam = rows.find((r) => r.includes('data-kid="person.sam"'));
+  assert.match(alex, /data-action="answer" data-request="q1" data-minutes="30"[^>]*>Yes 30</);
+  assert.match(sam, /data-action="glance" data-id="bonus:youtube"[^>]*>\+15 youtube</);
+});
+
+test("All screen time is one bar split by pool plus other, with the limit, the bonus and a lane per pool", () => {
+  const html = panel({
+    sam: {
+      all: { id: "all", name: "All screen time", used_minutes: 23, minutes_left: 172, budget: 180, bonus: 15, state: "ok" },
+      groups: [
+        { id: "youtube", name: "YouTube", used_minutes: 7, minutes_left: 53, budget: 60, bonus: 0, state: "ok" },
+        { id: "games", name: "Games", used_minutes: 10, minutes_left: 110, budget: 120, bonus: 0, state: "ok" },
+        { id: "messaging", name: "Messaging", used_minutes: 2, minutes_left: null, budget: null, bonus: 0 },
+      ],
+      all_by_pool: [
+        { id: "games", name: "Games", minutes: 10 },
+        { id: "youtube", name: "YouTube", minutes: 7 },
+        { id: "other", name: "Other", minutes: 6 },
+      ],
+    },
+  })._page();
+  assert.match(html, /<span class="strong">All screen time<\/span>.*23 of 3 h 15/s);
+  assert.equal((html.match(/class="seg /g) || []).length, 3);
+  assert.match(html, /class="seg other"[^>]*title="Other: 6 min"/);
+  // The limit at 180 of 195 minutes, the bonus hatched after it
+  assert.match(html, /class="bonus" style="left:92.31%;width:7.69%"/);
+  assert.match(html, /class="limit" style="left:92.31%"/);
+  // A lane per budgeted pool, fewest left first, on the same scale; the rest in one muted line
+  assert.match(html, /class="lane role-ok"><span class="bar-label">YouTube<\/span>[^]*?class="limit" style="left:30.77%"[^]*?53 left/);
+  assert.match(html, /<span class="bar-label">Games<\/span>/);
+  assert.ok(html.indexOf(">YouTube</span>") < html.indexOf(">Games</span>"));
+  assert.match(html, /No limit: messaging 2 min/);
+});
+
+test("the day strip runs from wake to bedtime, else 6 to 10", () => {
+  const today = new Date();
+  const at = (h, m = 0) => new Date(today.getFullYear(), today.getMonth(), today.getDate(), h, m).toISOString();
+  let html = panel({ sam: { bedtime: { start: at(20, 30), end: at(7) }, school_time: { start: at(8), end: at(15) } } })._page();
+  assert.match(html, /class="strip"/);
+  const ticks = (h) => [...h.matchAll(/<div class="strip-x">(.*?)<\/div>/gs)][0][1].match(/>(\d+)</g).map((t) => t.slice(1, -1));
+  assert.deepEqual(ticks(html), ["7", "9", "11", "1", "3", "5", "7", "9"]);
+  // The half hour after bedtime is shaded; School time is striped
+  assert.match(html, /class="night" style="left:96.43%;width:3.57%"/);
+  assert.match(html, /class="school"/);
+  assert.match(html, /bedtime at 8:30/);
+  html = panel()._page();
+  assert.deepEqual(ticks(html), ["6", "8", "10", "12", "2", "4", "6", "8", "10"]);
+});
+
+test("each device shows the time left there as the server worked it out", () => {
+  const html = panel({
+    sam: {
+      targets: [
+        { id: "fl:d1", name: "Phone", kind: "phone", via: "family_link", left: 103, left_by: "google", left_pool: null, locked: false, locked_kind: null },
+        { id: "fs:xbox", name: "Xbox", kind: "xbox", via: "family_safety", left: 120, left_by: "hearth", left_pool: "games", locked: false, locked_kind: null },
+        { id: "hearth:tv1", name: "Kitchen TV", kind: "tv", via: "hearth", left: 157, left_by: "hearth", left_pool: "all", locked: true, locked_kind: "school_time" },
+        { id: "hearth:p1", name: "Phone", kind: "phone", via: "hearth", same_as: null, left: 157, left_by: "hearth", locked: false },
+      ],
+    },
+  })._page();
+  const tiles = html.split(/class="tile[" ]/).slice(1);
+  assert.equal(tiles.length, 4);
+  assert.match(tiles[0], /Phone<\/div><div class="strong">1 h 43 left<\/div><div class="muted small">by google</);
+  assert.match(tiles[1], /2 h left<\/div><div class="muted small">games, by hearth</);
+  assert.match(tiles[2], /^locked"[^]*Locked<\/div><div class="muted small">school time</);
+  // An older summary without the fields: no tiles
+  assert.doesNotMatch(panel()._page(), /class="tiles"/);
+});
+
+test("the Chores card: today's list with tick, Give and Undo, the tasks and the balance", () => {
+  const p = panel();
+  p._tab = "kids";
+  p._todo = {
+    "person.sam": {
+      today: [
+        { id: "t1:2026-11-13", task: "t1", title: "Feed the cat", reward: "+15 min Games", done: true, granted: "t1:2026-11-13#1", by: "adult" },
+        { id: "t2:2026-11-13", task: "t2", title: "Teeth", reward: "+5 min Games", done: true, granted: null, by: "adult" },
+        { id: "t3", task: "t3", title: "Math sheet", reward: null, done: false, granted: null, by: "kid" },
+      ],
+      tasks: [
+        { id: "t1", title: "Feed the cat", repeat: { kind: "weekdays", days: [0, 1, 2, 3, 4] }, due_time: "07:30", reward: { pool: "all", minutes: 15 } },
+        { id: "t4", title: "Mow", repeat: { kind: "after_done", n: 7 }, reward: { cents: 500 } },
+      ],
+      ledger: [{ key: "t1:2026-11-13#1", kind: "earned", title: "Feed the cat", day: "2026-11-13", pool: "all", minutes: 15 }],
+      balance_cents: 1250,
+    },
+  };
+  const html = p._page();
+  assert.match(html, /<h3><ha-icon icon="mdi:checkbox-marked-circle-outline"><\/ha-icon>Chores<\/h3>/);
+  assert.match(html, /data-change="todo-check"[^>]*data-item="t1:2026-11-13" checked/);
+  assert.match(html, /data-action="todo-undo"[^>]*data-key="t1:2026-11-13#1"/);
+  // Done with no reward given (a shared screen's tick): Give
+  assert.match(html, /no reward given<\/span><button class="btn" data-action="todo-give"[^>]*data-item="t2:2026-11-13"/);
+  assert.match(html, /Math sheet <span class="chip small">Sam's own<\/span>/);
+  assert.match(html, /Mon to Fri · by 07:30 · \+15 min All screen time/);
+  assert.match(html, /7 days after done · \+\$5\.00/);
+  assert.match(html, /Balance: <b>\$12\.50<\/b>/);
+  assert.match(html, /data-action="todo-add" data-person="person.sam"/);
+});
+
+test("the Chores card says when the list couldn't be read", () => {
+  const p = panel();
+  p._tab = "kids";
+  p._todo = { "person.sam": null };
+  assert.match(p._page(), /The to-do list couldn't be read/);
+});
+
+test("Check these: the shared catalog's guesses and disagreements, kept with Right or moved, with a tick to share", () => {
+  const p = panel();
+  p._config.groups.push({ id: "games", name: "Games", builtin: true, in_all: true, apps: [], added_apps: [] });
+  p._config.check_these = [
+    { package: "com.example.maybe", name: "Maybe Game", group: "games", why: "shared catalog suggests game", suggested: true, shareable: true },
+    { package: "x:xboxplt:0123456789abcdef", name: "Hub", group: "other", why: "shared catalog says companion, the device says game", suggested: false, shareable: false },
+  ];
+  p._config.apps = [{ package: "com.example.moved", name: "Moved", group: "games", moved: true, catalog_says: "companion" }];
+  p._config.catalog = { fetch: true, share: true, asked: true, keys: 380, values: ["game", "youtube"], pools: { game: "games" }, own_pools: {}, waiting: { keys: 2, corrections: 1 } };
+  const html = p._appsTab();
+  assert.match(html, /<h3><ha-icon icon="mdi:help-circle-outline"><\/ha-icon>Check these<\/h3>/);
+  assert.match(html, /data-action="app-confirm" data-app="com.example.maybe" data-group="games">Right/);
+  assert.match(html, /data-change="app-group" data-app="com.example.maybe" data-idx="0"/);
+  assert.match(html, /id="catalog-suggest-0"/);
+  // A key the catalog can't take (Family Safety's own id) has no tick
+  assert.doesNotMatch(html, /id="catalog-suggest-1"/);
+  assert.match(html, /the shared catalog now says companion/);
+  // Nothing to check: no card
+  p._config.check_these = [];
+  assert.doesNotMatch(p._appsTab(), /Check these/);
+});
+
+test("the shared catalog's setting asks once before sharing, and maps kinds of apps to groups", () => {
+  const p = panel();
+  p._config.groups.push({ id: "games", name: "Games", builtin: true, in_all: true, apps: [], added_apps: [] });
+  p._config.catalog = {
+    fetch: true, share: false, asked: false, keys: 380, origin: "bundled", values: ["game", "companion"],
+    pools: { game: "games", companion: "other" }, own_pools: { companion: "games" },
+  };
+  let html = p._catalogCard();
+  assert.match(html, /data-change="catalog-fetch" checked/);
+  assert.match(html, /data-action="catalog-share-on">Turn on/);
+  assert.match(html, /never who uses them/);
+  assert.match(html, /the copy Hearth came with/);
+  assert.match(html, /Hearth's default \(Games\)/);
+  assert.match(html, /<option value="games" selected>Games<\/option>/);
+  p._config.catalog = { ...p._config.catalog, asked: true };
+  html = p._catalogCard();
+  assert.doesNotMatch(html, /catalog-share-on/);
+  assert.match(html, /data-change="catalog-share" >/);
+});

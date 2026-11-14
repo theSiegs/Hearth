@@ -331,18 +331,23 @@ def _summary(hub: HearthHub) -> dict[str, Any]:
 
 _BRIEF = (
     "id", "name", "kind", "all", "groups", "locked", "locked_by", "pause", "lock", "next_lock", "held_by",
-    "google_tv_limit", "school_time", "school_time_off", "place", "playing", "headline", "lines",
+    "google_tv_limit", "school_time", "school_time_off", "bedtime", "place", "playing", "headline", "lines",
 )
 _DETAIL = _BRIEF + (
     "allows", "pauses", "grants", "device_extras", "devices_today", "apps_today", "first_party", "answered_elsewhere",
-    "week",
+    "week", "all_by_pool",
 )
+_DEVICE_TIME = ("left", "left_by", "locked")
 
 
 def _person_view(row: dict[str, Any], keys: tuple[str, ...]) -> dict[str, Any]:
     out = {k: row[k] for k in keys if k in row and row[k] not in (None, [], {})}
     if "targets" in row and "week" in keys:
-        out["devices"] = [{"id": t["id"], "name": t["name"], "kind": t.get("kind")} for t in row["targets"]]
+        out["devices"] = [
+            # With the time left there and whose limit it is (targets.with_time_left)
+            {"id": t["id"], "name": t["name"], "kind": t.get("kind"), **{k: t[k] for k in _DEVICE_TIME if k in t}}
+            for t in row["targets"]
+        ]
     return out
 
 

@@ -44,14 +44,19 @@ from .const import (
 )
 from .counting import ALL
 from .enforce import CONF_ENFORCE, FAMILY_LINK, FAMILY_SAFETY, NINTENDO, NINTENDO_DOMAIN, PLATFORMS
+from .catalog import CONF_CATALOG_ASKED, CONF_CATALOG_FETCH, CONF_CATALOG_RELAY, CONF_CATALOG_SHARE, CONF_CATALOG_URL
 from .limits import (
     BUILTIN_GROUPS,
+    CATEGORY_VALUES,
     CONF_APP_GROUPS,
+    CONF_CATALOG_POOLS,
+    DETAIL_VALUES,
     CONF_INSIDE_ALL,
     DEFAULT_OUTSIDE_ALL,
     OTHER,
     OTHER_DAY,
     SCHOOL_DAY,
+    one_pool_per_app,
     slug,
 )
 from .notifications import clear_pairing
@@ -288,6 +293,15 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
         "media_players": dict(options.get(CONF_MEDIA_PLAYERS, {})),
         **household.apps_overview(),
         "tile_exchange": list(options.get(CONF_TILE_EXCHANGE, [])),
+        # The shared app catalog (catalog.py): the copy in use, Hearth's own tile exchange setting (fetching on by
+        # default; sending asked once, off until turned on), and what each value goes to here
+        "catalog": {
+            **household.catalog.page(),
+            "asked": bool(options.get(CONF_CATALOG_ASKED)),
+            "pools": household.pools(),
+            "own_pools": dict(options.get(CONF_CATALOG_POOLS) or {}),
+            "values": [*DETAIL_VALUES, *CATEGORY_VALUES],
+        },
         # Voice assistants may use Hearth (llm_api.py): off unless chosen
         "voice_assistants": bool(options.get(CONF_VOICE_ASSISTANTS)),
         "push_server": options.get(CONF_PUSH_SERVER),
@@ -358,10 +372,18 @@ _ID = vol.All(cv.string, vol.Match(r"^[a-z0-9_]{1,64}$"))
 OPTION_SCHEMAS: dict[str, Any] = {
     CONF_ROLES: vol.Schema({_PERSON: vol.In(ROLES)}),
     CONF_PROFILES: vol.Schema({vol.Match(OPTION_KEY): _PERSON}),
-    CONF_GROUPS: [vol.Schema({vol.Required("id"): _ID, vol.Required("name"): cv.string, "apps": [cv.string]})],
+    CONF_GROUPS: [
+        vol.Schema({vol.Required("id"): _ID, vol.Required("name"): cv.string, "apps": [cv.string], "category": cv.string})
+    ],
     CONF_GROUP_APPS: vol.Schema({_ID: [cv.string]}),
     CONF_OUTSIDE_ALL: [_ID],
     CONF_TILE_EXCHANGE: [_PERSON],
+    CONF_CATALOG_FETCH: bool,
+    CONF_CATALOG_SHARE: bool,
+    CONF_CATALOG_ASKED: bool,
+    CONF_CATALOG_POOLS: vol.Schema({vol.In((*DETAIL_VALUES, *CATEGORY_VALUES)): vol.Any(OTHER, _ID)}),
+    CONF_CATALOG_URL: vol.Any(None, vol.All(cv.url, vol.Match(r"^https://"))),
+    CONF_CATALOG_RELAY: vol.Any(None, vol.All(cv.url, vol.Match(r"^https://"))),
     CONF_VOICE_ASSISTANTS: bool,
     CONF_SOURCES: [
         vol.Schema(
@@ -456,11 +478,40 @@ def ws_config_set(hass: HomeAssistant, connection: websocket_api.ActiveConnectio
         connection.send_error(msg["id"], "invalid", str(err))
         return
     options = {**hub.entry.options, key: value}
+    if key == CONF_GROUPS:
+        # A pool's category (the Video pool retire_video kept) stays when the page sends the pool without it
+        categories = {g["id"]: g["category"] for g in hub.entry.options.get(CONF_GROUPS, []) if g.get("category")}
+        options[CONF_GROUPS] = [
+            {**g, "category": categories[g["id"]]} if g["id"] in categories and "category" not in g else g
+            for g in options[CONF_GROUPS]
+        ]
+    if key in (CONF_GROUPS, CONF_GROUP_APPS):
+        # An app is in one pool: one just put in a pool's list leaves the others
+        options = one_pool_per_app(hub.entry.options, options)
     if key == CONF_SUGGEST_PUSH:
         # The older offer_more (moved into suggest_push when the household loads) mustn't come back with it
         options.pop(CONF_OFFER_MORE, None)
     hass.config_entries.async_update_entry(hub.entry, options=options)
     connection.send_result(msg["id"])
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hearth/catalog/correct",
+        vol.Required("app"): vol.All(cv.string, vol.Length(min=1, max=200)),
+        vol.Required("group"): vol.Any(OTHER, _ID),
+    }
+)
+@callback
+def ws_catalog_correct(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """An adult's move, shared with the shared app catalog too (the catalog's key and value, never the pool): queued
+    for the weekly send while the tile exchange's sending is on."""
+    hub = _hub(hass)
+    if hub is None:
+        connection.send_error(msg["id"], "not_set_up", "Hearth isn't set up")
+        return
+    connection.send_result(msg["id"], {"queued": hub.household.correct_app(msg["app"], msg["group"])})
 
 
 @websocket_api.require_admin
@@ -695,6 +746,7 @@ def async_register_commands(hass: HomeAssistant) -> None:
     for command in (
         ws_config,
         ws_config_set,
+        ws_catalog_correct,
         ws_budget,
         ws_pairing,
         ws_parent_pin,

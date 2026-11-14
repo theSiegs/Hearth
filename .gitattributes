@@ -1,0 +1,2 @@
+# The shared app catalog's bundled snapshot is checked byte for byte (Ed25519 signature, SHA-256): never convert it
+custom_components/hearth/catalog_data/** -text
