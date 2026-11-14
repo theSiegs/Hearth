@@ -339,7 +339,7 @@ async def test_configure_has_no_chores_step_any_more(
 
 
 async def test_the_adults_get_a_suggestion_when_a_chosen_group_runs_out(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, no_evening_hold
 ) -> None:
     """Configure > Suggest more time to phones (it was Offer more time, an offered request): the group's suggestion
     goes to the adults' phones instead, and nothing is asked of the kid."""

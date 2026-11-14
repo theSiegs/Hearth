@@ -22,12 +22,14 @@ A source can be "the same device" as a Hearth device or another source, so their
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 import re
 from typing import Any
 
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
+from homeassistant.util import dt as dt_util
 
 from .counting import Reading
 
@@ -142,10 +144,15 @@ def _seconds(value: Any, unit: str | None) -> float | None:
     return number * _UNITS.get((unit or "min").lower(), 60)
 
 
-def totals_reading(hass: HomeAssistant, source: Source) -> Reading | None:
-    """A totals source's reading now; None while its sensor has no number."""
+def totals_reading(hass: HomeAssistant, source: Source, today: date | None = None) -> Reading | None:
+    """A totals source's reading now; None while its sensor has no number, and (with [today]) while it hasn't changed
+    since midnight: its integration hasn't polled since, so it still says yesterday's time (a kid would run out of a
+    pool for a moment at midnight, and the day would keep that "out"). A sensor of time today always changes when the
+    day turns (back to 0, or on to today's), so nothing of today's is lost."""
     state = hass.states.get(source.entity_id)
     if state is None:
+        return None
+    if today is not None and dt_util.as_local(state.last_updated).date() < today:
         return None
     total = _seconds(state.state, state.attributes.get("unit_of_measurement"))
     if total is None:

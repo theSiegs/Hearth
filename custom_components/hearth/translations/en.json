@@ -477,6 +477,24 @@
         }
       }
     },
+    "remove_bonus": {
+      "name": "Take back a bonus",
+      "description": "Takes back extra time given today (an undo): never more than was given today, so their own budget stays. What Family Link and Family Safety got for it goes too.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "Whose extra time."
+        },
+        "minutes": {
+          "name": "Minutes",
+          "description": "How many minutes to take back."
+        },
+        "group": {
+          "name": "Group",
+          "description": "The group's id the extra time was given to: all, games, youtube, or one of your own."
+        }
+      }
+    },
     "set_budget": {
       "name": "Set a budget",
       "description": "Sets a person's daily budget for a group, on school days, other days, or both. Leave minutes empty for no limit.",

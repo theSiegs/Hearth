@@ -248,6 +248,21 @@ class NativeSync:
         until = min(now + timedelta(minutes=left), end_of_day(now))
         entry_task(self.hass, self.household.hub.entry.entry_id, self._give_time(person, until, key), "hearth first-party extra time")
 
+    @callback
+    def take_back_bonus(self, person: str) -> bool:
+        """An adult took back the extra time that gave All screen time back (hearth.remove_bonus): what Hearth gave for
+        it in Family Link and Family Safety (the latest of today's, mirror_bonus) goes, as when extra time on one
+        device ends early (a parent's own bonus there is kept). Says whether there was any."""
+        today = dt_util.now().date().isoformat()
+        keys = [k for k, v in self._given.items() if k[0] == person and k[1].startswith("bonus:") and v.get("day") == today]
+        if not keys:
+            return False
+        record = self._given.pop(max(keys, key=lambda k: k[1]))
+        self._save()
+        if record["devices"] or record["platforms"] or record.get("cutoffs"):
+            entry_task(self.hass, self.household.hub.entry.entry_id, self._take_back(person, record), "hearth extra time back")
+        return True
+
     def _mirrors(self, person: str) -> bool:
         return any(
             e.person == person and e.kind in (FAMILY_LINK, FAMILY_SAFETY) for e in self.household.enforcement.enforcers

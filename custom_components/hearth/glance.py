@@ -332,6 +332,62 @@ def _suggestion(
             "actions": actions}
 
 
+def device_word(target: dict[str, Any] | None) -> str:
+    """A device as a person reads it: its display name (targets.py: the name given in Home Assistant, a source's,
+    else its label), never a model id when a better one is known."""
+    if not target:
+        return "device"
+    return str(target.get("display_name") or target.get("name") or "device")
+
+
+def _pool_word(group_id: str, names: dict[str, str]) -> str:
+    """A pool as a sentence names it: as named ("YouTube", "Games"), "screen time" for All."""
+    return "screen time" if group_id == ALL else str(names.get(group_id) or group_id)
+
+
+def _possessive(name: str) -> str:
+    return f"{name}'s"
+
+
+def _whose_device(person: dict[str, Any], target: dict[str, Any] | None) -> str:
+    """"Sam's Xbox"; a name that says whose already stays ("Sam's tablet", never "Sam's Sam's tablet")."""
+    word = device_word(target)
+    name = str(person.get("name") or "")
+    return word if name and word.casefold().startswith(f"{name}'s ".casefold()) else f"{_possessive(name or 'Their')} {word}"
+
+
+def _on_device(target: dict[str, Any] | None) -> str:
+    """"the Xbox"; "Sam's tablet" (a name that says whose takes no "the")."""
+    word = device_word(target)
+    return word if "'s " in word or word == "Windows" else f"the {word}"
+
+
+def _sentence(person: dict[str, Any], reason: str, group: str, target: dict[str, Any] | None, via: str | None,
+              names: dict[str, str]) -> tuple[str, str]:
+    """A suggestion as one sentence and a detail line, for a page that writes sentences (the panel's For you):
+    "Sam's YouTube time is up" / "Used 1 h 14 of 1 h · 1 h 45 of screen time left"; "Sam's Xbox is stopped by
+    Microsoft's limit" / "Microsoft's own limit for today"."""
+    who = _possessive(str(person.get("name") or person.get("id") or "Their"))
+    whole = next((g for g in person.get("groups") or [] if g["id"] == ALL), None)
+    if reason == "group_out":
+        group_row = next((g for g in person.get("groups") or [] if g["id"] == group), {}) or {}
+        if group == ALL:
+            title = f"{person.get('name') or 'They'} ran out of screen time"
+        else:
+            title = f"{who} {_pool_word(group, names)} time is up"
+        budget = group_row.get("budget")
+        cap = None if budget is None else budget + max(0, group_row.get("bonus") or 0)
+        used = group_row.get("used_minutes") or 0
+        parts = [f"Used {duration(used)} of {duration(cap)}" if cap is not None else f"Used {duration(used)}"]
+        if group != ALL:
+            left = (whole or {}).get("minutes_left")
+            parts.append("no overall limit" if left is None else f"{duration(left)} of screen time left")
+        return title, " · ".join(parts)
+    company = {"family_link": "Google", "family_safety": "Microsoft", "nintendo": "Nintendo"}.get(via or "", "its own")
+    title = f"{_whose_device(person, target)} is stopped by {company}'s limit"
+    return title, f"{company}'s own limit for today"
+
+
 def _device_target(row: dict[str, Any], via: str, targets: list[dict[str, Any]]) -> dict[str, Any] | None:
     """The person's device (targets.py) a first-party row is about."""
     if via == "family_link":
@@ -390,9 +446,10 @@ def suggestions(
             continue
         word = _group_word(group["id"], names)
         minutes = minutes_for(group["id"], group["id"])
+        sentence, detail = _sentence(person, "group_out", group["id"], None, None, names)
         found.append(
             _suggestion(entity, key, f"{word} ran out · give {amount(minutes)}?", "group_out", minutes,
-                        {"group": group["id"]}, group=group["id"])
+                        {"group": group["id"]}, group=group["id"], sentence=sentence, detail=detail)
         )
     if all_out:
         return found
@@ -411,14 +468,88 @@ def suggestions(
             key = news_key("device", target["id"])
             if key in dismissed:
                 continue
-            word = str(target.get("name") or "device").lower()
+            word = device_word(target).lower()
             whose = {"family_link": "google's", "family_safety": "microsoft's", "nintendo": "nintendo's"}.get(via, "its")
             minutes = minutes_for(target["id"], ALL, device=True)
+            sentence, detail = _sentence(person, "device_limit", ALL, target, via, names)
             found.append(
                 _suggestion(entity, key, f"{word} · {whose} limit · give {amount(minutes)}?", "device_limit", minutes,
-                            {"group": ALL, "device": target["id"]}, device=target["id"])
+                            {"group": ALL, "device": target["id"]}, device=target["id"], sentence=sentence,
+                            detail=detail)
             )
     return found
+
+
+# Why a suggestion waits (hold_back): `held` in the summary's suggestions_held, with a few words in `why`
+HOLD_LOCK = "lock"
+HOLD_PAUSE = "paused"
+HOLD_BEDTIME = "after_bedtime"
+HOLD_CUTOFF = "after_cutoff"
+HOLD_NOT_IN_USE = "not_in_use"
+HOLD_MORE = "more"
+# Without a bedtime, suggestions wait from this hour of the evening to MORNING
+CUTOFF_HOUR = 21
+MORNING_HOUR = 6
+_LOCK_WORDS = {"bedtime": "in bedtime", "school_time": "in School time", "other": "locked"}
+
+
+def _in_use(person: dict[str, Any], device: str, asks: list[dict[str, Any]]) -> bool:
+    """The device is in use now: something plays there (a playing sensor, a live source, a TV's now playing) or a
+    waiting request came from it."""
+    if any(p.get("target") == device for p in person.get("playing") or []):
+        return True
+    for ask in asks:
+        if ask.get("device_id") and f"hearth:{ask['device_id']}" == device:
+            return True
+        if ask.get("platform") and f"fs:{str(ask['platform']).lower()}" == device:
+            return True
+    return False
+
+
+def _hold(person: dict[str, Any], suggestion: dict[str, Any], asks: list[dict[str, Any]], now: datetime) -> tuple[str, str] | None:
+    """Why [suggestion] waits now, as (code, a few words), or None to show it."""
+    pause = person.get("pause")
+    if pause:
+        return HOLD_PAUSE, f"paused{till(pause.get('until'))}"
+    lock = person.get("lock") or {}
+    if lock.get("kind") in LOCK_KINDS:
+        return HOLD_LOCK, f"{_LOCK_WORDS[lock['kind']]}{till(lock.get('until'))}"
+    local = dt_util.as_local(now)
+    bedtime = person.get("bedtime") or {}
+    start = dt_util.parse_datetime(bedtime.get("start") or "") if bedtime else None
+    wake = dt_util.parse_datetime(bedtime.get("end") or "") if bedtime else None
+    if start is not None:
+        if now >= start:
+            return HOLD_BEDTIME, f"after bedtime ({clock(bedtime['start'])})"
+        if wake is not None and now < wake:
+            return HOLD_BEDTIME, f"before wake-up ({clock(bedtime['end'])})"
+    elif local.hour >= CUTOFF_HOUR or local.hour < MORNING_HOUR:
+        return HOLD_CUTOFF, f"after {CUTOFF_HOUR - 12}:00 pm"
+    if suggestion.get("reason") == "device_limit" and not _in_use(person, suggestion.get("device") or "", asks):
+        target = next((t for t in person.get("targets") or [] if t.get("id") == suggestion.get("device")), None)
+        return HOLD_NOT_IN_USE, f"not on {_on_device(target)} now"
+    return None
+
+
+def hold_back(
+    person: dict[str, Any], found: list[dict[str, Any]], asks: list[dict[str, Any]], now: datetime
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """The suggestions to show now and the ones held back (the redesign's rules): none during a lock, a pause, after
+    the kid's bedtime starts (or after 21:00 without a bedtime, till 6:00), and a device's own limit only while that
+    device is in use. At most one shows per kid, and none while a request of theirs waits (the request comes first):
+    the rest are held as "more". Each held one is the suggestion with `held` (the code) and `why` (a few words: "in
+    bedtime till 7:00")."""
+    shown: list[dict[str, Any]] = []
+    held: list[dict[str, Any]] = []
+    for suggestion in found:
+        why = _hold(person, suggestion, asks, now)
+        if why is None and (asks or shown):
+            why = (HOLD_MORE, "a request from them comes first" if asks else "another for them shows first")
+        if why is None:
+            shown.append(suggestion)
+        else:
+            held.append({**suggestion, "held": why[0], "why": why[1]})
+    return shown, held
 
 
 # The color role of a group and of a person (docs/home-assistant-integration.md, Household summary, `state`): a surface
@@ -748,11 +879,14 @@ def person_glance(
                 confirm=f"end what {APP_WORDS.get(grant.get('via'), 'their app')} gave {name.lower()}?",
             )
         )
+    shown, held = hold_back(person, suggestions(person, asks, allows, hints), asks, now)
     return {
         "headline": headline,
         "lines": lines,
         "actions": actions,
-        "suggestions": suggestions(person, asks, allows, hints),
+        # What shows now (at most one), and what waits with why (hold_back)
+        "suggestions": shown,
+        "suggestions_held": held,
         **person_states(person, allows),
     }
 
@@ -813,6 +947,14 @@ def household_glance(people: list[dict[str, Any]], approvals: list[dict[str, Any
         for s in p.get("suggestions") or []
     ]
     found.sort(key=lambda s: (s.get("group") != ALL, s["reason"] != "group_out"))
+    # And the ones held back, with why (hold_back): the page's "held back · why"
+    held = [
+        {**s, "person": p["id"], "person_name": p.get("name") or p["id"]}
+        for p in people
+        for s in p.get("suggestions_held") or []
+    ]
+    # Who needs an adult now: a kid with a waiting request or a suggestion showing (one row each on the page)
+    needs = {a["person"] for a in asks} | {s["person"] for s in found}
     # What a tile's badge and the TV's top row count, so no surface counts on its own: kids by their `state`
     counts = {
         "asks": len(asks),
@@ -820,5 +962,8 @@ def household_glance(people: list[dict[str, Any]], approvals: list[dict[str, Any
         "pairings": len(pairings),
         "paused": len(paused),
         **{state: sum(1 for p in kids if p.get("state") == state) for state in (OUT, LOW, LOCKED, HELD)},
+        # ("held" above counts kids a first-party control holds)
+        "suggestions_held": sum(1 for s in held if s.get("held") != HOLD_MORE),
+        "needs": len(needs),
     }
-    return {"headline": headline, "actions": actions, "suggestions": found, "counts": counts}
+    return {"headline": headline, "actions": actions, "suggestions": found, "suggestions_held": held, "counts": counts}

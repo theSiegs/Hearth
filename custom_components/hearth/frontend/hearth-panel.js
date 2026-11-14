@@ -57,45 +57,43 @@ const cap = (text) => {
 // "a", "a and b", "a, b and c"
 const listWords = (words) => (words.length <= 1 ? words.join("") : `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`);
 
-// A pool's short name, as the glance writes it: "screen time" for All, else the group's name in lower case
-const shortGroup = (id, name) => (id === "all" ? "screen time" : String(name || id).toLowerCase());
-
 // The summary's state for a group or person, as a color role (spec section 4); unknown: neutral
 const ROLES = ["ok", "low", "out", "allowed", "paused", "locked", "held", "none"];
 const role = (state) => (ROLES.includes(state) ? state : "none");
 
-// noiwid's hourly chart (parental-screen-time.js): 24 bars in minutes, steps of 15 min up to an hour, 30 above
-const hourChart = (values) => {
-  const peak = Math.max(...values);
-  const top = peak <= 60 ? 60 : Math.ceil(peak / 30) * 30;
-  const steps = top <= 60 ? 4 : top / 30;
-  const grid = Array.from({ length: steps + 1 }, (_, i) => top - (i * top) / steps);
-  return `<div class="plot">
-    <div class="hy">${grid.map((v) => `<span>${Math.round(v)} min</span>`).join("")}</div>
-    <div class="harea">${grid.map((_, i) => `<i style="top:${(i * 100) / steps}%"></i>`).join("")}
-      <div class="hcols">${values.map((v) => `<div class="hcol"><div style="height:${Math.min(100, (v / top) * 100)}%" title="${esc(fmtMinutes(v))}"></div></div>`).join("")}</div>
-    </div>
-    <div></div><div class="hx">${values.map((_, i) => `<span>${i % 2 ? "" : `${i}h`}</span>`).join("")}</div>
-  </div>`;
+// "11:00 pm": the header's time of day
+const clockAmPm = (date) => {
+  const h = date.getHours();
+  return `${h % 12 || 12}:${String(date.getMinutes()).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`;
 };
 
-// Minutes in each hour today from the hourly statistics of a sensor that counts up through the day (noiwid's
-// _hours): an hour's use is its growth, or its whole value right after the midnight reset; `live` is the value now
-const hourBars = (rows, midnight, live) => {
-  const at = (t) => (typeof t === "number" ? t : Date.parse(t));
-  const list = (rows || []).map((r) => ({ t: at(r.start), v: r.state ?? r.max })).filter((r) => r.v !== null && r.v !== undefined);
-  if (!Number.isNaN(live)) list.push({ t: Date.now(), v: live });
-  const bars = new Array(24).fill(0);
-  let prev = list.length && list[0].t < midnight ? list[0].v : 0;
-  for (const r of list) {
-    if (r.t < midnight) continue;
-    bars[new Date(r.t).getHours()] += Math.max(0, r.v >= prev ? r.v - prev : r.v);
-    prev = r.v;
-  }
-  // Sources report in bursts: no hour holds more than 60 min, the rest belongs to the hours before
-  for (let h = 23; h > 0; h--) if (bars[h] > 60) { bars[h - 1] += bars[h] - 60; bars[h] = 60; }
-  return bars.map((v) => Math.min(60, v));
+const LOCK_WORDS = { bedtime: "Bedtime", school_time: "School time", paused: "Paused", other: "Locked" };
+
+// Today's own icons, drawn inline (crisp at any size, and the same in every theme)
+const ICONS = {
+  tv: '<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/>',
+  tablet: '<rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
+  phone: '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
+  xbox: '<path d="M6 9h12a3 3 0 0 1 3 3l-1 5a2 2 0 0 1-3.4 1L15 16H9l-1.6 2A2 2 0 0 1 4 17l-1-5a3 3 0 0 1 3-3z"/><path d="M8 12v2M7 13h2M16 12.5h.01M17.5 14h.01"/>',
+  windows: '<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M9 20h6M12 16v4"/>',
+  switch: '<rect x="2.5" y="6" width="19" height="12" rx="3"/><path d="M7 6v12M17 6v12"/>',
+  moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  school: '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2.5 9 2.5 12 0v-5"/>',
+  pause: '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  chev: '<path d="M9 6l6 6-6 6"/>',
+  close: '<path d="M6 6l12 12M18 6L6 18"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  more: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
+  list: '<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>',
 };
+const icon = (name, cls = "") => `<svg class="svg ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ""}</svg>`;
+
+// How long an Undo stays on offer
+const UNDO_MS = 6000;
 
 const money = (cents) => `${cents < 0 ? "−" : ""}$${(Math.abs(cents) / 100).toFixed(2)}`;
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -135,16 +133,22 @@ class HearthPanel extends HTMLElement {
     this._busy = false;
     this._drafts = {};
     this._open = new Set();
-    // Today's kid cards: the pool each 7-day chart shows, the day tapped, and the hourly statistics read
-    this._weekGroup = {};
-    this._weekDay = {};
-    this._hours = {};
-    this._hoursBusy = new Set();
+    // Today: the kid whose sheet shows (and whether it's open on a phone), what's unfolded, the open choosers
+    this._sel = null;
+    this._sheetOpen = false;
+    this._exp = new Set();
+    this._wide = false;
+    // Undo: the toast on offer, and what waits its turn (a "Not today" or a "No" runs once the Undo is gone)
+    this._undo = null;
+    this._deferred = new Map();
+    this._hidden = new Set();
   }
 
   set hass(hass) {
     const first = !this._hass;
     this._hass = hass;
+    // Hearth's own accent follows Home Assistant's dark mode
+    if (hass?.themes && typeof this.toggleAttribute === "function") this.toggleAttribute("dark", Boolean(hass.themes.darkMode));
     if (first) this._start();
   }
 
@@ -179,18 +183,39 @@ class HearthPanel extends HTMLElement {
         if (e.target.tagName === "DETAILS" && e.target.id) {
           if (e.target.open) this._open.add(e.target.id);
           else this._open.delete(e.target.id);
-          // The hourly chart reads Home Assistant's statistics only once someone opens it
-          if (e.target.open && e.target.dataset.hours) this._loadHours(e.target.dataset.hours);
         }
       },
       true
     );
     this.shadowRoot.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && e.target.dataset && e.target.dataset.enter) {
+      if ((e.key === "Enter" || (e.key === " " && e.target.getAttribute?.("role") === "button")) && e.target.dataset && e.target.dataset.enter) {
         e.preventDefault();
         this._act(e.target.dataset.enter, e.target);
       }
+      // Esc closes a kid's sheet on a phone
+      if (e.key === "Escape" && this._sheetOpen) this._act("sheet-close", e.target);
     });
+    // Swiped down from its top, the sheet closes
+    let swipeFrom = null;
+    this.shadowRoot.addEventListener("touchstart", (e) => {
+      const sheet = e.target.closest?.(".detail.on");
+      swipeFrom = sheet && sheet.scrollTop <= 0 && !this._wide ? e.touches[0].clientY : null;
+    }, { passive: true });
+    this.shadowRoot.addEventListener("touchend", (e) => {
+      if (swipeFrom !== null && e.changedTouches[0].clientY - swipeFrom > 80) this._act("sheet-close", e.target);
+      swipeFrom = null;
+    }, { passive: true });
+    // Side by side from 900 px of the page's own width (Home Assistant's sidebar takes the rest)
+    if (typeof ResizeObserver !== "undefined" && !this._resize) {
+      this._resize = new ResizeObserver(() => {
+        const wide = this.clientWidth >= 900;
+        if (wide !== this._wide) {
+          this._wide = wide;
+          if (this._config) this._render();
+        }
+      });
+      this._resize.observe(this);
+    }
     try {
       const saved = window.localStorage.getItem("hearth-panel-tab");
       if (saved && TABS.some((t) => t.id === saved)) this._tab = saved;
@@ -216,6 +241,8 @@ class HearthPanel extends HTMLElement {
   }
 
   disconnectedCallback() {
+    // Leaving the page: a "Not today" or "No" still waiting for its Undo runs now
+    for (const key of [...this._deferred.keys()]) this._runDeferred(key);
     if (this._unsub) {
       this._unsub.then((unsub) => unsub()).catch(() => {});
       this._unsub = null;
@@ -267,6 +294,9 @@ class HearthPanel extends HTMLElement {
   }
 
   _notify(text) {
+    // A message takes the toast's place: what waited for its Undo runs now
+    if (this._undo?.key) this._runDeferred(this._undo.key);
+    this._undo = null;
     this._toast = text;
     this._render();
     clearTimeout(this._toastTimer);
@@ -310,7 +340,14 @@ class HearthPanel extends HTMLElement {
   }
 
   _groupName(id) {
-    return (this._config?.groups || []).find((g) => g.id === id)?.name || id;
+    // As named; a group only the summary knows by its name there; never a lower-case id
+    const named = (this._config?.groups || []).find((g) => g.id === id)?.name || (this._summary?.groups || []).find((g) => g.id === id)?.name;
+    if (named) return named;
+    for (const p of this._summary?.people || []) {
+      const g = (p.groups || []).find((x) => x.id === id);
+      if (g?.name) return g.name;
+    }
+    return cap(String(id || ""));
   }
 
   _entityName(entityId) {
@@ -349,6 +386,70 @@ class HearthPanel extends HTMLElement {
     } catch (err) {
       this._notify(this._message(err));
     }
+  }
+
+  // A Hearth service, raising on failure (for Undo's own calls)
+  async _call(service, data) {
+    await this._hass.callService("hearth", service, data);
+  }
+
+  // Undo instead of confirm: the service runs at once, and the toast offers [undo] for UNDO_MS
+  async _undoable(service, data, text, undo) {
+    try {
+      await this._call(service, data);
+    } catch (err) {
+      this._notify(this._message(err));
+      return;
+    }
+    this._drafts = {};
+    this._offerUndo(text, undo);
+  }
+
+  _offerUndo(text, undo, key = null) {
+    // A toast already on offer for a "Not today" or "No": it runs now, as the new one takes its place
+    if (this._undo?.key && this._undo.key !== key) this._runDeferred(this._undo.key);
+    this._toast = null;
+    this._undo = { text, undo, key, at: Date.now() };
+    clearTimeout(this._undoTimer);
+    this._undoTimer = setTimeout(() => {
+      this._undo = null;
+      this._render();
+    }, UNDO_MS);
+    this._render();
+  }
+
+  // A "Not today" or a "No": its row goes at once, and it runs once its Undo is gone (or the page closes)
+  _defer(key, text, run) {
+    this._hidden.add(key);
+    const timer = setTimeout(() => this._runDeferred(key), UNDO_MS);
+    this._deferred.set(key, { run, timer });
+    this._offerUndo(text, null, key);
+  }
+
+  async _runDeferred(key) {
+    const waiting = this._deferred.get(key);
+    if (!waiting) return;
+    clearTimeout(waiting.timer);
+    this._deferred.delete(key);
+    try {
+      await waiting.run();
+    } catch (err) {
+      this._hidden.delete(key);
+      this._notify(this._message(err));
+      return;
+    }
+    // Gone from the summary by now; a new one with the same key (another day) shows again
+    setTimeout(() => this._hidden.delete(key), 15000);
+  }
+
+  _resetChoosers() {
+    this._giveOpen = false;
+    this._allowOpen = false;
+    this._moreOpen = false;
+    this._giveGroup = null;
+    this._giveAmt = 15;
+    this._allowPick = null;
+    this._allowLen = 30;
   }
 
   // Events
@@ -390,22 +491,203 @@ class HearthPanel extends HTMLElement {
         if (d.tab === "kids" && this._kid) this._loadWatch(this._kid);
         if (d.tab === "kids") this._loadTodo(this._kid || this._kids()[0]?.id);
         return;
-      case "kid-open":
-        // A kid's row on Today: their full card opens under the rows (tap again to close)
-        this._todayKid = this._todayKid === d.kid ? null : d.kid;
+      case "kid-sheet":
+        // A kid's row on Today: their sheet opens (a bottom sheet on a phone, the column beside on a wide page)
+        if (this._sel !== d.kid) this._resetChoosers();
+        this._sel = d.kid;
+        this._sheetOpen = true;
         this._render();
-        if (this._todayKid) this._loadHours(this._todayKid);
+        this.shadowRoot.querySelector?.(".detail")?.scrollTo?.(0, 0);
         return;
+      case "sheet-close":
+        this._sheetOpen = false;
+        if (!this._wide) this._sel = null;
+        this._resetChoosers();
+        this._render();
+        return;
+      case "exp":
+        if (this._exp.has(d.key)) this._exp.delete(d.key);
+        else this._exp.add(d.key);
+        this._render();
+        return;
+      case "pause-open":
+        this._pauseOpen = !this._pauseOpen;
+        this._render();
+        return;
+      case "pause-len":
+        this._pauseMinutes = Number(d.minutes);
+        this._render();
+        return;
+      case "pause-go": {
+        const minutes = this._pauseMinutes || 30;
+        const reason = this._value("#pause-reason");
+        this._pauseOpen = false;
+        await this._undoable("pause", reason ? { minutes, reason } : { minutes }, `Paused everyone for ${fmtMinutes(minutes)}`, () => this._call("pause_end", {}));
+        return;
+      }
+      case "pause-end-all": {
+        const was = (this._summary?.people || []).find((p) => p.pause)?.pause;
+        await this._undoable(
+          "pause_end",
+          {},
+          "Ended the pause",
+          was?.until ? () => this._call("pause", { until: was.until, ...(was.reason ? { reason: was.reason } : {}) }) : null
+        );
+        return;
+      }
+      case "give-open":
+        this._giveOpen = !this._giveOpen;
+        this._allowOpen = false;
+        this._moreOpen = false;
+        this._render();
+        return;
+      case "give-pool":
+        this._giveGroup = d.group;
+        this._render();
+        return;
+      case "give-amt":
+        this._giveAmt = Number(d.minutes);
+        this._render();
+        return;
+      case "allow-open":
+        this._allowOpen = !this._allowOpen;
+        this._giveOpen = false;
+        this._moreOpen = false;
+        this._render();
+        return;
+      case "allow-pick":
+        this._allowPick = d.pick;
+        this._render();
+        return;
+      case "allow-len":
+        this._allowLen = Number(d.minutes);
+        this._render();
+        return;
+      case "more-open":
+        this._moreOpen = !this._moreOpen;
+        this._render();
+        return;
+      case "screens-toggle":
+        this._screensOpen = !this._screensOpen;
+        this._render();
+        return;
+      case "give": {
+        // Extra time now; Undo takes back just that (hearth.remove_bonus)
+        const minutes = Number(d.minutes);
+        const group = d.group || "all";
+        this._giveOpen = false;
+        await this._undoable(
+          "add_bonus",
+          { person: d.person, minutes, group },
+          `Gave ${this._personName(d.person)} ${minutes} min of ${group === "all" ? "screen time" : this._groupName(group)}`,
+          () => this._call("remove_bonus", { person: d.person, minutes, group })
+        );
+        return;
+      }
+      case "ask-give": {
+        const minutes = Number(d.minutes);
+        try {
+          await this._hass.callWS({ type: "hearth/approvals/answer", request_id: d.request, minutes });
+        } catch (err) {
+          this._notify(this._message(err));
+          return;
+        }
+        // A Family Safety request's time is Microsoft's: nothing of Hearth's to take back
+        const undo = d.fs ? null : () => this._call("remove_bonus", { person: d.person, minutes, group: d.group || "all" });
+        this._offerUndo(`Gave ${this._personName(d.person)} ${minutes} min${d.group && d.group !== "all" ? ` of ${this._groupName(d.group)}` : ""}`, undo);
+        return;
+      }
+      case "ask-no":
+        this._defer(`ask|${d.request}`, `Told ${this._personName(d.person)} no`, () =>
+          this._hass.callWS({ type: "hearth/approvals/answer", request_id: d.request, deny: true })
+        );
+        return;
+      case "sugg-give": {
+        const a = this._glanceAction(d.id, d.person);
+        if (!a) {
+          this._notify("That's no longer on offer");
+          return;
+        }
+        const data = a.data || {};
+        const minutes = Number(data.minutes) || 0;
+        const where = data.device ? (this._summaryPerson(d.person)?.targets || []).find((t) => t.id === data.device) : null;
+        const what = where ? `on ${where.display_name || where.name}` : `of ${!data.group || data.group === "all" ? "screen time" : this._groupName(data.group)}`;
+        const text = `Gave ${this._personName(d.person)} ${minutes} min ${what}`;
+        if (data.device) {
+          // Extra time on one device answers with its id: Undo ends just that one
+          let id = null;
+          try {
+            const r = await this._hass.callWS({ type: "call_service", domain: "hearth", service: "add_bonus", service_data: data, return_response: true });
+            id = r?.response?.id || null;
+          } catch (err) {
+            this._notify(this._message(err));
+            return;
+          }
+          this._offerUndo(text, id ? () => this._call("allow_end", { id }) : null);
+          return;
+        }
+        await this._undoable("add_bonus", data, text, () => this._call("remove_bonus", { person: data.person || d.person, minutes, group: data.group || "all" }));
+        return;
+      }
+      case "sugg-dismiss": {
+        const a = this._glanceAction(d.id, d.person);
+        const data = a?.data || { person: d.person, key: d.key };
+        this._defer(`${d.person}|${d.key}`, `Not today for ${this._personName(d.person)}`, () => this._call("dismiss_suggestion", data));
+        return;
+      }
+      case "allow": {
+        const at = d.pick.indexOf(":");
+        const kind = d.pick.slice(0, at);
+        const value = d.pick.slice(at + 1);
+        const minutes = Number(d.minutes);
+        const until = minutes ? new Date(this._now().getTime() + minutes * 60000).toISOString() : "end_of_day";
+        const s = this._summaryPerson(d.person);
+        const name = kind === "app" ? (s?.apps_today || []).find((a) => a.package === value)?.name || value : this._groupName(value);
+        this._allowOpen = false;
+        await this._undoable(
+          "allow",
+          { people: [d.person], [kind]: value, until },
+          `Allowed ${name} for ${this._personName(d.person)}${minutes ? ` for ${fmtMinutes(minutes)}` : " for the rest of today"}`,
+          () => this._call("allow_end", { people: [d.person], [kind]: value })
+        );
+        return;
+      }
+      case "allow-end":
+        await this._undoable("allow_end", { people: [d.person], ...(d.app ? { app: d.app } : { group: d.group }) }, "Ended the allow", null);
+        return;
+      case "undo": {
+        const u = this._undo;
+        this._undo = null;
+        clearTimeout(this._undoTimer);
+        if (u?.key) {
+          // A "Not today" or "No" that hadn't run yet: it never runs, and its row is back
+          const waiting = this._deferred.get(u.key);
+          if (waiting) clearTimeout(waiting.timer);
+          this._deferred.delete(u.key);
+          this._hidden.delete(u.key);
+        }
+        this._render();
+        if (u?.undo) {
+          try {
+            await u.undo();
+          } catch (err) {
+            this._notify(this._message(err));
+          }
+        }
+        return;
+      }
       case "kid":
         this._kid = d.kid;
-        if (d.go) this._tab = d.go;
+        if (d.go) {
+          this._tab = d.go;
+          this._sheetOpen = false;
+        }
         this._render();
         this._loadWatch(d.kid);
         this._loadTodo(d.kid);
         return;
       case "grant-end":
-        if (!window.confirm("End what the parent gave in their app? Hearth's hold comes back.")) return;
-        await this._service("allow_end", { id: d.grant }, "Ended");
+        await this._undoable("allow_end", { id: d.grant }, "Ended what the parent gave: Hearth's hold is back", null);
         return;
       case "bonus":
         this._open.delete(`more-${d.person}`);
@@ -429,14 +711,6 @@ class HearthPanel extends HTMLElement {
         }
         return;
       }
-      case "week-group":
-        this._weekGroup[d.person] = d.group;
-        this._render();
-        return;
-      case "week-day":
-        this._weekDay[d.person] = this._weekDay[d.person] === d.date ? null : d.date;
-        this._render();
-        return;
       case "answer":
         await this._ws(
           d.deny ? { type: "hearth/approvals/answer", request_id: d.request, deny: true } : { type: "hearth/approvals/answer", request_id: d.request, minutes: Number(d.minutes) },
@@ -808,13 +1082,17 @@ class HearthPanel extends HTMLElement {
         this._loadWatch(d.person);
         return;
       case "kid-pause": {
-        const minutes = Number(this._value(`#kid-pause-${CSS.escape(d.person)}`)) || 30;
-        await this._service("pause", { people: [d.person], minutes }, `${this._personName(d.person)} paused for ${fmtMinutes(minutes)}`);
+        const minutes = Number(d.minutes) || Number(this._value(`#kid-pause-${CSS.escape(d.person)}`)) || 30;
+        await this._undoable("pause", { people: [d.person], minutes }, `Paused ${this._personName(d.person)} for ${fmtMinutes(minutes)}`, () =>
+          this._call("pause_end", { people: [d.person] })
+        );
         return;
       }
-      case "kid-pause-end":
-        await this._service("pause_end", { people: [d.person] }, `${this._personName(d.person)}'s pause ended`);
+      case "kid-pause-end": {
+        const was = this._summaryPerson(d.person)?.pause;
+        await this._undoable("pause_end", { people: [d.person] }, `Ended ${this._personName(d.person)}'s pause`, was?.until ? () => this._call("pause", { people: [d.person], until: was.until }) : null);
         return;
+      }
       case "app-pause-end":
         await this._service(
           "pause_end",
@@ -830,10 +1108,14 @@ class HearthPanel extends HTMLElement {
         );
         return;
       case "school-off":
-        await this._service("school_time_off", { people: [d.person] }, "No School time today");
+        this._moreOpen = false;
+        await this._undoable("school_time_off", { people: [d.person] }, `No School time today for ${this._personName(d.person)}`, () =>
+          this._call("school_time_off_cancel", { people: [d.person] })
+        );
         return;
       case "school-off-cancel":
-        await this._service("school_time_off_cancel", { people: [d.person] }, "School time is back today");
+        this._moreOpen = false;
+        await this._undoable("school_time_off_cancel", { people: [d.person] }, "School time is back today", () => this._call("school_time_off", { people: [d.person] }));
         return;
       case "nin-bonus": {
         const minutes = Number(d.minutes);
@@ -916,7 +1198,7 @@ class HearthPanel extends HTMLElement {
     const lists = [];
     if (person) {
       const p = this._summaryPerson(person);
-      lists.push(p?.actions || [], ...(p?.suggestions || []).map((s) => s.actions || []));
+      lists.push(p?.actions || [], ...[...(p?.suggestions || []), ...(p?.suggestions_held || [])].map((s) => s.actions || []));
       lists.push(...(h.suggestions || []).filter((s) => s.person === person).map((s) => s.actions || []));
     } else lists.push(h.actions || []);
     for (const list of lists) {
@@ -924,33 +1206,6 @@ class HearthPanel extends HTMLElement {
       if (found) return found;
     }
     return null;
-  }
-
-  // The hourly statistics of a person's Screen time today sensor (spec 3.4, decision 3b): finished hours read once an
-  // hour, the current one from the live state at each draw
-  async _loadHours(person) {
-    const entity = this._config?.screen_time_sensors?.[person];
-    const now = new Date();
-    const midnight = new Date(now);
-    midnight.setHours(0, 0, 0, 0);
-    const key = `${midnight.getTime()}|${now.getHours()}`;
-    if (!entity || this._hours[person]?.key === key || this._hoursBusy.has(person)) return;
-    this._hoursBusy.add(person);
-    try {
-      const rows = await this._hass.callWS({
-        type: "recorder/statistics_during_period",
-        start_time: new Date(midnight.getTime() - 3600000).toISOString(),
-        statistic_ids: [entity],
-        period: "hour",
-        types: ["state"],
-      });
-      this._hours[person] = { key, rows: rows[entity] || [] };
-    } catch (err) {
-      this._hours[person] = { key, error: this._message(err) };
-    } finally {
-      this._hoursBusy.delete(person);
-    }
-    this._render();
   }
 
   async _loadWatch(person) {
@@ -991,7 +1246,11 @@ class HearthPanel extends HTMLElement {
     const focused = root.activeElement;
     const focusId = focused && focused.id;
     const focusValue = focused && "value" in focused ? focused.value : null;
+    // The kid's sheet keeps its place when the numbers move under it
+    const sheetTop = root.querySelector?.(".detail")?.scrollTop || 0;
     root.innerHTML = `<style>${STYLE}</style>${this._page()}`;
+    const sheet = root.querySelector?.(".detail");
+    if (sheet && sheetTop) sheet.scrollTop = sheetTop;
     for (const [id, value] of Object.entries(this._drafts)) {
       const el = root.getElementById(id);
       if (!el) continue;
@@ -1001,14 +1260,6 @@ class HearthPanel extends HTMLElement {
     for (const id of this._open) {
       const el = root.getElementById(id);
       if (el) el.open = true;
-      // An hourly chart left open reads the hour just finished
-      if (el && el.dataset.hours) this._loadHours(el.dataset.hours);
-    }
-    // The open kid's day strip shows the minutes used each hour once their statistics are read
-    if (this._tab === "today" && this._config && this._summary && this._setupStep === null) {
-      const kids = this._kids();
-      const open = kids.length === 1 ? kids[0].id : this._todayKid;
-      if (open) this._loadHours(open);
     }
     if (focusId) {
       const again = root.getElementById(focusId);
@@ -1053,7 +1304,10 @@ class HearthPanel extends HTMLElement {
     else if (!this._config) body = `<div class="loading">Loading Hearth…</div>`;
     else if (this._setupStep !== null) body = this._setup();
     else body = { today: () => this._today(), kids: () => this._kidsTab(), devices: () => this._devicesTab(), apps: () => this._appsTab(), family: () => this._familyTab() }[this._tab]();
-    return `${toolbar}<main class="content">${body}</main>${this._toast ? `<div class="toast" role="status">${esc(this._toast)}</div>` : ""}`;
+    const toast = this._undo
+      ? `<div class="toast undo" role="status"><span>${esc(this._undo.text)}</span>${this._undo.undo || this._undo.key ? `<button data-action="undo">Undo</button>` : ""}<i class="tbar" style="animation-duration:${UNDO_MS}ms;animation-delay:-${Math.max(0, Date.now() - this._undo.at)}ms"></i></div>`
+      : this._toast ? `<div class="toast" role="status">${esc(this._toast)}</div>` : "";
+    return `${toolbar}<main class="content ${this._tab === "today" && this._setupStep === null ? "wide" : ""}">${body}</main>${toast}`;
   }
 
   _pendingCount() {
@@ -1091,411 +1345,637 @@ class HearthPanel extends HTMLElement {
       .join("");
   }
 
-  // Today, in the spec's order (section 2): the Suggested now strip, the pause, problems, the kids, what's on, the
-  // family by pool
+  // Today (the redesign, docs/home-assistant-integration.md and the design review): does anything need an adult, in one
+  // sentence; one row per kid; what's playing; the rest one tap away in the kid's sheet (a bottom sheet on a phone, a
+  // column beside the list from 900 px). Every action applies at once with a 6-second Undo instead of a confirm.
   _today() {
     const kids = this._kids();
-    const devices = this._summary?.devices || [];
-    const parts = [this._suggestedNow(), this._pauseBar(), this._pairingCards(), this._controlsAttention()];
+    const parts = [this._pairingCards(), this._controlsAttention()];
     if (!kids.length) {
       parts.push(`<div class="card empty"><ha-icon icon="mdi:account-child-outline"></ha-icon>
         <p>No kids in Hearth yet. The guided setup takes a few minutes.</p>
         <button class="btn primary" data-action="setup-open">Start the guided setup</button></div>`);
+      return parts.join("");
     }
-    // Time-use decision 4a: a compact row per kid, the full card of the one tapped (with one kid, theirs at once)
-    if (kids.length > 1) parts.push(`<div class="card kid-rows">${kids.map((k) => this._kidRow(k)).join("")}</div>`);
-    const open = kids.length === 1 ? kids[0] : kids.find((k) => k.id === this._todayKid);
-    if (open) parts.push(this._kidCard(open));
-    if (devices.length) {
-      parts.push(`<h2>TVs and phones</h2><div class="grid devices">${devices.map((dv) => this._deviceCard(dv)).join("")}</div>`);
+    if (!this._summary) return `${parts.join("")}<div class="loading">Loading Hearth…</div>`;
+    const sel = this._selectedKid(kids);
+    const main = `${this._todayHeader(kids)}${this._pauseBox()}${this._pauseBanner()}${parts.join("")}${this._forYou(kids)}${this._kidList(kids, sel)}${this._screensNow()}${this._adultsLine()}`;
+    const sheet = sel ? this._kidSheet(sel) : `<div class="empty-detail">Pick a kid to see their day.</div>`;
+    const open = Boolean(sel && this._sheetOpen);
+    return `<div class="today ${this._wide ? "wide" : ""}">
+      <div class="today-cols">
+        <div class="today-main">${main}</div>
+        <aside class="detail ${open ? "on" : ""}" role="dialog" aria-modal="${open && !this._wide}" aria-label="${esc(sel ? `${sel.name}'s day` : "A kid's day")}">${sheet}</aside>
+      </div>
+      <div class="scrim ${open ? "on" : ""}" data-action="sheet-close"></div>
+    </div>`;
+  }
+
+  // The kid the sheet shows: the one tapped, else (side by side) the first one awake
+  _selectedKid(kids) {
+    const tapped = kids.find((k) => k.id === this._sel);
+    if (tapped) return tapped;
+    if (!this._wide) return null;
+    return kids.find((k) => !this._lockOf(this._summaryPerson(k.id))) || kids[0];
+  }
+
+  _now() {
+    return new Date();
+  }
+
+  // What holds a kid now: a pause (theirs or everyone's), else bedtime, School time or another lock; null when none
+  _lockOf(s) {
+    if (!s) return null;
+    if (s.pause) return { kind: "paused", until: s.pause.until, reason: s.pause.reason || "" };
+    const kind = s.lock?.kind;
+    if (kind === "bedtime" || kind === "school_time" || kind === "other") return { kind, until: s.lock.until, by: s.lock.by || s.locked_by || [] };
+    return null;
+  }
+
+  // When suggestions and the row's +15 stop for a kid: their bedtime, else 9:00 pm
+  _cutoff(s) {
+    const start = s?.bedtime ? new Date(s.bedtime.start) : null;
+    if (start && !Number.isNaN(start.getTime())) return start;
+    const nine = this._now();
+    nine.setHours(21, 0, 0, 0);
+    return nine;
+  }
+
+  _notCounted() {
+    return new Set(this._summary?.not_screen_time || []);
+  }
+
+  // A kid's pools with what the redesign needs: limited, counted in All screen time, state
+  _pools(s) {
+    const outside = this._notCounted();
+    return (s?.groups || []).map((g) => ({
+      ...g,
+      limited: g.limited !== false && g.minutes_left !== null && g.minutes_left !== undefined,
+      counted: !outside.has(g.id),
+      name: g.id === "all" ? "Screen time" : g.name,
+    }));
+  }
+
+  _binding(s) {
+    const id = s?.binding?.group;
+    return id ? this._pools(s).find((g) => g.id === id) || null : null;
+  }
+
+  // A pool's color, the same on every kid: by kind of pool, else by the household's order
+  _poolVar(id) {
+    const known = { games: "games", youtube: "youtube", video: "youtube", streaming: "streaming", social: "social", audible: "audible", music: "audible", other: "other", all: "all" };
+    if (known[id]) return `var(--p-${known[id]})`;
+    const order = (this._summary?.groups || []).map((g) => g.id).filter((g) => g !== "all" && !known[g]);
+    return `var(--p-x${Math.max(0, order.indexOf(id)) % 4})`;
+  }
+
+  _ring(s, size = 48) {
+    const lock = this._lockOf(s);
+    const all = s?.all;
+    const binding = this._binding(s);
+    const r = size / 2 - 4;
+    const c = 2 * Math.PI * r;
+    const cap = all && all.budget !== null && all.budget !== undefined ? all.budget + Math.max(0, all.bonus || 0) : null;
+    const frac = cap ? Math.min(1, (all.used_minutes || 0) / cap) : 0;
+    let tone = "accent";
+    if (lock?.kind === "bedtime") tone = "night";
+    else if (lock?.kind === "school_time") tone = "school";
+    else if (all?.state === "out") tone = "out";
+    else if (binding && binding.state === "out") tone = "low";
+    else if (all?.state === "low" || binding?.state === "low") tone = "low";
+    const badgeIcon = lock ? { bedtime: "moon", school_time: "school", paused: "pause", other: "lock" }[lock.kind] : "";
+    const badge = badgeIcon ? `<span class="badge tone-${tone === "accent" ? "accent" : tone}">${icon(badgeIcon)}</span>` : "";
+    const name = s?.name || "";
+    return `<span class="ring tone-${tone}" style="width:${size}px;height:${size}px" aria-hidden="true">
+      <svg width="${size}" height="${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" class="track"/>
+      <circle cx="${size / 2}" cy="${size / 2}" r="${r}" class="arc" stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${(c * (1 - frac)).toFixed(2)}"/></svg>
+      <span class="ini ${lock?.kind === "bedtime" ? "dim" : ""}">${esc(name.slice(0, 1).toUpperCase())}</span>${badge}</span>`;
+  }
+
+  // One status line: what stops them now, else what's left (and the pool that binds, and bedtime)
+  _kidLine(s) {
+    const lock = this._lockOf(s);
+    const all = s?.all;
+    const binding = this._binding(s);
+    if (!s) return "";
+    if (lock?.kind === "paused") return `<b>Paused</b>${lock.reason ? ` · ${esc(lock.reason)}` : ""}${lock.until ? ` till ${esc(clock(lock.until))}` : ""}`;
+    if (lock) return `${esc(LOCK_WORDS[lock.kind])}${lock.until ? ` till ${esc(clock(lock.until))}` : ""}`;
+    const allLimited = all && all.minutes_left !== null && all.minutes_left !== undefined;
+    if (all?.state === "out") return `<b class="t-out">Out of screen time</b>`;
+    if (binding && binding.id !== "all" && binding.state === "out")
+      return `<b class="t-out">${esc(binding.name)} ran out</b> · ${allLimited ? `${esc(fmtMinutes(all.minutes_left))} left overall` : "no overall limit"}`;
+    if (!allLimited && !binding) return `${esc(fmtMinutes(all?.used_minutes || 0))} today · no limit`;
+    const parts = [];
+    if (allLimited) parts.push(`<b>${esc(fmtMinutes(all.minutes_left))} left</b>`);
+    if (binding && binding.id !== "all") parts.push(`${esc(binding.name)} ${esc(fmtMinutes(binding.minutes_left))}`);
+    const start = s.bedtime ? new Date(s.bedtime.start) : null;
+    const now = this._now();
+    if (start && start > now) {
+      const mins = Math.round((start - now) / 60000);
+      parts.push(mins <= 60 ? `bedtime in ${mins} min` : `bedtime ${esc(clock(s.bedtime.start))}`);
     }
-    parts.push(this._familyPools(kids));
-    return parts.join("");
+    return parts.join(" · ");
   }
 
-  // Spec 2.1, a fixed slot at the top: the household's headline, then requests waiting (with +15 to +60), then
-  // suggestions with their own buttons, urgent first as the summary orders them. It keeps a minimum height so the
-  // cards below don't jump when one comes or goes
-  _suggestedNow() {
-    const h = this._summary?.household;
-    const items = this._askCards() + (h?.suggestions || []).map((s) => this._suggestionRow(s)).join("");
-    const headline = h?.headline;
-    return `<section class="card suggested ${headline ? `lvl-${esc(headline.level)}` : ""}">
-      <h3><ha-icon icon="mdi:lightbulb-on-outline"></ha-icon>Suggested now</h3>
-      <div class="headline">${esc(cap(headline ? headline.text : "all clear"))}</div>
-      ${items ? `<div class="suggested-items">${items}</div>` : ""}
-    </section>`;
+  _todayHeader(kids) {
+    const now = this._now();
+    const people = kids.map((k) => ({ k, s: this._summaryPerson(k.id) }));
+    const night = people.length && people.some(({ s }) => now >= this._cutoff(s)) && now >= new Date(Math.min(...people.map(({ s }) => this._cutoff(s).getTime())));
+    const bed = people.filter(({ s }) => this._lockOf(s)?.kind === "bedtime");
+    const school = people.filter(({ s }) => this._lockOf(s)?.kind === "school_time");
+    const awake = people.filter(({ s }) => !this._lockOf(s));
+    const sub = [clockAmPm(now)];
+    if (bed.length) sub.push(`${bed.length} of ${people.length} in bedtime`);
+    if (school.length) sub.push(`${listWords(school.map(({ k }) => k.name))} in School time`);
+    if (night && awake.length && bed.length) sub.push(`${listWords(awake.map(({ k }) => k.name))} still up`);
+    if (sub.length === 1) sub.push(awake.length === people.length ? "everyone has time left" : "");
+    return `<header class="top"><div class="grow"><h1>${night ? "Tonight" : "Today"}</h1>
+      <div class="sub">${esc(sub.filter(Boolean).join(" · "))}</div><div class="live"><i></i>Live</div></div>
+      <button class="ibtn" data-action="pause-open" aria-expanded="${Boolean(this._pauseOpen)}">${icon("pause", "sm")}Pause everyone</button></header>`;
   }
 
-  _suggestionRow(s) {
-    return `<div class="item sugg" data-key="${esc(s.key)}"><div class="grow"><span class="strong">${esc(s.person_name)}</span> · ${esc(s.text)}</div>
-      <div class="actions wrap">${(s.actions || []).map((a) => this._actionButton(a, s.person)).join("")}</div></div>`;
+  _pauseBox() {
+    if (!this._pauseOpen) return "";
+    const m = this._pauseMinutes || 30;
+    return `<div class="card pausebox"><div class="strong">Pause every kid's screens</div>
+      <div class="chips">${[15, 30, 60, 90].map((x) => `<button class="chip-t" data-action="pause-len" data-minutes="${x}" aria-pressed="${x === m}">${esc(fmtMinutes(x))}</button>`).join("")}</div>
+      <label class="field">Reason they'll see (optional)<input id="pause-reason" placeholder="Dinner" data-enter="pause-go"></label>
+      <div class="acts"><button class="b primary" data-action="pause-go">Pause now</button><button class="b ghost" data-action="pause-open">Cancel</button></div></div>`;
   }
 
-  _actionButton(a, person) {
-    return `<button class="btn ${a.primary ? "primary" : ""}" data-action="glance" data-id="${esc(a.id)}" ${person ? `data-person="${esc(person)}"` : ""}>${esc(cap(a.label))}</button>`;
-  }
-
-  // A request's text as the glance writes it for that kid ("sam asks for 30 more · games"), else built here
-  _askText(a) {
-    const p = this._summaryPerson(a.person);
-    const item = [p?.headline, ...(p?.lines || [])].find((x) => x && x.key === `ask:${a.id}`);
-    if (item) return `${a.person_name} ${item.text}`;
-    if (a.source === "family_safety")
-      return `${a.person_name} asks for more time${a.platform ? ` on ${a.platform}` : ""}${a.app_name ? ` for ${a.app_name}` : ""} (Family Safety)`;
-    return `${a.person_name} asks for ${amount(a.minutes)} more${a.group && a.group !== "all" ? ` · ${shortGroup(a.group, this._groupName(a.group))}` : ""}`;
-  }
-
-  _askCards() {
-    const asks = (this._summary?.approvals || []).filter((a) => a.type === "more_time");
-    return asks
-      .map(
-        (a) => `<div class="item ask ${a.id === this._askFocus ? "focus" : ""}" id="ask-${esc(a.id)}">
-        <div class="row">${this._avatar(a.person, 36)}<div class="grow">
-          <div class="strong">${esc(cap(this._askText(a)))}</div>
-          ${a.note ? `<div class="muted">“${esc(a.note)}”</div>` : ""}
-          ${a.via === "home_assistant" ? `<div class="muted small">From their Home Assistant app${a.app ? ` · ${esc(a.app)}` : ""}</div>` : ""}</div></div>
-        <div class="actions wrap">
-          <button class="btn" data-action="answer" data-request="${esc(a.id)}" data-deny="1">No</button>
-          ${[15, 30, 45, 60]
-            .map((m) => `<button class="btn ${m === a.minutes ? "primary" : ""}" data-action="answer" data-request="${esc(a.id)}" data-minutes="${m}">+${esc(amount(m))}</button>`)
-            .join("")}
-        </div></div>`
-      )
-      .join("");
-  }
-
-  _pauseBar() {
+  _pauseBanner() {
     const paused = (this._summary?.people || []).filter((p) => p.pause);
-    if (paused.length) {
-      const p = paused[0].pause;
-      return `<div class="card pause on"><div class="row"><ha-icon icon="mdi:silverware-fork-knife"></ha-icon>
-        <div class="grow"><div class="strong">${esc(cap(p.reason || "paused"))} till ${esc(clock(p.until))}${p.ends_on ? ` or ${esc(this._endsOn(p.ends_on))}` : ""}</div>
-        <div class="muted small">${esc(paused.map((x) => x.name).join(", "))}: their Hearth TVs and phones are on hold.</div></div>
-        <button class="btn primary" data-action="pause-end">End pause</button></div></div>`;
-    }
-    return `<div class="card pause"><div class="row wrap"><ha-icon icon="mdi:pause-circle-outline"></ha-icon>
-      <div class="grow strong">Pause everyone</div>
-      <select id="pause-minutes" aria-label="How long">${[15, 30, 45, 60, 90].map((m) => `<option value="${m}" ${m === 45 ? "selected" : ""}>${fmtMinutes(m)}</option>`).join("")}</select>
-      <input id="pause-reason" placeholder="Reason, e.g. Dinner" value="" data-enter="pause-start">
-      <button class="btn" data-action="pause-start">Pause</button></div></div>`;
+    if (!paused.length) return "";
+    const p = paused[0].pause;
+    const kids = this._kids();
+    const who = paused.length >= kids.length ? "Everyone paused" : `${listWords(paused.map((x) => x.name))} paused`;
+    return `<div class="banner">${icon("pause")}<div class="grow"><b>${esc(who)}</b>${p.until ? ` till ${esc(clock(p.until))}` : ""}${p.ends_on ? ` or ${esc(this._endsOn(p.ends_on))}` : ""}${p.reason ? ` · ${esc(p.reason)}` : ""}</div>
+      <button class="lnk" data-action="pause-end-all">End now</button></div>`;
   }
 
-  // A kid on Today (spec 2.3 and section 3): the server's today line and state color, the ring for All, one bar per
-  // pool, the give button for the pool that binds (All in an overflow), the last 7 days and, opened, the day by hour,
-  // device and app
-  _kidCard(kid) {
-    const s = this._summaryPerson(kid.id);
-    const left = s?.all?.minutes_left ?? null;
-    const playing = (s?.playing || [])[0];
-    const chips = [];
-    // The kind of lock and when it ends, as the day line says it ("School time till 3:00"); what locks them (the
-    // School time and bedtime entities) only in the tooltip
-    if (s?.locked && !s.pause) {
-      const kind = s.lock?.kind;
-      const word = { bedtime: "Bedtime", school_time: "School time" }[kind] || "Locked";
-      const icon = { bedtime: "weather-night", school_time: "school-outline" }[kind] || "lock";
-      const by = (s.locked_by || []).filter((e) => e !== "pause").map((e) => this._entityName(e));
-      chips.push(`<span class="chip warn"${by.length ? ` title="${esc(`Locked by ${by.join(", ")}`)}"` : ""}><ha-icon icon="mdi:${icon}"></ha-icon>${esc(word)}${s.lock?.until ? ` till ${esc(clock(s.lock.until))}` : ""}</span>`);
+  // The waiting requests and the suggestions showing, one row per kid (a request first), each with its own buttons
+  _needs(kids) {
+    const asks = (this._summary?.approvals || []).filter((a) => a.type === "more_time" && !this._hidden.has(`ask|${a.id}`));
+    const order = [...new Set([...kids.map((k) => k.id), ...asks.map((a) => a.person)])];
+    const rows = [];
+    for (const id of order) {
+      const s = this._summaryPerson(id);
+      const mine = asks.filter((a) => a.person === id).map((a) => ({ type: "ask", person: id, ask: a, key: `ask|${a.id}` }));
+      const sugg = (s?.suggestions || [])
+        .filter((x) => !this._hidden.has(`${id}|${x.key}`))
+        .map((x) => ({ type: "suggestion", person: id, s: x, key: `${id}|${x.key}` }));
+      const behind = (s?.suggestions_held || [])
+        .filter((x) => x.held === "more" && !this._hidden.has(`${id}|${x.key}`))
+        .map((x) => ({ type: "suggestion", person: id, s: x, key: `${id}|${x.key}` }));
+      const all = [...mine, ...sugg, ...behind];
+      if (!mine.length && !sugg.length) continue;
+      rows.push({ person: id, top: all[0], more: all.slice(1) });
     }
-    if (s?.pause) chips.push(`<span class="chip warn"><ha-icon icon="mdi:pause"></ha-icon>${esc(cap(s.pause.reason || "paused"))}</span>`);
-    const place = s?.place;
-    if (place) {
-      const now = this._config.places_now?.[kid.id] || {};
-      const source = { family_link: "Family Link", person: "Home Assistant" }[now.source] || "";
-      const title = place.fresh ? `From ${source || "its source"}` : place.name === "No location" ? "No Family Link location and no person location" : "No fresh reading";
-      chips.push(`<span class="chip ${place.fresh ? "" : "dim"}" title="${esc(title)}"><ha-icon icon="mdi:map-marker${place.fresh ? "" : "-question"}-outline"></ha-icon>${esc(place.name === "No location" ? "no location" : place.name)}${place.fresh && source ? ` · ${esc(source)}` : ""}</span>`);
-    }
-    // Now playing: the summary's own short text ("bluey · s2e4 · 8 min left"), and where
-    if (playing)
-      chips.push(`<span class="chip play"><ha-icon icon="mdi:play-circle"></ha-icon>${esc(cap(playing.text || playing.title || playing.app || "playing"))}${playing.device ? ` · ${esc(playing.device)}` : ""}</span>`);
-    if (s?.next_lock) {
-      const mins = Math.round((new Date(s.next_lock.at) - Date.now()) / 60000);
-      const what = s.next_lock.kind === "bedtime" ? "Bedtime" : "School time";
-      if (mins >= 0 && mins <= 120)
-        chips.push(`<span class="chip"><ha-icon icon="mdi:${s.next_lock.kind === "bedtime" ? "weather-night" : "school-outline"}"></ha-icon>${what} ${mins <= 15 ? `in ${mins} min` : `at ${esc(clock(s.next_lock.at))}`}</span>`);
-    }
-    const line = s?.day_line;
-    return `<div class="card kid role-${role(s?.state)}" id="kid-${esc(kid.id)}">
-      <div class="kid-head">
-        ${this._avatar(kid.id)}
-        <div class="grow"><div class="name">${esc(kid.name)}</div><div class="chips">${chips.join("")}</div></div>
-        <div class="left-now">${left === null ? `<span class="muted">No limit</span>` : left === 0 ? "Out" : `${esc(amount(left))} left`}</div>
-      </div>
-      <div class="kid-main">
-        ${line ? `<div class="day-line lvl-${esc(line.level)}"><span class="dot-role"></span>${esc(cap(line.text))}</div>` : ""}
-        ${this._allBar(s)}
-        ${this._dayStrip(kid, s)}
-        ${this._deviceTiles(s)}
-      </div>
-      ${this._exceptionsAndApps(kid, s)}
-      ${this._weekChart(kid, s)}
-      ${this._hoursCard(kid)}
-      ${this._todayDetail(kid, s)}
-      ${this._kidControls(kid, s)}
-      ${this._giveButtons(kid, s)}
-    </div>`;
+    const rank = (r) => (r.top.type === "ask" ? 0 : r.top.s.reason === "group_out" ? 1 : 2);
+    rows.sort((a, b) => rank(a) - rank(b));
+    const held = (this._summary?.household?.suggestions_held || []).filter((x) => x.held && x.held !== "more");
+    return { rows, held };
   }
 
-  // Time-use decision 4a: one kid in a row (tap for the full card), with a button only when there's something to answer:
-  // their waiting request ("Yes 30") or a suggestion for them ("+15 youtube", the pool named)
-  _kidRow(kid) {
-    const s = this._summaryPerson(kid.id);
-    const all = s?.all;
-    const used = all?.used_minutes || 0;
-    const total = all && all.minutes_left !== null && all.minutes_left !== undefined ? used + Math.max(0, all.minutes_left) : null;
-    const text = s?.day_line?.text || s?.headline?.text || (total === null ? "no limit" : `${amount(all.minutes_left)} left`);
-    const open = this._todayKid === kid.id;
-    return `<div class="kid-row role-${role(s?.state)}${open ? " on" : ""}" data-action="kid-open" data-enter="kid-open" data-kid="${esc(kid.id)}" role="button" tabindex="0" aria-expanded="${open}">
-      ${this._avatar(kid.id, 32)}
-      <div class="grow"><div class="strong">${esc(kid.name)}</div><div class="muted small">${esc(cap(text))}</div></div>
-      <div class="row-bar">${total === null ? "" : `<div class="bar"><div style="width:${total ? Math.min(100, (used / total) * 100) : 100}%"></div></div>`}</div>
-      ${this._rowButton(kid)}
-    </div>`;
-  }
-
-  _rowButton(kid) {
-    const ask = (this._summary?.approvals || []).find((a) => a.type === "more_time" && a.person === kid.id && a.minutes);
-    if (ask)
-      return `<button class="btn primary" data-action="answer" data-request="${esc(ask.id)}" data-minutes="${esc(ask.minutes)}" title="${esc(cap(this._askText(ask)))}">Yes ${esc(amount(ask.minutes))}</button>`;
-    const sugg = (this._summary?.household?.suggestions || []).find((x) => x.person === kid.id && (x.actions || []).length);
-    if (sugg) {
-      const a = sugg.actions.find((x) => x.primary) || sugg.actions[0];
-      return this._actionButton({ ...a, primary: true }, kid.id);
+  _forYou(kids) {
+    const { rows, held } = this._needs(kids);
+    const now = this._now();
+    const night = kids.some((k) => now >= this._cutoff(this._summaryPerson(k.id)));
+    if (!rows.length) {
+      return `<div class="sec"><span>For you</span></div><div class="card flat"><div class="quiet ${night ? "" : "day"}"><span class="qic">${icon(night ? "moon" : "check")}</span>
+        <div><div class="strong">${night ? "Nothing needs you tonight" : "Nothing needs you"}</div>
+        <div class="d">${night ? "Hearth holds suggestions after bedtime. A kid's request would still show here." : "Suggestions show here when a kid runs out while they're using a screen."}</div></div></div>${this._heldFold(held)}</div>`;
     }
-    return "";
+    const title = rows.length === 1 ? "1 thing for you" : `${rows.length} things for you`;
+    return `<div class="sec"><span>${title}</span></div><div class="card flat needs">${rows
+      .map((r) => this._needRow(r.top, { more: r.more.length }))
+      .join("")}</div>${held.length ? `<div class="card flat heldcard">${this._heldFold(held)}</div>` : ""}`;
   }
 
-  // A pool's color on the All bar and its lane: by the household's order of groups, "other" grey
-  _poolColor(id) {
-    if (id === "other") return "other";
-    const order = (this._summary?.groups || []).map((g) => g.id).filter((g) => g !== "all");
-    const i = order.indexOf(id);
-    return `p${(i < 0 ? order.length : i) % 6}`;
+  _heldFold(held) {
+    if (!held.length) return "";
+    return `<details class="held" id="held-fold"><summary>${icon("info", "sm")}${held.length} suggestion${held.length === 1 ? "" : "s"} held back · why</summary><ul>${held
+      .map((x) => `<li><span>${esc(x.sentence || `${x.person_name || this._personName(x.person)}: ${cap(x.text)}`)}</span><span>${esc(x.why || "")}</span></li>`)
+      .join("")}</ul></details>`;
   }
 
-  // Time-use decisions 1a and 2c: All screen time as one bar split by pool plus "other" (an app is in one pool, so the
-  // parts add up), the limit as a mark, today's extra time as a hatched end, then each pool with a budget as a thin
-  // lane on the same minute scale (which cap comes first), and the pools without a budget in one muted line
-  _allBar(s) {
-    const all = s?.all;
-    if (!all) return "";
-    const used = all.used_minutes || 0;
-    const bonus = Math.max(0, all.bonus || 0);
-    const limited = (g) => g.limited !== false && g.minutes_left !== null && g.minutes_left !== undefined;
-    const capOf = (g) => (g.budget !== null && g.budget !== undefined ? g.budget + Math.max(0, g.bonus || 0) : (g.used_minutes || 0) + Math.max(0, g.minutes_left));
-    const budget = limited(all) ? capOf(all) - bonus : null;
-    const pools = (s.groups || []).filter((g) => g.id !== "all");
-    const lanes = pools.filter(limited).sort((a, b) => a.minutes_left - b.minutes_left);
-    const free = pools.filter((g) => !limited(g) && (g.used_minutes || 0) > 0);
-    const top = Math.max(1, used, budget === null ? 0 : budget + bonus, ...lanes.map((g) => Math.max(capOf(g), g.used_minutes || 0)));
-    const x = (m) => `${Math.max(0, Math.min(100, (m / top) * 100)).toFixed(2)}%`;
-    const parts = s.all_by_pool?.length ? s.all_by_pool : used ? [{ id: "all", name: "All screen time", minutes: used }] : [];
-    let at = 0;
-    const segs = parts
-      .map((p) => {
-        const html = `<span class="seg ${p.id === "all" ? "whole" : this._poolColor(p.id)}" style="left:${x(at)};width:${x(p.minutes)}" title="${esc(`${p.name}: ${fmtMinutes(p.minutes)}`)}"></span>`;
-        at += p.minutes;
-        return html;
-      })
-      .join("");
-    const marks = budget === null ? "" : `${bonus ? `<span class="bonus" style="left:${x(budget)};width:${x(bonus)}"></span>` : ""}<span class="limit" style="left:${x(budget)}"></span>`;
-    const head = budget === null ? `${fmtMinutes(used)} today · no limit` : `${amount(used)} of ${fmtMinutes(budget + bonus)}`;
-    const legend = parts.filter((p) => p.id !== "all" && p.minutes > 0);
-    const lane = (g) => {
-      const value = { out: "Out", allowed: "Allowed", paused: "Paused" }[g.state] || `${amount(g.minutes_left)} left`;
-      return `<div class="lane role-${role(g.state)}"><span class="bar-label">${esc(g.name)}</span>
-        <div class="lane-track"><span class="lane-fill ${this._poolColor(g.id)}" style="width:${x(g.used_minutes || 0)}"></span><span class="limit" style="left:${x(capOf(g))}"></span></div>
-        <span class="bar-value">${g.bonus > 0 ? `<span class="tag">+${esc(amount(g.bonus))}</span>` : ""}${esc(value)}</span></div>`;
-    };
-    return `<div class="allbar role-${role(all.state)}">
-      <div class="allbar-head"><span class="strong">All screen time</span><span class="grow"></span><span class="muted small">${esc(head)}</span>${bonus ? `<span class="tag">+${esc(amount(bonus))}</span>` : ""}</div>
-      <div class="all-track">${segs}${marks}</div>
-      ${legend.length ? `<div class="legend small">${legend.map((p) => `<span><i class="dot ${this._poolColor(p.id)}"></i>${esc(p.id === "other" ? "other" : p.name)} ${esc(amount(p.minutes))}</span>`).join("")}</div>` : ""}
-      ${lanes.map(lane).join("")}
-      ${free.length ? `<div class="muted small">No limit: ${esc(free.map((g) => `${String(g.name).toLowerCase()} ${fmtMinutes(g.used_minutes)}`).join(" · "))}</div>` : ""}
-    </div>`;
-  }
-
-  // Time-use decision 3a: the kid's waking day, from this morning's wake to tonight's bedtime (the summary's bedtime,
-  // from their lock entities; else 6:00 to 22:00): bedtime shaded at the ends, School time striped, a line at now, and
-  // the minutes used each hour once the hourly statistics are read
-  _dayStrip(kid, s) {
-    const midnight = new Date();
-    midnight.setHours(0, 0, 0, 0);
-    const hourOf = (iso) => (new Date(iso).getTime() - midnight.getTime()) / 3600000;
-    const wake = s?.bedtime ? hourOf(s.bedtime.end) : 6;
-    const bed = s?.bedtime ? hourOf(s.bedtime.start) : 22;
-    if (!(bed > wake) || Number.isNaN(bed) || Number.isNaN(wake)) return "";
-    const from = Math.max(0, Math.floor(wake));
-    const to = Math.min(24, Math.ceil(bed));
-    const span = to - from;
-    const pos = (h) => ((Math.min(to, Math.max(from, h)) - from) / span) * 100;
-    const block = (a, b, cls) => (pos(b) > pos(a) ? `<span class="${cls}" style="left:${pos(a).toFixed(2)}%;width:${(pos(b) - pos(a)).toFixed(2)}%"></span>` : "");
-    const parts = [block(from, wake, "night"), block(bed, to, "night")];
-    const words = [];
-    if (s?.school_time) {
-      parts.push(block(hourOf(s.school_time.start), hourOf(s.school_time.end), "school"));
-      words.push(`School time ${clock(s.school_time.start)}–${clock(s.school_time.end)}`);
+  // A request or a suggestion, as one sentence, a detail line and its buttons under the text
+  _needRow(item, { more = 0, inSheet = false } = {}) {
+    const s = this._summaryPerson(item.person);
+    const name = s?.name || this._personName(item.person);
+    let title;
+    let detail;
+    let acts;
+    if (item.type === "ask") {
+      const a = item.ask;
+      const pool = a.group && a.group !== "all" ? this._groupName(a.group) : "Screen time";
+      const ago = a.asked ? Math.max(0, Math.round((this._now() - new Date(a.asked)) / 60000)) : null;
+      const when = ago === null ? "" : ago < 2 ? "just now" : ago < 60 ? `${ago} min ago` : `at ${clock(a.asked)}`;
+      const fs = a.source === "family_safety" || !a.minutes;
+      title = fs ? `${name} asks for more time${a.platform ? ` on ${a.platform}` : ""}` : `${name} asks for ${a.minutes} more min`;
+      detail = [fs ? a.app_name || "Family Safety" : pool, when, a.note ? `“${a.note}”` : ""].filter(Boolean).join(" · ");
+      const btn = (m, cls, label) => `<button class="b ${cls}" data-action="ask-give" data-request="${esc(a.id)}" data-person="${esc(item.person)}" data-group="${esc(a.group || "all")}" data-minutes="${m}" data-fs="${fs ? 1 : ""}">${label}</button>`;
+      acts = fs
+        ? `${btn(15, "primary", "15 min")}${btn(30, "", "30 min")}${btn(60, "", "1 h")}`
+        : `${btn(a.minutes, "primary", `Give ${esc(amount(a.minutes))} min`)}${a.minutes !== 15 ? btn(15, "", "15 min") : btn(30, "", "30 min")}`;
+      acts += `<button class="b ghost" data-action="ask-no" data-request="${esc(a.id)}" data-person="${esc(item.person)}">No</button>`;
+    } else {
+      const x = item.s;
+      title = x.sentence || `${name}: ${cap(x.text)}`;
+      detail = x.detail || "";
+      const actions = x.actions || [];
+      const gives = actions.filter((a) => a.service === "hearth.add_bonus");
+      const dismiss = actions.find((a) => a.service === "hearth.dismiss_suggestion");
+      acts = gives
+        .map((a, i) => `<button class="b ${i === 0 ? "primary" : ""}" data-action="sugg-give" data-person="${esc(item.person)}" data-id="${esc(a.id)}">${i === 0 ? `${icon("plus", "sm")}${esc(amount(a.data?.minutes))} min` : `${esc(amount(a.data?.minutes))} min`}</button>`)
+        .join("");
+      if (dismiss) acts += `<button class="b ghost" data-action="sugg-dismiss" data-person="${esc(item.person)}" data-key="${esc(x.key)}" data-id="${esc(dismiss.id)}">Not today</button>`;
     }
-    if (s?.bedtime) words.push(`bedtime at ${clock(s.bedtime.start)}`);
-    const entity = this._config?.screen_time_sensors?.[kid.id];
-    const read = this._hours[kid.id];
-    if (read?.rows) {
-      const bars = hourBars(read.rows, midnight.getTime(), parseFloat(this._hass?.states?.[entity]?.state));
-      for (let h = from; h < to; h++)
-        if (bars[h] > 0)
-          parts.push(`<span class="use" style="left:${pos(h).toFixed(2)}%;width:${(100 / span).toFixed(2)}%;height:${Math.min(100, (bars[h] / 60) * 100).toFixed(0)}%" title="${esc(`${fmtMinutes(bars[h])} at ${h % 12 || 12}`)}"></span>`);
-    }
-    const now = (Date.now() - midnight.getTime()) / 3600000;
-    if (now >= from && now <= to) parts.push(`<span class="now" style="left:${pos(now).toFixed(2)}%"></span>`);
-    const step = span > 16 ? 3 : 2;
-    const hours = [];
-    for (let h = from; h <= to; h += step) hours.push(h);
-    if (hours[hours.length - 1] !== to) hours.push(to);
-    const ticks = hours.map((h) => `<span style="left:${pos(h).toFixed(2)}%">${h % 12 || 12}</span>`);
-    return `<div class="strip" aria-label="Today from wake to bedtime">
-      <div class="strip-track">${parts.join("")}</div>
-      <div class="strip-x">${ticks.join("")}</div>
-      ${words.length ? `<div class="muted small">${esc(cap(words.join(" · ")))}</div>` : ""}
-    </div>`;
+    const moreLine = more ? `<div class="more">+${more} more for ${esc(name)} · <button class="lnk" data-action="kid-sheet" data-kid="${esc(item.person)}">See</button></div>` : "";
+    return `<div class="need ${item.type === "ask" ? "ask" : ""} ${inSheet ? "insheet" : ""}" ${item.type === "ask" && !inSheet ? `id="ask-${esc(item.ask.id)}"` : ""}>
+      ${inSheet ? "" : `<span class="av">${this._ring(s, 40)}</span>`}
+      <div class="t">${esc(title)}</div>${detail ? `<div class="d">${esc(detail)}</div>` : ""}
+      <div class="acts">${acts}</div>${moreLine}</div>`;
   }
 
-  // Time-use decision 5a: each device with the time actually left there, as the server works it out (targets'
-  // left, left_by, locked): "1 h 43 left · by google", "2 h left · games, by hearth", "Locked · school time"
-  _deviceTiles(s) {
-    const tiles = (s?.targets || []).filter((t) => !t.same_as && "left" in t);
-    if (!tiles.length) return "";
-    const icons = { tv: "mdi:television", phone: "mdi:cellphone", xbox: "mdi:microsoft-xbox", windows: "mdi:microsoft-windows", switch: "mdi:nintendo-switch" };
-    const why = { bedtime: "bedtime", school_time: "school time", pause: "paused", other: "locked", out: "out of time", device_limit: "its own limit", parent_lock: "a parent's lock" };
-    return `<div class="tiles">${tiles
-      .map((t) => {
-        const big = t.locked ? (t.locked_kind === "out" ? "Out" : "Locked") : t.left === null || t.left === undefined ? "No limit" : `${fmtMinutes(t.left)} left`;
-        const pool = t.left_by === "hearth" && t.left_pool && t.left_pool !== "all" ? `${shortGroup(t.left_pool, this._groupName(t.left_pool))}, ` : "";
-        const sub = t.locked ? why[t.locked_kind] || "" : t.left_by ? `${pool}by ${t.left_by}` : "";
-        return `<div class="tile${t.locked ? " locked" : ""}"><ha-icon icon="${icons[t.kind] || "mdi:devices"}"></ha-icon>
-          <div class="grow"><div class="small">${esc(t.name)}</div><div class="strong">${esc(big)}</div>${sub ? `<div class="muted small">${esc(sub)}</div>` : ""}</div></div>`;
+  _kidList(kids, sel) {
+    const { rows } = this._needs(kids);
+    const covered = new Set(rows.map((r) => r.person));
+    const sorted = [...kids].sort((a, b) => (this._lockOf(this._summaryPerson(a.id))?.kind === "bedtime") - (this._lockOf(this._summaryPerson(b.id))?.kind === "bedtime"));
+    return `<div class="sec"><span>Kids</span></div><div class="kids">${sorted
+      .map((k) => {
+        const s = this._summaryPerson(k.id);
+        const asleep = this._lockOf(s)?.kind === "bedtime";
+        return `<div class="card kid ${asleep ? "asleep" : ""}" role="button" tabindex="0" data-action="kid-sheet" data-enter="kid-sheet" data-kid="${esc(k.id)}" aria-current="${Boolean(sel && sel.id === k.id && this._wide)}">
+          ${this._ring(s || { name: k.name })}<div class="grow"><div class="name">${esc(k.name)}</div><div class="line">${this._kidLine(s) || "No word yet"}</div></div>
+          ${covered.has(k.id) ? "" : this._rowGive(s)}<span class="chev">${icon("chev")}</span></div>`;
       })
       .join("")}</div>`;
   }
 
-  // One pool today (spec 3.3): fill used / (budget + bonus), the state's color, "40 left", "out", or muted
-  // "no limit · 25 min" for a pool without a budget today
-  _poolRow(g) {
-    const name = g.id === "all" ? "All screen time" : g.name;
-    const bonus = g.bonus > 0 ? `<span class="tag">+${esc(amount(g.bonus))}</span>` : "";
-    if (g.limited === false || g.minutes_left === null || g.minutes_left === undefined)
-      return `<div class="bar-row unlimited role-none"><span class="bar-label">${esc(name)}</span><div class="bar"><div style="width:0"></div></div>
-        <span class="bar-value">No limit · ${esc(fmtMinutes(g.used_minutes || 0))}</span></div>`;
-    const total = g.budget !== null && g.budget !== undefined ? g.budget + (g.bonus || 0) : (g.used_minutes || 0) + g.minutes_left;
-    const pct = total ? Math.min(100, ((g.used_minutes || 0) / total) * 100) : 100;
-    const value = { out: "Out", allowed: "Allowed", paused: "Paused" }[g.state] || `${amount(g.minutes_left)} left`;
-    return `<div class="bar-row role-${role(g.state)}"><span class="bar-label">${esc(name)}</span>
-      <div class="bar"><div style="width:${pct}%"></div></div><span class="bar-value">${bonus}${esc(value)}</span></div>`;
+  // The row's +15: only when time is what stops them, they're awake and it's before their cutoff
+  _rowGive(s) {
+    if (!s || this._lockOf(s) || this._now() >= this._cutoff(s)) return "";
+    const b = this._binding(s);
+    if (!b || (b.state !== "out" && b.state !== "low")) return "";
+    return `<button class="b primary give" data-action="give" data-person="${esc(s.id)}" data-group="${esc(b.id)}" data-minutes="15" aria-label="${esc(`Give ${s.name} 15 minutes of ${b.name}`)}">+15</button>`;
   }
 
-  // Spec principle 6 (round 2, 3b): one button gives to the pool that stops them first and names it ("+15 games");
-  // more of it, All screen time and taking time back are in the overflow
-  _giveButtons(kid, s) {
-    const groups = s?.groups || [];
-    if (!groups.some((g) => g.limited !== false && g.minutes_left !== null && g.minutes_left !== undefined))
-      return `<div class="actions"><button class="link" data-action="kid" data-kid="${esc(kid.id)}" data-go="kids">Change limits</button><span class="grow"></span>
-        <button class="btn" data-action="kid" data-kid="${esc(kid.id)}" data-go="kids">Set limits</button></div>`;
-    const binding = s.binding?.group || null;
-    const give = binding ? (s.actions || []).find((a) => a.id === `bonus:${binding}`) : null;
-    const name = (id) => shortGroup(id, groups.find((g) => g.id === id)?.name || this._groupName(id));
-    const more = (minutes, group) =>
-      `<button class="chip-btn" data-action="bonus" data-person="${esc(kid.id)}" data-minutes="${minutes}" data-group="${esc(group)}">${minutes > 0 ? "+" : "−"}${esc(amount(Math.abs(minutes)))} ${esc(name(group))}</button>`;
-    const overflow = [];
-    if (binding && binding !== "all") overflow.push(more(30, binding), more(-15, binding));
-    overflow.push(more(15, "all"), more(30, "all"), more(60, "all"), more(-15, "all"));
-    return `<div class="actions wrap">
-      <button class="link" data-action="kid" data-kid="${esc(kid.id)}" data-go="kids">Change limits</button><span class="grow"></span>
-      <details class="more" id="more-${esc(kid.id)}"><summary aria-label="More extra time">More</summary><div class="more-menu">${overflow.join("")}</div></details>
-      ${give ? this._actionButton({ ...give, primary: true }, kid.id) : ""}
-    </div>`;
+  // What's playing in the house: one collapsed row when nothing is
+  _screensNow() {
+    const devices = this._summary?.devices || [];
+    const plays = this._summary?.playing || [];
+    const kindIcon = { tv: "tv", phone: "phone", xbox: "xbox", windows: "windows", switch: "switch" };
+    const onRows = [];
+    for (const dv of devices) {
+      if (dv.screen !== "on" || !dv.connected) continue;
+      const play = plays.find((p) => p.target === `hearth:${dv.id}`);
+      const what = play ? cap(play.text || play.item || "") : dv.media_title || (dv.app === "Hearth TV" || !dv.app ? "Home screen" : dv.app);
+      const who = play?.name || (dv.profile ? dv.profile : "");
+      onRows.push(`<div class="rowi"><span class="dic on">${icon(kindIcon[dv.kind] || "tv")}</span><div class="grow"><div class="t">${esc(dv.name || dv.id)}</div><div class="d">${esc([what, who].filter(Boolean).join(" · "))}</div></div></div>`);
+    }
+    for (const p of plays) {
+      if (String(p.target || "").startsWith("hearth:")) continue;
+      const target = (this._summaryPerson(p.person)?.targets || []).find((t) => t.id === p.target);
+      const where = target ? target.display_name || target.name : p.device || "";
+      onRows.push(`<div class="rowi"><span class="dic on">${icon(kindIcon[target?.kind] || (p.kind === "game" ? "switch" : "tv"))}</span><div class="grow"><div class="t">${esc(where || p.name)}</div><div class="d">${esc([cap(p.text || p.item || ""), p.name].filter(Boolean).join(" · "))}</div></div></div>`);
+    }
+    const off = devices.filter((dv) => !(dv.screen === "on" && dv.connected));
+    const offRows = off.map((dv) => `<div class="rowi"><span class="dic">${icon(kindIcon[dv.kind] || "tv")}</span><div class="grow"><div class="t">${esc(dv.name || dv.id)}</div><div class="d">${dv.connected ? "Off" : "Not connected"}</div></div></div>`);
+    const tvs = off.filter((dv) => dv.kind === "tv").length;
+    let body;
+    if (!onRows.length) {
+      const d = [tvs ? `${tvs} TV${tvs === 1 ? "" : "s"} off` : "", "no console or Switch in use"].filter(Boolean).join(" · ");
+      body = `<button class="rowi" data-action="screens-toggle" aria-expanded="${Boolean(this._screensOpen)}"><span class="dic">${icon("tv")}</span><div class="grow"><div class="t">Nothing playing</div><div class="d">${esc(d)}</div></div><span class="chev ${this._screensOpen ? "open" : ""}">${icon("chev")}</span></button>${this._screensOpen ? offRows.join("") : ""}`;
+    } else {
+      body = onRows.join("") + (offRows.length
+        ? `<button class="rowi more-off" data-action="screens-toggle" aria-expanded="${Boolean(this._screensOpen)}"><div class="grow d">${offRows.length} more off</div><span class="chev ${this._screensOpen ? "open" : ""}">${icon("chev")}</span></button>${this._screensOpen ? offRows.join("") : ""}`
+        : "");
+    }
+    return `<div class="sec"><span>Screens now</span></div><div class="card flat rowlist">${body}</div>`;
   }
 
-  // Spec 2.6 and 3.7, noiwid's daily bars from the summary's `week` (decision 4a): oldest on the left, All (or the
-  // chosen pool) per day with the day's budget tick, "+30" over a day with extra time, a dot under a day something ran
-  // out, a hatched placeholder for a day with no record. A tap shows the day: "tue · 2 h 40 of 3 h · games ran out ·
-  // +30 given · 1 ask"
-  _weekChart(kid, s) {
-    const week = [...(s?.week || [])].reverse();
-    if (!week.length) return "";
-    const names = new Map((s.groups || []).map((g) => [g.id, g.name]));
-    const short = (id) => shortGroup(id, names.get(id) || this._groupName(id));
-    const budgeted = new Set();
-    for (const d of week) for (const [id, n] of Object.entries(d.budget || {})) if (n !== null && id !== "all") budgeted.add(id);
-    const chipIds = ["all", ...(s.groups || []).map((g) => g.id).filter((id) => budgeted.has(id))];
-    const group = chipIds.includes(this._weekGroup[kid.id]) ? this._weekGroup[kid.id] : "all";
-    const today = week[week.length - 1].date;
-    const days = week.map((d) => {
-      const known = Boolean(d.minutes && Object.keys(d.minutes).length);
-      const bonus = group === "all" ? Object.values(d.bonus || {}).reduce((a, b) => a + b, 0) : (d.bonus || {})[group] || 0;
-      const budget = d.budget && d.budget[group] !== null && d.budget[group] !== undefined ? d.budget[group] + ((d.bonus || {})[group] || 0) : null;
-      const out = (d.out || []).filter((id) => group === "all" || id === group);
-      const label = d.date === today ? "today" : new Date(`${d.date}T12:00:00`).toLocaleDateString("en-US", { weekday: "short" });
-      return { d, known, used: known ? d.minutes[group] || 0 : 0, budget, bonus, out, label };
-    });
-    const peak = Math.max(60, ...days.map((x) => Math.max(x.used, x.budget || 0)));
-    const step = peak > 480 ? 240 : 60;
-    const top = Math.ceil(peak / step) * step;
-    const steps = top / step;
-    const pick = days.find((x) => x.d.date === this._weekDay[kid.id]);
-    let detail = "";
-    if (pick) {
-      const parts = [pick.label.toLowerCase()];
-      if (!pick.known) parts.push("no record");
-      else {
-        parts.push(pick.budget === null ? fmtMinutes(pick.used) : `${amount(pick.used)} of ${fmtMinutes(pick.budget)}`);
-        if (pick.out.length) parts.push(pick.out.includes("all") && group === "all" ? "out of time" : `${pick.out.map(short).join(" and ")} ran out`);
-        if (pick.bonus > 0) parts.push(`+${amount(pick.bonus)} given`);
-        if (pick.d.asks) parts.push(`${pick.d.asks} ask${pick.d.asks === 1 ? "" : "s"}`);
+  _adultsLine() {
+    const adults = (this._summary?.people || []).filter((p) => p.kind === "adult");
+    if (!adults.length) return "";
+    const limited = adults.some((p) => p.all && p.all.minutes_left !== null && p.all.minutes_left !== undefined);
+    return `<div class="adults">Adults today: ${esc(adults.map((p) => `${p.name} ${fmtMinutes(p.all?.used_minutes || 0)}`).join(" · "))}${limited ? "" : " · no limits"}</div>`;
+  }
+
+  // A device's name in a kid's own sheet: without "<kid>'s"
+  _deviceName(t, kid) {
+    let n = String(t?.display_name || t?.name || "Unnamed device");
+    const pre = `${kid}'s `;
+    if (kid && n.toLowerCase().startsWith(pre.toLowerCase())) n = n.slice(pre.length);
+    return cap(n);
+  }
+
+  _deviceKind(t) {
+    if (t.kind !== "phone") return t.kind;
+    const words = `${t.display_name || ""} ${t.name || ""}`;
+    return /\btab|tablet|ipad|\bSM-[XTP]\d/i.test(words) ? "tablet" : "phone";
+  }
+
+  // The kid's sheet: their lock, their request or suggestions, the actions that help now, today, devices, exceptions,
+  // the week and their to-do list
+  _kidSheet(kid) {
+    const s = this._summaryPerson(kid.id);
+    if (!s) return `<div class="dinner"><p class="muted">No word from Hearth about ${esc(kid.name)} yet.</p></div>`;
+    const lock = this._lockOf(s);
+    const locked = lock && lock.kind !== "paused";
+    const h = [];
+    h.push(`<div class="handle"><i></i></div><div class="dinner">
+      <div class="dhead">${this._ring(s, 60)}<div class="grow"><h2>${esc(kid.name)}</h2><div class="line">${this._kidLine(s)}</div></div>
+      <button class="closebtn" data-action="sheet-close" aria-label="Close">${icon("close")}</button></div>`);
+    if (locked) {
+      const word = LOCK_WORDS[lock.kind];
+      const from = this._lockSource(lock.by);
+      h.push(`<div class="lockbox ${lock.kind === "bedtime" ? "night" : "school"}">${icon(lock.kind === "bedtime" ? "moon" : lock.kind === "school_time" ? "school" : "lock")}<div>
+        <div class="strong">${esc(word)}${lock.until ? ` till ${esc(clock(lock.until))}` : ""}</div>
+        <div class="d">${esc(`${from ? `Set in ${from}. ` : ""}Every screen is off for ${kid.name} until then, so extra time wouldn't help.${lock.kind === "school_time" ? " School time apps still work." : ""}`)}</div></div></div>`);
+    }
+    if (lock?.kind === "paused")
+      h.push(`<div class="banner">${icon("pause")}<div class="grow">Paused${lock.until ? ` till ${esc(clock(lock.until))}` : ""}${lock.reason ? ` · ${esc(lock.reason)}` : ""}</div><button class="lnk" data-action="kid-pause-end" data-person="${esc(kid.id)}">End</button></div>`);
+    // Their request or suggestions
+    const mine = this._needs([kid]).rows.find((r) => r.person === kid.id);
+    if (mine) for (const item of [mine.top, ...mine.more]) h.push(`<div class="card flat">${this._needRow(item, { inSheet: true })}</div>`);
+    h.push(this._actionBar(kid, s, lock));
+    h.push(this._todayBlock(kid, s, locked));
+    h.push(this._deviceGroups(kid, s));
+    h.push(this._exceptions(kid, s));
+    h.push(this._weekBlock(s));
+    const td = s.todo || { total: 0 };
+    h.push(`<div class="card flat blk todo">${icon("list")}<div class="grow"><div class="strong">${td.total ? `To-do: ${td.done} of ${td.total} done` : "No to-do list yet"}</div>
+      <div class="d">${td.total ? "" : "Chores can earn extra time or money."}${s.balance_cents ? ` Balance ${esc(money(s.balance_cents))}` : ""}</div></div>
+      <button class="b ghost" data-action="kid" data-kid="${esc(kid.id)}" data-go="kids">${td.total ? "Open" : "Set up"}</button></div>`);
+    h.push(`<div class="foot"><span class="muted">Updated ${esc(clockAmPm(this._now()))}</span><button class="lnk" data-action="kid" data-kid="${esc(kid.id)}" data-go="kids">Change ${esc(kid.name)}'s limits</button></div></div>`);
+    return h.join("");
+  }
+
+  // Which parental control a lock comes from, by its entities' integration
+  _lockSource(by) {
+    const names = { familylink: "Family Link", microsoft_family_safety: "Family Safety", nintendo_parental_controls: "the Nintendo app" };
+    for (const e of by || []) {
+      const platform = this._hass?.entities?.[e]?.platform;
+      if (names[platform]) return names[platform];
+    }
+    return (by || []).some((e) => /_(bedtime|school_time)_active/.test(e)) ? "Family Link" : "";
+  }
+
+  _actionBar(kid, s, lock) {
+    const locked = lock && lock.kind !== "paused";
+    const p = esc(kid.id);
+    const now = this._now();
+    const off = (s.school_time_off || [])[0];
+    const schoolOpen = s.school_time && now < new Date(s.school_time.end);
+    const bar = [];
+    if (!locked) bar.push(`<button class="b primary" data-action="give-open" aria-expanded="${Boolean(this._giveOpen)}">${icon("plus", "sm")}Give time</button>`);
+    else bar.push(`<button class="b" data-action="allow-open" aria-expanded="${Boolean(this._allowOpen)}">${icon("shield", "sm")}Allow an app…</button>`);
+    if (!lock) bar.push(`<button class="b" data-action="kid-pause" data-person="${p}" data-minutes="30">${icon("pause", "sm")}Pause 30 min</button>`);
+    bar.push(`<button class="b ghost" data-action="more-open" aria-expanded="${Boolean(this._moreOpen)}" aria-label="More actions">${icon("more")}</button>`);
+    const menu = [];
+    if (this._moreOpen) {
+      if (locked) menu.push(`<button data-action="give-open">Give time anyway<small>Counts after ${lock.kind === "bedtime" ? "bedtime" : lock.kind === "school_time" ? "School time" : "the lock"} ends</small></button>`);
+      else menu.push(`<button data-action="allow-open">Allow an app…<small>Lets one app or pool through limits for a while</small></button>`);
+      if (off) menu.push(`<button data-action="school-off-cancel" data-person="${p}">School time is back today<small>Undo "No School time today"</small></button>`);
+      else if (schoolOpen) menu.push(`<button data-action="school-off" data-person="${p}">No School time today<small>For a sick day or a day off</small></button>`);
+      menu.push(`<button data-action="kid" data-kid="${p}" data-go="kids">Change limits<small>Opens ${esc(kid.name)}'s rules</small></button>`);
+    }
+    let chooser = "";
+    if (this._giveOpen) {
+      const pools = this._pools(s).filter((g) => g.limited && g.counted);
+      const binding = this._binding(s);
+      const gg = pools.some((g) => g.id === this._giveGroup) ? this._giveGroup : binding?.id || (pools[0] && pools[0].id) || "all";
+      const amt = this._giveAmt || 15;
+      const choices = pools.length ? pools : [{ id: "all", name: "Screen time", state: "none" }];
+      chooser = `<div class="chooser"><div class="lab">Pool</div><div class="chips">${choices
+        .map((g) => `<button class="chip-t" data-action="give-pool" data-group="${esc(g.id)}" aria-pressed="${g.id === gg}">${esc(g.name)}${g.state === "out" ? " · out" : ""}</button>`)
+        .join("")}</div><div class="lab">Minutes</div><div class="chips">${[15, 30, 60]
+        .map((m) => `<button class="chip-t" data-action="give-amt" data-minutes="${m}" aria-pressed="${m === amt}">${m}</button>`)
+        .join("")}</div><button class="b primary" data-action="give" data-person="${p}" data-group="${esc(gg)}" data-minutes="${amt}">Give ${amt} min of ${esc((choices.find((g) => g.id === gg) || {}).name || "screen time")}</button></div>`;
+    } else if (this._allowOpen) {
+      const apps = (s.apps_today || []).filter((a) => a.name).slice(0, 8);
+      const pools = this._pools(s).filter((g) => g.id !== "all" && g.counted);
+      const pick = this._allowPick || (apps[0] ? `app:${apps[0].package}` : pools[0] ? `group:${pools[0].id}` : "");
+      const len = this._allowLen || 30;
+      const label = pick.startsWith("app:") ? (apps.find((a) => `app:${a.package}` === pick) || {}).name : (pools.find((g) => `group:${g.id}` === pick) || {}).name;
+      chooser = `<div class="chooser"><div class="lab">App or pool</div><div class="chips">${apps
+        .map((a) => `<button class="chip-t" data-action="allow-pick" data-pick="app:${esc(a.package)}" aria-pressed="${pick === `app:${a.package}`}" title="${esc(a.package)}">${esc(a.name)}</button>`)
+        .join("")}${pools.map((g) => `<button class="chip-t" data-action="allow-pick" data-pick="group:${esc(g.id)}" aria-pressed="${pick === `group:${g.id}`}">${esc(g.name)}</button>`).join("")}</div>
+        <div class="lab">For</div><div class="chips">${[[30, "30 min"], [60, "1 h"], [0, "Rest of today"]]
+          .map(([m, l]) => `<button class="chip-t" data-action="allow-len" data-minutes="${m}" aria-pressed="${m === len}">${l}</button>`)
+          .join("")}</div>${pick ? `<button class="b primary" data-action="allow" data-person="${p}" data-pick="${esc(pick)}" data-minutes="${len}">Allow ${esc(label || "it")}</button>` : `<div class="d">No apps used today to pick from.</div>`}</div>`;
+    }
+    return `<div class="actbar">${bar.join("")}</div>${menu.length ? `<div class="menu">${menu.join("")}</div>` : ""}${chooser}`;
+  }
+
+  // Today: All screen time split by pool, then a lane per limited pool that opens to its apps and +15 / +30
+  _todayBlock(kid, s, locked) {
+    const all = s.all;
+    if (!all) return "";
+    const pools = this._pools(s);
+    const used = all.used_minutes || 0;
+    const cap = all.budget !== null && all.budget !== undefined ? all.budget + Math.max(0, all.bonus || 0) : null;
+    const left = all.minutes_left;
+    const byPool = (s.all_by_pool || []).filter((x) => x.minutes > 0);
+    const total = Math.max(cap || 0, used, 1);
+    const stack = byPool.length ? byPool : used ? [{ id: "all", name: "Screen time", minutes: used }] : [];
+    let h = `<div class="card flat blk"><h3>Today <span>${cap ? `of ${esc(fmtMinutes(cap))}` : "no limit"}${all.bonus > 0 ? ` · +${esc(amount(all.bonus))} given` : ""}</span></h3>
+      <div class="big">${esc(fmtMinutes(used))} <small>used${left !== null && left !== undefined ? ` · ${esc(fmtMinutes(left))} left` : ""}</small></div>
+      <div class="stack" role="img" aria-label="${esc(`${fmtMinutes(used)} used of ${cap ? fmtMinutes(cap) : "no limit"}`)}">${stack
+        .map((x) => `<i style="width:${((x.minutes / total) * 100).toFixed(2)}%;background:${this._poolVar(x.id)}" title="${esc(`${x.name}: ${fmtMinutes(x.minutes)}`)}"></i>`)
+        .join("")}</div>
+      ${byPool.length ? `<div class="legend">${byPool.map((x) => `<span><i style="background:${this._poolVar(x.id)}"></i>${esc(x.name)} ${esc(fmtMinutes(x.minutes))}</span>`).join("")}</div>` : ""}<div class="lanes">`;
+    for (const g of pools.filter((x) => x.id !== "all" && x.counted && x.limited)) {
+      const key = `${kid.id}|pool|${g.id}`;
+      const open = this._exp.has(key);
+      const capG = g.budget !== null && g.budget !== undefined ? g.budget + Math.max(0, g.bonus || 0) : (g.used_minutes || 0) + Math.max(0, g.minutes_left);
+      const frac = capG ? Math.min(1, (g.used_minutes || 0) / capG) : 0;
+      const value = { out: "Out", allowed: "Allowed", paused: "Paused" }[g.state] || `${fmtMinutes(g.minutes_left)} left`;
+      h += `<button class="lane" data-action="exp" data-key="${esc(key)}" aria-expanded="${open}"><span class="nm"><i style="background:${this._poolVar(g.id)}"></i>${esc(g.name)}</span>
+        <span class="bar"><i style="width:${(frac * 100).toFixed(1)}%;background:${g.state === "out" ? "var(--h-out)" : this._poolVar(g.id)}"></i></span>
+        <span class="v ${g.state === "out" ? "t-out" : g.state === "low" ? "t-low" : ""}">${esc(value)}${g.bonus > 0 ? ` <span class="pill">+${esc(amount(g.bonus))}</span>` : ""}</span><span class="chev ${open ? "open" : ""}">${icon("chev", "sm")}</span></button>`;
+      if (open) {
+        const apps = (s.apps_today || []).filter((a) => (a.groups || []).includes(g.id)).map((a) => ({ name: a.name || a.package, title: a.package, minutes: a.minutes }));
+        // Consoles count by device, not by app: "On Switch 2"
+        for (const d of s.devices_today || []) {
+          const t = (s.targets || []).find((x) => x.id === d.target);
+          if (t && t.left_pool === g.id && t.via !== "family_link" && t.via !== "hearth") apps.push({ name: `On ${this._deviceName(t, kid.name)}`, minutes: d.minutes });
+        }
+        h += `<div class="expand">${esc(fmtMinutes(g.used_minutes || 0))} of ${esc(fmtMinutes(capG))} today${g.bonus > 0 ? ` (with +${esc(amount(g.bonus))} given)` : ""}.
+          <div class="apps">${apps.length ? apps.map((a) => `<div><span${a.title ? ` title="${esc(a.title)}"` : ""}>${esc(a.name)}</span><span>${esc(fmtMinutes(a.minutes))}</span></div>`).join("") : `<div><span>No apps in ${esc(g.name)} today</span><span></span></div>`}</div>
+          ${locked ? "" : `<div class="acts"><button class="b" data-action="give" data-person="${esc(kid.id)}" data-group="${esc(g.id)}" data-minutes="15">+15 ${esc(g.name)}</button><button class="b ghost" data-action="give" data-person="${esc(kid.id)}" data-group="${esc(g.id)}" data-minutes="30">+30</button></div>`}</div>`;
       }
-      detail = cap(parts.join(" · "));
     }
-    return `<div class="week">
-      <div class="week-head"><span class="strong">Last 7 days</span><span class="grow"></span>${chipIds.length > 1 ? chipIds
-        .map((id) => `<button class="chip-btn ${id === group ? "on" : ""}" data-action="week-group" data-person="${esc(kid.id)}" data-group="${esc(id)}">${esc(short(id))}</button>`)
-        .join("") : ""}</div>
-      <div class="wk-plot">
-        <div class="wk-y">${Array.from({ length: steps + 1 }, (_, i) => `<span>${Math.round((top - i * step) / 60)} h</span>`).join("")}</div>
-        <div class="wk-cols">
-          ${days
-            .map((x) => `<button class="wk-col ${pick === x ? "on" : ""}" data-action="week-day" data-person="${esc(kid.id)}" data-date="${esc(x.d.date)}" aria-label="${esc(x.label)}">
-              <span class="wk-tag">${x.bonus > 0 ? `+${esc(amount(x.bonus))}` : ""}</span>
-              <span class="wk-area">${Array.from({ length: steps + 1 }, (_, i) => `<i style="top:${(i * 100) / steps}%"></i>`).join("")}
-                ${x.known ? `<span class="wk-bar" style="height:${Math.min(100, (x.used / top) * 100)}%" title="${esc(fmtMinutes(x.used))}"></span>` : `<span class="wk-bar none" title="No record"></span>`}
-                ${x.known && x.budget !== null ? `<span class="wk-tick" style="bottom:${Math.min(100, (x.budget / top) * 100)}%"></span>` : ""}</span>
-              <span class="wk-dot ${x.out.length ? "out" : ""}"></span>
-              <span class="wk-x">${esc(x.label === "today" ? "Today" : x.label)}</span>
-            </button>`)
-            .join("")}
-        </div>
-      </div>
-      ${detail ? `<div class="small wk-detail">${esc(detail)}</div>` : ""}
-    </div>`;
+    const other = byPool.find((x) => x.id === "other");
+    const notCounted = pools.filter((g) => !g.counted && (g.used_minutes || 0) > 0);
+    const free = pools.filter((g) => g.id !== "all" && g.counted && !g.limited && (g.used_minutes || 0) > 0 && g.id !== "other");
+    h += `</div>${other ? `<div class="notcounted">Other apps: ${esc(fmtMinutes(other.minutes))} (no pool)</div>` : ""}${free.length ? `<div class="notcounted">No limit: ${esc(free.map((g) => `${g.name} ${fmtMinutes(g.used_minutes)}`).join(", "))}</div>` : ""}${notCounted.length ? `<div class="notcounted">Not counted: ${esc(notCounted.map((g) => `${g.name} ${fmtMinutes(g.used_minutes)}`).join(", "))}</div>` : ""}</div>`;
+    return h;
   }
 
-  // Spec 3.4: All minutes per hour today, from Home Assistant's statistics of the kid's Screen time today sensor
-  // (decision 3b; read when opened)
-  _hoursCard(kid) {
-    const entity = this._config?.screen_time_sensors?.[kid.id];
-    if (!entity) return "";
-    const read = this._hours[kid.id];
-    let body = `<div class="muted small">Loading…</div>`;
-    if (read?.error) body = `<div class="small error-text">${esc(read.error)}</div>`;
-    else if (read) {
-      const midnight = new Date();
-      midnight.setHours(0, 0, 0, 0);
-      body = hourChart(hourBars(read.rows, midnight.getTime(), parseFloat(this._hass.states[entity]?.state)));
+  // A device's state in a kid's sheet, as the server worked it out (targets: left, left_by, left_pool, locked_kind)
+  _deviceState(kid, s, t) {
+    const lock = this._lockOf(s);
+    if (lock) {
+      const text = lock.kind === "paused" ? "Paused" : `${LOCK_WORDS[lock.kind]}${lock.until ? ` till ${clock(lock.until)}` : ""}`;
+      return { key: "lock", tone: lock.kind === "school_time" ? "school" : lock.kind === "paused" ? "low" : "night", text, note: "Everything follows the lock" };
     }
-    return `<details id="hours-${esc(kid.id)}" data-hours="${esc(kid.id)}" class="today-detail"><summary>Today, hour by hour</summary>${body}</details>`;
+    const pool = t.left_pool || "all";
+    const poolName = pool === "all" ? "screen time" : (this._pools(s).find((g) => g.id === pool) || {}).name || pool;
+    const company = { google: "Google", microsoft: "Microsoft", nintendo: "Nintendo" }[t.left_by] || "";
+    if (t.locked_kind === "parent_lock") return { key: `parent:${t.via}`, tone: "out", text: "Locked by a parent", note: `Locked in ${company ? `${company}'s` : "the parent's"} app` };
+    if (t.locked_kind === "out") return { key: `out:${pool}`, tone: "out", text: pool === "all" ? "Out of screen time" : `${cap(poolName)} ran out`, note: "" };
+    if (t.locked_kind === "device_limit")
+      return { key: `own:${t.left_by}`, tone: "out", text: t.left_by === "microsoft" && t.left ? "Microsoft's hours" : `${company || "Its own"} limit reached`, note: `${company || "The device"}'s own limit` };
+    if (t.left === null || t.left === undefined) return { key: "none", tone: "ok", text: "No limit", note: "" };
+    const tone = t.left < 10 ? "low" : "ok";
+    if (t.left_by && t.left_by !== "hearth") return { key: `own:${t.left_by}:${t.left}`, tone, text: `${fmtMinutes(t.left)} left`, note: `${company}'s own daily limit on this device` };
+    return { key: `left:${pool}:${t.left}`, tone, text: `${fmtMinutes(t.left)} left`, note: pool === "all" ? "Follows screen time" : `Follows ${cap(poolName)}` };
   }
 
-  // Spec 2.5: each pool with a budget, every kid's state in it, one short bar per kid (never stacked). Pools without
-  // a budget for anyone are left out
+  // Devices grouped by what they're doing: "3 TVs, 2 tablets · Follows screen time · 31 min left"
+  _deviceGroups(kid, s) {
+    const targets = (s.targets || []).filter((t) => !t.same_as);
+    if (!targets.length) return "";
+    const usedOf = new Map((s.devices_today || []).map((d) => [d.target, d.minutes]));
+    const groups = new Map();
+    for (const t of targets) {
+      const st = this._deviceState(kid, s, t);
+      if (!groups.has(st.key)) groups.set(st.key, { st, items: [] });
+      groups.get(st.key).items.push({ t, kind: this._deviceKind(t), name: this._deviceName(t, kid.name), used: usedOf.get(t.id) || 0 });
+    }
+    const order = { out: 0, low: 1, ok: 2, night: 3, school: 3 };
+    const sorted = [...groups.values()].sort((a, b) => (order[a.st.tone] ?? 5) - (order[b.st.tone] ?? 5));
+    const words = { tv: ["TV", "TVs"], tablet: ["tablet", "tablets"], phone: ["phone", "phones"], xbox: ["Xbox", "Xboxes"], windows: ["PC", "PCs"], switch: ["Switch", "Switches"] };
+    const label = (items) => {
+      if (items.length === 1) return items[0].name;
+      const by = new Map();
+      for (const i of items) by.set(i.kind, [...(by.get(i.kind) || []), i]);
+      if (by.size > 3) return `All ${items.length} screens`;
+      return [...by.entries()].map(([k, list]) => (list.length === 1 ? list[0].name : `${list.length} ${(words[k] || [k, `${k}s`])[1]}`)).join(", ");
+    };
+    const fp = s.first_party || {};
+    const facts = (t) => {
+      const out = [];
+      const fl = t.via === "family_link" ? (fp.family_link || []).find((r) => `fl:${r.device_id}` === t.id) : null;
+      const fs = t.via === "family_safety" ? (fp.family_safety || []).find((r) => `fs:${String(r.platform).toLowerCase()}` === t.id) : null;
+      const nin = t.via === "nintendo" ? (fp.nintendo || []).find((r) => r.target === t.id) : null;
+      if (fl && fl.minutes_left !== null && fl.minutes_left !== undefined) out.push(`Google's limit: ${fmtMinutes(fl.minutes_left)} left`);
+      if (fs && fs.blocking && !fs.held_by_hearth) out.push("Microsoft's hours also block it");
+      if ((fs && fs.held_by_hearth) || (nin && nin.held_by_hearth)) out.push("Hearth is holding it");
+      if (nin && nin.playing) out.push("playing now");
+      return out;
+    };
+    let h = `<div class="card flat blk"><h3>Devices <span>${targets.length} linked</span></h3>`;
+    for (const g of sorted) {
+      const key = `${kid.id}|dev|${g.st.key}`;
+      const open = this._exp.has(key);
+      const kinds = new Set(g.items.map((i) => i.kind));
+      const kind = kinds.size === 1 ? g.items[0].kind : kinds.has("tv") ? "tv" : g.items[0].kind;
+      const usedAll = g.items.reduce((a, i) => a + i.used, 0);
+      const d = [g.st.note, usedAll ? `${fmtMinutes(usedAll)} on ${g.items.length > 1 ? "these" : "it"} today` : ""].filter(Boolean).join(" · ");
+      h += `<button class="dgroup" data-action="exp" data-key="${esc(key)}" aria-expanded="${open}"><span class="dic tone-${g.st.tone}">${icon(kind === "tablet" ? "tablet" : kind)}</span>
+        <div class="grow"><div class="t">${esc(g.items.length > 3 && g.st.key === "lock" ? `All ${g.items.length} screens` : label(g.items))}</div>${d ? `<div class="d">${esc(d)}</div>` : ""}</div>
+        <span class="r t-${g.st.tone}">${esc(g.st.text)}</span><span class="chev ${open ? "open" : ""}">${icon("chev", "sm")}</span></button>`;
+      if (open)
+        h += `<div class="dlist">${g.items
+          .map((i) => `<div><span title="${esc(i.t.name && i.t.name !== i.name ? i.t.name : "")}">${esc(i.name)}</span><span>${esc([i.used ? `${fmtMinutes(i.used)} today` : "", ...facts(i.t)].filter(Boolean).join(" · ") || "not used today")}</span></div>`)
+          .join("")}</div>`;
+    }
+    return `${h}</div>`;
+  }
+
+  // What's different today, in plain sentences: who allowed what and till when, what Hearth is holding and why
+  _exceptions(kid, s) {
+    const notes = [];
+    const p = esc(kid.id);
+    const note = (ic, html) => notes.push(`<div class="note">${icon(ic, "sm")}<div>${html}</div></div>`);
+    const till = (iso) => (iso ? ` till ${esc(clock(iso))}` : "");
+    for (const a of s.allows || []) {
+      const what = a.group ? (a.group === "all" ? "screen time" : this._groupName(a.group)) : a.app_name || a.app;
+      note("shield", `You allowed ${esc(what)}${a.ends_on ? ` until ${esc(this._endsOn(a.ends_on))}` : till(a.until)}. <button class="lnk" data-action="allow-end" data-person="${p}" ${a.group ? `data-group="${esc(a.group)}"` : `data-app="${esc(a.app)}"`}>End</button>`);
+    }
+    for (const x of s.pauses || [])
+      note("pause", `${esc(x.name)} is paused${till(x.until)}${x.reason ? ` · ${esc(x.reason)}` : ""}. <button class="lnk" data-action="app-pause-end" data-person="${p}" ${x.app ? `data-app="${esc(x.app)}"` : `data-group="${esc(x.group)}"`}>End</button>`);
+    for (const x of s.device_extras || []) {
+      const t = (s.targets || []).find((y) => y.id === x.target);
+      const where = t ? this._deviceName(t, kid.name) : x.name || "one device";
+      note("plus", x.kind === "allow" ? `${esc(where)} is open${till(x.until)}.` : `${esc(amount(x.minutes_left || 0))} min extra left on ${esc(where)}.`);
+    }
+    const off = (s.school_time_off || [])[0];
+    if (off) note("school", `No School time today${off.reason ? ` · ${esc(off.reason)}` : ""}. <button class="lnk" data-action="school-off-cancel" data-person="${p}">Put it back</button>`);
+    // A parent's changes in their own apps
+    const grants = s.grants || [];
+    const where = { family_link: "the Family Link app", family_safety: "the Family Safety app", nintendo: "the Nintendo app" };
+    const appGrants = grants.filter((g) => g.target?.kind === "app");
+    if (appGrants.length) {
+      const key = `${kid.id}|grants`;
+      const open = this._exp.has(key);
+      const names = [...new Set(appGrants.map((g) => g.name || g.target.value))].sort((a, b) => a.localeCompare(b));
+      const what = appGrants.length === 1 ? `${esc(names[0])} is` : `${appGrants.length} apps are`;
+      note("shield", `${what} allowed without a limit${till(appGrants[0].until)}. Someone changed ${appGrants.length === 1 ? "its" : "their"} limits in ${esc(where[appGrants[0].via] || "a parent's app")}. <button class="lnk" data-action="exp" data-key="${esc(key)}">${open ? "Hide" : "Show"}</button>${open ? `<div class="namelist">${esc(names.join(", "))}</div>` : ""}`);
+    }
+    for (const g of grants.filter((x) => x.target?.kind !== "app")) {
+      const what = { device: "Their devices are", switch: "The Switch is" }[g.target?.kind] || `${esc(g.target?.value || "It")} is`;
+      note("shield", `${what} open${till(g.until)}, from ${esc(where[g.via] || "a parent's app")}.${g.endable ? ` <button class="lnk" data-action="grant-end" data-grant="${esc(g.id)}">End</button>` : ""}`);
+    }
+    // What Hearth holds through each parental control, and what didn't take
+    const services = { family_link: "Family Link", family_safety: "Family Safety", nintendo: "Nintendo" };
+    const outPool = this._pools(s).find((g) => g.state === "out" && g.id !== "all");
+    const reasons = { school_time: "it's School time", pause: "of a pause", budget: outPool ? `${outPool.name} ran out` : "time ran out" };
+    for (const [kind, st] of Object.entries(s.sync || {})) {
+      const held = st.held || [];
+      if (held.length) {
+        const names = held.map((i) => this._itemName(i, st.names || {}));
+        const whys = [...new Set(held.map((i) => (st.why || {})[i]).filter(Boolean))];
+        const what = held.length <= 3 ? listWords(names.map((n) => (["Xbox", "Windows"].includes(n) ? `the ${n === "Windows" ? "PC" : n}` : n))) : `${held.length} apps`;
+        const why = whys.length === 1 && reasons[whys[0]] ? ` because ${reasons[whys[0]]}` : "";
+        const where = kind === "family_link" ? `on ${kid.name}'s Family Link devices` : `through ${services[kind] || kind}`;
+        note("lock", `Hearth is blocking ${esc(what)} ${esc(where)}${esc(why)}.`);
+      }
+      const error = st.error || st.last?.error;
+      if (error) note("info", `<span class="t-out">${esc(services[kind] || kind)} didn't take what Hearth asked:</span> ${esc(error)}`);
+    }
+    for (const a of s.answered_elsewhere || []) note("info", `Request ${esc(a.text)}.`);
+    if (!notes.length) return "";
+    return `<div class="card flat blk"><h3>Exceptions</h3>${notes.join("")}</div>`;
+  }
+
+  // The week: only the days Hearth recorded, with the day's limit as a dashed line
+  _weekBlock(s) {
+    const days = [...(s.week || [])].reverse().filter((d) => d.minutes && Object.keys(d.minutes).length);
+    if (!days.length) return "";
+    const outside = this._notCounted();
+    const today = (s.week || [])[0]?.date;
+    const max = Math.max(60, ...days.map((d) => Math.max(d.minutes.all || 0, (d.budget && d.budget.all) || 0)));
+    const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const label = (ds) => (ds === today ? "Today" : DOW[new Date(`${ds}T12:00:00`).getDay()]);
+    const names = new Map((s.groups || []).map((g) => [g.id, g.name]));
+    let h = `<div class="card flat blk"><h3>This week <span>${days.length < 7 ? `${days.length} day${days.length === 1 ? "" : "s"} recorded` : ""}</span></h3><div class="weekc">`;
+    for (const d of days) {
+      const v = d.minutes.all || 0;
+      const capD = d.budget && d.budget.all;
+      const segs = Object.entries(d.minutes).filter(([k, m]) => k !== "all" && m > 0 && !outside.has(k));
+      const sum = segs.reduce((a, [, m]) => a + m, 0);
+      h += `<div class="col"><div class="wb" style="height:${Math.max(3, (v / max) * 92).toFixed(1)}px" title="${esc(`${label(d.date)}: ${fmtMinutes(v)}`)}"><span class="fill">${segs
+        .map(([k, m]) => `<i style="height:${((m / Math.max(v, sum)) * 100).toFixed(1)}%;background:${this._poolVar(k)}"></i>`)
+        .join("")}</span>${capD ? `<span class="cap" style="bottom:${((capD / max) * 92).toFixed(1)}px"></span>` : ""}</div><span class="lbl">${esc(label(d.date))}</span></div>`;
+    }
+    if (days.length < 3) h += `<div class="col wide"><div class="d">Hearth started counting ${days[0].date === today ? "today" : "recently"}. Each day adds a bar here.</div></div>`;
+    const outs = [...new Set(days.flatMap((d) => d.out || []))].map((id) => (id === "all" ? "screen time" : names.get(id) || this._groupName(id)));
+    h += `</div><div class="d">${esc(fmtMinutes(days.reduce((a, d) => a + (d.minutes.all || 0), 0)))} so far${outs.length ? ` · ran out at some point: ${esc(outs.join(", "))}` : ""}. Dashed line: the day's limit.</div></div>`;
+    return h;
+  }
+
+  // An item a parental control holds, by name: an app's (never its package), "their devices", "the Switch"
+  _itemName(item, names) {
+    if (item === "Devices") return "their devices";
+    if (item === "Switch") return "the Switch";
+    return names[item] || item;
+  }
+
+  // "Family today, by pool" (the Family tab): each pool with a budget, every kid's state in it
   _familyPools(kids) {
     const people = kids.map((k) => this._summaryPerson(k.id)).filter(Boolean);
     const rows = (this._summary?.groups || [])
@@ -1507,215 +1987,18 @@ class HearthPanel extends HTMLElement {
       }))
       .filter((r) => r.cells.length);
     if (people.length < 2 || !rows.length) return "";
-    return `<h2>Family today, by pool</h2><div class="card pools">${rows
+    return `<section class="card pools"><h3><ha-icon icon="mdi:chart-bar"></ha-icon>Family today, by pool</h3>${rows
       .map(
         (r) => `<div class="pool"><div class="strong">${esc(r.g.id === "all" ? "All screen time" : r.g.name)}</div>${r.cells
           .map(({ p, pool }) => {
             const total = pool.budget !== null && pool.budget !== undefined ? pool.budget + (pool.bonus || 0) : (pool.used_minutes || 0) + pool.minutes_left;
-            const value = { out: "out", allowed: "allowed", paused: "paused" }[pool.state] || `${amount(pool.minutes_left)} left`;
+            const value = { out: "Out", allowed: "Allowed", paused: "Paused" }[pool.state] || `${amount(pool.minutes_left)} left`;
             return `<div class="bar-row role-${role(pool.state)}"><span class="bar-label">${esc(p.name)}</span>
               <div class="bar"><div style="width:${total ? Math.min(100, ((pool.used_minutes || 0) / total) * 100) : 100}%"></div></div><span class="bar-value">${esc(value)}</span></div>`;
           })
           .join("")}</div>`
       )
-      .join("")}</div>`;
-  }
-
-  // One kid's own pause, their app and group pauses, and School time today: what the integrations' dashboards do with
-  // a lock switch, done through Hearth so every device of theirs (TVs, phones, Xbox, Switch) follows
-  _kidControls(kid, s) {
-    if (!s) return "";
-    const time = clock;
-    const chips = [];
-    for (const p of s.pauses || [])
-      chips.push(`<span class="chip warn"><ha-icon icon="mdi:pause"></ha-icon>${esc(p.name)} paused till ${esc(time(p.until))}<button class="x" data-action="app-pause-end" data-person="${esc(kid.id)}" ${p.app ? `data-app="${esc(p.app)}"` : `data-group="${esc(p.group)}"`} title="End this pause">×</button></span>`);
-    const off = (s.school_time_off || [])[0];
-    if (off)
-      chips.push(`<span class="chip"><ha-icon icon="mdi:school-outline"></ha-icon>No School time today${off.from ? ` from ${esc(off.from)}` : ""}${off.reason ? ` · ${esc(off.reason)}` : ""}<button class="x" data-action="school-off-cancel" data-person="${esc(kid.id)}" title="School time is back today">×</button></span>`);
-    const buttons = [];
-    if (s.pause) buttons.push(`<button class="chip-btn" data-action="kid-pause-end" data-person="${esc(kid.id)}">End ${esc(kid.name)}'s pause</button>`);
-    else
-      buttons.push(`<select id="kid-pause-${esc(kid.id)}" aria-label="How long">${[15, 30, 60, 120].map((m) => `<option value="${m}" ${m === 30 ? "selected" : ""}>${fmtMinutes(m)}</option>`).join("")}</select>
-        <button class="chip-btn" data-action="kid-pause" data-person="${esc(kid.id)}" title="Holds their TVs, phones, Xbox and Switch">Pause ${esc(kid.name)}</button>`);
-    if (s.school_time && !off)
-      buttons.push(`<button class="chip-btn" data-action="school-off" data-person="${esc(kid.id)}" title="${esc(`School time ${time(s.school_time.start)}–${time(s.school_time.end)}`)}">No School time today</button>`);
-    return `<div class="native">${chips.length ? `<div class="chips">${chips.join("")}</div>` : ""}<div class="inline small-controls">${buttons.join("")}</div></div>`;
-  }
-
-  // Today's minutes by device (with extra time on one device) and the apps used most, as the Family Link and Family
-  // Safety dashboards show them, across every device Hearth counts
-  _todayDetail(kid, s) {
-    const devices = s?.devices_today || [];
-    const apps = s?.apps_today || [];
-    if (!devices.length && !apps.length) return "";
-    const targets = new Map((s.targets || []).map((t) => [t.id, t]));
-    const extras = new Map((s.device_extras || []).map((x) => [x.target, x]));
-    const groupNames = new Map((s.groups || []).map((g) => [g.id, g.name]));
-    const most = Math.max(1, ...apps.map((a) => a.minutes));
-    const icons = { tv: "mdi:television", phone: "mdi:cellphone", xbox: "mdi:microsoft-xbox", windows: "mdi:microsoft-windows", switch: "mdi:nintendo-switch" };
-    return `<details id="today-${esc(kid.id)}" class="today-detail"><summary>Today by device and app</summary>
-      ${devices.length ? `<ul class="list compact">${devices
-        .map((dv) => {
-          const extra = extras.get(dv.target);
-          const target = targets.get(dv.target);
-          // Spec 3.5: "48 min today", "25 left there", "open there till 7:00"
-          const there = !extra ? "" : extra.kind === "allow" ? ` · open there${extra.until ? ` till ${clock(extra.until)}` : ""}` : ` · ${amount(extra.minutes_left || 0)} left there`;
-          return `<li><ha-icon icon="${icons[target?.kind || dv.kind] || "mdi:devices"}"></ha-icon>
-            <div class="grow"><div>${esc(dv.name)}</div><div class="muted small">${esc(fmtMinutes(dv.minutes))} today${esc(there)}</div></div>
-            ${target ? `<button class="chip-btn" data-action="device-bonus" data-person="${esc(kid.id)}" data-target="${esc(target.id)}" data-name="${esc(dv.name)}" data-minutes="15" title="Only there, today">+15 there</button>` : ""}</li>`;
-        })
-        .join("")}</ul>` : ""}
-      <div class="muted small">Apps today</div>
-      ${apps.length ? apps
-        .slice(0, 8)
-        // Spec 3.6: "Minecraft · 35 min · games", the pools it counts in
-        .map((a) => `<div class="bar-row"><span class="bar-label" title="${esc(a.package)}">${esc(a.name || a.package)}</span><div class="bar"><div style="width:${(a.minutes / most) * 100}%"></div></div><span class="bar-value">${esc([fmtMinutes(a.minutes), ...(a.groups || []).map((g) => shortGroup(g, groupNames.get(g) || this._groupName(g)))].join(" · "))}</span></div>`)
-        .join("") : `<div class="muted small">No apps used today</div>`}
-    </details>`;
-  }
-
-  // Hearth's allows next to what a parent opened in their own apps (grants), requests answered in a parent's app, and,
-  // folded under "Device limits", Google's, Microsoft's and Nintendo's own limits and what Hearth last did through
-  // each parental control (apps by name, never their packages)
-  _exceptionsAndApps(kid, s) {
-    if (!s) return "";
-    const time = clock;
-    const chips = [];
-    for (const a of s.allows || [])
-      chips.push(`<span class="chip"><ha-icon icon="mdi:check-circle-outline"></ha-icon>${esc(a.group === "all" ? "All screen time" : a.group || a.app)} allowed${a.ends_on ? ` until ${esc(this._endsOn(a.ends_on))}${a.until ? ` or ${esc(time(a.until))}` : ""}` : a.until ? ` till ${esc(time(a.until))}` : ""}</span>`);
-    chips.push(...this._grantChips(s.grants || []));
-    for (const a of s.answered_elsewhere || [])
-      chips.push(`<span class="chip"><ha-icon icon="mdi:message-reply-text-outline"></ha-icon>Request ${esc(a.text)}</span>`);
-    const rows = [];
-    let stopping = 0;
-    let failed = 0;
-    for (const d of s.first_party?.family_link || []) {
-      const limit = d.daily_limit === null || d.daily_limit === undefined ? "no daily limit" : `limit ${fmtMinutes(d.daily_limit)}`;
-      const left = d.minutes_left === null || d.minutes_left === undefined ? "" : ` · ${fmtMinutes(d.minutes_left)} left`;
-      const bonus = d.bonus_left > 0 ? ` · bonus ${fmtMinutes(d.bonus_left)}` : "";
-      if (d.blocking) stopping++;
-      rows.push(`<div class="small ${d.blocking ? "warn-text" : "muted"}">${esc(d.device)} · Google: ${esc(limit + left + bonus)}${d.blocking ? " · its own limit stops it" : ""}</div>`);
-    }
-    for (const p of s.first_party?.family_safety || []) {
-      const allowance = p.allowance_minutes === null || p.allowance_minutes === undefined ? "" : `allowance ${fmtMinutes(p.allowance_minutes)}`;
-      const left = p.minutes_left === null || p.minutes_left === undefined ? "" : ` · ${fmtMinutes(p.minutes_left)} left`;
-      const why = p.parent_lock ? ` · locked by a parent${p.override_until ? ` till ${time(p.override_until)}` : ""}` : p.blocking ? " · its own limit stops it" : "";
-      if (p.parent_lock || p.blocking) stopping++;
-      rows.push(`<div class="small ${p.parent_lock || p.blocking ? "warn-text" : "muted"}">${esc(p.platform)} · Microsoft: ${esc(allowance + left + why)}</div>`);
-    }
-    for (const n of s.first_party?.nintendo || []) {
-      if (n.blocking) stopping++;
-      rows.push(`<div class="small ${n.blocking ? "warn-text" : "muted"}">${esc(n.name)} · Nintendo: ${esc(this._switchLine(n))}</div>`);
-    }
-    const services = { family_link: "Family Link", family_safety: "Family Safety", nintendo: "Nintendo" };
-    for (const [kind, st] of Object.entries(s.sync || {})) {
-      const last = st.last || {};
-      const error = st.error || last.error;
-      const names = st.names || {};
-      const did = [];
-      const held = this._heldWords(st.held || [], st.why || {}, names);
-      if (held) did.push(`holding ${held}`);
-      const outcomes = Object.entries(last.outcomes || {});
-      const back = outcomes.filter(([, o]) => o === "restored").map(([item]) => this._itemName(item, names));
-      const kept = outcomes.filter(([, o]) => o === "kept_current").map(([item]) => this._itemName(item, names));
-      if (back.length) did.push(`put back ${listWords(back)}`);
-      if (kept.length) did.push(`kept the parent's setting for ${listWords(kept)}`);
-      if (last.bonus_added && Object.keys(last.bonus_added).length) did.push(`bonus ${Object.entries(last.bonus_added).map(([d, m]) => `${d} +${m} min`).join(", ")}`);
-      if (last.extra_time && Object.keys(last.extra_time).length) did.push(`extra time on ${Object.keys(last.extra_time).join(", ")}`);
-      if (last.parent_grant) did.push(`let go: ${last.reason || "a parent's change"}`);
-      if (!did.length && !error) continue;
-      if (error) failed++;
-      rows.push(`<div class="small ${error ? "error-text" : "muted"}">${esc(services[kind] || kind)}: ${esc(did.join(" · ") || "nothing held")}${error ? ` · didn't take: ${esc(error)}` : ""}</div>`);
-    }
-    if (!chips.length && !rows.length) return "";
-    // Folded: the summary says only what needs a look (a control that didn't take, a device's own limit stopping it)
-    const flags = [failed ? `${failed} didn't take` : "", stopping ? `${stopping} stopping them` : ""].filter(Boolean).join(" · ");
-    const limits = rows.length
-      ? `<details id="device-limits-${esc(kid.id)}" class="device-limits"><summary>Device limits${flags ? ` <span class="${failed ? "error-text" : "warn-text"}">· ${esc(flags)}</span>` : ""}</summary>${rows.join("")}</details>`
-      : "";
-    return `<div class="native">${chips.length ? `<div class="chips">${chips.join("")}</div>` : ""}${limits}</div>`;
-  }
-
-  // A parent's grants as chips, as the glance puts them: one per device lock, Switch or platform; an app's put together
-  // by where they came from and when they end, by name ("Spotify and Pandora open", then "9 apps open"), every name in
-  // the tooltip
-  _grantChips(grants) {
-    const where = { family_link: "Family Link", family_safety: "Family Safety", nintendo: "the Nintendo app" };
-    const tail = (g) => `${where[g.via] || g.source || "their app"}${g.until ? ` till ${clock(g.until)}` : ""}`;
-    const appName = (g) => g.name || g.target?.value || "an app";
-    const chips = [];
-    const together = new Map();
-    for (const g of grants) {
-      if (g.target?.kind === "app" && !g.endable) {
-        const key = `${g.via}|${g.until}`;
-        together.set(key, [...(together.get(key) || []), g]);
-        continue;
-      }
-      const what = { device: "Devices", switch: "Switch", app: appName(g) }[g.target?.kind] || g.target?.value;
-      chips.push(`<span class="chip warn" title="${esc(g.reason || "")}"><ha-icon icon="mdi:account-key"></ha-icon>${esc(what)} open · ${esc(tail(g))}${
-        g.endable ? `<button class="x" data-action="grant-end" data-grant="${esc(g.id)}" title="End it in the parent's app">×</button>` : ""
-      }</span>`);
-    }
-    for (const group of together.values()) {
-      const names = [...new Set(group.map(appName))].sort((a, b) => a.localeCompare(b));
-      const what = group.length <= 3 ? listWords(names) : `${group.length} apps`;
-      const title = `${names.join(", ")}: ${group[0].reason || "changed in the parent's app"}`;
-      chips.push(`<span class="chip warn" title="${esc(title)}"><ha-icon icon="mdi:account-key"></ha-icon>${esc(what)} open · ${esc(tail(group[0]))}</span>`);
-    }
-    return chips;
-  }
-
-  // An item a parental control holds, by name: an app's (never its package), "their devices", "the Switch"
-  _itemName(item, names) {
-    if (item === "Devices") return "their devices";
-    if (item === "Switch") return "the Switch";
-    return names[item] || item;
-  }
-
-  // What a parental control holds and why: "Google Messages for School time", "Spotify, YouTube and 3 more for the
-  // budget"
-  _heldWords(items, why, names) {
-    const reasons = { school_time: "School time", pause: "a pause", budget: "the budget" };
-    const byWhy = new Map();
-    for (const item of items) byWhy.set(why[item] || "", [...(byWhy.get(why[item] || "") || []), this._itemName(item, names)]);
-    return [...byWhy.entries()]
-      .map(([r, list]) => {
-        const sorted = list.sort((a, b) => a.localeCompare(b));
-        const what = sorted.length <= 3 ? listWords(sorted) : `${sorted.slice(0, 2).join(", ")} and ${sorted.length - 2} more`;
-        return reasons[r] ? `${what} for ${reasons[r]}` : what;
-      })
-      .join("; ");
-  }
-
-  // One line of a Switch's day: "played 1 h 15 min (theirs 50 min) · limit 2 h · 45 min left · +30 extra"
-  _switchLine(n) {
-    if (!n.available) return "no recent word from the Switch";
-    const parts = [];
-    if (n.played_minutes !== null && n.played_minutes !== undefined)
-      parts.push(`played ${fmtMinutes(n.played_minutes)}${n.player_minutes !== null && n.player_minutes !== undefined ? ` (theirs ${fmtMinutes(n.player_minutes)})` : ""}`);
-    parts.push(n.limit_minutes === null || n.limit_minutes === undefined ? "no daily limit" : `limit ${fmtMinutes(n.limit_minutes)}`);
-    if (n.minutes_left !== null && n.minutes_left !== undefined) parts.push(`${fmtMinutes(n.minutes_left)} left`);
-    if (n.extra_minutes === -1) parts.push("unlimited extra today");
-    else if (n.extra_minutes > 0) parts.push(`+${fmtMinutes(n.extra_minutes)} extra`);
-    if (n.held_by_hearth) parts.push("held by Hearth");
-    else if (n.blocking) parts.push("its own limit stops it");
-    if (n.playing) parts.push("playing now");
-    return parts.join(" · ");
-  }
-
-  _deviceCard(dv) {
-    const icon = dv.kind === "tv" ? "mdi:television" : "mdi:cellphone";
-    const on = dv.screen === "on";
-    // Now playing: the summary's short text for what's on there ("bluey · s2e4 · 8 min left"), else the device's own
-    const play = (this._summary?.playing || []).find((p) => p.target === `hearth:${dv.id}` && p.text);
-    const what = play
-      ? cap(`${play.name ? `${play.name} · ` : ""}${play.text}`)
-      : dv.media_title ? `${dv.media_title}${dv.media_app ? ` · ${dv.media_app}` : ""}` : dv.app || (on ? "Home" : dv.connected ? "Asleep" : "Not connected");
-    return `<div class="card device ${dv.connected ? "" : "dim"}">
-      <div class="row"><ha-icon icon="${icon}"></ha-icon><div class="grow"><div class="strong">${esc(dv.name || dv.id)}</div>
-      <div class="muted small">${esc(what)}</div></div>
-      ${dv.person ? `<span class="chip">${esc(this._personName(dv.person))}</span>` : dv.profile ? `<span class="chip">${esc(dv.profile)}</span>` : ""}
-      <span class="dot ${dv.connected ? (on ? "on" : "idle") : "off"}" title="${dv.connected ? "Connected" : "Not connected"}"></span></div></div>`;
+      .join("")}</section>`;
   }
 
   _kidPicker() {
@@ -1798,8 +2081,8 @@ class HearthPanel extends HTMLElement {
       })
       .join("");
     return `<section class="card">
-      <h3><ha-icon icon="mdi:cellphone-message"></ha-icon>Suggest to phones</h3>
-      <p class="muted small">When one runs out, the adults' phones get "give more?" with two amounts and Not today, once a day. Off: it still shows here and in the adults' apps.</p>
+      <h3><ha-icon icon="mdi:cellphone-message"></ha-icon>Send suggestions to adults' phones</h3>
+      <p class="muted small">When one runs out while ${esc(kid.name)} is awake, the adults' phones ask "give more?" once a day, with two amounts and Not today. Off: the suggestion still shows on Today.</p>
       <ul class="list compact small-controls">${rows}</ul>
     </section>`;
   }
@@ -1908,7 +2191,7 @@ class HearthPanel extends HTMLElement {
       <h3><ha-icon icon="mdi:chart-timeline-variant"></ha-icon>Screen time from other places</h3>
       <p class="muted">Hearth's own TVs and phones count by themselves. Add Family Link, Xbox, Switch or other sensors so ${esc(kid.name)}'s time adds up everywhere.</p>
       ${mine.length ? `<ul class="list">${mine
-        .map((s) => `<li><ha-icon icon="mdi:counter"></ha-icon><div class="grow"><div>${esc(s.name || s.entity_id)}</div><div class="muted small">${esc(s.entity_id)}${s.group ? ` · counts in ${esc(this._groupName(s.group))}` : ""}${s.same_as ? " · same device as another" : ""}${s.live ? " · live" : ""}</div></div>
+        .map((s) => `<li><ha-icon icon="mdi:counter"></ha-icon><div class="grow" title="${esc(s.entity_id)}"><div>${esc(s.name || this._entityName(s.entity_id))}</div><div class="muted small">${esc([s.group ? `Counts in ${this._groupName(s.group)}` : "Counts in screen time", s.same_as ? "the same device as another" : "", s.live ? "says what's playing" : ""].filter(Boolean).join(" · "))}</div></div>
           <button class="icon-btn" data-action="source-remove" data-id="${esc(s.id)}" aria-label="Remove"><ha-icon icon="mdi:close"></ha-icon></button></li>`)
         .join("")}</ul>` : `<p class="muted small">None yet.</p>`}
       <details id="add-source-${esc(kid.id)}"><summary>Add a source</summary>
@@ -1931,7 +2214,7 @@ class HearthPanel extends HTMLElement {
       <h3><ha-icon icon="mdi:bed-clock"></ha-icon>Bedtime and school time</h3>
       <p class="muted">While any of these is on, ${esc(kid.name)}'s Hearth devices hold their apps. Family Link's bedtime and school time sensors, or Family Safety's Downtime Active, are typical.</p>
       ${mine.length ? `<ul class="list">${mine
-        .map((l) => `<li><ha-icon icon="mdi:lock-clock"></ha-icon><div class="grow">${esc(this._entityName(l.entity_id))}<div class="muted small">${esc(l.entity_id)} · now ${esc(this._hass.states[l.entity_id]?.state ?? "unknown")}</div></div>
+        .map((l) => `<li><ha-icon icon="mdi:lock-clock"></ha-icon><div class="grow" title="${esc(l.entity_id)}">${esc(this._entityName(l.entity_id))}<div class="muted small">${esc({ on: "On now", off: "Off now" }[this._hass.states[l.entity_id]?.state] || "Not reporting")}</div></div>
           <button class="icon-btn" data-action="lock-remove" data-person="${esc(kid.id)}" data-entity="${esc(l.entity_id)}" aria-label="Remove"><ha-icon icon="mdi:close"></ha-icon></button></li>`)
         .join("")}</ul>` : ""}
       <div class="inline"><select id="lock-entity-${esc(kid.id)}">${this._entityOptions(cfg.choices?.locks, "", "Choose a sensor…")}</select>
@@ -2162,8 +2445,22 @@ class HearthPanel extends HTMLElement {
 
   _appRow(a, extra = "") {
     const says = a.catalog_says ? ` · the shared catalog now says ${esc(a.catalog_says)}` : "";
-    return `<li><div class="grow"><div>${esc(a.name || a.package)}${a.moved ? ` <span class="chip small">moved by you</span>` : ""}</div>
-      <div class="muted small">${esc(a.package)}${extra}${says}</div></div>${this._groupSelect(a.package, a.group)}</li>`;
+    const sub = `${extra}${says}`.replace(/^ · /, "");
+    return `<li><div class="grow"><div title="${esc(a.package)}">${esc(this._appName(a))}${a.moved ? ` <span class="chip small">moved by you</span>` : ""}</div>
+      ${sub ? `<div class="muted small">${sub}</div>` : ""}</div>${this._groupSelect(a.package, a.group)}</li>`;
+  }
+
+  // An app's name, never its package: a guess from the package when nothing better is known
+  _appName(a) {
+    if (a.name && a.name !== a.package) return a.name;
+    const parts = String(a.package || "").split(".").filter((x) => x && !["com", "org", "net", "android", "app", "apps", "x:xboxplt:"].includes(x));
+    const last = parts[parts.length - 1] || a.package || "";
+    return cap(last);
+  }
+
+  // A build for testing (Hearth's own .ardtest builds, a debug build): not an app a kid uses
+  _testBuild(pkg) {
+    return /\.(ardtest|debug|dev|test)$/.test(String(pkg || ""));
   }
 
   // Apps the shared catalog only guessed, or where it and the device disagree: an adult keeps or moves each
@@ -2175,7 +2472,7 @@ class HearthPanel extends HTMLElement {
       <h3><ha-icon icon="mdi:help-circle-outline"></ha-icon>Check these</h3>
       <p class="muted">Placed on the shared app catalog's guess, or where the catalog and the device disagree (Hearth goes by the catalog). Keep each where it is, or move it; your choice always wins.</p>
       <ul class="list compact">${rows
-        .map((a, i) => `<li><div class="grow"><div>${esc(a.name || a.package)}</div>
+        .map((a, i) => `<li><div class="grow"><div title="${esc(a.package)}">${esc(this._appName(a))}</div>
           <div class="muted small">${esc(a.why)}</div>
           ${share && a.shareable ? `<label class="check small"><input type="checkbox" id="catalog-suggest-${i}"> Suggest my move for the shared catalog</label>` : ""}</div>
           <button class="btn" data-action="app-confirm" data-app="${esc(a.package)}" data-group="${esc(a.group)}">Right</button>
@@ -2219,8 +2516,8 @@ class HearthPanel extends HTMLElement {
     const cfg = this._config;
     const known = cfg.known_apps || {};
     const filter = this._appFilter || "";
-    const all = (cfg.apps || []).filter((a) => !filter || a.name.toLowerCase().includes(filter) || a.package.includes(filter));
-    const recent = cfg.recent || [];
+    const all = (cfg.apps || []).filter((a) => !this._testBuild(a.package)).filter((a) => !filter || a.name.toLowerCase().includes(filter) || a.package.includes(filter));
+    const recent = (cfg.recent || []).filter((a) => !this._testBuild(a.package));
     const appsCards = `${this._checkTheseCard()}
       <section class="card">
         <h3><ha-icon icon="mdi:new-box"></ha-icon>Sorted lately</h3>
@@ -2252,7 +2549,7 @@ class HearthPanel extends HTMLElement {
           <div class="chips">${g.apps
             .map((a) => {
               const removable = !g.builtin || (g.added_apps || []).includes(a);
-              return `<span class="chip">${esc(known[a] || a)}${removable ? `<button class="x" data-action="app-remove" data-group="${esc(g.id)}" data-app="${esc(a)}" aria-label="Remove">×</button>` : ""}</span>`;
+              return `<span class="chip" title="${esc(a)}">${esc(known[a] || this._appName({ package: a }))}${removable ? `<button class="x" data-action="app-remove" data-group="${esc(g.id)}" data-app="${esc(a)}" aria-label="Remove">×</button>` : ""}</span>`;
             })
             .join("") || `<span class="muted small">No apps yet.</span>`}</div>
           <div class="inline"><input id="app-new-${esc(g.id)}" list="known-apps" placeholder="Add an app (name or package)" data-enter="app-add" data-group="${esc(g.id)}">
@@ -2290,21 +2587,36 @@ class HearthPanel extends HTMLElement {
       .join("")}</ul>`;
   }
 
+  // Someone Hearth has something of: a role, a TV profile, a paired device, a source or time counted today. Anyone else
+  // (a Home Assistant user an add-on made, say) is folded away
+  _inHearth(p) {
+    const cfg = this._config;
+    if ((cfg.roles || {})[p.id]) return true;
+    if (Object.values(cfg.profiles || {}).includes(p.id)) return true;
+    if ((cfg.devices || []).some((d) => d.person === p.id) || (cfg.sources || []).some((s) => s.person === p.id)) return true;
+    const s = this._summaryPerson(p.id);
+    return Boolean(s && ((s.tv_profiles || []).length || (s.all?.used_minutes || 0) > 0));
+  }
+
   _familyTab() {
     const cfg = this._config;
     const roles = cfg.roles || {};
-    return `<section class="card">
-        <h3><ha-icon icon="mdi:account-group"></ha-icon>Who's who</h3>
-        <p class="muted">Kids get limits and rules. Adults get a parent PIN and see everything here.</p>
-        <ul class="list">${(cfg.persons || [])
-          .map((p) => `<li>${this._avatar(p.id, 32)}<div class="grow">${esc(p.name)}</div>
+    const row = (p) => `<li>${this._avatar(p.id, 32)}<div class="grow">${esc(p.name)}</div>
             <div class="segmented" role="group" aria-label="${esc(p.name)}">
               ${[["kid", "Kid"], ["adult", "Adult"], ["", "Not in Hearth"]]
                 .map(([v, label]) => `<button class="${(roles[p.id] || "") === v ? "on" : ""}" data-action="role" data-person="${esc(p.id)}" data-role="${v}">${label}</button>`)
                 .join("")}
-            </div></li>`)
-          .join("")}</ul>
+            </div></li>`;
+    const persons = cfg.persons || [];
+    const shown = persons.filter((p) => this._inHearth(p));
+    const others = persons.filter((p) => !this._inHearth(p));
+    return `<section class="card">
+        <h3><ha-icon icon="mdi:account-group"></ha-icon>Who's who</h3>
+        <p class="muted">Kids get limits and rules. Adults get a parent PIN and see everything here.</p>
+        <ul class="list">${(shown.length ? shown : persons).map(row).join("")}</ul>
+        ${shown.length && others.length ? `<details id="family-others"><summary>Others in Home Assistant (${others.length})</summary><ul class="list">${others.map(row).join("")}</ul></details>` : ""}
       </section>
+      ${this._summary ? this._familyPools(this._kids()) : ""}
       ${this._pinsCard()}
       ${this._sharingCard()}
       ${this._catalogCard()}
@@ -2383,7 +2695,7 @@ class HearthPanel extends HTMLElement {
         .join("")}</ul>` : `<p class="muted small">No kids yet.</p>`}
       <div class="strong">Favorite places</div>
       ${(p.favorites || []).length ? `<ul class="list">${p.favorites
-        .map((f) => `<li><div class="grow">${esc(f.name)} <span class="muted small">${esc(f.key)} · ${esc(this._entityName(f.zone))}</span></div>
+        .map((f) => `<li><div class="grow" title="${esc(`${f.key} · ${f.zone}`)}">${esc(f.name)} <span class="muted small">${esc(this._entityName(f.zone))}</span></div>
           <button class="icon-btn" data-action="place-fav-remove" data-key="${esc(f.key)}" aria-label="Remove"><ha-icon icon="mdi:delete-outline"></ha-icon></button></li>`)
         .join("")}</ul>` : `<p class="muted small">None yet.</p>`}
       <div class="row wrap">
@@ -2499,11 +2811,6 @@ p { margin: 6px 0 12px; line-height: 1.45; }
   box-shadow: var(--ha-card-box-shadow, 0 1px 3px rgba(0,0,0,.12)); border: var(--ha-card-border-width, 1px) solid var(--ha-card-border-color, var(--divider-color, transparent));
   margin-bottom: var(--gap); }
 .card.attention { border-color: var(--warning-color, #ffa600); border-width: 2px; }
-.card.ask.focus { box-shadow: 0 0 0 3px var(--primary-color, #03a9f4); }
-.card.pause { padding: 12px 16px; }
-.card.pause.on { border-color: var(--primary-color); border-width: 2px; }
-.card.pause ha-icon { color: var(--primary-color); }
-.card.pause input { min-width: 160px; flex: 1; }
 .row.wrap { flex-wrap: wrap; }
 .card.empty { text-align: center; padding: 32px 16px; }
 .card.empty ha-icon { --mdc-icon-size: 48px; color: var(--secondary-text-color); }
@@ -2512,49 +2819,9 @@ p { margin: 6px 0 12px; line-height: 1.45; }
 .grid .card { margin: 0; }
 .grid.devices { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
 .row { display: flex; align-items: center; gap: 12px; }
-.kid-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-.kid .name { font-size: 18px; font-weight: 500; }
 .avatar { border-radius: 50%; object-fit: cover; flex: none; }
 .avatar.initials { display: flex; align-items: center; justify-content: center; background: var(--primary-color); color: var(--text-primary-color, #fff); font-weight: 500; }
 .kid-main { display: flex; flex-direction: column; gap: 10px; }
-.left-now { font-size: 17px; font-weight: 500; white-space: nowrap; }
-.kid-rows { padding: 4px 8px; }
-.kid-row { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; cursor: pointer; border-left: 4px solid var(--role); }
-.kid-row + .kid-row { margin-top: 2px; }
-.kid-row:hover, .kid-row.on { background: rgba(var(--rgb-primary-color, 3, 169, 244), .08); }
-.kid-row:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
-.kid-row .row-bar { width: 96px; flex: none; }
-.kid-row .grow { min-width: 0; }
-.kid-row .grow > div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.p0 { --pool: #0f6b74; } .p1 { --pool: #b85c00; } .p2 { --pool: #6a4c93; } .p3 { --pool: #2d7a3e; } .p4 { --pool: #c2185b; } .p5 { --pool: #1565c0; }
-.other { --pool: var(--disabled-text-color, #9e9e9e); }
-.allbar-head { display: flex; align-items: baseline; gap: 6px; }
-.all-track { position: relative; height: 16px; margin: 6px 0 4px; border-radius: 4px; background: var(--divider-color, #e0e0e0); }
-.all-track .seg { position: absolute; top: 0; bottom: 0; background: var(--pool, var(--role)); }
-.all-track .seg.whole { background: var(--role, var(--primary-color)); }
-.all-track .bonus { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, transparent 0 3px, var(--role, var(--primary-color)) 3px 5px); opacity: .6; }
-.limit { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--primary-text-color); }
-.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--secondary-text-color); }
-.legend .dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; background: var(--pool); }
-.lane { display: grid; grid-template-columns: 80px 1fr auto; gap: 8px; align-items: center; margin: 6px 0; font-size: 13px; }
-.lane-track { position: relative; height: 6px; border-radius: 3px; background: var(--divider-color, #e0e0e0); }
-.lane-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--pool); }
-.lane.role-out .lane-fill { background: var(--error-color, #db4437); }
-.lane .limit { top: -3px; bottom: -3px; }
-.strip-track { position: relative; height: 34px; border-radius: 6px; background: var(--divider-color, #e0e0e0); overflow: hidden; }
-.strip-track .night { position: absolute; top: 0; bottom: 0; background: var(--primary-text-color); opacity: .7; }
-.strip-track .school { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(45deg, transparent 0 4px, rgba(var(--rgb-primary-text-color, 128, 128, 128), .35) 4px 6px); }
-.strip-track .use { position: absolute; bottom: 0; background: var(--accent-color, var(--primary-color)); border-radius: 2px 2px 0 0; box-shadow: inset 1px 0 0 var(--card-background-color, #fff); }
-.strip-track .now { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--error-color, #db4437); }
-.strip-x { position: relative; height: 16px; font-size: 10px; color: var(--secondary-text-color); }
-.strip-x span { position: absolute; transform: translateX(-50%); }
-.strip-x span:first-child { transform: none; }
-.strip-x span:last-child { transform: translateX(-100%); }
-.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
-.tile { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--divider-color, #e0e0e0); border-radius: 10px; min-width: 0; }
-.tile .grow { min-width: 0; }
-.tile.locked { border-color: var(--warning-color, #ffa600); }
-.tile ha-icon { --mdc-icon-size: 20px; color: var(--secondary-text-color); }
 .bar-row { display: grid; grid-template-columns: 80px 1fr auto; gap: 8px; align-items: center; margin: 6px 0; font-size: 13px; }
 .bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bar { height: 6px; border-radius: 3px; background: var(--divider-color, #e0e0e0); overflow: hidden; }
@@ -2571,13 +2838,6 @@ p.warn { color: var(--warning-color, #ffa600); }
 .chip.play { background: color-mix(in srgb, var(--success-color, #43a047) 20%, transparent); }
 .chip.small { padding: 1px 6px; font-size: 11px; }
 .chip.dim { opacity: .6; }
-.native { margin-top: 8px; display: flex; flex-direction: column; gap: 2px; }
-.device-limits summary { font-size: 13px; margin-top: 4px; }
-.device-limits > div { padding-left: 16px; }
-.small-controls { margin-top: 4px; }
-.small-controls select { min-height: 30px; padding: 3px 8px; font-size: 12px; }
-.today-detail .bar-row { grid-template-columns: 120px 1fr auto; }
-.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin: 10px 0; }
 .card .row.wrap + .row.wrap { margin-top: 8px; }
 .warn-text { color: var(--warning-color, #b26a00); }
 .error-text { color: var(--error-color, #db4437); }
@@ -2660,71 +2920,202 @@ ol.steps { margin: 0; padding-left: 20px; line-height: 1.7; }
 .role-locked { --role: var(--state-icon-color, #44739e); }
 .role-held { --role: var(--purple-color, #926bc7); }
 .role-none { --role: var(--disabled-text-color, #9e9e9e); }
-.card.kid { border-left: 4px solid var(--role); }
-.used { display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; }
-.big-num { font-size: 26px; font-weight: 600; letter-spacing: -.5px; }
-.day-line { display: flex; align-items: center; gap: 6px; font-size: 14px; margin: 2px 0 8px; }
-.dot-role { width: 8px; height: 8px; border-radius: 50%; background: var(--role); flex: none; }
-.lvl-notice { font-weight: 500; }
-.lvl-urgent { font-weight: 700; }
 .bar-row.unlimited { opacity: .55; }
-.tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 0 5px; margin-right: 4px; border-radius: 8px;
-  background: color-mix(in srgb, var(--success-color, #43a047) 22%, transparent); color: var(--primary-text-color); }
-.card.suggested { min-height: 112px; }
-.card.suggested.lvl-urgent { border-color: var(--warning-color, #ffa600); border-width: 2px; }
-.suggested .headline { font-size: 16px; margin-bottom: 4px; }
-.suggested.lvl-urgent .headline { font-weight: 600; }
-.suggested-items .item { padding: 10px 0; border-top: 1px solid var(--divider-color, #eee); }
-.suggested-items .item .actions { margin-top: 8px; }
-.item.ask.focus { box-shadow: 0 0 0 3px var(--primary-color, #03a9f4); border-radius: 8px; padding: 10px; }
-.item.sugg { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.item.sugg .actions { margin-top: 0; }
-details.more { position: relative; }
-details.more summary { list-style: none; margin: 0; padding: 8px 12px; border: 1px solid var(--divider-color, #ccc); border-radius: 18px; font-size: 14px; }
-details.more summary::-webkit-details-marker { display: none; }
-.more-menu { position: absolute; right: 0; bottom: calc(100% + 6px); z-index: 2; display: flex; flex-direction: column; gap: 6px; padding: 8px; min-width: 170px;
-  background: var(--ha-card-background, var(--card-background-color, #fff)); border: 1px solid var(--divider-color, #ccc); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.2); }
 .chip-btn.on { border-color: var(--primary-color); background: var(--primary-color); color: var(--text-primary-color, #fff); }
-.week { margin-top: 12px; }
-.week-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 14px; margin-bottom: 6px; }
-.wk-plot { display: grid; grid-template-columns: auto 1fr; column-gap: 6px; }
-.wk-y { display: flex; flex-direction: column; justify-content: space-between; font-size: 10px; font-weight: 600; text-align: right; height: 96px; margin-top: 14px; }
-.wk-y span { line-height: 0; }
-.wk-cols { display: flex; gap: 3px; }
-.wk-col { flex: 1; display: flex; flex-direction: column; align-items: stretch; border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; border-radius: 6px; }
-.wk-col:hover .wk-bar, .wk-col.on .wk-bar { filter: brightness(1.2); }
-.wk-col.on { background: var(--secondary-background-color, rgba(0,0,0,.05)); }
-.wk-col:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 1px; }
-.wk-tag { display: block; height: 14px; font-size: 10px; font-weight: 600; text-align: center; color: var(--success-color, #43a047); }
-.wk-area { display: block; position: relative; height: 96px; }
-.wk-area i { position: absolute; left: 0; right: 0; border-top: 1px dashed rgba(var(--rgb-primary-text-color, 128, 128, 128), .2); }
-.wk-bar { position: absolute; bottom: 0; left: 12%; right: 12%; border-radius: 4px 4px 0 0; background: var(--accent-color, var(--primary-color)); }
-.wk-bar.none { height: 100%; opacity: .5; background: repeating-linear-gradient(45deg, var(--divider-color, #ccc) 0 3px, transparent 3px 7px); }
-.wk-tick { position: absolute; left: 0; right: 0; border-top: 2px solid var(--primary-text-color); opacity: .55; }
-.wk-dot { display: block; width: 6px; height: 6px; border-radius: 50%; margin: 4px auto 2px; }
-.wk-dot.out { background: var(--error-color, #db4437); }
-.wk-x { display: block; font-size: 10px; font-weight: 600; text-align: center; white-space: nowrap; }
-.wk-detail { margin-top: 6px; }
-.plot { display: grid; grid-template-columns: auto 1fr; grid-template-rows: 120px auto; column-gap: 6px; margin-top: 8px; }
-.hy { display: flex; flex-direction: column; justify-content: space-between; white-space: nowrap; font-size: 10px; font-weight: 600; text-align: right; margin: -6px 0; }
-.harea { position: relative; }
-.harea i { position: absolute; left: 0; right: 0; border-top: 1px dashed rgba(var(--rgb-primary-text-color, 128, 128, 128), .2); }
-.hcols { position: absolute; inset: 0; display: flex; gap: 3px; align-items: flex-end; }
-.hcol { flex: 1; height: 100%; display: flex; align-items: flex-end; }
-.hcol div { width: 100%; border-radius: 4px 4px 0 0; background: var(--accent-color, var(--primary-color)); }
-.hx { display: flex; gap: 3px; font-size: 10px; font-weight: 600; margin-top: 6px; }
-.hx span { flex: 1; text-align: center; white-space: nowrap; }
 .card.pools .pool + .pool { margin-top: 12px; }
 @media (max-width: 600px) {
   .content { padding: 12px; }
   .grid { grid-template-columns: 1fr; }
-  .kid-row .row-bar { width: 56px; }
   .tab span:not(.badge) { display: none; }
   .tab { padding: 10px 12px; }
   table.limits input { width: 92px; }
   .pin-row { flex-wrap: wrap; }
   .toolbar .text-btn span { display: none; }
 }
+/* Today (the redesign). Hearth's own warm accent for its actions and rings; Home Assistant's theme for the rest */
+:host { --h-accent: #b9501c; --h-accent-soft: #fbe6da; --h-on-accent: #fff; --h-ok: #2f7d5b; --h-low: #a86b00; --h-low-soft: #fdf0d5;
+  --h-out: #c03a2b; --h-out-soft: #fbe3df; --h-night: #4a4fa3; --h-night-soft: #e7e8f7; --h-school: #2c6f9e; --h-school-soft: #e0eef7;
+  --p-all: #7a736b; --p-games: #3466c2; --p-youtube: #d24b43; --p-streaming: #8a52c9; --p-social: #c78a12; --p-audible: #2f8f83; --p-other: #a8a29b;
+  --p-x0: #0f6b74; --p-x1: #b85c00; --p-x2: #6a4c93; --p-x3: #2d7a3e;
+  --h-line: var(--divider-color, rgba(0,0,0,.12)); --h-track: color-mix(in srgb, var(--primary-text-color, #222) 10%, transparent);
+  --h-surface: var(--ha-card-background, var(--card-background-color, #fff)); --h-surface-2: var(--secondary-background-color, #f0ede9);
+  --h-btn-line: color-mix(in srgb, var(--primary-text-color, #222) 24%, transparent); }
+:host([dark]) { --h-accent: #f08a52; --h-accent-soft: #3a2418; --h-on-accent: #1a0f08; --h-ok: #5cc08f; --h-low: #e7b04a; --h-low-soft: #3a2d12;
+  --h-out: #f07a6c; --h-out-soft: #3d1d19; --h-night: #a3a8f0; --h-night-soft: #25264a; --h-school: #7cb8e3; --h-school-soft: #17303f;
+  --p-all: #a39b92; --p-games: #6f9cf0; --p-youtube: #f07870; --p-streaming: #b88af0; --p-social: #e9b34a; --p-audible: #5cc0b2; --p-other: #77716b;
+  --p-x0: #4fb3bd; --p-x1: #f0a050; --p-x2: #b39ddb; --p-x3: #7bc47f; }
+.content.wide { max-width: 1180px; }
+.small-controls { margin-top: 4px; }
+.small-controls select { min-height: 30px; padding: 3px 8px; font-size: 12px; }
+.svg { width: 20px; height: 20px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.svg.sm { width: 16px; height: 16px; }
+.today { font-size: 15px; line-height: 1.4; }
+.today button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+.today button:focus-visible, .today [tabindex]:focus-visible { outline: 2px solid var(--h-accent); outline-offset: 2px; border-radius: 10px; }
+.today .card { margin-bottom: 0; }
+.today .card.flat { padding: 0; }
+.today-cols { display: block; }
+.top { display: flex; align-items: flex-start; gap: 12px; padding: 6px 0 4px; }
+.top h1 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -.01em; }
+.top .sub { color: var(--secondary-text-color); font-size: 14px; margin-top: 2px; }
+.live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--secondary-text-color); margin-top: 6px; }
+.live i { width: 7px; height: 7px; border-radius: 50%; background: var(--h-ok); }
+.today .ibtn { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px; border-radius: 999px; background: var(--h-surface);
+  border: 1px solid var(--h-btn-line); font-weight: 500; font-size: 14px; white-space: nowrap; color: var(--primary-text-color); }
+.sec { display: flex; align-items: baseline; justify-content: space-between; margin: 22px 4px 8px; font-size: 13px; font-weight: 600; color: var(--secondary-text-color); letter-spacing: .02em; }
+.today .b { height: 36px; padding: 0 14px; border-radius: 999px; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--h-btn-line); background: var(--h-surface); color: var(--primary-text-color); white-space: nowrap; }
+.today .b:hover { background: var(--h-surface-2); }
+.today .b.primary { background: var(--h-accent); color: var(--h-on-accent); border-color: transparent; }
+.today .b.primary:hover { filter: brightness(1.06); }
+.today .b.ghost { border-color: transparent; background: transparent; color: var(--secondary-text-color); }
+.today .b.ghost:hover { background: var(--h-surface-2); color: var(--primary-text-color); }
+.today .lnk { color: var(--h-accent); font-weight: 600; }
+.t-out { color: var(--h-out); font-weight: 600; } .t-low { color: var(--h-low); font-weight: 600; } .t-night { color: var(--h-night); } .t-school { color: var(--h-school); }
+.banner { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: var(--radius); background: var(--h-accent-soft); margin: 10px 0; color: var(--primary-text-color); }
+.banner .svg { color: var(--h-accent); }
+.pausebox { padding: 16px; margin-top: 10px; }
+.pausebox .field input { width: 100%; }
+.chips .chip-t, .today .chip-t { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--h-btn-line); background: var(--h-surface); font-size: 13px; font-weight: 500; color: var(--primary-text-color); }
+.today .chip-t[aria-pressed="true"] { background: var(--primary-text-color); color: var(--h-surface); border-color: transparent; }
+.today .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.needs { padding: 4px 0; }
+.need { padding: 14px 16px; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; border-top: 1px solid var(--h-line); }
+.need:first-child { border-top: 0; }
+.need .av { grid-row: span 2; }
+.need .t { font-weight: 600; }
+.need .d, .today .d { color: var(--secondary-text-color); font-size: 13px; }
+.need .acts, .need .more { grid-column: 2; }
+.need.insheet { grid-template-columns: 1fr; padding: 12px 14px; }
+.need.insheet .acts, .need.insheet .more { grid-column: 1; }
+.need.ask { background: linear-gradient(90deg, var(--h-accent-soft), transparent 70%); }
+.need .more { font-size: 13px; color: var(--secondary-text-color); margin-top: 4px; }
+.quiet { display: flex; align-items: center; gap: 12px; padding: 16px; }
+.qic { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--h-night-soft); color: var(--h-night); flex: none; }
+.quiet.day .qic { background: color-mix(in srgb, var(--h-ok) 15%, transparent); color: var(--h-ok); }
+.heldcard { margin-top: 8px; padding-top: 4px !important; }
+.held { margin: 0 16px 12px; border-top: 1px dashed var(--h-line); padding-top: 8px; font-size: 13px; color: var(--secondary-text-color); }
+.held summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; margin: 0; color: var(--secondary-text-color); font-size: 13px; }
+.held summary::-webkit-details-marker { display: none; }
+.held ul { margin: 8px 0 0; padding: 0; list-style: none; }
+.held li { padding: 6px 0; display: flex; gap: 8px; justify-content: space-between; border-top: 1px solid var(--h-line); }
+.held li span:last-child { color: var(--secondary-text-color); opacity: .8; text-align: right; }
+.kids { display: flex; flex-direction: column; gap: 10px; }
+.today .card.kid { display: flex; align-items: center; gap: 14px; padding: 14px 14px 14px 12px; cursor: pointer; }
+.today .card.kid[aria-current="true"] { outline: 2px solid var(--h-accent); outline-offset: -2px; }
+.today .card.kid .grow { min-width: 0; }
+.today .card.kid .name { font-weight: 600; font-size: 16px; }
+.today .line { color: var(--secondary-text-color); font-size: 14px; }
+.today .card.kid .line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.today .line b { font-weight: 600; color: var(--primary-text-color); }
+.today .line b.t-out { color: var(--h-out); }
+.today .card.kid.asleep .name { color: var(--secondary-text-color); }
+.chev { color: var(--secondary-text-color); opacity: .7; display: inline-flex; transition: transform .15s; }
+.chev.open { transform: rotate(90deg); }
+.ring { position: relative; flex: none; display: inline-block; }
+.ring svg { display: block; transform: rotate(-90deg); }
+.ring .track { stroke: var(--h-track); stroke-width: 4; fill: none; }
+.ring .arc { stroke: var(--ring); stroke-width: 4; fill: none; stroke-linecap: round; transition: stroke-dashoffset .5s; }
+.ring .ini { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 600; font-size: 15px; }
+.ring .ini.dim { color: var(--secondary-text-color); }
+.ring .badge { position: absolute; right: -3px; bottom: -3px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--h-surface); box-shadow: 0 0 0 2px var(--h-surface); color: var(--ring); padding: 0; font-size: 0; }
+.ring .badge .svg { width: 14px; height: 14px; }
+.tone-accent { --ring: var(--h-accent); } .tone-night { --ring: var(--h-night); } .tone-school { --ring: var(--h-school); }
+.tone-out { --ring: var(--h-out); } .tone-low { --ring: var(--h-low); } .tone-ok { --ring: var(--h-ok); }
+.rowlist { padding: 4px 0; }
+.today .rowi { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--h-line); width: 100%; text-align: left; }
+.today .rowi:first-child { border-top: 0; }
+.rowi .t { font-weight: 500; }
+.dic { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--h-surface-2); color: var(--secondary-text-color); flex: none; }
+.dic.on { background: color-mix(in srgb, var(--h-ok) 16%, transparent); color: var(--h-ok); }
+.dic.tone-out { background: var(--h-out-soft); color: var(--h-out); } .dic.tone-night { background: var(--h-night-soft); color: var(--h-night); }
+.dic.tone-school { background: var(--h-school-soft); color: var(--h-school); } .dic.tone-low { background: var(--h-low-soft); color: var(--h-low); }
+.adults { font-size: 13px; color: var(--secondary-text-color); padding: 12px 4px; }
+.scrim { position: fixed; inset: 0; background: rgba(10,8,6,.38); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 6; }
+.scrim.on { opacity: 1; pointer-events: auto; }
+.detail { position: fixed; left: 0; right: 0; bottom: 0; z-index: 7; max-height: 90vh; overflow: auto; background: var(--primary-background-color); border-radius: 22px 22px 0 0;
+  transform: translateY(105%); transition: transform .28s cubic-bezier(.2,.8,.2,1); box-shadow: 0 -8px 32px rgba(0,0,0,.18); overscroll-behavior: contain; visibility: hidden; }
+.detail.on { transform: none; visibility: visible; }
+.detail .handle { position: sticky; top: 0; z-index: 2; background: var(--primary-background-color); padding: 8px 0 0; }
+.detail .handle i { display: block; width: 40px; height: 4px; border-radius: 2px; background: var(--h-btn-line); margin: 0 auto; }
+.dinner { padding: 4px 16px 28px; max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+.dhead { display: flex; align-items: center; gap: 14px; padding: 10px 0 2px; }
+.dhead h2 { margin: 0; font-size: 22px; font-weight: 600; }
+.closebtn { width: 40px; height: 40px; border-radius: 50%; display: grid !important; place-items: center; background: var(--h-surface) !important; border: 1px solid var(--h-line) !important; }
+.actbar { display: flex; gap: 8px; flex-wrap: wrap; }
+.lockbox { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: var(--radius); }
+.lockbox.night { background: var(--h-night-soft); } .lockbox.night .svg { color: var(--h-night); }
+.lockbox.school { background: var(--h-school-soft); } .lockbox.school .svg { color: var(--h-school); }
+.blk { padding: 14px 16px !important; }
+.blk h3 { margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--secondary-text-color); letter-spacing: .02em; display: flex; justify-content: space-between; align-items: baseline; }
+.blk h3 span { font-weight: 500; opacity: .85; }
+.big { font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+.big small { font-size: 14px; font-weight: 500; color: var(--secondary-text-color); }
+.stack { position: relative; height: 14px; border-radius: 7px; background: var(--h-track); overflow: hidden; display: flex; margin: 10px 0 8px; }
+.stack i { display: block; height: 100%; }
+.stack i + i { box-shadow: -1.5px 0 0 var(--h-surface); }
+.today .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--secondary-text-color); }
+.today .legend span { display: inline-flex; align-items: center; gap: 5px; }
+.today .legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+.lanes { margin-top: 12px; }
+.today .lane { width: 100%; text-align: left; display: grid; grid-template-columns: 96px 1fr auto 16px; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--h-line); margin: 0; font-size: 14px; }
+.today .lane:first-child { border-top: 0; }
+.today .lane .nm { font-weight: 500; display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.today .lane .nm i { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.today .lane .bar { height: 6px; border-radius: 3px; background: var(--h-track); overflow: hidden; position: relative; }
+.today .lane .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; }
+.today .lane .v { font-size: 13px; color: var(--secondary-text-color); text-align: right; white-space: nowrap; }
+.today .pill { display: inline-flex; padding: 1px 6px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--h-accent-soft); color: var(--h-accent); }
+.expand { padding: 2px 0 12px; font-size: 13px; color: var(--secondary-text-color); }
+.expand .apps { display: flex; flex-direction: column; gap: 2px; margin: 4px 0 6px; }
+.expand .apps div { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
+.notcounted { font-size: 13px; color: var(--secondary-text-color); padding-top: 8px; border-top: 1px solid var(--h-line); margin-top: 4px; }
+.today .dgroup { width: 100%; text-align: left; display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--h-line); }
+.today .dgroup:first-of-type { border-top: 0; }
+.dgroup .grow { min-width: 0; }
+.dgroup .t { font-weight: 500; font-size: 14px; }
+.dgroup .r { font-size: 13px; font-weight: 600; white-space: nowrap; }
+.dgroup .r.t-ok { color: var(--primary-text-color); }
+.dlist { margin: 0 0 8px 48px; font-size: 13px; }
+.dlist div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-top: 1px dashed var(--h-line); }
+.dlist div span:last-child { color: var(--secondary-text-color); text-align: right; }
+.note { font-size: 13px; color: var(--secondary-text-color); display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-top: 1px solid var(--h-line); }
+.note:first-of-type { border-top: 0; }
+.note .svg { margin-top: 1px; flex: none; }
+.namelist { margin-top: 4px; line-height: 1.6; }
+.weekc { display: flex; align-items: flex-end; gap: 10px; height: 120px; padding: 4px 0 0; }
+.weekc .col { flex: 0 0 44px; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+.weekc .col.wide { flex: 1; align-items: flex-start; justify-content: center; }
+.weekc .wb { width: 28px; border-radius: 6px 6px 2px 2px; background: var(--p-other); position: relative; }
+.weekc .fill { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; display: flex; flex-direction: column-reverse; }
+.weekc .fill i { display: block; width: 100%; }
+.weekc .cap { position: absolute; left: -6px; right: -6px; border-top: 2px dashed var(--secondary-text-color); }
+.weekc .lbl { font-size: 12px; color: var(--secondary-text-color); }
+.weekc + .d { margin-top: 10px; }
+.todo { display: flex; align-items: center; gap: 12px; }
+.chooser { background: var(--h-surface-2); border-radius: 14px; padding: 12px; }
+.chooser .lab { font-size: 12px; color: var(--secondary-text-color); margin: 0 0 6px; }
+.chooser .chips { margin: 0 0 10px; }
+.menu { display: flex; flex-direction: column; background: var(--h-surface); border: 1px solid var(--h-line); border-radius: 14px; overflow: hidden; }
+.menu button { padding: 12px 14px !important; text-align: left; border-top: 1px solid var(--h-line) !important; font-size: 14px; }
+.menu button:first-child { border-top: 0 !important; }
+.menu button small { display: block; color: var(--secondary-text-color); font-size: 12px; }
+.foot { display: flex; justify-content: space-between; align-items: center; padding: 6px 4px; font-size: 13px; }
+.empty-detail { display: none; }
+.toast.undo { display: flex; align-items: center; gap: 14px; width: max-content; padding: 12px 12px 12px 16px; border-radius: 14px; overflow: hidden; }
+.toast.undo button { border: 0; background: none; font: inherit; font-weight: 700; color: var(--h-accent); padding: 6px 10px; border-radius: 8px; cursor: pointer; filter: brightness(1.25); }
+:host([dark]) .toast.undo button { color: #b9501c; filter: none; }
+.toast .tbar { position: absolute; left: 12px; right: 12px; bottom: 4px; height: 2px; border-radius: 1px; background: currentColor; opacity: .25; transform-origin: left; animation: tbar linear forwards; }
+@keyframes tbar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+/* Side by side from 900 px of the page's own width (Home Assistant's sidebar takes part of the window) */
+.today.wide .today-cols { display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: 28px; align-items: start; }
+.today.wide .scrim { display: none; }
+.today.wide .detail { position: sticky; top: 112px; transform: none; visibility: visible; max-height: calc(100vh - 124px); border-radius: var(--radius); box-shadow: none; background: transparent; margin-top: 6px; z-index: 1; }
+.today.wide .detail .handle, .today.wide .closebtn { display: none !important; }
+.today.wide .dinner { padding: 0; }
+.today.wide .empty-detail { display: block; color: var(--secondary-text-color); padding: 40px 16px; text-align: center; }
+@media (max-width: 380px) { .today .lane { grid-template-columns: 80px 1fr auto 14px; } }
+@media (prefers-reduced-motion: reduce) { .today *, .toast * { animation: none !important; transition: none !important; } }
 `;
 
 customElements.define("hearth-panel", HearthPanel);

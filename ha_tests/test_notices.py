@@ -6,6 +6,8 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from homeassistant.components import persistent_notification
+import pytest
+
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import (
@@ -28,8 +30,17 @@ from test_phones import _options
 from test_suggest_push import KEY, TAG, _check, _video_out
 from test_wait import _wait
 
+# Suggestions show at any hour here: in the evening they would be held back (glance.hold_back)
+pytestmark = pytest.mark.usefixtures("no_evening_hold")
+
 CAPS = ["commands.play", "events", "notices"]
-TV_STATUS = {**_tv_status(hearthtube_s=600, game_s=300), "caps": CAPS}
+
+
+def _tv(caps: list[str] = CAPS) -> dict:
+    """The TV's status, built when sent: its "day" is today in the test's time zone (at import, it would be UTC's)."""
+    return {**_tv_status(hearthtube_s=600, game_s=300), "caps": caps}
+
+
 NOTICE = {
     "key": KEY,
     "tag": TAG,
@@ -40,8 +51,8 @@ NOTICE = {
 }
 
 
-async def _state(client, secret: str, body=TV_STATUS, device_id: str = TV_ID) -> dict:
-    response = await _post(client, secret, body=body, device_id=device_id)
+async def _state(client, secret: str, body: dict | None = None, device_id: str = TV_ID) -> dict:
+    response = await _post(client, secret, body=body or _tv(), device_id=device_id)
     assert response.status == 200
     return (await response.json())["state"]
 
@@ -69,7 +80,7 @@ async def test_a_tv_without_the_cap_gets_none(hass: HomeAssistant, hass_client_n
     client, secret, _users, _sent = await _suggested(hass, hass_client_no_auth)
     # A TV from before caps (its kind's defaults), or one that declares caps without notices
     assert "notices" not in await _state(client, secret, body=_tv_status(hearthtube_s=600, game_s=300))
-    assert "notices" not in await _state(client, secret, body={**TV_STATUS, "caps": ["commands.play", "events"]})
+    assert "notices" not in await _state(client, secret, body=_tv(["commands.play", "events"]))
 
 
 async def test_a_phone_never_gets_the_adults_notices(
@@ -262,7 +273,7 @@ async def test_only_a_tv_that_shows_notices_can_press(
 ) -> None:
     client, secret, _users, _sent = await _on_tv(hass, hass_client_no_auth)
     # The TV now says it doesn't show notices: they're gone for it
-    await _state(client, secret, body={**TV_STATUS, "caps": ["commands.play", "events"]})
+    await _state(client, secret, body=_tv(["commands.play", "events"]))
     assert (await _notice(client, secret, {"key": KEY, "action": 0, "pin": PIN})).status == 404
     hass.data[f"{DOMAIN}_pairing"]["asked_at"].clear()
     phone_secret = await _pair(hass, client, PHONE_ID, "mobile", "Phone")

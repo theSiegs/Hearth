@@ -708,7 +708,7 @@ class Household:
                         source.person, device, item, source.reading_source, item,
                     )
             else:
-                reading = totals_reading(self.hass, source)
+                reading = totals_reading(self.hass, source, today)
                 if reading is not None:
                     self._last_totals[source.id] = (today, reading)
                 elif (last := self._last_totals.get(source.id)) is not None and last[0] == today:
@@ -1264,6 +1264,8 @@ class Household:
             "playing": [p.view() for p in (day.playing if day else [])],
             # A parent let this person's phone share with the launcher's tile exchange (off unless chosen)
             "tile_exchange_share": person in self.options.get(CONF_TILE_EXCHANGE, []),
+            # A kid's to-do list today, counts only (todos.py); the money balance stays on adults' screens
+            **({"todo": self.todos.counts(person)} if person in self.todos.kids() else {}),
             # Their latest request for more time and its answer (asks.py), while it's still news
             **({"request": ask.device_view()} if (ask := self.hub.asks.latest_for(person)) else {}),
             # What a parent blocked here, for HearthTube in the person's kids profiles (a TV's Hearth passes it on)
@@ -1720,6 +1722,25 @@ class Household:
         if group == ALL and minutes > 0:
             # All screen time back: Google's and Microsoft's own limits get as much
             self.sync.mirror_bonus(person, had_none)
+
+    @callback
+    def remove_bonus(self, person: str, group: str, minutes: int) -> int:
+        """Takes back up to [minutes] of the extra time an adult gave [person]'s group today (an undo,
+        hearth.remove_bonus): never more than was given, so it never takes their own budget (and chores' minutes
+        stay). Logged as a negative bonus. When All screen time is none again, what Hearth gave for it in Family Link
+        and Family Safety goes too. The minutes taken back."""
+        given = max(0, self.limits.bonus(person, group))
+        taken = max(0, min(int(minutes), given))
+        if not taken:
+            return 0
+        self.limits.set_bonus(person, group, given - taken)
+        self.history.log(BONUS, person, group=group, minutes=-taken, undo=True)
+        self.recompute()
+        day = self.days.get(person)
+        state = day.limits.get(ALL) if day else None
+        if group == ALL and state is not None and state.minutes_left == 0:
+            self.sync.take_back_bonus(person)
+        return taken
 
     @callback
     def set_bonus(self, person: str, group: str, minutes: int) -> None:

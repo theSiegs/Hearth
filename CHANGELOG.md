@@ -3,6 +3,17 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **Today on Hearth's page, redesigned.** It answers "does anything need me?" in one sentence: For you shows at most one row per kid (a request first), each a plain sentence ("Sam's YouTube time is up") with +15 min, 30 min and Not today under it, or says "Nothing needs you tonight" with a fold of what's held back and why. Then one row per kid with a ring around the initial (Hearth's warm accent; indigo with a moon in bedtime, blue in School time) and one status line, no +15 during a lock or after their cutoff; Screens now (one row when nothing plays); and one muted line for the adults. A tap on a kid opens their sheet (a bottom sheet on a phone, a column beside the list on a wide screen): their lock and why time won't help, the actions that help now, today split by pool with lanes that open to their apps, devices grouped by what they're doing, exceptions in plain sentences, and only the days Hearth recorded. Every action applies at once with a 6-second Undo instead of a confirm. Family today, by pool moved to the Family tab.
+- **Suggestions wait when they wouldn't help.** None while a kid is in bedtime, School time or a pause, none after their bedtime starts (or after 9:00 pm without one), and a device's own limit (Microsoft's, Google's, Nintendo's) only while that device is in use. At most one shows per kid. The adults' phones follow the same rules. The household summary adds `suggestions_held` (each with `held` and `why`), `sentence` and `detail` per suggestion, and `counts.suggestions_held` and `counts.needs`.
+- **Devices by the names you gave them.** Each device in the summary's `targets` has a `display_name`: the name given to its device in Home Assistant, else the name of the source counting it, so a Family Link tablet reads "Sam's tablet", not "SM-X230".
+- **Take back extra time.** `hearth.remove_bonus` takes back up to the minutes given today (never their own budget), logs it, and takes back what Family Link and Family Safety got for it. The page's Undo uses it.
+- **No more "ran out" at midnight from yesterday's numbers.** A screen time sensor that hasn't updated since midnight (Family Link's, before its first poll of the day) no longer counts as today's, so a kid no longer runs out of a pool for a moment at midnight and the week no longer marks it out.
+- **Other tabs:** apps, sources and lock sensors show names first with their ids in a tooltip, test builds are hidden from Apps, Home Assistant users with nothing in Hearth fold under "Others in Home Assistant", and "Suggest to phones" reads "Send suggestions to adults' phones".
+
 ## 2026.11.14
 
 ### Home Assistant integration

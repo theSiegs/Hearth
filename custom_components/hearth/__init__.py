@@ -65,6 +65,7 @@ _VIEWS_REGISTERED = f"{DOMAIN}_views"
 EVENT_FS_REQUEST = "microsoft_family_safety_request"
 EVENT_FS_RESOLVED = "microsoft_family_safety_request_resolved"
 SERVICE_ADD_BONUS = "add_bonus"
+SERVICE_REMOVE_BONUS = "remove_bonus"
 SERVICE_SET_BUDGET = "set_budget"
 
 ADD_BONUS_SCHEMA = vol.Schema(
@@ -74,6 +75,13 @@ ADD_BONUS_SCHEMA = vol.Schema(
         vol.Optional("group", default="all"): cv.string,
         # Only on this device of theirs (a target id: hearth:<id>, fl:<id>, fs:xbox, nintendo:<entity>)
         vol.Optional("device"): cv.string,
+    }
+)
+REMOVE_BONUS_SCHEMA = vol.Schema(
+    {
+        vol.Required("person"): cv.entity_id,
+        vol.Required("minutes"): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+        vol.Optional("group", default="all"): cv.string,
     }
 )
 SET_BUDGET_SCHEMA = vol.Schema(
@@ -202,6 +210,14 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         return {}
 
     @callback
+    def remove_bonus(call: ServiceCall) -> ServiceResponse:
+        """Takes back extra time given today (the page's Undo): never more than was given, logged in the history,
+        and what Family Link and Family Safety got for it goes too."""
+        target = household(call)
+        group = group_id(target, call.data["group"])
+        return {"removed": target.remove_bonus(call.data["person"], group, call.data["minutes"])}
+
+    @callback
     def set_budget(call: ServiceCall) -> None:
         target = household(call)
         names = {"school_days": "weekday", "other_days": "weekend", "weekday": "weekday", "weekend": "weekend"}
@@ -211,6 +227,10 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
     register_service(
         hass, DOMAIN, SERVICE_ADD_BONUS, add_bonus, schema=ADD_BONUS_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    )
+    register_service(
+        hass, DOMAIN, SERVICE_REMOVE_BONUS, remove_bonus, schema=REMOVE_BONUS_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
     )
     register_service(hass, DOMAIN, SERVICE_SET_BUDGET, set_budget, schema=SET_BUDGET_SCHEMA)
 
