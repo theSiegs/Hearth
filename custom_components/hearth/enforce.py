@@ -129,8 +129,11 @@ REFRESH_AFTER_WRITE = timedelta(seconds=10)
 MAX_PACKAGES = 150
 
 # Never paused, whatever group they're in: calls, texts, the system, and the apps that hold the rest. A paired client's
-# own packages are kept out per person instead (Enforcement.update's exempt_of, from the client locked at pairing)
-ESSENTIAL = frozenset(
+# own packages are kept out per person instead (Enforcement.update's exempt_of, from the client locked at pairing).
+# TRANSITION: the phone launcher's two packages stay listed until its phones have re-paired with contract 3 (then
+# they're exempt by their locked client id); remove them in the release after that.
+TRANSITION_CLIENTS = frozenset({"com.thesiegs.glint", "com.thesiegs.glint.phone"})
+ESSENTIAL = TRANSITION_CLIENTS | frozenset(
     {
         "com.thesiegs.hearth",
         "com.thesiegs.hearth.mobile",
@@ -155,7 +158,7 @@ def essential(package: str) -> bool:
 
 
 # Never paused for School time either: what holds the rest, and the system
-NEVER_PAUSED = frozenset(
+NEVER_PAUSED = TRANSITION_CLIENTS | frozenset(
     {
         "com.thesiegs.hearth",
         "com.thesiegs.hearth.mobile",

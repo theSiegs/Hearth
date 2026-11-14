@@ -225,8 +225,10 @@ async def test_a_paired_client_is_never_paused_for_its_person(
     assert LAUNCHER in wanted["family_link|person.sam"] and DIALER not in wanted["family_link|person.sam"]
 
 
-async def test_the_old_launcher_literal_is_gone() -> None:
-    assert "com.thesiegs.glint" not in enforce.ESSENTIAL and "com.thesiegs.glint" not in enforce.NEVER_PAUSED
+async def test_the_launcher_literal_is_transitional_only() -> None:
+    # Kept only until phones have re-paired with contract 3; nothing else rides on the transition list
+    assert enforce.TRANSITION_CLIENTS == {"com.thesiegs.glint", "com.thesiegs.glint.phone"}
+    assert enforce.TRANSITION_CLIENTS <= enforce.ESSENTIAL and enforce.TRANSITION_CLIENTS <= enforce.NEVER_PAUSED
     for kept in ("com.thesiegs.hearth", "com.thesiegs.hearth.mobile", "com.thesiegs.hearthtube.mobile",
                  "com.google.android.apps.kids.familylink"):
         assert enforce.essential(kept)
