@@ -266,7 +266,7 @@ test("a suggestion shows as a sentence with +15, 30 and Not today; a request com
   assert.match(html, /1 thing for you/);
   assert.match(html, /<div class="t">Sam&#39;s Games time is up<\/div><div class="d">Used 2 h 05 of 2 h · 31 min of screen time left<\/div>/);
   assert.match(html, /data-action="sugg-give" data-person="person.sam" data-id="suggest:more:games:15">[^]*?15 min<\/button>/);
-  assert.match(html, /data-action="sugg-dismiss" data-person="person.sam" data-key="more:games"[^>]*>Not today/);
+  assert.match(html, /data-action="sugg-dismiss" data-person="person.sam" data-key="more:games"[^>]*>Dismiss/);
   // The row covers Sam: no second +15 on his kid row
   assert.doesNotMatch(html.split('class="card kid')[1], /data-action="give"/);
   const ask = { type: "more_time", id: "q1", person: "person.sam", person_name: "Sam", minutes: 30, group: "games", asked: iso(15, 59) };
@@ -482,4 +482,142 @@ test("the shared catalog's setting asks once before sharing, and maps kinds of a
   html = p._catalogCard();
   assert.doesNotMatch(html, /catalog-share-on/);
   assert.match(html, /data-change="catalog-share" >/);
+});
+
+// The Schedule tab (the weekly schedule)
+const SCHOOL_TUE = [["06:45", "free"], ["07:45", "school"], ["15:15", "free"], ["16:00", "homework"], ["17:00", "free"], ["21:30", "sleep"]];
+function scheduled({ todayChange = null, empty = false } = {}) {
+  const p = panel();
+  const days = Object.fromEntries(
+    ["mon", "tue", "wed", "thu", "fri", "sat", "sun", "day_off"].map((k, i) => [
+      k,
+      {
+        changes: empty ? [] : (i < 5 ? SCHOOL_TUE : [["08:30", "free"], ["22:30", "sleep"]]).map((c) => [...c]),
+        limits: { all: i < 5 ? 180 : 240, games: 60 },
+      },
+    ])
+  );
+  p._sched = {
+    today: "2026-11-24",
+    modes: {
+      sleep: { name: "Sleep", allows: "nothing", builtin: true, description: "Bedtime: screens locked." },
+      school: { name: "School", allows: "school", builtin: true, description: "School time." },
+      free: { name: "Free time", allows: "everything", builtin: true, description: "Everything." },
+      homework: { name: "Homework", allows: "some", closed: ["games"], description: "Games closed." },
+    },
+    groups: [{ id: "all", name: "All screen time", in_all: true }, { id: "games", name: "Games", in_all: true }],
+    week: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map((k, i) => ({ date: `2026-11-${23 + i}`, key: k, type: i === 3 ? "day_off" : i < 5 ? "school" : "weekend" })),
+    coming_up: [{ date: "2026-11-26", type: "day_off", source: "typed" }],
+    kids: [
+      {
+        id: "person.sam",
+        name: "Sam",
+        set: !empty,
+        days,
+        half_day: { school_ends: "12:00", early: null, limits: "day_off" },
+        today: todayChange,
+        this_week: ["mon", "tue", "wed", "day_off", "fri", "sat", "sun"].map((u, i) => ({ date: `2026-11-${23 + i}`, uses: u })),
+        controls: ["family_link"],
+        now: empty
+          ? null
+          : {
+              mode: { id: "homework", name: "Homework", allows: "some", until: "2026-11-24T17:00:00", closed: ["games"] },
+              next: { at: "2026-11-24T17:00:00", mode: "free", name: "Free time" },
+              bedtime: { at: "2026-11-24T21:30:00", wake: "2026-11-25T06:45:00" },
+              day: { date: "2026-11-24", uses: "tue", changed_today: Boolean(todayChange) },
+            },
+      },
+    ],
+  };
+  p._tab = "schedule";
+  p._wide = true;
+  p._schDayKey = "tue";
+  const sent = [];
+  p._hass.callWS = async (m) => {
+    sent.push(m);
+    return { schedule: p._sched, undo: "tok" };
+  };
+  p._render = () => {};
+  return { p, sent };
+}
+
+test("Schedule: the week with the night carried over, the now card, and the day's editor with handles", () => {
+  const { p } = scheduled();
+  const html = p._page();
+  assert.match(html, /data-tab="schedule"/);
+  assert.match(html, /Sam: Homework until 5 PM, then Free time/);
+  assert.match(html, /Bedtime at 9:30 PM/);
+  // Seven weekday rows, the Day off and the Half day
+  assert.equal((html.match(/class="s-wrow"/g) || []).length, 9);
+  assert.match(html, /26 Nov: day off/);
+  // Monday's night comes from Sunday's Sleep, drawn faded
+  assert.match(html, /class="s-seg carried"[^>]*title="Sleep midnight–6:45 AM"/);
+  assert.equal((html.match(/class="s-hnd"/g) || []).length, 6);
+  assert.match(html, /From Mon<\/span>/);
+  assert.match(html, /Every Tuesday<\/button><button data-action="sch-scope" data-scope="today"/);
+  assert.match(html, /Keeps its own bedtime and School time for now/);
+});
+
+test("Schedule: a half day ends School at its time and takes the Day off's limits", () => {
+  const { p } = scheduled();
+  const kid = p._schKid();
+  const half = p._schDay(kid, "half_day");
+  assert.deepEqual(half.changes.slice(1, 3), [[465, "school"], [720, "free"]]);
+  assert.equal(half.limits.all, 240);
+  kid.half_day.limits = "weekday";
+  assert.equal(p._schDay(kid, "half_day").limits.all, 180);
+});
+
+test("Schedule: edits snap, merge and go to the server; Today only goes to today's change", async () => {
+  const { p, sent } = scheduled();
+  // A time typed off the quarter hour snaps
+  await p._schAct("sch-time", { dataset: { i: "3" }, value: "16:07" });
+  assert.equal(sent[0].type, "hearth/schedule/set");
+  assert.deepEqual(sent[0].days, ["tue"]);
+  assert.deepEqual(sent[0].changes[3], ["16:00", "homework"]);
+  // Homework turned Free time merges with its neighbours
+  await p._schAct("sch-modesel", { dataset: { i: "3" }, value: "free" });
+  assert.deepEqual(sent[1].changes.map((c) => c[1]), ["free", "school", "free", "sleep"]);
+  // Remove a change: the one before runs on
+  await p._schAct("sch-del", { dataset: { i: "1" } });
+  assert.deepEqual(sent[2].changes, [["06:45", "free"], ["21:30", "sleep"]]);
+  // Today only
+  p._schScope = "today";
+  await p._schAct("sch-del", { dataset: { i: "0" } });
+  assert.equal(sent[3].type, "hearth/schedule/today");
+  assert.deepEqual(sent[3].changes, [["21:30", "sleep"]]);
+  clearTimeout(p._undoTimer);
+  clearTimeout(p._toastTimer);
+});
+
+test("Schedule: limits step by 15 minutes up to No limit, and the copy dialog names its count", async () => {
+  const { p, sent } = scheduled();
+  await p._schAct("sch-lim", { dataset: { group: "games", v: "15" } });
+  assert.match(p._page(), /<output>1 h 15<\/output>/);
+  clearTimeout(p._schLimTimer);
+  const kid = p._schKid();
+  kid.days.tue.limits.games = 600;
+  await p._schAct("sch-lim", { dataset: { group: "games", v: "15" } });
+  assert.equal(kid.days.tue.limits.games, null);
+  clearTimeout(p._schLimTimer);
+  await p._schAct("sch-dlg", { dataset: { dlg: "copy" } });
+  await p._schAct("sch-q", { dataset: { q: "school" } });
+  assert.match(p._page(), /Copy to 4 days/);
+  await p._schAct("sch-copy", { dataset: {} });
+  assert.deepEqual(sent.at(-1), { type: "hearth/schedule/copy", from: "person.sam", day: "tue", to_days: ["mon", "wed", "thu", "fri"], times: true, limits: true });
+  assert.equal(p._undo.text, "Copied Tuesday to Mon, Wed, Thu, Fri");
+  clearTimeout(p._undoTimer);
+});
+
+test("Schedule: a kid with no times yet, and a today-only change with Back to the schedule", () => {
+  let { p } = scheduled({ empty: true });
+  let html = p._page();
+  assert.match(html, /Sam has no times yet/);
+  assert.match(html, /No times yet: the day's limits count/);
+  ({ p } = scheduled({ todayChange: { date: "2026-11-24", changes: [["07:00", "free"], ["22:00", "sleep"]], limits: null } }));
+  p._schScope = "today";
+  html = p._page();
+  assert.match(html, /Changed for today only/);
+  assert.match(html, /data-action="sch-resume"/);
+  assert.match(html, /Changed for today<\/span>/);
 });

@@ -911,9 +911,50 @@ async def test_a_group_outside_all_screen_time_isn_t_held_by_it(
     )
     await hass.async_block_till_done()
     household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
-    assert household.outside_all() == {"music", "messaging"}
+    assert household.outside_all() == {"music", "messaging", "accessibility"}
     assert household.group_packages()["music"] == ["com.example.music"]
     assert "com.example.music" not in household._person_apps(household.days.get("person.sam"), household.membership())
+
+
+async def test_an_accessibility_app_is_never_paused(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    paused, _resumed = _family_link(hass)
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    # An adult moves the TV's game to Accessibility (a kid's reading aid, say): it counts there, not in All
+    assert household.sort_app("com.example.game", "accessibility")
+    await hass.async_block_till_done()
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    assert hass.states.get("sensor.hearth_sam_accessibility_today").state == "5"
+    assert hass.states.get("sensor.hearth_sam_screen_time_today").attributes["groups"]["all"] == 10
+    # No budget or bonus to set for it: nothing would pause it
+    assert hass.states.get("number.hearth_sam_accessibility_budget_on_school_days") is None
+    assert hass.states.get("sensor.hearth_sam_accessibility_minutes_left") is None
+    never = household.never_held(household.membership())
+    assert {"com.example.game", "com.google.android.apps.accessibility.voiceaccess"} <= never
+
+    # All screen time runs out: devices are told to spare it
+    await _budget(hass, "all", 5)
+    doc = household._person_document("person.sam")
+    all_entry = next(g for g in doc["groups"] if g["id"] == "all")
+    assert "com.example.game" in all_entry["except"] and "com.example.game" in doc["never_held"]
+
+    # Counted in All screen time (inside_all), and paused as an app and as a group: still never held
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "inside_all": ["accessibility"]})
+    await hass.async_block_till_done()
+    household = entry.runtime_data.household
+    await _pause(hass, app="com.example.game", minutes=30)
+    await _pause(hass, group="accessibility", minutes=30)
+    assert all("com.example.game" not in c.data.get("packages", []) for c in paused)
+    doc = household._person_document("person.sam")
+    assert all("com.example.game" not in g["apps"] for g in doc["groups"])
+    assert "com.example.game" in next(g for g in doc["groups"] if g["id"] == "all")["except"]
+    why = household.explain("person.sam", app="com.example.game")
+    assert [b for b in why["blocked_by"] if b["kind"] in ("budget", "pause") and b.get("app")] == []
+    assert not [b for b in why["blocked_by"] if b["kind"] == "budget"]
 
 
 async def test_family_link_never_pauses_an_app_with_unlimited_time(

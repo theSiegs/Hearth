@@ -6,6 +6,7 @@
 const TABS = [
   { id: "today", label: "Today", icon: "mdi:home-heart" },
   { id: "kids", label: "Kids", icon: "mdi:account-child" },
+  { id: "schedule", label: "Schedule", icon: "mdi:calendar-clock" },
   { id: "devices", label: "Devices", icon: "mdi:television" },
   { id: "apps", label: "Apps", icon: "mdi:apps" },
   { id: "family", label: "Family", icon: "mdi:account-group" },
@@ -89,6 +90,10 @@ const ICONS = {
   shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
   more: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
   list: '<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>',
+  copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
+  edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+  book: '<path d="M3 6.5C5.5 5 8.5 5 12 7c3.5-2 6.5-2 9-.5V19c-2.5-1.5-5.5-1.5-9 .5-3.5-2-6.5-2-9-.5z"/><path d="M12 7v12.5"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
 };
 const icon = (name, cls = "") => `<svg class="svg ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ""}</svg>`;
 
@@ -114,6 +119,67 @@ const slug = (text) =>
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "")
     .slice(0, 64);
+
+// The weekly schedule's days and times (weekly.py): minutes since midnight, snapped to 15 minutes
+const SCH_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const SCH_SHORT = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun", day_off: "Day off", half_day: "Half day" };
+const SCH_LONG = {
+  mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday", day_off: "Day off", half_day: "Half day",
+};
+const schMin = (hhmm) => {
+  const [h, m] = String(hhmm || "0:0").split(":").map(Number);
+  return Math.max(0, Math.min(1425, Math.round(((h || 0) * 60 + (m || 0)) / 15) * 15));
+};
+const schHhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+// "9:30 PM", "7 AM", "noon", "midnight"
+const schClock = (m) => {
+  m = ((m % 1440) + 1440) % 1440;
+  if (m === 0) return "midnight";
+  if (m === 720) return "noon";
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  return `${h % 12 || 12}${mm ? `:${String(mm).padStart(2, "0")}` : ""} ${h < 12 ? "AM" : "PM"}`;
+};
+// "9:30p", "7a"
+const schShort = (m) => {
+  m = ((m % 1440) + 1440) % 1440;
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  return `${h % 12 || 12}${mm ? `:${String(mm).padStart(2, "0")}` : ""}${h < 12 ? "a" : "p"}`;
+};
+const schIsoClock = (iso) => {
+  const t = new Date(iso);
+  return Number.isNaN(t.getTime()) ? "" : schClock(t.getHours() * 60 + t.getMinutes());
+};
+const schPct = (m) => `${(m / 1440) * 100}%`;
+const schDur = (m) => (m === null || m === undefined ? "No limit" : m === 0 ? "None" : fmtMinutes(m));
+const schDayMonth = (iso) => {
+  const d = new Date(`${iso}T12:00:00`);
+  return `${d.getDate()} ${d.toLocaleDateString("en", { month: "short" })}`;
+};
+// Sorted, one per time, neighbours with the same mode merged
+const schMerge = (changes) => {
+  const out = [];
+  for (const [m, mode] of [...changes].sort((a, b) => a[0] - b[0])) {
+    if (out.length && out[out.length - 1][0] === m) out[out.length - 1] = [m, mode];
+    else if (!out.length || out[out.length - 1][1] !== mode) out.push([m, mode]);
+  }
+  return out.filter((c, i, a) => i === 0 || a[i - 1][1] !== c[1]);
+};
+// A half day: the weekday's changes with its first School ending at [ends] (or [early] minutes before the weekday's)
+const schHalfChanges = (base, modes, ends, early) => {
+  const i = base.findIndex(([, m]) => modes[m]?.allows === "school");
+  if (i < 0) return base;
+  const after = base[i + 1];
+  let end;
+  if (early) {
+    if (!after) return base;
+    end = Math.round((after[0] - early) / 15) * 15;
+  } else end = ends ?? 720;
+  if (end <= base[i][0] || (after && end >= after[0])) return base;
+  const rest = after ? base.slice(i + 2).filter(([m]) => m > end) : [];
+  return schMerge([...base.slice(0, i + 1), [end, after ? after[1] : "free"], ...rest]);
+};
 
 class HearthPanel extends HTMLElement {
   constructor() {
@@ -194,6 +260,12 @@ class HearthPanel extends HTMLElement {
       }
       // Esc closes a kid's sheet on a phone
       if (e.key === "Escape" && this._sheetOpen) this._act("sheet-close", e.target);
+      // and the schedule's dialog, then its day sheet
+      if (e.key === "Escape" && this._tab === "schedule" && (this._schDlg || this._schSheet)) {
+        if (this._schDlg) this._schDlg = null;
+        else this._schSheet = false;
+        this._render();
+      }
     });
     // Swiped down from its top, the sheet closes
     let swipeFrom = null;
@@ -473,6 +545,7 @@ class HearthPanel extends HTMLElement {
   }
 
   async _act(action, el) {
+    if (action.startsWith("sch-")) return this._schAct(action, el);
     const d = el.dataset;
     const cfg = this._config;
     switch (action) {
@@ -490,6 +563,7 @@ class HearthPanel extends HTMLElement {
         this._render();
         if (d.tab === "kids" && this._kid) this._loadWatch(this._kid);
         if (d.tab === "kids") this._loadTodo(this._kid || this._kids()[0]?.id);
+        if (d.tab === "schedule") this._loadSchedule();
         return;
       case "kid-sheet":
         // A kid's row on Today: their sheet opens (a bottom sheet on a phone, the column beside on a wide page)
@@ -632,7 +706,7 @@ class HearthPanel extends HTMLElement {
       case "sugg-dismiss": {
         const a = this._glanceAction(d.id, d.person);
         const data = a?.data || { person: d.person, key: d.key };
-        this._defer(`${d.person}|${d.key}`, `Not today for ${this._personName(d.person)}`, () => this._call("dismiss_suggestion", data));
+        this._defer(`${d.person}|${d.key}`, `Dismissed for ${this._personName(d.person)}`, () => this._call("dismiss_suggestion", data));
         return;
       }
       case "allow": {
@@ -1268,6 +1342,7 @@ class HearthPanel extends HTMLElement {
         if (focusValue !== null && again.value !== focusValue && again.tagName === "INPUT") again.value = focusValue;
       }
     }
+    if (this._tab === "schedule" && this._sched && this._setupStep === null) this._schBindDrag();
     this._showAsk();
   }
 
@@ -1303,11 +1378,652 @@ class HearthPanel extends HTMLElement {
     if (this._error && !this._config) body = `<div class="card empty"><ha-icon icon="mdi:alert-circle-outline"></ha-icon><p>${esc(this._error)}</p></div>`;
     else if (!this._config) body = `<div class="loading">Loading Hearth…</div>`;
     else if (this._setupStep !== null) body = this._setup();
-    else body = { today: () => this._today(), kids: () => this._kidsTab(), devices: () => this._devicesTab(), apps: () => this._appsTab(), family: () => this._familyTab() }[this._tab]();
+    else body = { today: () => this._today(), kids: () => this._kidsTab(), schedule: () => this._scheduleTab(), devices: () => this._devicesTab(), apps: () => this._appsTab(), family: () => this._familyTab() }[this._tab]();
     const toast = this._undo
       ? `<div class="toast undo" role="status"><span>${esc(this._undo.text)}</span>${this._undo.undo || this._undo.key ? `<button data-action="undo">Undo</button>` : ""}<i class="tbar" style="animation-duration:${UNDO_MS}ms;animation-delay:-${Math.max(0, Date.now() - this._undo.at)}ms"></i></div>`
       : this._toast ? `<div class="toast" role="status">${esc(this._toast)}</div>` : "";
-    return `${toolbar}<main class="content ${this._tab === "today" && this._setupStep === null ? "wide" : ""}">${body}</main>${toast}`;
+    return `${toolbar}<main class="content ${["today", "schedule"].includes(this._tab) && this._setupStep === null ? "wide" : ""}">${body}</main>${toast}`;
+  }
+
+  // Schedule (the weekly schedule, weekly.py): each kid's week of modes and limits, the editor with drag, copy,
+  // today-only changes and the family's modes. Edits go to hearth/schedule/* and come back as the whole view.
+
+  async _loadSchedule() {
+    if (this._schLoading) return;
+    this._schLoading = true;
+    try {
+      const answer = await this._hass.callWS({ type: "hearth/schedule/get" });
+      this._sched = answer.schedule;
+      this._schError = null;
+    } catch (err) {
+      this._schError = this._message(err);
+    } finally {
+      this._schLoading = false;
+    }
+    this._render();
+  }
+
+  // An edit: sent at once, the answer's view replaces the page's; Undo offered with [text]
+  async _schSend(message, text) {
+    try {
+      const answer = await this._hass.callWS(message);
+      this._sched = answer.schedule;
+      if (text && answer.undo) {
+        const token = typeof answer.undo === "string" ? answer.undo : null;
+        this._offerUndo(text, token ? async () => this._schUndo(token) : null);
+      } else if (text) this._notify(text);
+      else this._render();
+    } catch (err) {
+      this._notify(this._message(err));
+      await this._loadSchedule();
+    }
+  }
+
+  async _schUndo(token) {
+    const answer = await this._hass.callWS({ type: "hearth/schedule/undo", token });
+    this._sched = answer.schedule;
+    this._notify("Undone");
+  }
+
+  _schKid() {
+    const kids = this._sched?.kids || [];
+    if (!kids.some((k) => k.id === this._schKidId)) this._schKidId = kids[0]?.id || null;
+    return kids.find((k) => k.id === this._schKidId) || null;
+  }
+
+  _schTodayKey() {
+    const today = this._sched?.today;
+    return (this._sched?.week || []).find((d) => d.date === today)?.key || SCH_DAYS[(new Date().getDay() + 6) % 7];
+  }
+
+  _schNowMin() {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+  }
+
+  _schModes() {
+    return this._sched?.modes || {};
+  }
+
+  _schModeName(id) {
+    return this._schModes()[id]?.name || id;
+  }
+
+  // A day's changes and limits as shown: the weekly day, today's own copy (Today only), or the half day worked out
+  _schDay(kid, key, scope = "weekly") {
+    if (key === "half_day") {
+      const base = kid.days[this._schHalfBase()] || { changes: [], limits: {} };
+      const half = kid.half_day || {};
+      const changes = schHalfChanges(base.changes.map(([at, m]) => [schMin(at), m]), this._schModes(), half.school_ends ? schMin(half.school_ends) : null, half.early || null);
+      const limits = half.limits === "weekday" ? base.limits : (kid.days.day_off || {}).limits;
+      return { changes, limits: { ...(limits || {}) } };
+    }
+    const own = kid.days[key] || { changes: [], limits: {} };
+    const day = { changes: own.changes.map(([at, m]) => [schMin(at), m]), limits: { ...(own.limits || {}) } };
+    const today = kid.today;
+    if (scope === "today" && key === this._schTodayKey() && today && today.date === this._sched.today) {
+      if (today.changes) day.changes = today.changes.map(([at, m]) => [schMin(at), m]);
+      if (today.limits) day.limits = { ...day.limits, ...today.limits };
+    }
+    return day;
+  }
+
+  // The weekday the Half day's row draws (the next half day this week, else Monday)
+  _schHalfBase() {
+    const half = (this._sched?.week || []).find((d) => d.type === "half_day");
+    return half ? half.key : "mon";
+  }
+
+  _schPrevKey(key) {
+    if (key === "day_off" || key === "half_day") return "sun";
+    return SCH_DAYS[(SCH_DAYS.indexOf(key) + 6) % 7];
+  }
+
+  _schSegments(kid, key, scope = "weekly") {
+    const day = this._schDay(kid, key, scope);
+    let carry = null;
+    let back = this._schPrevKey(key);
+    for (let i = 0; i < 8 && carry === null; i++) {
+      const prev = this._schDay(kid, back);
+      if (prev.changes.length) carry = prev.changes[prev.changes.length - 1][1];
+      back = this._schPrevKey(back);
+    }
+    const out = [];
+    let at = 0;
+    let mode = carry;
+    let carried = true;
+    for (const [minute, changed] of day.changes) {
+      if (minute > at && mode !== null) out.push({ s: at, e: minute, mode, carried });
+      at = minute;
+      mode = changed;
+      carried = false;
+    }
+    if (mode !== null) out.push({ s: at, e: 1440, mode, carried });
+    return out;
+  }
+
+  _schColor(id) {
+    const known = { sleep: "var(--h-night)", school: "var(--h-school)", free: "var(--h-ok)", homework: "var(--m-homework)", wind: "var(--m-wind)" };
+    if (known[id]) return known[id];
+    const ids = Object.keys(this._schModes()).filter((m) => !known[m]);
+    return `var(--p-x${Math.max(0, ids.indexOf(id)) % 4})`;
+  }
+
+  _schBar(kid, key, { now = false, scope = "weekly", labels = false } = {}) {
+    const segs = this._schSegments(kid, key, scope);
+    const parts = segs
+      .map(
+        (s) => `<div class="s-seg ${s.carried ? "carried" : ""}" style="left:${schPct(s.s)};width:${schPct(s.e - s.s)};background:${this._schColor(s.mode)}" title="${esc(this._schModeName(s.mode))} ${schClock(s.s)}–${schClock(s.e)}">${labels && s.e - s.s >= 75 ? `<span>${esc(this._schModeName(s.mode))}</span>` : ""}</div>`
+      )
+      .join("");
+    return `<div class="s-bar">${parts}${now ? `<i class="s-nowl" style="left:${schPct(this._schNowMin())}"></i>` : ""}</div>`;
+  }
+
+  _schAxis() {
+    return `<div class="s-ticks">${[0, 6, 12, 18, 24].map((h) => `<span style="left:${(h / 24) * 100}%">${h === 0 || h === 24 ? "12a" : h === 12 ? "12p" : h < 12 ? `${h}a` : `${h - 12}p`}</span>`).join("")}</div>`;
+  }
+
+  _schIsSleep(mode) {
+    return this._schModes()[mode]?.allows === "nothing";
+  }
+
+  _schIsSchool(mode) {
+    return this._schModes()[mode]?.allows === "school";
+  }
+
+  _schBed(day) {
+    const last = day.changes[day.changes.length - 1];
+    return last && this._schIsSleep(last[1]) ? last[0] : null;
+  }
+
+  _schWeekRow(kid, i) {
+    const key = SCH_DAYS[i];
+    const date = (this._sched.week || [])[i];
+    const isToday = date?.date === this._sched.today;
+    const changedToday = isToday && kid.today?.date === this._sched.today;
+    const day = this._schDay(kid, key, changedToday ? "today" : "weekly");
+    const bed = this._schBed(day);
+    const sum = [];
+    if (changedToday) sum.push(`<span class="s-tag over">Changed for today</span>`);
+    if (bed !== null) sum.push(`Bed ${schShort(bed)}`);
+    if (day.changes.some(([, m]) => this._schIsSchool(m))) sum.push("School");
+    sum.push(`${schDur(day.limits.all)} a day`);
+    const uses = (kid.this_week || [])[i]?.uses;
+    const dm = date ? schDayMonth(date.date) : "";
+    if (uses === "day_off") sum.push(`<span class="s-tag off">${esc(dm)}: day off</span>`);
+    else if (uses === "half_day") sum.push(`<span class="s-tag half">${esc(dm)}: half day</span>`);
+    else if (date && date.type === "school" && i >= 5) sum.push(`<span class="s-tag half">${esc(dm)}: school day</span>`);
+    const label = date ? `<small>${isToday ? '<span class="s-today">Today</span>' : esc(dm)}</small>` : "";
+    return `<button class="s-wrow" data-action="sch-day" data-day="${key}" aria-current="${this._schDayKey === key}">
+      <span class="s-dl">${SCH_SHORT[key]}${label}</span>${this._schBar(kid, key, { now: isToday, scope: changedToday ? "today" : "weekly" })}
+      <span></span><span class="s-sum">${sum.join("<span>·</span>")}</span></button>`;
+  }
+
+  _schSpecialRow(kid, key) {
+    const day = this._schDay(kid, key);
+    const sum = [];
+    if (key === "day_off") {
+      const bed = this._schBed(day);
+      if (bed !== null) sum.push(`Bed ${schShort(bed)}`);
+      sum.push(day.changes.some(([, m]) => this._schIsSchool(m)) ? "School" : "No School", `${schDur(day.limits.all)} a day`, "Days off and weekdays with no school");
+    } else {
+      const half = kid.half_day || {};
+      sum.push(half.early ? `School ends ${schDur(half.early)} early` : `School ends ${schShort(schMin(half.school_ends || "12:00"))}`);
+      sum.push(half.limits === "weekday" ? "The weekday's limits" : "Day off's limits", "Otherwise the weekday's times");
+    }
+    return `<button class="s-wrow" data-action="sch-day" data-day="${key}" aria-current="${this._schDayKey === key}">
+      <span class="s-dl">${key === "day_off" ? "Day<br>off" : "Half<br>day"}</span>${this._schBar(kid, key)}
+      <span></span><span class="s-sum">${sum.join("<span>·</span>")}</span></button>`;
+  }
+
+  _schNowCard(kid) {
+    const now = kid.now;
+    if (!now) {
+      return `<div class="card s-nowcard"><span class="s-dot" style="background:var(--h-surface-2)">${icon("info")}</span><div class="s-grow">
+        <div class="s-t">${esc(kid.name)} has no times yet</div>
+        <div class="s-d">Each day's limits count as set below. Bedtime and School time come from Family Link until you add them here.</div></div></div>`;
+    }
+    const mode = this._schModes()[now.mode.id] || {};
+    const until = now.mode.until ? ` until ${schIsoClock(now.mode.until)}` : "";
+    const then = now.next ? `, then ${esc(now.next.name || now.next.mode)}` : "";
+    const ic = mode.allows === "nothing" ? "moon" : mode.allows === "school" ? "school" : mode.allows === "some" ? "book" : "sun";
+    const color = this._schColor(now.mode.id);
+    const changed = now.day?.changed_today;
+    return `<div class="card s-nowcard"><span class="s-dot" style="background:color-mix(in srgb, ${color} 16%, transparent);color:${color}">${icon(ic)}</span><div class="s-grow">
+      <div class="s-t">${esc(kid.name)}: ${esc(now.mode.name)}${esc(until)}${then}</div>
+      <div class="s-d">${esc(mode.description || "")}${now.bedtime?.at ? ` Bedtime at ${esc(schIsoClock(now.bedtime.at))}.` : ""}${changed ? " Changed for today only." : ""}</div></div>
+      ${changed ? `<button class="b sm" data-action="sch-resume">Back to the schedule</button>` : ""}</div>`;
+  }
+
+  _schComingUp() {
+    const rows = this._sched.coming_up || [];
+    if (!rows.length) return `<div class="card flat s-up"><div class="s-uprow"><div class="s-grow s-d">No days off or half days in the next three weeks.</div></div></div>`;
+    const words = { day_off: "Day off", half_day: "Half day", school: "School day" };
+    const src = { typed: "From the dates you typed in", calendar: "From the school calendar", entity: "From your day-type helper", rule: "From the school year", date: "From the dates you typed in" };
+    return `<div class="card flat s-up">${rows
+      .map((r) => {
+        const d = new Date(`${r.date}T12:00:00`);
+        const what = r.type === "day_off" ? "the Day off's schedule, no School." : r.type === "half_day" ? "School ends early; the Half day's limits." : "the Friday schedule.";
+        return `<div class="s-uprow"><span class="s-cal"><small>${d.toLocaleDateString("en", { weekday: "short" })}</small><b>${d.getDate()}</b></span>
+          <div class="s-grow"><div class="s-t">${words[r.type] || r.type}</div><div class="s-d">${cap(what)} ${esc(src[r.source] || "")}.</div></div></div>`;
+      })
+      .join("")}</div>`;
+  }
+
+  _schModesCard() {
+    const modes = this._schModes();
+    return `<div class="card flat s-modes">${Object.entries(modes)
+      .map(([id, m]) => `<button class="s-mrow" data-action="sch-mode" data-mode="${esc(id)}"><span class="s-sw" style="background:${this._schColor(id)}"></span>
+        <div class="s-grow"><div class="s-t">${esc(m.name)}</div><div class="s-d">${esc(m.description || "")}</div></div>${icon("edit", "sm muted")}</button>`)
+      .join("")}${Object.keys(modes).length < 8 ? `<button class="s-mrow" data-action="sch-mode" data-mode=""><span class="s-sw" style="border:1.5px dashed var(--secondary-text-color)"></span><div class="s-grow"><div class="s-t lnk">Add a mode</div></div></button>` : ""}</div>`;
+  }
+
+  _schControls(kid) {
+    const has = new Set(kid.controls || []);
+    const lines = [{ name: "The TV and Hearth phones", sub: "Hearth", d: "Everything as scheduled, to the minute: locked in Sleep and School, closed groups held." }];
+    if (has.has("family_link")) lines.push({ name: "Family Link", sub: "phones and tablets", d: "Keeps its own bedtime and School time for now. During modes that close groups, Hearth pauses those groups' apps." });
+    if (has.has("family_safety")) lines.push({ name: "Xbox and Windows", sub: "Family Safety", d: "Hearth locks them during Sleep, School and modes that close their groups." });
+    if (has.has("nintendo")) lines.push({ name: "Switch", sub: "Nintendo", d: "Hearth holds it during Sleep, School and modes that close its groups." });
+    return `<div class="s-subh"><span>How Hearth holds it</span><span style="font-weight:500">today</span></div>
+      <ul class="s-sync">${lines.map((l) => `<li><span class="s-ic ok">${icon("check", "sm")}</span><div class="s-t">${esc(l.name)} <small>${esc(l.sub)}</small></div><div class="s-d">${esc(l.d)}</div></li>`).join("")}</ul>
+      ${has.size ? `<div class="s-hint">Sending the schedule to Family Link, the Xbox and the Switch themselves comes in a later update.</div>` : ""}`;
+  }
+
+  _schEditor(kid) {
+    const key = this._schDayKey;
+    const todayKey = this._schTodayKey();
+    const isToday = key === todayKey;
+    const scope = isToday ? this._schScope : "weekly";
+    const half = key === "half_day";
+    const day = this._schDay(kid, key, scope);
+    const segs = this._schSegments(kid, key, scope);
+    const modes = this._schModes();
+    const title = SCH_LONG[key];
+    const weekIndex = SCH_DAYS.indexOf(key);
+    const date = weekIndex >= 0 ? (this._sched.week || [])[weekIndex] : null;
+    const uses = weekIndex >= 0 ? (kid.this_week || [])[weekIndex]?.uses : null;
+    const sub = key === "day_off"
+      ? "Used on days off from school and on weekdays outside the school year."
+      : half
+        ? "A school day that ends early: the weekday's times, with School ending at this time."
+        : `Every ${title}${uses === "day_off" || uses === "half_day" ? `, except ${schDayMonth(date.date)} (${uses === "day_off" ? "a day off" : "a half day"})` : ""}.`;
+    const scopeCtl = isToday
+      ? `<div class="s-segc" role="group" aria-label="Which ${esc(title)}"><button data-action="sch-scope" data-scope="weekly" aria-pressed="${scope === "weekly"}">Every ${esc(title)}</button><button data-action="sch-scope" data-scope="today" aria-pressed="${scope === "today"}">Today only</button></div>`
+      : "";
+    const handles = half
+      ? ""
+      : day.changes
+          .map(([tm], i) => `<button class="s-hnd" data-i="${i}" style="left:${schPct(tm)}" aria-label="Change at ${schClock(tm)}; arrow keys move it 15 minutes"><i></i><span class="s-tip">${schClock(tm)}</span></button>`)
+          .join("");
+    const big = `<div class="s-big" id="sch-big">${this._schBar(kid, key, { now: isToday, scope, labels: true })}${handles}<div class="s-axis">${this._schAxis()}</div></div>`;
+    const first = segs[0];
+    const carried = first && first.carried && day.changes.length
+      ? `<li class="s-blk"><span class="s-carried">From ${key === "day_off" || half ? "the night before" : SCH_SHORT[this._schPrevKey(key)]}</span><span class="s-chip" style="background:color-mix(in srgb, ${this._schColor(first.mode)} 16%, transparent);color:${this._schColor(first.mode)}">${esc(this._schModeName(first.mode))}</span><span class="s-x"></span></li>`
+      : "";
+    const options = (m) => Object.entries(modes).map(([id, md]) => `<option value="${esc(id)}" ${id === m ? "selected" : ""}>${esc(md.name)}</option>`).join("");
+    const rows = day.changes
+      .map(([tm, m], i) => `<li class="s-blk"><input class="s-tm" type="time" step="900" value="${schHhmm(tm)}" data-change="sch-time" data-i="${i}" aria-label="Starts at" ${half ? "disabled" : ""}>
+        <select data-change="sch-modesel" data-i="${i}" aria-label="Mode" ${half ? "disabled" : ""}>${options(m)}</select>
+        ${half ? '<span class="s-x"></span>' : `<button class="s-x" data-action="sch-del" data-i="${i}" aria-label="Remove">${icon("close", "sm")}</button>`}</li>`)
+      .join("");
+    const empty = !day.changes.length && !half ? `<li class="s-blk"><span class="s-d">No times yet: the day's limits count, and Family Link's bedtime and School time hold.</span></li>` : "";
+    const halfCtl = half
+      ? `<div class="s-subh"><span>School ends at</span></div>
+        <div class="s-blk" style="border:0"><input class="s-tm" type="time" step="900" value="${esc((kid.half_day || {}).school_ends || "12:00")}" data-change="sch-half" aria-label="School ends at">
+        <select data-change="sch-half-limits" aria-label="Limits"><option value="day_off" ${(kid.half_day || {}).limits !== "weekday" ? "selected" : ""}>The Day off's limits</option><option value="weekday" ${(kid.half_day || {}).limits === "weekday" ? "selected" : ""}>The weekday's limits</option></select></div>`
+      : "";
+    const groups = (this._sched.groups || []).filter((g) => g.in_all || g.id === "all");
+    const lim = half
+      ? ""
+      : `<div class="s-subh"><span>Time each day</span><span style="font-weight:500">${scope === "today" ? "today only" : ""}</span></div>
+      ${groups
+        .map((g) => `<div class="s-lim"><span class="s-pdot" style="background:var(--p-${esc(g.id)}, var(--p-other))"></span><span class="s-grow">${esc(g.name)}${g.id === "all" ? "<small>Every screen together</small>" : ""}</span>
+        <span class="s-step"><button data-action="sch-lim" data-group="${esc(g.id)}" data-v="-15" aria-label="15 minutes less">−</button><output>${schDur(day.limits[g.id])}</output><button data-action="sch-lim" data-group="${esc(g.id)}" data-v="15" aria-label="15 minutes more">+</button></span></div>`)
+        .join("")}`;
+    const foot = `<div class="s-foot">${half ? "" : `<button class="b" data-action="sch-dlg" data-dlg="copy">${icon("copy", "sm")}Copy this day to…</button>`}
+      ${(this._sched.kids || []).length > 1 ? `<button class="b ghost" data-action="sch-dlg" data-dlg="kids">Copy to another kid…</button>` : ""}</div>`;
+    return `<div class="card s-ed"><div class="s-edh"><div class="s-grow"><h2>${esc(title)}</h2><div class="s-d">${esc(sub)}</div></div></div>
+      ${scopeCtl}${big}
+      ${half || !day.changes.length ? "" : `<div class="s-hint">Drag a handle to move a change. Times snap to 15 minutes.</div>`}
+      <ul class="s-blocks">${carried}${rows}${empty}</ul>
+      ${half ? halfCtl : day.changes.length < 12 ? `<button class="b sm s-add" data-action="sch-add">${icon("plus", "sm")}Add a change</button>` : ""}
+      ${lim}${this._schControls(kid)}${foot}</div>`;
+  }
+
+  _schDialog(kid) {
+    const dlg = this._schDlg;
+    if (!dlg) return "";
+    const key = this._schDayKey;
+    if (dlg === "copy") {
+      const to = this._schCopyTo || new Set();
+      const what = this._schCopyWhat || { times: true, limits: true };
+      return `<div class="s-scrim" data-action="sch-dlg-close"><div class="s-dlg" role="dialog" aria-modal="true" aria-label="Copy ${esc(SCH_LONG[key])}" data-stop="1">
+        <h3>Copy ${esc(SCH_LONG[key])} to…</h3><p>${esc(kid.name)}'s ${esc(SCH_LONG[key])} replaces the days you pick. You can undo it.</p>
+        <div class="s-quick"><button data-action="sch-q" data-q="school">School days</button><button data-action="sch-q" data-q="weekend">Weekend</button><button data-action="sch-q" data-q="all">Every day</button><button data-action="sch-q" data-q="none">None</button></div>
+        <div class="s-daygrid">${[...SCH_DAYS, "day_off"].map((o) => `<button class="s-dbox" data-action="sch-pick" data-day="${o}" aria-pressed="${to.has(o)}" ${o === key ? "disabled" : ""}>${o === "day_off" ? "Day off" : SCH_SHORT[o]}${o === key ? "<small>this day</small>" : ""}</button>`).join("")}</div>
+        <label class="s-ck"><input type="checkbox" data-change="sch-what" data-w="times" ${what.times ? "checked" : ""}>The times (Sleep, School, Free time…)</label>
+        <label class="s-ck"><input type="checkbox" data-change="sch-what" data-w="limits" ${what.limits ? "checked" : ""}>The time each day (limits)</label>
+        <div class="s-acts"><button class="b ghost" data-action="sch-dlg-close">Cancel</button><button class="b primary" data-action="sch-copy" ${to.size && (what.times || what.limits) ? "" : "disabled"}>Copy to ${to.size || "no"} day${to.size === 1 ? "" : "s"}</button></div></div></div>`;
+    }
+    if (dlg === "kids") {
+      const others = (this._sched.kids || []).filter((k) => k.id !== kid.id);
+      const to = this._schKidsTo || new Set();
+      const whole = this._schKidsWhat !== "day";
+      return `<div class="s-scrim" data-action="sch-dlg-close"><div class="s-dlg" role="dialog" aria-modal="true" aria-label="Copy to another kid" data-stop="1">
+        <h3>Copy ${esc(kid.name)}'s schedule to…</h3><p>Their schedule is replaced. You can undo it.</p>
+        ${others.map((k) => `<label class="s-ck"><input type="checkbox" data-change="sch-kidck" data-kid="${esc(k.id)}" ${to.has(k.id) ? "checked" : ""}>${esc(k.name)}</label>`).join("")}
+        <div class="s-subh"><span>What</span></div>
+        <label class="s-radio"><input type="radio" name="sch-kw" data-change="sch-kw" value="week" ${whole ? "checked" : ""}><span>The whole week<small>Monday to Sunday, Day off and Half day</small></span></label>
+        <label class="s-radio"><input type="radio" name="sch-kw" data-change="sch-kw" value="day" ${whole ? "" : "checked"}><span>Only ${esc(SCH_LONG[key])}<small>The other days stay as they are</small></span></label>
+        <label class="s-ck"><input type="checkbox" data-change="sch-kidlim" ${this._schKidsLimits !== false ? "checked" : ""}>With the time each day (limits)</label>
+        <div class="s-acts"><button class="b ghost" data-action="sch-dlg-close">Cancel</button><button class="b primary" data-action="sch-copykids" ${to.size ? "" : "disabled"}>Copy</button></div></div></div>`;
+    }
+    if (dlg === "mode") {
+      const draft = this._schModeDraft;
+      const radio = (v, title, sub) => `<label class="s-radio"><input type="radio" name="sch-mk" data-change="sch-mode-kind" value="${v}" ${draft.allows === v ? "checked" : ""} ${draft.builtin && draft.allows !== v ? "disabled" : ""}><span>${title}<small>${sub}</small></span></label>`;
+      const pools = (this._sched.groups || []).filter((g) => g.id !== "all");
+      return `<div class="s-scrim" data-action="sch-dlg-close"><div class="s-dlg" role="dialog" aria-modal="true" aria-label="Mode" data-stop="1">
+        <h3>${draft.id ? esc(draft.name || "Mode") : "New mode"}</h3><p>Modes are the family's: changing one changes it in every kid's schedule.</p>
+        <label class="s-ck s-name"><span class="muted">Name</span><input id="sch-mode-name" value="${esc(draft.name || "")}" maxlength="40"></label>
+        <div class="s-subh"><span>While it's on</span></div>
+        ${radio("everything", "Everything", "Screens are open; the day's limits still count.")}
+        ${radio("some", "Some groups closed", "Those groups' apps and games are held; the rest stays open.")}
+        ${draft.allows === "some" ? `<div class="s-pchips">${pools.map((p) => `<button class="s-pchip" data-action="sch-pool" data-group="${esc(p.id)}" aria-pressed="${(draft.closed || []).includes(p.id)}">${esc(p.name)}</button>`).join("")}</div>` : ""}
+        ${radio("school", "School time", "Only the apps School time allows. The TV and Hearth phones lock.")}
+        ${radio("nothing", "Bedtime", "Everything locked.")}
+        ${draft.allows === "nothing" ? `<label class="s-ck" style="margin-left:28px"><input type="checkbox" data-change="sch-mode-nst" ${draft.keep_not_screen_time !== false ? "checked" : ""}>Keep apps that aren't screen time (music, audiobooks)</label>` : ""}
+        <div class="s-acts">${draft.id && !draft.builtin ? `<button class="b ghost" style="margin-right:auto;color:var(--h-out)" data-action="sch-mode-remove">Remove</button>` : ""}<button class="b ghost" data-action="sch-dlg-close">Cancel</button><button class="b primary" data-action="sch-mode-save">Save</button></div></div></div>`;
+    }
+    return "";
+  }
+
+  _scheduleTab() {
+    if (!this._sched) {
+      if (!this._schLoading && !this._schError) setTimeout(() => this._loadSchedule(), 0);
+      return `<div class="today sched">${this._schError ? `<div class="card empty"><p>${esc(this._schError)}</p></div>` : `<div class="loading">Loading the schedule…</div>`}</div>`;
+    }
+    const kid = this._schKid();
+    const head = `<header class="top"><div class="s-grow"><h1>Schedule</h1>
+      <div class="sub">Set up a day, then copy it to other days. Each change runs until the next; the night carries over to the morning.</div></div></header>`;
+    if (!kid) return `<div class="today sched">${head}<div class="card empty"><p>Mark who's a kid in the Family tab: each kid gets a week of their own.</p></div></div>`;
+    if (!this._schDayKey) this._schDayKey = this._schTodayKey();
+    if (!this._schScope) this._schScope = "weekly";
+    const kids = `<div class="s-kids" role="group" aria-label="Kid">${(this._sched.kids || [])
+      .map((k) => `<button class="s-kidchip" data-action="sch-kid" data-kid="${esc(k.id)}" aria-pressed="${k.id === kid.id}"><span class="s-av">${esc((k.name || "?")[0])}</span>${esc(k.name)}</button>`)
+      .join("")}</div>`;
+    const week = `<div class="card flat s-week"><div class="s-axisrow"><span></span>${this._schAxis()}</div>${SCH_DAYS.map((_, i) => this._schWeekRow(kid, i)).join("")}</div>`;
+    const main = `<div>
+      <div class="sec"><span>${esc(kid.name)}'s week</span>${(this._sched.kids || []).length > 1 ? `<button class="lnk" data-action="sch-dlg" data-dlg="kids" style="font-size:13px">Copy to another kid</button>` : ""}</div>
+      ${week}
+      <div class="sec"><span>Special days</span><span style="font-weight:500">These replace the weekday</span></div>
+      <div class="card flat s-week">${this._schSpecialRow(kid, "day_off")}${this._schSpecialRow(kid, "half_day")}</div>
+      <div class="sec"><span>Coming up</span></div>${this._schComingUp()}
+      <div class="sec"><span>Modes</span><span style="font-weight:500">The family's</span></div>${this._schModesCard()}
+    </div>`;
+    const editor = this._schEditor(kid);
+    const body = this._wide
+      ? `<div class="s-cols">${main}<aside class="s-side">${editor}</aside></div>`
+      : `${main}${this._schSheet ? `<div class="s-sheet"><div class="s-shtop"><button class="b ghost" data-action="sch-close" aria-label="Back">${icon("chev", "s-back")}</button><span class="s-t">${esc(kid.name)} · ${esc(SCH_LONG[this._schDayKey])}</span></div>${editor}</div>` : ""}`;
+    return `<div class="today sched">${head}${kids}${this._schNowCard(kid)}${body}${this._schDialog(kid)}</div>`;
+  }
+
+  // The day being edited, as the editor sends it: [[HH:MM, mode]] and limits
+  _schEditable(kid) {
+    const key = this._schDayKey;
+    const scope = key === this._schTodayKey() ? this._schScope : "weekly";
+    return { key, scope, day: this._schDay(kid, key, scope) };
+  }
+
+  _schCommit(kid, day, text) {
+    const key = this._schDayKey;
+    const scope = key === this._schTodayKey() ? this._schScope : "weekly";
+    const changes = schMerge(day.changes).map(([m, mode]) => [schHhmm(m), mode]);
+    // Shown at once; the answer replaces it
+    if (scope === "today") {
+      kid.today = { ...(kid.today || {}), date: this._sched.today, changes, limits: day.limits };
+      this._render();
+      return this._schSend({ type: "hearth/schedule/today", person: kid.id, changes, limits: day.limits }, text || "Changed for today only");
+    }
+    kid.days[key] = { changes, limits: day.limits };
+    kid.set = true;
+    this._render();
+    return this._schSend({ type: "hearth/schedule/set", person: kid.id, days: [key], changes, limits: day.limits }, text);
+  }
+
+  async _schAct(action, el) {
+    const d = el.dataset;
+    const kid = this._schKid();
+    switch (action) {
+      case "sch-kid":
+        this._schKidId = d.kid;
+        this._schScope = "weekly";
+        break;
+      case "sch-day":
+        this._schDayKey = d.day;
+        this._schSheet = true;
+        if (d.day !== this._schTodayKey()) this._schScope = "weekly";
+        break;
+      case "sch-close":
+        this._schSheet = false;
+        break;
+      case "sch-scope":
+        this._schScope = d.scope;
+        break;
+      case "sch-resume":
+        await this._schSend({ type: "hearth/schedule/resume", person: kid.id }, `${kid.name} is back on the schedule`);
+        return;
+      case "sch-dlg":
+        this._schDlg = d.dlg;
+        if (d.dlg === "copy") this._schCopyTo = new Set();
+        if (d.dlg === "kids") this._schKidsTo = new Set();
+        break;
+      case "sch-dlg-close":
+        // The scrim closes it; a click inside the dialog doesn't
+        if (el.classList.contains("s-scrim") && this._schClickInside) {
+          this._schClickInside = false;
+          return;
+        }
+        this._schDlg = null;
+        break;
+      case "sch-q": {
+        const sets = { school: SCH_DAYS.slice(0, 5), weekend: SCH_DAYS.slice(5), all: [...SCH_DAYS, "day_off"], none: [] };
+        this._schCopyTo = new Set(sets[d.q].filter((x) => x !== this._schDayKey));
+        break;
+      }
+      case "sch-pick": {
+        const to = this._schCopyTo || new Set();
+        if (to.has(d.day)) to.delete(d.day);
+        else to.add(d.day);
+        this._schCopyTo = to;
+        break;
+      }
+      case "sch-copy": {
+        const what = this._schCopyWhat || { times: true, limits: true };
+        const days = [...(this._schCopyTo || [])];
+        this._schDlg = null;
+        await this._schSend(
+          { type: "hearth/schedule/copy", from: kid.id, day: this._schDayKey, to_days: days, times: what.times, limits: what.limits },
+          `Copied ${SCH_LONG[this._schDayKey]} to ${days.map((x) => SCH_SHORT[x]).join(", ")}`
+        );
+        return;
+      }
+      case "sch-copykids": {
+        const to = [...(this._schKidsTo || [])];
+        const whole = this._schKidsWhat !== "day";
+        this._schDlg = null;
+        const names = to.map((id) => (this._sched.kids || []).find((k) => k.id === id)?.name || id);
+        await this._schSend(
+          { type: "hearth/schedule/copy", from: kid.id, day: whole ? null : this._schDayKey, to_people: to, times: true, limits: this._schKidsLimits !== false },
+          `Copied ${kid.name}'s ${whole ? "week" : SCH_LONG[this._schDayKey]} to ${listWords(names)}`
+        );
+        return;
+      }
+      case "sch-del": {
+        const { day } = this._schEditable(kid);
+        day.changes.splice(Number(d.i), 1);
+        await this._schCommit(kid, day, "Removed a change");
+        return;
+      }
+      case "sch-add": {
+        const { key, scope, day } = this._schEditable(kid);
+        const segs = this._schSegments(kid, key, scope).filter((s) => !s.carried);
+        const longest = segs.reduce((a, b) => (b.e - b.s > a.e - a.s ? b : a), segs[0] || { s: 0, e: 1440, mode: "sleep" });
+        const at = Math.min(1425, Math.round((longest.s + (longest.e - longest.s) / 2) / 15) * 15);
+        const modes = this._schModes();
+        const other = longest.mode === "free" ? Object.keys(modes).find((m) => modes[m].allows === "some") || "sleep" : "free";
+        day.changes.push([day.changes.length ? at : 7 * 60, day.changes.length ? other : "free"]);
+        day.changes.sort((a, b) => a[0] - b[0]);
+        await this._schCommit(kid, day);
+        return;
+      }
+      case "sch-lim": {
+        const { day } = this._schEditable(kid);
+        const v = Number(d.v);
+        let cur = day.limits[d.group];
+        if (cur === null || cur === undefined) cur = v > 0 ? null : 600;
+        else cur += v;
+        if (cur !== null && cur > 600) cur = null;
+        if (cur !== null && cur < 0) cur = 0;
+        day.limits[d.group] = cur;
+        // Steps come quickly: sent once they stop
+        clearTimeout(this._schLimTimer);
+        const scope = this._schDayKey === this._schTodayKey() ? this._schScope : "weekly";
+        if (scope === "today") kid.today = { ...(kid.today || {}), date: this._sched.today, limits: day.limits, changes: kid.today?.changes || null };
+        else kid.days[this._schDayKey] = { ...(kid.days[this._schDayKey] || { changes: [] }), limits: day.limits };
+        this._render();
+        this._schLimTimer = setTimeout(() => this._schCommit(kid, day), 700);
+        return;
+      }
+      case "sch-mode": {
+        const mode = this._schModes()[d.mode];
+        this._schModeDraft = mode ? { id: d.mode, ...JSON.parse(JSON.stringify(mode)) } : { id: null, name: "", allows: "some", closed: [] };
+        this._schDlg = "mode";
+        break;
+      }
+      case "sch-pool": {
+        const draft = this._schModeDraft;
+        draft.name = this._value("#sch-mode-name") || draft.name;
+        const closed = new Set(draft.closed || []);
+        if (closed.has(d.group)) closed.delete(d.group);
+        else closed.add(d.group);
+        draft.closed = [...closed];
+        break;
+      }
+      case "sch-mode-save": {
+        const draft = this._schModeDraft;
+        const name = this._value("#sch-mode-name") || draft.name;
+        if (!name) {
+          this._notify("Give the mode a name");
+          return;
+        }
+        this._schDlg = null;
+        await this._schSend(
+          { type: "hearth/schedule/mode", mode_id: draft.id, name, allows: draft.allows, closed: draft.closed || [], keep_not_screen_time: draft.keep_not_screen_time !== false },
+          `Saved ${name}`
+        );
+        return;
+      }
+      case "sch-mode-remove": {
+        const draft = this._schModeDraft;
+        this._schDlg = null;
+        await this._schSend({ type: "hearth/schedule/mode/remove", mode_id: draft.id }, `Removed ${draft.name}`);
+        return;
+      }
+      // Changes (data-change)
+      case "sch-time":
+      case "sch-modesel": {
+        const { day } = this._schEditable(kid);
+        const i = Number(d.i);
+        if (action === "sch-time") {
+          const [h, m] = (el.value || "0:0").split(":").map(Number);
+          day.changes[i][0] = Math.min(1425, Math.round((h * 60 + m) / 15) * 15);
+        } else day.changes[i][1] = el.value;
+        day.changes.sort((a, b) => a[0] - b[0]);
+        await this._schCommit(kid, day);
+        return;
+      }
+      case "sch-half":
+        await this._schSend({ type: "hearth/schedule/set", person: kid.id, days: [], half_day_ends: el.value || "12:00" }, "The half day changed");
+        return;
+      case "sch-half-limits":
+        await this._schSend({ type: "hearth/schedule/set", person: kid.id, days: [], half_day_limits: el.value }, "The half day changed");
+        return;
+      case "sch-what":
+        this._schCopyWhat = { ...(this._schCopyWhat || { times: true, limits: true }), [d.w]: el.checked };
+        break;
+      case "sch-kidck": {
+        const to = this._schKidsTo || new Set();
+        if (el.checked) to.add(d.kid);
+        else to.delete(d.kid);
+        this._schKidsTo = to;
+        break;
+      }
+      case "sch-kw":
+        this._schKidsWhat = el.value;
+        break;
+      case "sch-kidlim":
+        this._schKidsLimits = el.checked;
+        break;
+      case "sch-mode-kind":
+        this._schModeDraft.name = this._value("#sch-mode-name") || this._schModeDraft.name;
+        this._schModeDraft.allows = el.value;
+        break;
+      case "sch-mode-nst":
+        this._schModeDraft.keep_not_screen_time = el.checked;
+        return;
+      default:
+        return;
+    }
+    this._render();
+  }
+
+  // The editor's handles: dragged with a pointer (snapping to 15 minutes, the bar redrawn live), or moved with the
+  // arrow keys; sent once let go
+  _schBindDrag() {
+    const big = this.shadowRoot.getElementById?.("sch-big");
+    const kid = this._schKid();
+    if (!big || !kid || typeof big.querySelectorAll !== "function") return;
+    big.querySelectorAll(".s-hnd").forEach((h) => {
+      h.addEventListener("pointerdown", (ev) => {
+        ev.preventDefault();
+        h.setPointerCapture?.(ev.pointerId);
+        h.classList.add("drag");
+        const { day } = this._schEditable(kid);
+        const i = Number(h.dataset.i);
+        const lo = i > 0 ? day.changes[i - 1][0] + 15 : 0;
+        const hi = i < day.changes.length - 1 ? day.changes[i + 1][0] - 15 : 1425;
+        const bar = big.querySelector(".s-bar").getBoundingClientRect();
+        const move = (e2) => {
+          const m = Math.round((((e2.clientX - bar.left) / bar.width) * 1440) / 15) * 15;
+          day.changes[i][0] = Math.max(lo, Math.min(hi, m));
+          h.style.left = schPct(day.changes[i][0]);
+          h.querySelector(".s-tip").textContent = schClock(day.changes[i][0]);
+        };
+        const up = () => {
+          h.removeEventListener("pointermove", move);
+          h.removeEventListener("pointerup", up);
+          h.removeEventListener("pointercancel", up);
+          this._schCommit(kid, day);
+        };
+        h.addEventListener("pointermove", move);
+        h.addEventListener("pointerup", up);
+        h.addEventListener("pointercancel", up);
+      });
+      h.addEventListener("keydown", (e) => {
+        if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+        e.preventDefault();
+        e.stopPropagation();
+        const { day } = this._schEditable(kid);
+        const i = Number(h.dataset.i);
+        const lo = i > 0 ? day.changes[i - 1][0] + 15 : 0;
+        const hi = i < day.changes.length - 1 ? day.changes[i + 1][0] - 15 : 1425;
+        day.changes[i][0] = Math.max(lo, Math.min(hi, day.changes[i][0] + (e.key === "ArrowRight" ? 15 : -15)));
+        this._schCommit(kid, day);
+        this.shadowRoot.querySelector?.(`.s-hnd[data-i="${i}"]`)?.focus();
+      });
+    });
+    // A click inside a dialog doesn't close it
+    this.shadowRoot.querySelectorAll?.(".s-dlg").forEach((dlg) => dlg.addEventListener("click", () => (this._schClickInside = true), true));
   }
 
   _pendingCount() {
@@ -1589,7 +2305,7 @@ class HearthPanel extends HTMLElement {
       acts = gives
         .map((a, i) => `<button class="b ${i === 0 ? "primary" : ""}" data-action="sugg-give" data-person="${esc(item.person)}" data-id="${esc(a.id)}">${i === 0 ? `${icon("plus", "sm")}${esc(amount(a.data?.minutes))} min` : `${esc(amount(a.data?.minutes))} min`}</button>`)
         .join("");
-      if (dismiss) acts += `<button class="b ghost" data-action="sugg-dismiss" data-person="${esc(item.person)}" data-key="${esc(x.key)}" data-id="${esc(dismiss.id)}">Not today</button>`;
+      if (dismiss) acts += `<button class="b ghost" data-action="sugg-dismiss" data-person="${esc(item.person)}" data-key="${esc(x.key)}" data-id="${esc(dismiss.id)}" title="Hides it until tomorrow">Dismiss</button>`;
     }
     const moreLine = more ? `<div class="more">+${more} more for ${esc(name)} · <button class="lnk" data-action="kid-sheet" data-kid="${esc(item.person)}">See</button></div>` : "";
     return `<div class="need ${item.type === "ask" ? "ask" : ""} ${inSheet ? "insheet" : ""}" ${item.type === "ask" && !inSheet ? `id="ask-${esc(item.ask.id)}"` : ""}>
@@ -1923,7 +2639,7 @@ class HearthPanel extends HTMLElement {
     // What Hearth holds through each parental control, and what didn't take
     const services = { family_link: "Family Link", family_safety: "Family Safety", nintendo: "Nintendo" };
     const outPool = this._pools(s).find((g) => g.state === "out" && g.id !== "all");
-    const reasons = { school_time: "it's School time", pause: "of a pause", budget: outPool ? `${outPool.name} ran out` : "time ran out" };
+    const reasons = { school_time: "it's School time", pause: "of a pause", schedule: "of the schedule", budget: outPool ? `${outPool.name} ran out` : "time ran out" };
     for (const [kind, st] of Object.entries(s.sync || {})) {
       const held = st.held || [];
       if (held.length) {
@@ -2038,11 +2754,13 @@ class HearthPanel extends HTMLElement {
   }
 
   _limitsCard(kid) {
-    const groups = this._config.groups || [];
+    const groups = (this._config.groups || []).filter((g) => !g.never_held);
     const b = this._config.budgets?.[kid.id] || {};
     return `<section class="card">
       <h3><ha-icon icon="mdi:timer-sand"></ha-icon>Daily limits</h3>
-      <p class="muted">Minutes a day. Empty means no limit. <b>All screen time</b> counts every device together; the others count only their apps.</p>
+      <p class="muted">Minutes a day. Empty means no limit. <b>All screen time</b> counts every device together; the others count only their apps.
+        School days here are Monday to Friday in the schedule, other days the weekend and the Day off.
+        <button class="chip-btn" data-action="tab" data-tab="schedule">Set each day in the Schedule</button></p>
       <div class="presets">Quick All screen time:
         ${[60, 90, 120, 180].map((m) => `<button class="chip-btn" data-action="budget-preset" data-person="${esc(kid.id)}" data-days="both" data-minutes="${m}">${fmtMinutes(m)}</button>`).join("")}
       </div>
@@ -2521,7 +3239,7 @@ class HearthPanel extends HTMLElement {
     const appsCards = `${this._checkTheseCard()}
       <section class="card">
         <h3><ha-icon icon="mdi:new-box"></ha-icon>Sorted lately</h3>
-        <p class="muted">New apps go to a group on their own: one that lists them, else their kind (games, video, social, messaging…), else Other. If one landed wrong, move it; your choice always wins.</p>
+        <p class="muted">New apps go to a group on their own: one that lists them, else their kind (games, video, social…; Messaging and Accessibility only when the shared catalog confirms it), else Other. Accessibility apps are never paused. If one landed wrong, move it; your choice always wins.</p>
         ${recent.length ? `<ul class="list compact">${recent.map((a) => this._appRow(a, `${a.who ? ` · ${esc(a.who)}` : ""} · ${esc(new Date(a.seen).toLocaleDateString())}`)).join("")}</ul>` : `<p class="muted small">Nothing new lately.</p>`}
       </section>
       <section class="card">
@@ -3116,6 +3834,130 @@ ol.steps { margin: 0; padding-left: 20px; line-height: 1.7; }
 .today.wide .empty-detail { display: block; color: var(--secondary-text-color); padding: 40px 16px; text-align: center; }
 @media (max-width: 380px) { .today .lane { grid-template-columns: 80px 1fr auto 14px; } }
 @media (prefers-reduced-motion: reduce) { .today *, .toast * { animation: none !important; transition: none !important; } }
+/* Schedule (the weekly schedule): the Today redesign's tokens, two mode colors of its own */
+:host { --m-homework: #8a52c9; --m-wind: #c78a12; }
+:host([dark]) { --m-homework: #b88af0; --m-wind: #e9b34a; }
+.sched .card { padding: 0; }
+.sched .s-grow { flex: 1; min-width: 0; }
+.sched .s-t { font-weight: 600; }
+.sched .s-d { color: var(--secondary-text-color); font-size: 13px; }
+.sched .b.sm { height: 32px; padding: 0 12px; font-size: 13px; }
+.s-kids { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 10px; }
+.sched .s-kidchip { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px 0 6px; border-radius: 999px; border: 1px solid var(--h-btn-line); background: var(--h-surface); font-weight: 600; }
+.s-kidchip .s-av { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; background: var(--h-surface-2); }
+.sched .s-kidchip[aria-pressed="true"] { background: var(--h-accent-soft); border-color: var(--h-accent); }
+.s-kidchip[aria-pressed="true"] .s-av { background: var(--h-accent); color: var(--h-on-accent); }
+.s-nowcard { display: flex; align-items: center; gap: 12px; padding: 14px 16px !important; }
+.s-nowcard .s-dot { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+.s-cols { display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: 20px; align-items: start; }
+.s-side { position: sticky; top: 12px; margin-top: 22px; }
+.s-week { padding: 6px 0 !important; }
+.sched .s-wrow { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 2px 10px; align-items: center; padding: 10px 14px; width: 100%; text-align: left; border-top: 1px solid var(--h-line); }
+.sched .s-wrow:first-of-type { border-top: 0; }
+.sched .s-wrow:hover { background: color-mix(in srgb, var(--h-surface-2) 55%, transparent); }
+.sched .s-wrow[aria-current="true"] { background: var(--h-accent-soft); }
+.s-dl { font-weight: 600; font-size: 14px; line-height: 1.15; }
+.s-dl small { display: block; font-weight: 500; font-size: 11px; color: var(--secondary-text-color); }
+.s-dl .s-today { color: var(--h-accent); }
+.s-sum { grid-column: 2; font-size: 12.5px; color: var(--secondary-text-color); display: flex; gap: 6px 10px; flex-wrap: wrap; align-items: center; }
+.s-tag { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.s-tag.off { background: color-mix(in srgb, var(--h-ok) 16%, transparent); color: var(--h-ok); }
+.s-tag.half { background: var(--h-school-soft); color: var(--h-school); }
+.s-tag.over { background: var(--h-accent-soft); color: var(--h-accent); }
+.s-bar { position: relative; height: 22px; border-radius: 7px; overflow: hidden; background: var(--h-track); }
+.s-seg { position: absolute; top: 0; bottom: 0; }
+.s-seg.carried { opacity: .45; }
+.s-nowl { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--primary-text-color); border-radius: 2px; z-index: 2; }
+.s-axisrow { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; padding: 8px 14px 0; font-size: 11px; color: var(--secondary-text-color); }
+.s-ticks { position: relative; height: 14px; font-size: 11px; color: var(--secondary-text-color); }
+.s-ticks span { position: absolute; transform: translateX(-50%); }
+.s-ticks span:first-child { transform: none; }
+.s-ticks span:last-child { transform: translateX(-100%); }
+.sched .s-mrow { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--h-line); width: 100%; text-align: left; }
+.sched .s-mrow:first-child { border-top: 0; }
+.s-mrow .s-sw { width: 14px; height: 14px; border-radius: 4px; flex: none; }
+.s-up { padding: 4px 0 !important; }
+.s-uprow { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--h-line); }
+.s-uprow:first-child { border-top: 0; }
+.s-cal { width: 40px; text-align: center; flex: none; line-height: 1.05; }
+.s-cal b { display: block; font-size: 17px; }
+.s-cal small { font-size: 11px; color: var(--secondary-text-color); text-transform: uppercase; letter-spacing: .04em; }
+.s-ed { padding: 16px !important; }
+.s-edh { display: flex; align-items: flex-start; gap: 10px; }
+.s-edh h2 { margin: 0; font-size: 20px; font-weight: 600; }
+.s-segc { display: inline-flex; background: var(--h-surface-2); border-radius: 999px; padding: 3px; margin-top: 12px; }
+.sched .s-segc button { padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--secondary-text-color); }
+.sched .s-segc button[aria-pressed="true"] { background: var(--h-surface); color: var(--primary-text-color); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.s-big { position: relative; margin: 26px 0 6px; user-select: none; touch-action: none; }
+.s-big .s-bar { height: 44px; border-radius: 10px; }
+.s-big .s-seg { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #fff; overflow: hidden; white-space: nowrap; }
+:host([dark]) .s-big .s-seg { color: #111; }
+.s-big .s-seg span { padding: 0 4px; overflow: hidden; text-overflow: ellipsis; }
+.sched .s-hnd { position: absolute; top: -6px; width: 28px; height: 56px; margin-left: -14px; display: grid; place-items: center; cursor: ew-resize; z-index: 3; touch-action: none; }
+.s-hnd i { width: 6px; height: 40px; border-radius: 4px; background: var(--h-surface); box-shadow: 0 0 0 1.5px var(--primary-text-color), 0 1px 4px rgba(0,0,0,.25); }
+.s-hnd:hover i, .s-hnd.drag i, .s-hnd:focus-visible i { box-shadow: 0 0 0 2px var(--h-accent), 0 1px 6px rgba(0,0,0,.3); }
+.s-hnd .s-tip { position: absolute; top: -24px; background: var(--primary-text-color); color: var(--h-surface); font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 6px; white-space: nowrap; opacity: 0; pointer-events: none; }
+.s-hnd:hover .s-tip, .s-hnd.drag .s-tip, .s-hnd:focus-visible .s-tip { opacity: 1; }
+.s-big .s-axis { padding-top: 4px; }
+.s-hint { font-size: 12px; color: var(--secondary-text-color); margin: 2px 0 4px; }
+.s-blocks { margin: 10px 0 0; padding: 0; list-style: none; }
+.s-blk { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--h-line); }
+.s-blk:first-child { border-top: 0; }
+.s-tm { width: 112px; height: 36px; border-radius: 10px; border: 1px solid var(--h-btn-line); background: var(--h-surface); padding: 0 8px; font: inherit; font-size: 14px; color: var(--primary-text-color); }
+.s-carried { width: 112px; font-size: 13px; color: var(--secondary-text-color); padding-left: 2px; }
+.s-blk select { flex: 1; min-width: 0; height: 36px; border-radius: 10px; border: 1px solid var(--h-btn-line); padding: 0 8px; font: inherit; font-size: 14px; color: var(--primary-text-color); background: var(--h-surface); }
+.s-chip { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px; border-radius: 10px; font-weight: 600; font-size: 14px; }
+.sched .s-x { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: var(--secondary-text-color); flex: none; }
+.sched button.s-x:hover { background: var(--h-surface-2); }
+.s-add { margin-top: 6px; }
+.s-subh { display: flex; align-items: baseline; justify-content: space-between; margin: 22px 0 4px; font-size: 13px; font-weight: 600; color: var(--secondary-text-color); }
+.s-lim { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--h-line); }
+.s-subh + .s-lim { border-top: 0; }
+.s-pdot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.s-lim .s-grow { font-weight: 500; }
+.s-lim small { display: block; font-weight: 400; color: var(--secondary-text-color); font-size: 12px; }
+.s-step { display: inline-flex; align-items: center; border: 1px solid var(--h-btn-line); border-radius: 999px; height: 36px; }
+.sched .s-step button { width: 36px; height: 34px; border-radius: 999px; font-size: 18px; line-height: 1; color: var(--secondary-text-color); }
+.sched .s-step button:hover { background: var(--h-surface-2); color: var(--primary-text-color); }
+.s-step output { min-width: 72px; text-align: center; font-weight: 600; font-size: 14px; }
+.s-sync { margin: 0; padding: 0; list-style: none; }
+.s-sync li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 2px 10px; padding: 10px 0; border-top: 1px solid var(--h-line); }
+.s-sync li:first-child { border-top: 0; }
+.s-ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--h-surface-2); color: var(--secondary-text-color); }
+.s-ic.ok { background: color-mix(in srgb, var(--h-ok) 16%, transparent); color: var(--h-ok); }
+.s-sync .s-t { font-size: 14px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.s-sync .s-t small { font-weight: 500; font-size: 12px; color: var(--secondary-text-color); }
+.s-sync .s-d { grid-column: 2; }
+.s-foot { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+.s-sheet { position: fixed; inset: 0; z-index: 50; background: var(--primary-background-color); overflow: auto; }
+.s-shtop { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 6px; height: 56px; padding: 0 8px; background: var(--h-surface); border-bottom: 1px solid var(--h-line); }
+.s-shtop .s-t { font-size: 18px; font-weight: 500; flex: 1; }
+.s-shtop .s-back { transform: rotate(180deg); }
+.s-sheet .card { border-radius: 0; border-left: 0; border-right: 0; box-shadow: none; }
+.s-scrim { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.4); display: grid; place-items: center; padding: 16px; }
+.s-dlg { width: min(440px, 100%); max-height: calc(100vh - 32px); overflow: auto; background: var(--h-surface); border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,.3); padding: 20px; }
+.s-dlg h3 { margin: 0 0 4px; font-size: 18px; font-weight: 600; }
+.s-dlg p { margin: 0 0 12px; color: var(--secondary-text-color); font-size: 14px; }
+.s-daygrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px 0 14px; }
+.sched .s-dbox { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 52px; border-radius: 12px; border: 1px solid var(--h-btn-line); font-weight: 600; font-size: 14px; position: relative; }
+.s-dbox small { font-size: 11px; font-weight: 500; color: var(--secondary-text-color); }
+.sched .s-dbox[aria-pressed="true"] { background: var(--h-accent-soft); border-color: var(--h-accent); }
+.s-dbox[aria-pressed="true"]::after { content: ""; position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--h-accent); }
+.sched .s-dbox:disabled { opacity: .4; cursor: default; }
+.s-ck { display: flex; align-items: center; gap: 10px; padding: 8px 0; font-size: 14px; }
+.s-ck input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--h-accent); }
+.s-name { flex-direction: column; align-items: stretch; gap: 4px; }
+.s-name input { height: 40px; border-radius: 10px; border: 1px solid var(--h-btn-line); padding: 0 10px; font: inherit; background: var(--h-surface); color: var(--primary-text-color); }
+.s-acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+.s-quick { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+.sched .s-quick button { padding: 5px 10px; border-radius: 999px; border: 1px solid var(--h-btn-line); font-size: 13px; font-weight: 500; }
+.s-radio { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-top: 1px solid var(--h-line); font-size: 14px; }
+.s-radio input { margin-top: 3px; accent-color: var(--h-accent); }
+.s-radio small { display: block; color: var(--secondary-text-color); font-size: 12.5px; }
+.s-pchips { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 8px 28px; }
+.sched .s-pchip { padding: 5px 10px; border-radius: 999px; border: 1px solid var(--h-btn-line); font-size: 13px; font-weight: 500; }
+.sched .s-pchip[aria-pressed="true"] { background: var(--primary-text-color); color: var(--h-surface); border-color: transparent; }
+@media (max-width: 899px) { .s-cols { display: block; } }
 `;
 
 customElements.define("hearth-panel", HearthPanel);

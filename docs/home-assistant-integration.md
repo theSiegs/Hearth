@@ -296,8 +296,24 @@ A budget is set on a **group**: a set of apps and titles whose minutes count tog
 
 - **All screen time**: everything not excluded by a rule.
 - **Games**: games (Android's game category, plus any an adult adds).
-- **Social** and **Messaging**: social and messaging apps (a starter list, Android's category, plus any an adult adds).
-  Messaging is Not screen time (below) unless an adult puts it in.
+- **Social** and **Messaging**: social and messaging apps (a starter list, plus any an adult adds; Social also takes
+  Android's category). Messaging is Not screen time (below) unless an adult puts it in.
+- **Accessibility**: apps a kid may rely on (Voice Access, Lookout, Live Transcribe, Sound Amplifier, TalkBack: a
+  starter list, plus the shared catalog's confirmed `accessibility` and any an adult moves there). Not screen time
+  unless an adult puts it in, and **never paused**: not All screen time (or any group) running out, an adult's pause
+  of the app or a group, School time's apps, nor the weekly schedule. Family Link and Family Safety are never asked to
+  pause them, and the state document lists them in All screen time's `except` and in the person's `never_held`, for
+  a device that can spare them from a lock too. It has no budget or bonus (no number entities, no minutes left).
+  Family Link's own whole-device lock (All screen time out of time) is Google's: it spares only the apps a parent gave
+  unlimited time in Family Link.
+
+**Only a confirmed answer loosens a limit.** Messaging and Accessibility are outside All screen time (and
+Accessibility is never paused), so a guess never puts an app in them: only an adult's move or list, Hearth's starter
+lists, or the shared catalog's confirmed answer does. A device's own category (any app may declare one in its
+manifest, so a misfiled game would escape limits) and the catalog's suggestion pass over them: an app the catalog
+only suggests is messaging or accessibility (Proton Mail or Yahoo Mail, say) counts in Other and shows in Check
+these, unless a starter list or an adult already puts it somewhere (Snapchat is on Social's starter list, Discord on
+Messaging's).
 
 An adult can add groups (pools): **YouTube** (YouTube and HearthTube, on every device) and **Streaming** (the
 streaming apps), say. **An app is in one pool at most**, besides All screen time, so the pools' minutes and "other"
@@ -311,6 +327,7 @@ streaming apps), say. **An app is in one pool at most**, besides All screen time
 5. the device's own category (Android's, from a Hearth device), with a Glint phone's copy of the catalog
    (`catalog_categories`) below it;
 6. the shared catalog's **suggested** answer, only when it goes to a pool: a guess never takes an app out of one;
+   neither 5 nor 6 ever puts an app in Messaging or Accessibility (above);
 7. where its time came from (a Switch's or an Xbox's titles are games);
 8. Other.
 
@@ -354,7 +371,7 @@ to. Hearth fetches it itself (catalog.py), so it works without a Glint phone.
   way and used. A newer copy places apps again at once.
 - **The household's map** (Hearth's page > Settings > Shared app catalog > Which group each kind of app goes to;
   `catalog_pools`, value -> pool or `other`): by default a game goes to Games, social to Social, messaging to
-  Messaging, a value a pool claims by its category (the kept Video pool) to it, YouTube to a pool of the household's
+  Messaging and accessibility to Accessibility (those two on a confirmed answer only), a value a pool claims by its category (the kept Video pool) to it, YouTube to a pool of the household's
   called YouTube, streaming to one called Streaming, TV or Shows, audio to Music, education to Homework or School (else
   Other), and companion and system apps to Other, never Games. These are Hearth's policy; the catalog holds facts.
 - **Check these** (Hearth's page > Apps): apps placed only on the catalog's suggestion, then apps where the catalog's
@@ -734,6 +751,92 @@ calendar), never part of Hearth.
 
 ### Schedule
 
+#### The weekly schedule
+
+Each kid has a **week** (Monday to Sunday) and two **special days**, the Day off and the Half day, edited on the
+Schedule tab of Hearth's page (between Kids and Devices) or with the services below. Kept with Home Assistant's storage
+helper (`hearth.weekly.<entry>`).
+
+- **A day is a list of changes**, `["07:45", "school"]`: at that time the kid switches into that **mode**, which runs
+  until the next change. Times snap to 15 minutes, a day holds at most 12 changes, and two neighbouring changes with
+  the same mode merge (removing one lets the one before run on).
+- **The night carries over.** The mode that ends a day runs past midnight into the next until that day's first
+  change. **Bedtime** is the Sleep that ends the day; **wake** is the next day's first change, so a day off tomorrow
+  lets the kid sleep in.
+- **Modes are the household's** (at most 8): a name and what it allows while it's on. Sleep (`nothing`: a bedtime
+  lock; "Keep apps that aren't screen time" on), School (`school`: a School time lock) and Free time (`everything`)
+  are built in; Homework (closes Games, YouTube, Streaming and Social) and Wind down (closes Games and Social) are
+  starters a household can change or remove. A mode of `some` closes the groups it names. Editing a mode changes it in
+  every kid's schedule; removing one removes its changes.
+- **Time each day** is per day, not per mode: one limit per group (minutes; `null` is no limit, 0 is none), counted
+  as the two budgets were. Bonuses, chores, extra time and history work as before.
+- **Which day a date uses** follows its day type ([School days and day types](#school-days-and-day-types)): a school
+  day or a weekend day uses its weekday (an extra school day on a weekend uses Friday's); a day off and a weekday
+  outside the school year (summer) use the Day off; a half day uses its weekday's changes with School ending at the
+  Half day's "School ends at" time (12:00 by default), then whatever came after School, and the Day off's limits (or
+  the weekday's).
+- **Today only.** A change for today copies today's day and changes it (a later bedtime, Homework until 5, today's
+  limits); it ends at midnight, and Back to the schedule (`hearth.resume_schedule`) ends it sooner. The weekly day
+  stays as it is.
+- **Copy** a day to other days (with or without its times or its limits), or a kid's week or one day to other kids.
+  What's copied replaces what was there; every edit returns an undo token, and the page offers Undo.
+
+**The migration, and a household that hasn't set one up.** Until an adult edits a kid's schedule, it is their two
+budgets worked out when asked: the school-day budget on Monday to Friday, the other-day budget on Saturday, Sunday and
+the Day off, the half day's limits as Configure > School days' `half_day_budget` says, and the half day's School ending
+as many hours early as Configure > Schedule's `half_day_hours_early` says. It has **no changes**, so nothing of the
+schedule holds anything: bedtime and School time come from the lock entities (Family Link's) exactly as before, and
+the limits are the budgets. The first edit keeps that migration and changes it. From then on the two budgets
+(`hearth.set_budget`, the budget numbers, the Kids tab's table) read Monday's and Saturday's limits and write Monday to
+Friday, or Saturday, Sunday and the Day off. Configure > Schedule's day-off and half-day actions on Family Link (below)
+carry on as they are.
+
+**What Hearth holds for it (phase 1: Hearth's own holds only).** Nothing is written to Family Link's, Family Safety's
+or Nintendo's own schedules yet.
+
+- **Sleep and School are locks.** The kid's state document says `locked`, with `lock` `{by: ["schedule"], kind:
+  bedtime | school_time, until}`; an allow doesn't lift them (change today or take School off instead; a School time
+  taken off with `hearth.school_time_off` lifts the schedule's School too). Family Safety's chosen platforms are
+  locked and the Switch is held during them; Family Link keeps its own bedtime and School time.
+- **A closed group** (Homework, Wind down) is a hold, as a group out of time is: on Hearth's TVs and phones it's a
+  paused group, `{id: "schedule:games", name: "Games (Homework until 5 PM)", minutes_left: 0, apps, paused: {until,
+  reason: "Homework", name}}`, so a device holds it and offers no ask for more; Family Link pauses its apps; Family
+  Safety locks a chosen platform when one of its groups is closed and pauses the group's Xbox and Windows apps; the
+  Switch is held when one of its groups is closed. `hearth.allow` for the group or an app lifts it. More minutes don't
+  open it; its end does. Why: `schedule` in the summary's `sync`.
+- **`next_lock`** is the schedule's next Sleep or School (`{at, by: "schedule", kind}`) when it comes before the lock
+  entities' own; a kid's Today line and the suggestions' cutoff use the schedule's bedtime.
+- A **family pause** still locks everything, whatever the mode.
+
+**Each kid's schedule now** is in the household summary and their state document as `schedule` (only while their
+schedule has changes): `{mode {id, name, allows, since, until, closed}, next {at, mode, name}, bedtime {at, wake},
+day {date, uses: mon… | day_off | half_day, changed_today}}`. Added fields only: the contract stays at 2.
+
+**Entities and events.** `sensor.hearth_<kid>_mode` (an enum of the mode ids; attributes `name`, `since`, `until`,
+`next` {at, mode}, `today_changed`, `source`: `schedule`, or `locks` while the schedule has no changes and the mode
+comes from the lock entities) and `sensor.hearth_<kid>_bedtime` (a timestamp, tonight's bedtime, with `wake`).
+`hearth_mode` {person, mode, mode_name, previous, until} fires when a kid's mode changes (within the minute), and on a
+today-only change that changes it. `hearth_schedule_changed` {person, days, today_only, by: panel | service} fires on
+each edit.
+
+**Services** (adults only, as every Hearth service):
+
+| Service | Fields | Returns |
+|---|---|---|
+| `hearth.set_schedule` | `people`; `days` (`mon`…`sun`, `day_off`, `school_days`, `weekend`, `every_day`); `changes` [{at, mode}]; `limits` {group: minutes or null} (merged: a group not given keeps its limit); `half_day_ends`; `half_day_limits` (`day_off` or `weekday`) | `undo`, each person's schedule |
+| `hearth.copy_schedule` | `from`; `day` (empty: the whole week, to people); `to_people` or `to_days`; `times`, `limits` (both on by default) | `undo` |
+| `hearth.change_today` | `people`; `bedtime`, or `mode` (from now) and `until` (the next change by default), or `changes`; `limits`; `reason` | `undo` per person |
+| `hearth.resume_schedule` | `people` | `resumed` |
+| `hearth.get_schedule` | `person`; `date` or `day` | the day: `changes`, `limits`, `bedtime`, `wake`, `uses`, `changed_today`, and `now` for today |
+
+The page's WebSocket commands: `hearth/schedule/get`, `set`, `copy`, `undo`, `today`, `resume`, `mode` and
+`mode/remove` (administrators only, as the rest of the page).
+
+Later phases write the schedule to Family Link (weekly bedtime, School time and daily limit), Family Safety (allowed
+hours and daily limits) and the Switch, with read-back, retries and a parent's change in a vendor app adopted.
+
+#### Configure > Schedule
+
 Configure > Schedule says what each day type does to the kids' Family Link (everyone with Family Link in Enforce, or
 the people chosen):
 
@@ -874,7 +977,8 @@ The answer to each status post carries the person's (or, on a TV, each profile's
 `groups` lists only groups with a budget, and an adult's pauses of one app or group as groups with no time left and
 `paused` (see [Pause and locks](#pause-and-locks)): hold them like any group out of time, but say it's paused and
 **never offer to ask for more time for one**; `minutes_left` null is no limit; All screen time may carry `except`, the apps
-it never holds (a Not screen time group's). Each person's part is described under [Ask for more](#ask-for-more) and
+it never holds (a Not screen time group's, and the accessibility apps). `never_held` (only when there are any) lists
+the accessibility apps, which no group's `apps` holds: a device may spare them from a lock or a pause too. Each person's part is described under [Ask for more](#ask-for-more) and
 [Pause and locks](#pause-and-locks); an allow of theirs that ends on a place is in `allow_ends` [{id, app, group,
 until, text: "ends when you get home"}] (never where they are); a TV's also has every mapped profile's `youtube_blocks`, `people` (each mapped
 profile of that TV by its own key, with its person: a notification's `for` may name a person, and the TV finds their
@@ -1855,6 +1959,8 @@ Hearth's services, [Security](#security)); anyone else's change is refused with 
 | Held by parental controls | sensor: what Family Link, Family Safety or Nintendo holds now |
 | Locked | binary sensor |
 | Place, for each kid | sensor: a place key, away or unknown (see [Places](#places)) |
+| Mode, for each kid | sensor: the weekly schedule's mode now (see [Schedule](#schedule)) |
+| Bedtime, for each kid | sensor: tonight's bedtime (timestamp), with `wake` |
 
 Per household: **Playing together** and **School day** (binary sensors), **Apps to sort**, **Day type**. Open requests for more
 time are in the household summary and on Hearth's page, not an entity.
@@ -1862,12 +1968,14 @@ time are in the household summary and on Hearth's page, not an entity.
 Events: `hearth_budget_reached` (person, group, group_name), `hearth_more_time_requested` and
 `hearth_more_time_answered` (as in [Ask for more](#ask-for-more)), `hearth_playing_together` (title, people, started
 or ended), `hearth_enforced`, `hearth_new_app`, `hearth_parent_pin_used`, `hearth_parent_pin_locked_out`,
-`hearth_schedule`, `hearth_chore_done`, `hearth_chore_reversed`, `hearth_place` (person, from, to).
+`hearth_schedule`, `hearth_chore_done`, `hearth_chore_reversed`, `hearth_place` (person, from, to), `hearth_mode` and
+`hearth_schedule_changed` (see [Schedule](#schedule)).
 
 Per person with a TV profile: **Last video started** (see [A kids profile's YouTube](#a-kids-profiles-youtube)).
 
 Services: `hearth.add_bonus`, `hearth.remove_bonus`, `hearth.set_budget`, `hearth.pause`, `hearth.pause_end`, `hearth.allow`,
-`hearth.allow_end`, `hearth.explain`, `hearth.school_time_off`, `hearth.school_time_off_cancel` (see
+`hearth.allow_end`, `hearth.explain`, `hearth.school_time_off`, `hearth.school_time_off_cancel`, `hearth.set_schedule`,
+`hearth.copy_schedule`, `hearth.change_today`, `hearth.resume_schedule`, `hearth.get_schedule` (see
 [Exceptions](#exceptions) and [Schedule](#schedule)), `hearth.play_on_tv` (event
 `hearth_command_done`, see [Play on a TV](#play-on-a-tv));
 `hearth.get_watch_log`, `hearth.watch_digest`, `hearth.block_video`, `hearth.block_channel`, `hearth.block_word` and

@@ -309,13 +309,16 @@ def _paused_word(paused: dict[str, Any], names: dict[str, str]) -> str:
     return names.get(paused["group"], paused.get("name") or paused["group"]).lower()
 
 
-def _amounts(first: int) -> list[int]:
-    """The two amounts a suggestion offers: its own, and a quarter or a half hour beside it."""
+def _amounts(first: int, over: int = 0) -> list[int]:
+    """The two amounts a suggestion offers: its own, and a quarter or a half hour beside it. When the group is already
+    [over] its limit, both cover that first: the usual amount plus it, and a quarter hour more."""
+    if over:
+        return [first, first + 15]
     return [first, 30 if first == 15 else 15]
 
 
 def _suggestion(
-    person: str, key: str, text: str, reason: str, minutes: int, data: dict[str, Any], **about: Any
+    person: str, key: str, text: str, reason: str, minutes: int, data: dict[str, Any], over: int = 0, **about: Any
 ) -> dict[str, Any]:
     actions = [
         _action(
@@ -325,7 +328,7 @@ def _suggestion(
             {"person": person, "minutes": given, **data},
             primary=given == minutes,
         )
-        for given in _amounts(minutes)
+        for given in _amounts(minutes, over)
     ]
     actions.append(_action(f"suggest_dismiss:{key}", "not today", SERVICE_DISMISS, {"person": person, "key": key}))
     return {"key": key, "text": text, "level": NOTICE, "reason": reason, "minutes": minutes, **about,
@@ -362,6 +365,20 @@ def _on_device(target: dict[str, Any] | None) -> str:
     return word if "'s " in word or word == "Windows" else f"the {word}"
 
 
+# Minutes past a limit that count as really over (less is counting catching up with a hold that's already on)
+OVER_MIN = 10
+
+
+def _over(group_row: dict[str, Any]) -> int:
+    """How far past its limit (budget plus today's extra time) a group is, rounded up to 5 minutes; 0 when it isn't,
+    or only by the few minutes counting runs behind enforcement (under OVER_MIN)."""
+    budget = group_row.get("budget")
+    if budget is None or budget < 0:
+        return 0
+    past = (group_row.get("used_minutes") or 0) - budget - max(0, group_row.get("bonus") or 0)
+    return 0 if past < OVER_MIN else -(-int(past) // 5) * 5
+
+
 def _sentence(person: dict[str, Any], reason: str, group: str, target: dict[str, Any] | None, via: str | None,
               names: dict[str, str]) -> tuple[str, str]:
     """A suggestion as one sentence and a detail line, for a page that writes sentences (the panel's For you):
@@ -375,10 +392,18 @@ def _sentence(person: dict[str, Any], reason: str, group: str, target: dict[str,
             title = f"{person.get('name') or 'They'} ran out of screen time"
         else:
             title = f"{who} {_pool_word(group, names)} time is up"
+        given = max(0, group_row.get("bonus") or 0)
+        if given:
+            title = title.replace(" is up", " is still up").replace(" ran out of", " is still out of")
         budget = group_row.get("budget")
-        cap = None if budget is None else budget + max(0, group_row.get("bonus") or 0)
+        cap = None if budget is None else budget + given
         used = group_row.get("used_minutes") or 0
         parts = [f"Used {duration(used)} of {duration(cap)}" if cap is not None else f"Used {duration(used)}"]
+        if given:
+            parts[0] += f" (with {duration(given)} extra)"
+        over = _over(group_row)
+        if over:
+            parts.append(f"{duration(over)} over")
         if group != ALL:
             left = (whole or {}).get("minutes_left")
             parts.append("no overall limit" if left is None else f"{duration(left)} of screen time left")
@@ -446,10 +471,15 @@ def suggestions(
             continue
         word = _group_word(group["id"], names)
         minutes = minutes_for(group["id"], group["id"])
+        # Already over by more than the usual amount (time counted past the limit, or a give that didn't cover it):
+        # offer enough to catch up and still leave the usual amount, so a tap really opens it again
+        over = _over(group)
+        if over:
+            minutes = over + minutes
         sentence, detail = _sentence(person, "group_out", group["id"], None, None, names)
         found.append(
             _suggestion(entity, key, f"{word} ran out · give {amount(minutes)}?", "group_out", minutes,
-                        {"group": group["id"]}, group=group["id"], sentence=sentence, detail=detail)
+                        {"group": group["id"]}, over=over, group=group["id"], sentence=sentence, detail=detail)
         )
     if all_out:
         return found

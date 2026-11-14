@@ -171,6 +171,10 @@ class FLauncherChannel {
   /// Whether this Hearth runs in the TV's owner user (not a kids profile's).
   Future<bool> isOwnerUser() async => await _methodChannel.invokeMethod<bool>("isOwnerUser") ?? false;
 
+  /// Whether a Google TV kids profile's user is running (Hearth's automatic updates wait then); true when Android
+  /// won't say.
+  Future<bool> isKidsUserRunning() async => await _methodChannel.invokeMethod<bool>("isKidsUserRunning") ?? true;
+
   /// The companion update setting changed (HearthTube reads it from Hearth's provider).
   Future<void> companionSettingsChanged() async => await _methodChannel.invokeMethod("companionSettingsChanged");
 

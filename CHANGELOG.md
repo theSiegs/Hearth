@@ -3,6 +3,25 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **A weekly schedule per kid, like a thermostat's.** A new Schedule tab (between Kids and Devices) gives each kid a week and two special days, the Day off and the Half day. A day is a list of changes ("at 7:45, School"), each running until the next, drawn as a 24-hour bar; the night carries over to the next morning, so bedtime is the Sleep that ends the day and wake is the next day's first change. Drag a handle to move a change (it snaps to 15 minutes; arrow keys move it too), pick its mode, add or remove changes, set the time each day per group, copy a day to other days or a kid's week to another kid, and Undo. "Today only" changes today and ends at midnight; Back to the schedule ends it sooner.
+- **Modes are the family's.** Sleep, School and Free time are built in; Homework (Games, YouTube, Streaming and Social closed) and Wind down (Games and Social closed) are starters you can change or remove, and you can add your own (up to 8). Editing one changes it in every kid's schedule.
+- **Limits per day.** The time each day replaces the two budgets (school days, other days). Nothing changes for a household that hasn't set up a schedule: until you edit a kid's, it's their school-day budget on Monday to Friday and their other-day budget on the weekend and the Day off, with no times, and bedtime and School time still come from Family Link. Summer weekdays use the Day off. The old budgets and their numbers keep working: they write Monday to Friday, or the weekend and the Day off.
+- **Hearth holds the schedule itself.** Sleep and School lock Hearth's TVs and phones (`lock.by: ["schedule"]`) and hold the Xbox and the Switch; a mode that closes groups holds them as a paused group on Hearth's devices ("Games (Homework until 5 PM)", no ask for more), pauses their apps in Family Link, and locks the Xbox or holds the Switch when it closes their groups. An allow of the group lifts it. `next_lock` and Today's bedtime come from the schedule when it says sooner. Nothing is written to Family Link's, Family Safety's or Nintendo's own schedules yet.
+- **New:** `sensor.hearth_<kid>_mode` and `sensor.hearth_<kid>_bedtime`; the events `hearth_mode` and `hearth_schedule_changed`; the services `hearth.set_schedule`, `hearth.copy_schedule`, `hearth.change_today`, `hearth.resume_schedule` and `hearth.get_schedule`; `schedule` per person in the household summary and the state document (added fields: the contract stays at 2).
+- **Accessibility apps are never paused.** A new built-in group, Accessibility (Voice Access, Lookout, Live Transcribe, Sound Amplifier, TalkBack and any app the shared catalog confirms as accessibility, or an adult moves there), is Not screen time by default, and nothing of Hearth's pauses its apps: not All screen time running out, a pause of the app or a group, School time's apps, nor the schedule. It has no budget or bonus to set. The state document lists them in All screen time's `except` and in a new `never_held`, for a device that can spare them from a lock too.
+- **Only a confirmed answer loosens a limit.** Messaging and Accessibility (outside All screen time by default) take an app only on an adult's move or list, Hearth's starter lists, or the shared catalog's confirmed answer. A device's own category (any app can declare one) or the catalog's suggestion no longer puts an app there: it counts in Other, and Check these asks about a suggested one. Apps already in Messaging through Hearth's starter list or an adult's list or move stay there.
+- **A newer copy of the shared catalog ships with Hearth** (the bundled snapshot of 2026-11-14), so a new install no longer starts from one that called Chrome and Sound Amplifier messaging.
+
+- **A suggestion's +amount opens time again.** When a group is already 10 minutes or more past its limit (counted time catching up, or extra time that didn't cover it), the suggestion offers enough to catch up plus the usual amount (25 and 40 for a kid 10 over), says how far over it is, and after an adult's give reads "still up" with the extra time shown. "Not today" on Today reads "Dismiss" (it hides the suggestion until tomorrow).
+
+### Hearth TV
+
+- **Updates wait while a kids profile is in use.** Hearth TV's automatic updates, its own and HearthTube's, no longer install while a Google TV kids profile's user is running, even in the background: a package change then can make Google TV take apps out of that profile and sign the kid out. They install once no kids profile runs (Hearth TV's own still only with the screen off), or anyway after waiting a week. HearthTube's check comes back every hour while it waits, and only the owner's Hearth TV installs. An update an adult installs from Settings → System → Updates doesn't wait. The log says `HearthUpdate: deferring …` while one waits.
+
 ## 2026.11.15
 
 ### Home Assistant integration

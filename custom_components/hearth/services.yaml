@@ -437,3 +437,159 @@ copy_sites:
       default: false
       selector:
         boolean:
+
+set_schedule:
+  fields:
+    people:
+      required: true
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    days:
+      example: '["school_days"]'
+      selector:
+        select:
+          multiple: true
+          options:
+            - mon
+            - tue
+            - wed
+            - thu
+            - fri
+            - sat
+            - sun
+            - day_off
+            - school_days
+            - weekend
+            - every_day
+    changes:
+      example: '[{"at": "07:45", "mode": "school"}, {"at": "15:15", "mode": "free"}, {"at": "21:30", "mode": "sleep"}]'
+      selector:
+        object:
+    limits:
+      example: '{"all": 180, "games": 60}'
+      selector:
+        object:
+    half_day_ends:
+      example: "12:00"
+      selector:
+        time:
+    half_day_limits:
+      selector:
+        select:
+          options:
+            - day_off
+            - weekday
+copy_schedule:
+  fields:
+    from:
+      required: true
+      selector:
+        entity:
+          domain: person
+    day:
+      selector:
+        select:
+          options:
+            - mon
+            - tue
+            - wed
+            - thu
+            - fri
+            - sat
+            - sun
+            - day_off
+            - half_day
+    to_people:
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    to_days:
+      selector:
+        select:
+          multiple: true
+          options:
+            - mon
+            - tue
+            - wed
+            - thu
+            - fri
+            - sat
+            - sun
+            - day_off
+            - school_days
+            - weekend
+            - every_day
+    times:
+      default: true
+      selector:
+        boolean:
+    limits:
+      default: true
+      selector:
+        boolean:
+change_today:
+  fields:
+    people:
+      required: true
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    bedtime:
+      example: "22:00"
+      selector:
+        time:
+    mode:
+      example: homework
+      selector:
+        text:
+    until:
+      example: "17:00"
+      selector:
+        time:
+    changes:
+      example: '[{"at": "09:00", "mode": "free"}, {"at": "22:00", "mode": "sleep"}]'
+      selector:
+        object:
+    limits:
+      example: '{"games": 90}'
+      selector:
+        object:
+    reason:
+      example: Movie night
+      selector:
+        text:
+resume_schedule:
+  fields:
+    people:
+      required: true
+      selector:
+        entity:
+          domain: person
+          multiple: true
+get_schedule:
+  fields:
+    person:
+      required: true
+      selector:
+        entity:
+          domain: person
+    date:
+      selector:
+        date:
+    day:
+      selector:
+        select:
+          options:
+            - mon
+            - tue
+            - wed
+            - thu
+            - fri
+            - sat
+            - sun
+            - day_off
+            - half_day

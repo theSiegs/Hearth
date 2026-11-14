@@ -91,6 +91,12 @@
       },
       "person_place": {
         "name": "Place"
+      },
+      "person_mode": {
+        "name": "Mode"
+      },
+      "person_bedtime": {
+        "name": "Bedtime"
       }
     },
     "binary_sensor": {
@@ -838,6 +844,128 @@
         "key": {
           "name": "Suggestion",
           "description": "The suggestion's key, such as more:games or device:fs:xbox."
+        }
+      }
+    },
+    "set_schedule": {
+      "name": "Set the schedule",
+      "description": "Sets the people's weekly schedule for some days: the changes (each a time, snapped to 15 minutes, and a mode that runs until the next) and/or the time each day per group. What's given replaces what was there; a group not given keeps its limit. Returns an undo token.",
+      "fields": {
+        "people": {
+          "name": "People",
+          "description": "Whose schedule."
+        },
+        "days": {
+          "name": "Days",
+          "description": "mon to sun, day_off, or several at once: school_days (Monday to Friday), weekend, every_day (with the Day off)."
+        },
+        "changes": {
+          "name": "Changes",
+          "description": "The day's changes: [{\"at\": \"07:45\", \"mode\": \"school\"}, ...], at most 12. The last one runs past midnight until the next day's first."
+        },
+        "limits": {
+          "name": "Time each day",
+          "description": "Minutes per group: {\"all\": 180, \"games\": 60}; null is no limit, 0 is none."
+        },
+        "half_day_ends": {
+          "name": "Half day: School ends at",
+          "description": "On a half day, School ends at this time, then whatever came after it."
+        },
+        "half_day_limits": {
+          "name": "Half day's limits",
+          "description": "day_off (the Day off's) or weekday (that weekday's)."
+        }
+      }
+    },
+    "copy_schedule": {
+      "name": "Copy the schedule",
+      "description": "Copies one day of a person's to other days of theirs, or their week (or one day) to other people. What's copied replaces what was there. Returns an undo token.",
+      "fields": {
+        "from": {
+          "name": "From",
+          "description": "Whose schedule to copy."
+        },
+        "day": {
+          "name": "Day",
+          "description": "The day to copy; to other people, the whole week when empty."
+        },
+        "to_people": {
+          "name": "To people",
+          "description": "Copy to these people."
+        },
+        "to_days": {
+          "name": "To days",
+          "description": "Or copy the day to these days of the same person's."
+        },
+        "times": {
+          "name": "The times",
+          "description": "Copy the changes (Sleep, School, Free time...)."
+        },
+        "limits": {
+          "name": "The time each day",
+          "description": "Copy the limits."
+        }
+      }
+    },
+    "change_today": {
+      "name": "Change today",
+      "description": "Changes today only, until midnight: a later or earlier bedtime, a mode from now until a time (the next change by default), the whole day's changes, and/or today's limits. The weekly schedule stays as it is.",
+      "fields": {
+        "people": {
+          "name": "People",
+          "description": "Who."
+        },
+        "bedtime": {
+          "name": "Bedtime",
+          "description": "Tonight's bedtime: \"let Sam stay up until 10\"."
+        },
+        "mode": {
+          "name": "Mode",
+          "description": "A mode from now (Homework, Free time...)."
+        },
+        "until": {
+          "name": "Until",
+          "description": "When the mode ends; the next change when empty."
+        },
+        "changes": {
+          "name": "Changes",
+          "description": "Today's changes, instead: [{\"at\": \"09:00\", \"mode\": \"free\"}, ...]."
+        },
+        "limits": {
+          "name": "Time today",
+          "description": "Today's minutes per group: {\"games\": 90}."
+        },
+        "reason": {
+          "name": "Reason",
+          "description": "Why, for the record."
+        }
+      }
+    },
+    "resume_schedule": {
+      "name": "Back to the schedule",
+      "description": "Drops today's change: the people are back on their weekly schedule.",
+      "fields": {
+        "people": {
+          "name": "People",
+          "description": "Who."
+        }
+      }
+    },
+    "get_schedule": {
+      "name": "Get the schedule",
+      "description": "A person's day as the schedule has it: its changes, limits, bedtime and wake, and which day it uses (a weekday, the Day off, the Half day, or today's change). Today when no date or day is given.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "Whose schedule."
+        },
+        "date": {
+          "name": "Date",
+          "description": "A date (its day type decides the day it uses)."
+        },
+        "day": {
+          "name": "Day",
+          "description": "Or a day of the week, the Day off or the Half day."
         }
       }
     }

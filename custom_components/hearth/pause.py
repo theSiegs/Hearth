@@ -28,6 +28,8 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN
 
 PAUSE = "pause"
+# The weekly schedule's Sleep or School (weekly.py), in a person's locked_by
+SCHEDULE = "schedule"
 MAX_REASON = 80
 _STARTS = ("bedtime_start", "schooltime_start")
 _ENDS = ("bedtime_end", "schooltime_end")
@@ -144,12 +146,15 @@ def lock_until(hass: HomeAssistant, entity_ids: list[str]) -> datetime | None:
     return max(ends) if ends else None
 
 
-def lock_kinds(hass: HomeAssistant, by: list[str]) -> list[str]:
-    """What the locks that are on are: bedtime, school_time, pause, or other (a lock entity that doesn't say)."""
+def lock_kinds(hass: HomeAssistant, by: list[str], schedule_kind: str | None = None) -> list[str]:
+    """What the locks that are on are: bedtime, school_time, pause, or other (a lock entity that doesn't say). The
+    weekly schedule's is [schedule_kind] (bedtime or school_time)."""
     kinds: list[str] = []
     for item in by:
         if item == PAUSE:
             kind = PAUSE
+        elif item == SCHEDULE:
+            kind = schedule_kind or "other"
         else:
             state = hass.states.get(item)
             attrs = state.attributes if state else {}
