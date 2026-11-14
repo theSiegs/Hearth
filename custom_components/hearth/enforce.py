@@ -132,12 +132,15 @@ QUIET_AFTER_CALL = timedelta(minutes=1)
 REFRESH_AFTER_WRITE = timedelta(seconds=10)
 MAX_PACKAGES = 150
 
-# Never paused, whatever group they're in: calls, texts, the system, and the apps that hold the rest
-ESSENTIAL = frozenset(
+# Never paused, whatever group they're in: calls, texts, the system, and the apps that hold the rest. A paired client's
+# own packages are kept out per person instead (Enforcement.update's exempt_of, from the client locked at pairing).
+# TRANSITION: the phone launcher's two packages stay listed until its phones have re-paired with contract 3 (then
+# they're exempt by their locked client id); remove them in the release after that.
+TRANSITION_CLIENTS = frozenset({"com.thesiegs.glint", "com.thesiegs.glint.phone"})
+ESSENTIAL = TRANSITION_CLIENTS | frozenset(
     {
         "com.thesiegs.hearth",
         "com.thesiegs.hearth.mobile",
-        "com.thesiegs.glint",
         "com.thesiegs.hearthtube.mobile",
         "com.google.android.gms",
         "com.google.android.apps.messaging",
@@ -159,11 +162,10 @@ def essential(package: str) -> bool:
 
 
 # Never paused for School time either: what holds the rest, and the system
-NEVER_PAUSED = frozenset(
+NEVER_PAUSED = TRANSITION_CLIENTS | frozenset(
     {
         "com.thesiegs.hearth",
         "com.thesiegs.hearth.mobile",
-        "com.thesiegs.glint",
         "com.google.android.gms",
         "com.google.android.apps.kids.familylink",
         "com.google.android.apps.kids.familylinkhelper",
@@ -519,6 +521,7 @@ class Enforcement:
         paused_groups_of=None,
         closed_of=None,
         spared=frozenset(),
+        exempt_of=None,
     ) -> None:
         """[apps_of]: a group id's packages for a person (for All screen time, every app of theirs). [lifted_of]: what
         a person's allows lift (Lifted); [school_time_of]: whether an enforcer's child is in School time now;
@@ -527,7 +530,8 @@ class Enforcement:
         time on one device lifts of an enforcer's holds (a Family Safety platform, a Switch: device_extra.py);
         [paused_groups_of]: the groups an adult paused for a person, All screen time for a family pause (a Switch);
         [closed_of]: the groups the weekly schedule closes for a person now, All screen time in Sleep and School;
-        [spared]: packages never paused, for any reason (the accessibility apps: household.never_held)."""
+        [spared]: packages never paused, for any reason (the accessibility apps: household.never_held);
+        [exempt_of]: the packages Family Link never pauses for a person (their paired devices' clients)."""
         self.enforcers = enforcers
         now = dt_util.now()
         wanted_now: dict[str, set[str]] = {}
@@ -572,6 +576,8 @@ class Enforcement:
                 scheduled -= self._always_allowed(e.entity_id)
             device_lifted = device_lifted_of(e) if device_lifted_of else set()
             wanted_now[e.key] = (budget | school | paused | scheduled) - granted - device_lifted - set(spared)
+            if e.kind == FAMILY_LINK and exempt_of:
+                wanted_now[e.key] -= exempt_of(e.person)
             if e.kind == FAMILY_LINK:
                 # Only apps the child has: pausing one they don't would only cost a call (and read as a parent's
                 # change later, its pause never showing)

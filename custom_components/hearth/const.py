@@ -5,8 +5,10 @@ from datetime import timedelta
 DOMAIN = "hearth"
 # The device API's and the household summary's shape (docs/home-assistant-integration.md, Contract): goes up only
 # when a field changes meaning or type, becomes required, or goes; never for an added field. 2: the household summary's
-# headline, lines and actions (glance.py): added fields, but the bump tells an app they are there
-CONTRACT = 2
+# headline, lines and actions (glance.py): added fields, but the bump tells an app they are there. 3: the generic client
+# contract (docs/contracts/device-api.md): `client` and `checks` from devices, a grant from verify_pin, client settings
+# (client_settings.py), `share_app_data` in place of `tile_exchange_share`, and `catalog_categories` no longer read
+CONTRACT = 3
 
 # Config entry data: the household's Hearth devices (TVs, phones), by the device's own stable id
 CONF_DEVICES = "devices"
@@ -14,6 +16,8 @@ CONF_KIND = "kind"
 CONF_SECRET_HASH = "secret_hash"
 CONF_MODEL = "model"
 CONF_SW_VERSION = "sw_version"
+# The client app a device paired with ({"id", "companions"}), locked when an adult approved the pairing (client.py)
+CONF_CLIENT = "client"
 
 # A device not heard from in this long counts as not connected (a TV posts at least every 10 minutes)
 CONNECTED_WITHIN = timedelta(minutes=15)
@@ -28,6 +32,8 @@ PAIRING_INTERVAL_PER_ADDRESS = timedelta(seconds=10)
 TICKET_EXPIRES = timedelta(minutes=5)
 MAX_TICKETS = 10
 EVENT_DEVICE_PAIRED = "hearth_device_paired"
+# One of a device's checks (its own, or Hearth's client check) turned false
+EVENT_DEVICE_CHECK_FAILED = "hearth_device_check_failed"
 
 # A status post bigger than this is refused
 MAX_STATUS_BYTES = 64 * 1024
@@ -75,8 +81,10 @@ CONF_GROUPS = "groups"
 CONF_GROUP_APPS = "group_apps"
 # Groups whose time isn't screen time: not counted in All screen time, not held when it runs out
 CONF_OUTSIDE_ALL = "outside_all"
-# People whose phone may share with a launcher's tile exchange (scrubbed layouts only): a parent's choice
-CONF_TILE_EXCHANGE = "tile_exchange_share"
+# People whose devices may share app data with public app datasets (Hearth's own proposals to the shared app catalog,
+# and any client's own sharing): a parent's choice, off unless chosen. Was tile_exchange_share, moved once at load
+CONF_SHARE_APP_DATA = "share_app_data"
+CONF_SHARE_APP_DATA_OLD = "tile_exchange_share"
 # Options: voice assistants (Assist calls without a Home Assistant user) may use Hearth's LLM API (llm_api.py); off
 CONF_VOICE_ASSISTANTS = "voice_assistants"
 # Options: {person: "kid" | "adult"}, set on Hearth's page
@@ -108,6 +116,8 @@ SIGNAL_WATCH = "hearth_watch"
 MAX_EVENT_POSTS = 10
 # A TV may press its notices' buttons this many times in STATUS_WINDOW
 MAX_NOTICE_POSTS = 6
+# A device may read or write its client settings this many times in STATUS_WINDOW
+MAX_SETTINGS_CALLS = 60
 
 # Android app categories a device may report for its apps (ApplicationInfo.category, lower case)
 APP_CATEGORIES = (

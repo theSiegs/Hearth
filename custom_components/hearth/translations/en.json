@@ -11,7 +11,7 @@
       },
       "confirm": {
         "title": "Pair {name}?",
-        "description": "Check that {name} shows this code:\n\n**{code}**\n\nPair it only if the codes match. A device you don't recognize, or a code that doesn't match, may be someone else's: close this instead.",
+        "description": "Check that {name} shows this code:\n\n**{code}**\n\n{client}Pair it only if the codes match. A device you don't recognize, or a code that doesn't match, may be someone else's: close this instead.",
         "data": {
           "person": "Whose device is it?"
         },
@@ -150,8 +150,8 @@
           "group_apps": "Add apps to Games",
           "not_screen_time": "Not screen time",
           "remove_group": "Remove a group",
-          "tile_exchange": "Tile exchange sharing",
-          "app_catalog": "Shared app catalog",
+          "share_app_data": "Sharing app data",
+          "app_catalog": "App facts",
           "voice_assistants": "Voice assistants",
           "parent_pin": "Parent PINs",
           "push": "Push to phones (ntfy)",
@@ -208,16 +208,16 @@
           "server": "ntfy server"
         }
       },
-      "tile_exchange": {
-        "title": "Tile exchange sharing",
-        "description": "People whose phone may share with the launcher's tile exchange: the layout of notifications from apps that have no tile yet, with every word and number blanked out (never chat, health or payment apps). Off for everyone not chosen here.",
+      "share_app_data": {
+        "title": "Sharing app data",
+        "description": "Lets apps on these people's devices help public app lists: what kind of app something is and, where an app supports it, notification layouts with every word and number blanked out. Never chats, health, money or sign-in apps. Off for everyone not chosen here, and off here turns it off on their devices.",
         "data": {
           "people": "People"
         }
       },
       "app_catalog": {
-        "title": "Shared app catalog",
-        "description": "Glint's shared catalog says what an app is (a game, YouTube, a streaming service, a companion app) on phones, TVs, Xbox, Windows and Switch, so new apps land in the right pool. Fetching it sends nothing. Sharing sends, once a week, the names and store ids of public apps the catalog lacks and the corrections you choose to share; never who uses them, no usage, no times, never chat, health, money or sign-in apps.",
+        "title": "App facts",
+        "description": "A public list of what apps are (a game, YouTube, streaming, a companion app) on phones, TVs, Xbox, Windows and Switch, so new apps land in the right pool. Fetching it sends nothing. Sharing sends, once a week, the names and store ids of public apps (Microsoft Store, Xbox, Steam, Switch) the list lacks and the corrections you choose to share; never who uses them, no usage, no times, never chat, health, money or sign-in apps.",
         "data": {
           "fetch": "Fetch the shared app catalog",
           "share": "Share with the shared app catalog"

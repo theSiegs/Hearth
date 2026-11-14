@@ -1080,11 +1080,11 @@ class HearthPanel extends HTMLElement {
       case "voice-assistants":
         await this._setOption("voice_assistants", el.checked, el.checked ? "Voice assistants on" : "Voice assistants off");
         return;
-      case "tile-share": {
-        const set = new Set(cfg.tile_exchange || []);
+      case "share-app-data": {
+        const set = new Set(cfg.share_app_data || []);
         if (el.checked) set.add(d.person);
         else set.delete(d.person);
-        await this._setOption("tile_exchange_share", [...set], el.checked ? "Sharing allowed" : "Sharing off");
+        await this._setOption("share_app_data", [...set], el.checked ? "Sharing allowed" : "Sharing off");
         return;
       }
       case "outside-all": {
@@ -1129,6 +1129,11 @@ class HearthPanel extends HTMLElement {
         return;
       case "catalog-share":
         await this._setOption("catalog_share", el.checked, el.checked ? "Sharing with the shared catalog" : "Not sharing");
+        return;
+      case "client-settings-clear":
+        if (!window.confirm(`Remove everything Hearth keeps for ${d.client}? The app's settings on every device go with it.`)) return;
+        await this._ws({ type: "hearth/client_settings/clear", client: d.client }, "Removed");
+        await this._loadConfig();
         return;
       case "catalog-share-on":
       case "catalog-share-no":
@@ -2150,6 +2155,34 @@ class HearthPanel extends HTMLElement {
       : `<div class="avatar initials" style="width:${size}px;height:${size}px">${esc(name.slice(0, 1).toUpperCase())}</div>`;
   }
 
+  // A paired device's app (contract 3): the one locked at pairing with the version it reports, its own checks as
+  // given (Hearth knows none of them), and what Hearth keeps for that app, which an adult can remove. Never the contents.
+  _deviceClientLines(dv) {
+    const lines = [];
+    const locked = dv.client;
+    const reported = dv.client_reported;
+    if (locked) {
+      const version = reported && reported.id === locked.id && reported.version ? ` ${reported.version}` : "";
+      lines.push(`<div class="muted small">App: ${esc(locked.id)}${esc(version)}</div>`);
+    } else if (reported) {
+      lines.push(`<div class="muted small">App: ${esc(reported.id)} (not confirmed: pair again to confirm it)</div>`);
+    }
+    const checks = dv.checks || [];
+    if (checks.length) {
+      lines.push(`<div class="small">${checks
+        .map((c) => `<span class="${c.ok ? "muted" : "warn"}">${c.ok ? "✓" : "✗"} ${esc(c.label)}</span>`)
+        .join(" · ")}</div>`);
+    }
+    const kept = locked ? (this._config.client_settings || {})[locked.id] : null;
+    if (kept) {
+      const kb = Math.max(1, Math.round(kept.bytes / 1024));
+      const what = (kept.labels || []).slice(0, 3).map(esc).join(", ");
+      lines.push(`<div class="muted small">Settings kept for ${esc(locked.id)}: ${kept.count} (${kb} KB)${what ? ` · ${what}` : ""} ·
+        <button class="link" data-action="client-settings-clear" data-client="${esc(locked.id)}">Remove</button></div>`);
+    }
+    return lines.join("");
+  }
+
   _pairingCards() {
     const pairings = this._config.pairings || [];
     if (!pairings.length) return "";
@@ -2160,7 +2193,8 @@ class HearthPanel extends HTMLElement {
           <div class="row">
             <ha-icon icon="${p.kind === "tv" ? "mdi:television" : "mdi:cellphone"}"></ha-icon>
             <div class="grow"><div class="strong">${esc(p.name)} wants to join</div>
-              <div class="muted">Check the ${p.kind === "tv" ? "TV" : "phone"} shows this code: <span class="code">${esc(p.code)}</span></div></div>
+              <div class="muted">Check the ${p.kind === "tv" ? "TV" : "phone"} shows this code: <span class="code">${esc(p.code)}</span></div>
+              ${p.client ? `<div class="muted small">App: ${esc(p.client.id)}${(p.client.companions || []).length ? ` (and ${p.client.companions.map(esc).join(", ")})` : ""}. Pairing keeps this app from being paused for its person.</div>` : ""}</div>
           </div>
           ${p.kind === "mobile" ? `<label class="field">Whose phone is it?
             <select id="pair-person-${esc(p.pairing_id)}"><option value="">Choose…</option>${persons.map((x) => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join("")}</select></label>` : ""}
@@ -3211,7 +3245,7 @@ class HearthPanel extends HTMLElement {
       <section class="card">
         <h3><ha-icon icon="mdi:link-variant"></ha-icon>Pair a TV or phone</h3>
         <ol class="steps">
-          <li>On the TV, open Hearth's <b>Settings → Home Assistant → Pair with Home Assistant</b>. On a phone, Glint's Home Assistant pairing.</li>
+          <li>On the TV, open Hearth's <b>Settings → Home Assistant → Pair with Home Assistant</b>. On a phone, pair from an app that works with Hearth (Glint, for example: Settings › Home Assistant).</li>
           <li>It shows a code, and the request appears at the top of this page.</li>
           <li>Check the codes match, then pair. A phone also asks whose it is.</li>
         </ol>
@@ -3220,7 +3254,8 @@ class HearthPanel extends HTMLElement {
         <h3><ha-icon icon="mdi:devices"></ha-icon>Paired</h3>
         ${(cfg.devices || []).length ? `<ul class="list">${cfg.devices
           .map((dv) => `<li><ha-icon icon="${dv.kind === "tv" ? "mdi:television" : "mdi:cellphone"}"></ha-icon><div class="grow"><div>${esc(dv.name || dv.id)}</div>
-            <div class="muted small">${dv.kind === "tv" ? "TV" : `Phone${dv.person ? ` · ${esc(this._personName(dv.person))}'s` : ""}`} · ${dv.connected ? "connected" : "not heard from lately"}</div></div>
+            <div class="muted small">${dv.kind === "tv" ? "TV" : `Phone${dv.person ? ` · ${esc(this._personName(dv.person))}'s` : ""}`} · ${dv.connected ? "connected" : "not heard from lately"}</div>
+            ${this._deviceClientLines(dv)}</div>
             ${dv.kind === "tv" ? `<select data-change="media-player" data-device="${esc(dv.id)}" aria-label="Its media player">${this._entityOptions(cfg.choices?.media_player, (cfg.media_players || {})[dv.id] || "", "Its media player…")}</select>` : ""}
             <span class="dot ${dv.connected ? "on" : "off"}"></span></li>`)
           .join("")}</ul>` : `<p class="muted">Nothing paired yet.</p>`}
@@ -3325,7 +3360,7 @@ class HearthPanel extends HTMLElement {
     </section>`;
   }
 
-  // Hearth's own tile exchange setting, for the shared app catalog: fetching (sends nothing) and sharing (asked once)
+  // App facts (the shared app catalog): fetching (sends nothing) and sharing (asked once)
   _catalogCard() {
     const c = this._config.catalog;
     if (!c) return "";
@@ -3335,14 +3370,14 @@ class HearthPanel extends HTMLElement {
       ? `${c.keys} app keys${c.issued ? `, published ${esc(new Date(c.issued).toLocaleDateString())}` : ""}${c.origin === "bundled" ? " (the copy Hearth came with)" : ""}`
       : "No copy yet";
     const ask = !c.share && !c.asked
-      ? `<p class="muted">Share with the shared app catalog? What Hearth sends: names and store ids of public apps the catalog lacks, and corrections you choose to share; never who uses them, no usage or times, never chat, health, money or sign-in apps. Once a week.</p>
+      ? `<p class="muted">Share with App facts? What Hearth sends: names and store ids of public apps (Microsoft Store, Xbox, Steam, Switch) the list lacks, and corrections you choose to share; never who uses them, no usage or times, never chat, health, money or sign-in apps. Once a week.</p>
         <div class="actions"><button class="btn" data-action="catalog-share-no">Not now</button><button class="btn primary" data-action="catalog-share-on">Turn on</button></div>`
-      : `<label class="check"><input type="checkbox" data-change="catalog-share" ${c.share ? "checked" : ""}> Share with the shared app catalog</label>
+      : `<label class="check"><input type="checkbox" data-change="catalog-share" ${c.share ? "checked" : ""}> Share with App facts</label>
         ${c.share ? `<div class="muted small">Waiting for the weekly send: ${c.waiting?.keys || 0} apps, ${c.waiting?.corrections || 0} corrections</div>` : ""}`;
     return `<section class="card">
-      <h3><ha-icon icon="mdi:book-open-variant"></ha-icon>Shared app catalog</h3>
-      <p class="muted">Glint's shared catalog says what an app is (a game, YouTube, streaming, a companion app) on phones, TVs, Xbox, Windows and Switch, so new apps land in the right group. Fetching it sends nothing.</p>
-      <label class="check"><input type="checkbox" data-change="catalog-fetch" ${c.fetch ? "checked" : ""}> Fetch the shared app catalog</label>
+      <h3><ha-icon icon="mdi:book-open-variant"></ha-icon>App facts</h3>
+      <p class="muted">A public list of what apps are (a game, YouTube, streaming, a companion app) on phones, TVs, Xbox, Windows and Switch, so new apps land in the right group. Fetching it sends nothing.</p>
+      <label class="check"><input type="checkbox" data-change="catalog-fetch" ${c.fetch ? "checked" : ""}> Fetch App facts</label>
       <div class="muted small">${status}${c.error ? ` · last try: ${esc(c.error)}` : ""}</div>
       ${ask}
       <details><summary>Which group each kind of app goes to</summary>
@@ -3501,12 +3536,12 @@ class HearthPanel extends HTMLElement {
 
   _sharingCard() {
     const kids = this._kids();
-    const on = new Set(this._config.tile_exchange || []);
+    const on = new Set(this._config.share_app_data || []);
     return `<section class="card">
-      <h3><ha-icon icon="mdi:share-variant-outline"></ha-icon>Glint tile sharing</h3>
-      <p class="muted">Lets a kid's phone share the layout of notifications from apps with no tile yet, every word and number blanked out (never chats, health or payments), so Glint can learn new tiles.</p>
+      <h3><ha-icon icon="mdi:share-variant-outline"></ha-icon>Sharing app data</h3>
+      <p class="muted">Lets apps on a kid's devices help public app lists: what kind of app something is and, where an app supports it, notification layouts with every word and number blanked out. Never chats, health, money or sign-in apps. Off here turns it off on their devices.</p>
       <div class="checks">${kids
-        .map((k) => `<label class="check"><input type="checkbox" data-change="tile-share" data-person="${esc(k.id)}" ${on.has(k.id) ? "checked" : ""}> ${esc(k.name)}</label>`)
+        .map((k) => `<label class="check"><input type="checkbox" data-change="share-app-data" data-person="${esc(k.id)}" ${on.has(k.id) ? "checked" : ""}> ${esc(k.name)}</label>`)
         .join("") || `<span class="muted small">No kids yet.</span>`}</div>
     </section>`;
   }

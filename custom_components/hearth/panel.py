@@ -37,7 +37,8 @@ from .const import (
     CONF_PROFILES,
     CONF_PUSH_SERVER,
     CONF_ROLES,
-    CONF_TILE_EXCHANGE,
+    CONF_SHARE_APP_DATA,
+    CONF_CLIENT,
     CONF_VOICE_ASSISTANTS,
     DOMAIN,
     KIND_MOBILE,
@@ -61,6 +62,7 @@ from .limits import (
     slug,
 )
 from .notifications import clear_pairing
+from .client import locked
 from .places import CONF_PLACES, FAVORITES, MAX_FAVORITES, MAX_NAME, RESERVED, SCHOOLS, TRACKERS
 from .schooldays import CONF_SCHOOL_DAYS
 from .sources import CONF_SOURCES, CONF_TITLES
@@ -266,11 +268,24 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
             "kind": device.get(CONF_KIND),
             "person": device.get(CONF_PERSON),
             "connected": hub.connected(device_id),
+            # Contract 3 (client.py): the client locked at pairing, the one it reports now (with its version), and its
+            # checks as given, Hearth's client check after them
+            "client": device.get(CONF_CLIENT),
+            "client_reported": (hub.state(device_id).status or {}).get("client"),
+            "checks": hub.checks(device_id),
         }
         for device_id, device in sorted(hub.devices.items())
     ]
     pairings = [
-        {"pairing_id": p.pairing_id, "name": p.name, "kind": p.kind, "code": p.code, "expires": p.expires.isoformat()}
+        {
+            "pairing_id": p.pairing_id,
+            "name": p.name,
+            "kind": p.kind,
+            "code": p.code,
+            "expires": p.expires.isoformat(),
+            # The client the adult approves along with the device (locked when they do)
+            "client": locked(p.client),
+        }
         for p in hub.pending_pairings()
     ]
     return {
@@ -295,8 +310,10 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
         "app_groups": dict(options.get(CONF_APP_GROUPS, {})),
         "media_players": dict(options.get(CONF_MEDIA_PLAYERS, {})),
         **household.apps_overview(),
-        "tile_exchange": list(options.get(CONF_TILE_EXCHANGE, [])),
-        # The shared app catalog (catalog.py): the copy in use, Hearth's own tile exchange setting (fetching on by
+        "share_app_data": list(options.get(CONF_SHARE_APP_DATA, [])),
+        # What's kept for each client (client_settings.py): {client: {"count", "bytes"}}, never the contents
+        "client_settings": hub.client_settings.summary(),
+        # The shared app catalog (catalog.py): the copy in use, Hearth's own setting for it (fetching on by
         # default; sending asked once, off until turned on), and what each value goes to here
         "catalog": {
             **household.catalog.page(),
@@ -380,7 +397,7 @@ OPTION_SCHEMAS: dict[str, Any] = {
     ],
     CONF_GROUP_APPS: vol.Schema({_ID: [cv.string]}),
     CONF_OUTSIDE_ALL: [_ID],
-    CONF_TILE_EXCHANGE: [_PERSON],
+    CONF_SHARE_APP_DATA: [_PERSON],
     CONF_CATALOG_FETCH: bool,
     CONF_CATALOG_SHARE: bool,
     CONF_CATALOG_ASKED: bool,
@@ -509,7 +526,7 @@ def ws_config_set(hass: HomeAssistant, connection: websocket_api.ActiveConnectio
 @callback
 def ws_catalog_correct(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
     """An adult's move, shared with the shared app catalog too (the catalog's key and value, never the pool): queued
-    for the weekly send while the tile exchange's sending is on."""
+    for the weekly send while sending to the catalog is on."""
     hub = _hub(hass)
     if hub is None:
         connection.send_error(msg["id"], "not_set_up", "Hearth isn't set up")

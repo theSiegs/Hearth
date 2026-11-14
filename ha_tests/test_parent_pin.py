@@ -76,8 +76,12 @@ async def test_a_paired_device_checks_the_parent_pin(
 
     assert (await _verify(client, None, PIN)).status == 401
     assert (await _verify(client, "not-the-secret", PIN)).status == 401
-    assert await (await _verify(client, secret, PIN)).json() == {"ok": True, "person": "person.alex"}
-    assert await (await _verify(client, secret, OTHER_PIN)).json() == {"ok": True, "person": "person.robin"}
+    for pin, person in ((PIN, "person.alex"), (OTHER_PIN, "person.robin")):
+        answer = await (await _verify(client, secret, pin)).json()
+        # Contract 3: a grant for this device, two minutes, eight writes (pin_grants.py)
+        assert {k: answer.pop(k) for k in ("grant_expires", "grant_writes")} == {"grant_expires": 120, "grant_writes": 8}
+        assert len(answer.pop("grant")) == 32
+        assert answer == {"ok": True, "person": person}
     assert await (await _verify(client, secret, "1111")).json() == {"ok": False}
     assert (await _verify(client, secret, 4826)).status == 400
     await hass.async_block_till_done()

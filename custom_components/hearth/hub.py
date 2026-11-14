@@ -30,11 +30,14 @@ from .const import (
     MAX_EVENT_POSTS,
     MAX_NOTICE_POSTS,
     MAX_PENDING_PAIRINGS,
+    MAX_SETTINGS_CALLS,
     MAX_STATUS_POSTS,
     PAIRING_EXPIRES,
     PAIRING_INTERVAL_PER_ADDRESS,
+    EVENT_DEVICE_CHECK_FAILED,
     EVENT_DEVICE_PAIRED,
     KIND_TV,
+    CONF_CLIENT,
     MAX_TICKETS,
     TICKET_EXPIRES,
     default_caps,
@@ -47,6 +50,9 @@ from .const import (
 )
 from .asks import Asks
 from .attention import ADMINS, Attention, Item
+from .client import checks_of, locked
+from .client_settings import ClientSettings
+from .pin_grants import PinGrants
 from .commands import Commands
 from .push import PushChannel, new_topic
 from .suggest_push import SuggestPush
@@ -79,6 +85,8 @@ class Pairing:
     # A phone's ntfy topic, made when it's approved (push.py)
     push_topic: str | None = None
     denied: bool = False
+    # The client app it says it is (client.clean_client), shown to the adult and locked when they approve
+    client: dict[str, Any] | None = None
 
 
 @dataclass
@@ -143,6 +151,7 @@ class DeviceState:
     posts: list[datetime] = field(default_factory=list)
     event_posts: list[datetime] = field(default_factory=list)
     notice_posts: list[datetime] = field(default_factory=list)
+    settings_calls: list[datetime] = field(default_factory=list)
 
 
 class HearthHub:
@@ -172,6 +181,10 @@ class HearthHub:
         # The suggestions the household chose, on the adults' phones
         self.suggest_push = SuggestPush(hass, self)
         self.waits = DeviceWaits(hass, self)
+        # Paired clients' own documents, kept without being read (client_settings.py), and the writes a parent PIN
+        # typed on a device allows it (pin_grants.py)
+        self.client_settings = ClientSettings(hass, self)
+        self.pin_grants = PinGrants(hass)
 
     # The devices
 
@@ -196,6 +209,7 @@ class HearthHub:
 
     async def async_load(self) -> None:
         await self.household.async_load()
+        await self.client_settings.async_load()
         stored = await self._store.async_load() or {}
         for device_id, kept in stored.items():
             if device_id not in self.devices or not isinstance(kept, dict):
@@ -246,6 +260,16 @@ class HearthHub:
         state.notice_posts.append(now)
         return False
 
+    def too_many_settings_calls(self, device_id: str) -> bool:
+        """The same for its client-settings calls (reads and writes), counted on their own."""
+        now = dt_util.utcnow()
+        state = self.state(device_id)
+        state.settings_calls = [t for t in state.settings_calls if now - t < STATUS_WINDOW]
+        if len(state.settings_calls) >= MAX_SETTINGS_CALLS:
+            return True
+        state.settings_calls.append(now)
+        return False
+
     def too_many_user_asks(self, user_id: str) -> bool:
         """too_many_events for a Home Assistant user's own asks (hearth/ask)."""
         now = dt_util.utcnow()
@@ -266,9 +290,11 @@ class HearthHub:
             self.hass.bus.async_fire(
                 EVENT_PARENT_PIN_LOCKED_OUT, {"device_id": device_id, "lockouts": after - before, "retry_in": None}
             )
-        # A device that said its caps once keeps them while its later posts leave them out
-        if status.get("caps") is None and (state.status or {}).get("caps") is not None:
-            status = {**status, "caps": state.status["caps"]}
+        # A device that said its caps once keeps them while its later posts leave them out; its client and checks too
+        for kept in ("caps", "client", "checks"):
+            if status.get(kept) is None and (state.status or {}).get(kept) is not None:
+                status = {**status, kept: state.status[kept]}
+        self._tell_failed_checks(device_id, state.status, status)
         state.status = status
         state.seen = dt_util.utcnow()
         # What the TV ran of its commands leaves the queue (its answer no longer carries them)
@@ -280,6 +306,27 @@ class HearthHub:
         if status.get("local_rules") and self.kind(device_id) == KIND_TV:
             self.household.import_local_rules(device_id, status["local_rules"])
         self.household.recompute()
+
+    def checks(self, device_id: str) -> list[dict[str, Any]]:
+        """A device's checks as its row shows them: its own, then Hearth's client check (client.py)."""
+        return checks_of(self.devices.get(device_id, {}), self.state(device_id).status)
+
+    def _tell_failed_checks(self, device_id: str, before: dict[str, Any] | None, after: dict[str, Any]) -> None:
+        """hearth_device_check_failed for each check that is false now and wasn't in the device's last status."""
+        device = self.devices.get(device_id, {})
+        was = {c["id"]: c["ok"] for c in checks_of(device, before)} if before is not None else {}
+        for check in checks_of(device, after):
+            if check["ok"] is False and was.get(check["id"]) is not False:
+                self.hass.bus.async_fire(
+                    EVENT_DEVICE_CHECK_FAILED,
+                    {
+                        "device_id": device_id,
+                        "name": device.get("name"),
+                        "person": device.get(CONF_PERSON),
+                        "check": check["id"],
+                        "label": check["label"],
+                    },
+                )
 
     @callback
     def _data_to_save(self) -> dict[str, Any]:
@@ -294,9 +341,15 @@ class HearthHub:
         await self._store.async_save(self._data_to_save())
         await self.household.async_flush()
         await self.household.apps.async_flush()
+        await self.client_settings.async_flush()
 
     async def async_remove_device(self, device_id: str) -> None:
         """Forgets a device: its secret stops working at once."""
+        # Its device documents go with it, first and saved at once: updating the entry may reload it straight away;
+        # person and household documents stay until an adult removes them
+        self.pin_grants.forget(device_id)
+        self.client_settings.remove_device(device_id)
+        await self.client_settings.async_flush()
         devices = {k: v for k, v in self.devices.items() if k != device_id}
         self.hass.config_entries.async_update_entry(self.entry, data={**self.entry.data, CONF_DEVICES: devices})
         self._states.pop(device_id, None)
@@ -320,6 +373,7 @@ class HearthHub:
         model: str | None,
         sw_version: str | None,
         nonce: str,
+        client: dict[str, Any] | None = None,
     ) -> Pairing | None:
         """A device asks to pair; None when too many are waiting or this address asked a moment ago."""
         self._drop_expired()
@@ -343,6 +397,7 @@ class HearthHub:
             model=model,
             sw_version=sw_version,
             expires=now + PAIRING_EXPIRES,
+            client=client,
         )
         self._pairings[pairing.pairing_id] = pairing
         async_dispatcher_send(self.hass, SIGNAL_PAIRINGS)
@@ -382,6 +437,8 @@ class HearthHub:
                 CONF_SECRET_HASH: hash_secret(secret),
                 CONF_PERSON: person,
                 **({CONF_PUSH_TOPIC: topic} if topic else {}),
+                # The client app the adult saw when approving: pairing again is the only way to change it
+                **({CONF_CLIENT: pinned} if (pinned := locked(pairing.client)) else {}),
             },
         }
         self.hass.config_entries.async_update_entry(self.entry, data={**self.entry.data, CONF_DEVICES: devices})
@@ -416,6 +473,7 @@ class HearthHub:
         name: str,
         model: str | None,
         sw_version: str | None,
+        client: dict[str, Any] | None = None,
     ) -> Pairing | None:
         """Pairs a device that holds a live ticket of its kind, at once (the TV that asked for the ticket vouched for
         it); None when the ticket is unknown, used, expired or of another kind. The ticket is spent either way."""
@@ -435,6 +493,7 @@ class HearthHub:
             model=model,
             sw_version=sw_version,
             expires=now + APPROVED_EXPIRES,
+            client=client,
         )
         self._pairings[pairing.pairing_id] = pairing
         by_name = self.devices[held.minted_by].get("name") or held.minted_by
@@ -442,7 +501,14 @@ class HearthHub:
             return None
         self.hass.bus.async_fire(
             EVENT_DEVICE_PAIRED,
-            {"device_id": device_id, "name": name, "kind": kind, "person": held.person, "by": held.minted_by},
+            {
+                "device_id": device_id,
+                "name": name,
+                "kind": kind,
+                "person": held.person,
+                "by": held.minted_by,
+                "client": (client or {}).get("id"),
+            },
         )
         self.attention.notify(
             Item(

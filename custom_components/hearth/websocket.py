@@ -185,6 +185,9 @@ def summary(hub) -> dict[str, Any]:
                 "profile": status.get("profile") if tv else None,
                 "media_player": hub.entry.options.get(CONF_MEDIA_PLAYERS, {}).get(device_id),
                 "kids_profile": status.get("kids_profile"),
+                # Contract 3: the client it paired with ({"id", "companions"}, null before) and its checks, for display
+                "client": device.get("client"),
+                "checks": hub.checks(device_id),
                 "person": household.profile_person(device_id, status["profile_id"])
                 if tv and status.get("profile_id")
                 else device.get(CONF_PERSON),
@@ -197,6 +200,8 @@ def summary(hub) -> dict[str, Any]:
             "device_kind": p.kind,
             "code": p.code,
             "expires": p.expires.isoformat(),
+            "client": (p.client or {}).get("id"),
+            "companions": list((p.client or {}).get("companions") or []),
         }
         for p in hub.pending_pairings()
     ]

@@ -701,7 +701,7 @@ def person_states(person: dict[str, Any], allows: list[dict[str, Any]]) -> dict[
     paused = {p["group"] for p in person.get("pauses") or [] if p.get("group") and not p.get("app")}
     for group in groups:
         group["state"] = group_state(group, allowed, paused)
-        # No budget today: a surface may hide it (the TV, Glint) or mute it (the panel)
+        # No budget today: a surface may hide it (the TV, a phone app) or mute it (the panel)
         group["limited"] = group.get("minutes_left") is not None
     binds = binding_group(groups, allowed)
     return {

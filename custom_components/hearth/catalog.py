@@ -1,6 +1,7 @@
-"""The shared app catalog: Glint's signed catalog of app facts, which Hearth reads to put apps in pools.
+"""The shared app catalog (App Facts): a public, signed dataset of app facts, which Hearth reads to put apps in pools.
 
-Glint's catalog (glint-recipes) publishes, at a stable URL, a signed index (`glint.exchange/1`) naming one shard per
+It is published, for now from the glint-recipes repository (its own repository comes later, docs/contracts/app-facts.md),
+at a stable URL: a signed index (`glint.exchange/1`) naming one shard per
 platform (`glint.catalog/1`): for each key (android:<package>, pfn:<package family>, xbox:<title id>, name:switch:<name>
 and so on) what the app is (`category`, one of the ten Android categories, and the finer `detail`: youtube,
 streaming, education, companion, system), its app slug (`app`, shared by the same app's keys on every platform) and
@@ -12,7 +13,8 @@ Hearth's side, as the catalog's contract says (docs/home-assistant-integration.m
   with If-None-Match (ETag), then only the shards whose SHA-256 changed. A generic user agent and nothing else.
 - **Verify**, in order, and any failure keeps the last good copy: the index's Ed25519 signature over its exact bytes
   with one of the two pinned keys (catalog_data/keys), its format, its `seq` (lower than the copy's is a rollback,
-  refused), and each shard's SHA-256, format and platform.
+  refused), and each shard's SHA-256, format and platform. An index that lists no catalog, or no shards, keeps the
+  copy: it never empties it.
 - **Keep** the last good copy in a Home Assistant Store with no expiry; offline it's used forever. Before the first
   fetch, the snapshot bundled with the integration (catalog_data/snapshot) is checked the same way and used.
 - **Look up** what Hearth sees (an Android package, Family Safety's a:/appx:/x: ids, a Nintendo application id, an
@@ -20,7 +22,7 @@ Hearth's side, as the catalog's contract says (docs/home-assistant-integration.m
   never looked up.
 - **Send upward** (off until an HA administrator turns it on, asked once): weekly, at most 20 public store ids the
   catalog lacks and 10 corrections an adult chose to share, with no household, person or device id, no usage and no
-  times. Until the relay's /propose is deployed (a 404), nothing happens and the queue waits.
+  times, to the relay's /propose. A 404 or 410 (no such endpoint) changes nothing: the queue waits.
 
 Facts only come from the catalog; which pool a fact goes to is the household's (limits.pool_map).
 """
@@ -56,7 +58,7 @@ DEFAULT_RELAY = "https://glint-relay.glint-tiles.workers.dev/"
 EXCHANGE_FORMAT = "glint.exchange/1"
 CATALOG_FORMAT = "glint.catalog/1"
 PROPOSE_FORMAT = "glint.catalog-propose/1"
-# Options (Hearth's own tile exchange setting, with Glint's defaults: fetching on, sending off until asked)
+# Options (fetching on, sending off until an adult is asked and turns it on)
 CONF_CATALOG_FETCH = "catalog_fetch"
 CONF_CATALOG_SHARE = "catalog_share"
 CONF_CATALOG_ASKED = "catalog_share_asked"
@@ -149,11 +151,12 @@ def check_seq(index: dict[str, Any], cached: int | None) -> None:
         raise CatalogError(f"seq {index['seq']} is lower than the copy's {cached}: a rollback")
 
 
-def shard_list(index: dict[str, Any]) -> dict[str, tuple[str, str]]:
-    """The shards Hearth reads: name -> (path, sha256). None listed (an older index) is an empty catalog."""
+def shard_list(index: dict[str, Any]) -> dict[str, tuple[str, str]] | None:
+    """The shards Hearth reads: name -> (path, sha256); None when the index lists no catalog or no shards, which
+    keeps the copy in use (a publisher that dropped the entry, or moved it, must never empty Hearth's catalog)."""
     catalog = index.get("catalog")
     if catalog is None:
-        return {}
+        return None
     if not isinstance(catalog, dict) or catalog.get("format") != CATALOG_FORMAT:
         raise CatalogError("the index's catalog isn't glint.catalog/1")
     found: dict[str, tuple[str, str]] = {}
@@ -164,7 +167,8 @@ def shard_list(index: dict[str, Any]) -> dict[str, tuple[str, str]]:
         if not isinstance(path, str) or not _SHARD_PATH.match(path) or not isinstance(digest, str) or not _HEX64.match(digest):
             raise CatalogError(f"the index's {name} shard is malformed")
         found[name] = (path, digest)
-    return found
+    # No shard Hearth reads (none listed, or only ones it doesn't know): the copy stays
+    return found or None
 
 
 def check_shard(name: str, digest: str, data: bytes) -> dict[str, Any]:
@@ -190,9 +194,12 @@ def read_bundled(folder: Path = DATA_DIR) -> tuple[list[bytes], dict[str, Any] |
     snapshot = folder / "snapshot"
     try:
         index = verify_index((snapshot / "index.json").read_bytes(), (snapshot / "index.json.sig").read_bytes(), keys)
+        listed = shard_list(index)
+        if listed is None:
+            raise CatalogError("the snapshot lists no shards")
         shards = {
             name: check_shard(name, digest, (snapshot / path).read_bytes())
-            for name, (path, digest) in shard_list(index).items()
+            for name, (path, digest) in listed.items()
         }
     except (OSError, CatalogError) as err:
         _LOGGER.warning("Hearth's bundled app catalog can't be used: %s", err)
@@ -372,7 +379,7 @@ class CatalogKeeper:
             self.origin = stored.get("origin", "fetched")
         elif index is not None:
             # First run (or a newer integration than the copy): the bundled snapshot
-            self._use(index, shards, {n: d for n, (_p, d) in shard_list(index).items()}, origin="bundled")
+            self._use(index, shards, {n: d for n, (_p, d) in (shard_list(index) or {}).items()}, origin="bundled")
             self.fetched = stored.get("fetched")
         self.data = CatalogData(self._raw)
         if self.share_on:
@@ -476,6 +483,10 @@ class CatalogKeeper:
             index = verify_index(index_bytes, sig, self.keys)
             check_seq(index, self.seq)
             listed = shard_list(index)
+            if listed is None:
+                # Never an empty catalog from an index that lists none: the copy stays (and isn't marked current, so
+                # the next fetch looks again)
+                raise CatalogError("the index lists no catalog shards")
             shards: dict[str, dict[str, Any]] = {}
             for name, (path, digest) in listed.items():
                 if self._digests.get(name) == digest and name in self._raw:

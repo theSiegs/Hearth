@@ -1,4 +1,4 @@
-"""The TV status a Hearth TV posts (the same JSON as its webhook post, see docs/home-assistant.md), made safe.
+"""The status a Hearth device posts (a TV's is the same JSON as its webhook post, see docs/home-assistant.md), made safe.
 
 Everything a TV sends is untrusted: only known fields are kept, text is shortened and stripped of control characters,
 numbers are bounded, and nothing is ever used as a template.
@@ -157,8 +157,12 @@ def clean_status(raw: Any) -> dict[str, Any] | None:
     status["profiles"] = _profiles(raw.get("profiles"))
     status["profile_ref"] = _ref(raw.get("profile_ref"))
     status["app_categories"] = _categories(raw.get("app_categories"))
-    # Categories from a shared catalog (a Glint phone's), for apps that don't declare one: below the declared ones
-    status["catalog_categories"] = _categories(raw.get("catalog_categories"))
+    # Contract 3: the client app (its id is checked against the one locked at pairing) and its own checks, shown as
+    # given (client.py). catalog_categories is no longer read: Hearth fetches the shared app catalog itself
+    from .client import clean_checks, clean_client
+
+    status["client"] = clean_client(raw.get("client"))
+    status["checks"] = clean_checks(raw.get("checks"))
     # The one-shot commands (commands.py) the TV ran, or couldn't, since its last post
     status["commands_done"] = _commands_done(raw.get("commands_done"))
     # A TV's own screen-time rules for its kids profiles, from before it was paired: Hearth takes them as a kid's

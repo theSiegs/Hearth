@@ -671,6 +671,42 @@ test("the shared catalog's setting asks once before sharing, and maps kinds of a
   assert.match(html, /data-change="catalog-share" >/);
 });
 
+test("App facts and Sharing app data say what they do without naming an app", () => {
+  const p = panel();
+  p._config.catalog = { fetch: true, share: false, asked: false, keys: 380, values: [], pools: {}, own_pools: {} };
+  p._config.share_app_data = ["person.sam"];
+  const facts = p._catalogCard();
+  assert.match(facts, /App facts<\/h3>/);
+  assert.match(facts, /A public list of what apps are/);
+  const sharing = p._sharingCard();
+  assert.match(sharing, /Sharing app data<\/h3>/);
+  assert.match(sharing, /Off here turns it off on their devices/);
+  assert.match(sharing, /data-change="share-app-data" data-person="person.sam" checked/);
+  for (const html of [facts, sharing]) assert.doesNotMatch(html, /Glint|tile/i);
+});
+
+test("a paired device shows its app, its checks and what's kept for it; a pairing shows the app it brings", () => {
+  const p = panel();
+  p._config.client_settings = { "com.example.launcher": { count: 3, bytes: 12 * 1024, labels: ["Example rules", "com.example.launcher · kids"] } };
+  const lines = p._deviceClientLines({
+    id: "phone1", kind: "mobile", person: "person.sam",
+    client: { id: "com.example.launcher", companions: [] },
+    client_reported: { id: "com.example.launcher", version: "1.4.2" },
+    checks: [{ id: "home_app", ok: true, label: "Home app" }, { id: "hearth_client", ok: false, label: "App differs from pairing" }],
+  });
+  assert.match(lines, /App: com.example.launcher 1.4.2/);
+  assert.match(lines, /✓ Home app/);
+  assert.match(lines, /class="warn">✗ App differs from pairing/);
+  assert.match(lines, /Settings kept for com.example.launcher: 3 \(12 KB\) · Example rules, com.example.launcher · kids/);
+  assert.match(lines, /data-action="client-settings-clear" data-client="com.example.launcher">Remove/);
+  // Paired before the app said what it is
+  assert.match(p._deviceClientLines({ client: null, client_reported: { id: "com.example.launcher" }, checks: [] }), /not confirmed: pair again/);
+  assert.equal(p._deviceClientLines({ client: null, client_reported: null, checks: [] }), "");
+
+  p._config.pairings = [{ pairing_id: "p1", name: "Sam's phone", kind: "mobile", code: "123456", client: { id: "com.example.launcher", companions: ["com.example.launcher.phone"] } }];
+  assert.match(p._pairingCards(), /App: com.example.launcher \(and com.example.launcher.phone\)/);
+});
+
 // The Schedule tab (the weekly schedule)
 const SCHOOL_TUE = [["06:45", "free"], ["07:45", "school"], ["15:15", "free"], ["16:00", "homework"], ["17:00", "free"], ["21:30", "sleep"]];
 function scheduled({ todayChange = null, empty = false } = {}) {
