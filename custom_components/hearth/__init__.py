@@ -33,7 +33,7 @@ from .auth import is_adult_user, register_service
 from .websocket import async_register_commands
 from .pause import end_app_pause, end_pause, set_app_pause, set_pause
 from .places import ARRIVE, LEAVE
-from . import llm_api, panel, suggest_push, todo_ws
+from . import llm_api, panel, suggest_push, todo_ws, weekly_ws
 from .todos import migrated_options
 from .apps import ACTION_PREFIX
 from .asks import ACTION_PREFIX as ASK_ACTION_PREFIX
@@ -759,6 +759,8 @@ def _register_watch_services(hass: HomeAssistant) -> None:
         register_service(hass, DOMAIN, f"unblock_{name}", blocking(kind, field, parse, False), schema=unschema)
     # The adults' Undo on a chore's notice (todos.py)
     todo_ws.async_register_services(hass)
+    # The weekly schedule (weekly.py)
+    weekly_ws.async_register_services(hass)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bool:
@@ -781,6 +783,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
         async_register_commands(hass)
         panel.async_register_commands(hass)
         todo_ws.async_register_commands(hass)
+        weekly_ws.async_register_commands(hass)
         hass.data[_VIEWS_REGISTERED] = True
     # Hearth's page in the sidebar, while the household is set up
     await panel.async_register_panel(hass)
