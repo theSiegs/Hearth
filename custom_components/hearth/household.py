@@ -30,7 +30,7 @@ from .const import (
     CONF_PERSON,
     CONF_PROFILES,
     CONF_ROLES,
-    CONF_TILE_EXCHANGE,
+    CONF_SHARE_APP_DATA,
     CONTRACT,
     DOMAIN,
     EVENT_BUDGET_REACHED,
@@ -49,6 +49,7 @@ from .apps import (
 )
 from .counting import ALL, DeviceUsage, Reading, group_seconds, merge
 from .catalog import CatalogKeeper, correctable_key
+from .client import exempt_packages
 from .limits import (
     CONF_APP_GROUPS,
     CONF_CATALOG_POOLS,
@@ -103,6 +104,9 @@ if TYPE_CHECKING:
     from .hub import HearthHub
 
 SOURCE_HEARTH = "hearth"
+# Where an app lands when the household or the shared catalog put it in a pool (limits.Placement.why): a client's own
+# packages placed so are never kept from pausing (client_exempt)
+POOLED_BY_HOUSEHOLD_OR_CATALOG = ("moved", "list", "starter", "catalog", "suggested")
 # What a kid on their Switch plays when Nintendo's integration doesn't say the game
 SWITCH_ITEM = "Switch"
 
@@ -179,7 +183,7 @@ class Household:
         self.limits = Limits(hass, hub.entry.entry_id)
         self.live = LiveTracker(hass, hub.entry.entry_id)
         self.apps = AppCatalog(hass, hub.entry.entry_id)
-        # The shared app catalog (Glint's): what an app is, by its keys on every platform (catalog.py)
+        # The shared app catalog: what an app is, by its keys on every platform (catalog.py)
         self.catalog = CatalogKeeper(hass, hub.entry.entry_id, dict(hub.entry.options))
         self.school = SchoolDays(hass)
         self.school.configure(dict(hub.entry.options))
@@ -721,8 +725,7 @@ class Household:
 
     def placement(self):
         """Where an item counts and why (limits.placer): an adult's move, the household's lists, Hearth's curated
-        lists, the shared catalog's confirmed answer, the device's category (a Glint phone's copy of the catalog
-        below it), the catalog's suggested answer, where its time came from (a Switch's: games), else Other; for a
+        lists, the shared catalog's confirmed answer, the device's own category, the catalog's suggested answer, where its time came from (a Switch's: games), else Other; for a
         title its apps' (the first that has one)."""
         place = placer(
             self.groups,
@@ -778,7 +781,6 @@ class Household:
         playing: dict[str, list[Playing]] = {}
         observations: list[Observation] = []
         categories: dict[str, str] = {}
-        catalog: dict[str, str] = {}
         hints: dict[str, set[str]] = {}
         # Each Playing with its play's key in live.py, for when it started
         plays: list[tuple[Playing, tuple[str, str, str]]] = []
@@ -806,7 +808,6 @@ class Household:
             if status is None:
                 continue
             categories.update(status.get("app_categories") or {})
-            catalog.update(status.get("catalog_categories") or {})
             name = device.get("name") or device_id
             # Yesterday's counts from a device that hasn't posted since midnight don't count today
             into = (
@@ -914,9 +915,6 @@ class Household:
                         if source.group:
                             hints.setdefault(key, set()).add(source.group)
 
-        # An app's own category first, the shared catalog's for the rest
-        for package, category in catalog.items():
-            categories.setdefault(package, category)
         self.categories = categories
         self._hints = hints
         if self.catalog.share_on:
@@ -1004,12 +1002,31 @@ class Household:
             device_lifted_of=self._device_lifted,
             paused_groups_of=lambda person: self.paused_groups(person, now),
             closed_of=self.schedule_holds,
+            exempt_of=self.client_exempt(),
         )
         # An adult's allow of All screen time opens Google's and Microsoft's own limits too
         self.sync.mirror_allows()
         for together, what in [(t, "started") for t in started] + [(t, "ended") for t in ended]:
             self.hass.bus.async_fire(EVENT_PLAYING_TOGETHER, self._together_event(together, what))
         async_dispatcher_send(self.hass, SIGNAL_PEOPLE, new_day)
+
+    def client_exempt(self):
+        """person -> the packages never paused for them: the client (and its companions) locked at the pairing of
+        each of their devices, as an adult approved it (client.py). Never one the household or the shared catalog put
+        in a pool (an adult's move or list, Hearth's lists, the catalog's answer): those are held like any app. A
+        client a device reports later that isn't the one it paired with changes nothing."""
+        place = self.placement()
+        found: dict[str, set[str]] = {}
+        for device in self.hub.devices.values():
+            person = device.get(CONF_PERSON)
+            if not person or device.get(CONF_KIND) == KIND_TV:
+                continue
+            for package in exempt_packages(device):
+                placed = place(package)
+                if placed.pool is not None and placed.why in POOLED_BY_HOUSEHOLD_OR_CATALOG:
+                    continue
+                found.setdefault(person, set()).add(package)
+        return lambda person: found.get(person, set())
 
     def day_type_on(self, day: date) -> str:
         """A date's day type: today's as last worked out (the entity and the calendar too), another day's from the
@@ -1096,7 +1113,7 @@ class Household:
 
     def _note_for_catalog(self, readings: dict[str, dict[str, list[Reading]]], categories: dict[str, str]) -> None:
         """While sharing with the shared catalog is on: the public store ids counted today that it lacks, unless the
-        only ones they were seen on are kids whose sharing is off (tile_exchange_share), or it's a messaging app."""
+        only ones they were seen on are kids who don't share app data (share_app_data), or it's a messaging app."""
         seen: dict[str, set[str]] = {}
         for person, devices in readings.items():
             for device_readings in devices.values():
@@ -1104,7 +1121,7 @@ class Household:
                     for item in reading.items:
                         seen.setdefault(item, set()).add(person)
         roles = self.options.get(CONF_ROLES, {})
-        sharing = set(self.options.get(CONF_TILE_EXCHANGE, []))
+        sharing = set(self.options.get(CONF_SHARE_APP_DATA, []))
 
         def never(item: str) -> bool:
             hit = self.catalog.data.lookup(item)
@@ -1498,8 +1515,9 @@ class Household:
             "playing": [p.view() for p in (day.playing if day else [])],
             # The weekly schedule now: the mode, the next change, tonight's bedtime (weekly.py)
             **({"schedule": view} if (view := self.schedule_view(person)) else {}),
-            # A parent let this person's phone share with the launcher's tile exchange (off unless chosen)
-            "tile_exchange_share": person in self.options.get(CONF_TILE_EXCHANGE, []),
+            # A parent lets this person's devices share app data with public app datasets (off unless chosen); a
+            # client turns its own sharing off when it's false
+            "share_app_data": person in self.options.get(CONF_SHARE_APP_DATA, []),
             # A kid's to-do list today, counts only (todos.py); the money balance stays on adults' screens
             **({"todo": self.todos.counts(person)} if person in self.todos.kids() else {}),
             # Their latest request for more time and its answer (asks.py), while it's still news
@@ -1576,6 +1594,10 @@ class Household:
                     body["parent_pins"] = listed
         else:
             body = self._phone_body(device.get(CONF_PERSON), device_id)
+        # Contract 3: the etags of the client settings this device may read, for the client it paired with, so it
+        # fetches only what changed (client_settings.py); none for a device paired without a client
+        if (etags := self.hub.client_settings.etags_for_device(device_id)) is not None:
+            body["client_settings"] = etags
         body["version"] = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()[:16]
         body["contract"] = CONTRACT
         return body

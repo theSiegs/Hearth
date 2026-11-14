@@ -40,7 +40,7 @@ from .const import (
     CONF_LOCKS,
     CONF_OUTSIDE_ALL,
     CONF_ROLES,
-    CONF_TILE_EXCHANGE,
+    CONF_SHARE_APP_DATA,
     CONF_VOICE_ASSISTANTS,
     CONF_PERSON,
     CONF_PROFILES,
@@ -82,6 +82,14 @@ PERSON_SELECTOR = EntitySelector(EntitySelectorConfig(domain="person"))
 def _loaded_hub(hass):
     entries = hass.config_entries.async_loaded_entries(DOMAIN)
     return entries[0].runtime_data if entries else None
+
+
+def client_line(client: dict[str, Any] | None) -> str:
+    """The app a device pairs with, for the adult approving it (locked when they do: client.py); empty for none."""
+    if not client:
+        return ""
+    also = client.get("companions") or []
+    return f"App: **{client['id']}**" + (f" (and {', '.join(also)})" if also else "") + ". "
 
 
 class HearthConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -136,7 +144,7 @@ class HearthConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="confirm",
             data_schema=schema,
-            description_placeholders={"name": pairing.name, "code": pairing.code},
+            description_placeholders={"name": pairing.name, "code": pairing.code, "client": client_line(pairing.client)},
         )
 
     def _hub_pairing(self):
@@ -169,7 +177,7 @@ class HearthOptionsFlow(OptionsFlow):
                 "group_apps",
                 "not_screen_time",
                 "remove_group",
-                "tile_exchange",
+                "share_app_data",
                 "app_catalog",
                 "voice_assistants",
                 "parent_pin",
@@ -272,23 +280,24 @@ class HearthOptionsFlow(OptionsFlow):
         )
         return self.async_show_form(step_id="not_screen_time", data_schema=schema)
 
-    async def async_step_tile_exchange(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """The people whose phone may share with the launcher's tile exchange (scrubbed notification layouts, never
-        content). Off for everyone until chosen here."""
+    async def async_step_share_app_data(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """The people whose devices may share app data with public app datasets (what kind of app something is and,
+        where an app supports it, notification layouts with every word and number blanked out; never content). Off
+        for everyone until chosen here."""
         options = self._options()
         if user_input is not None:
-            return self.async_create_entry(data={**options, CONF_TILE_EXCHANGE: list(user_input.get("people", []))})
+            return self.async_create_entry(data={**options, CONF_SHARE_APP_DATA: list(user_input.get("people", []))})
         schema = vol.Schema(
             {
-                vol.Optional("people", default=list(options.get(CONF_TILE_EXCHANGE, []))): EntitySelector(
+                vol.Optional("people", default=list(options.get(CONF_SHARE_APP_DATA, []))): EntitySelector(
                     EntitySelectorConfig(domain="person", multiple=True)
                 )
             }
         )
-        return self.async_show_form(step_id="tile_exchange", data_schema=schema)
+        return self.async_show_form(step_id="share_app_data", data_schema=schema)
 
     async def async_step_app_catalog(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Hearth's own tile exchange setting, for the shared app catalog (catalog.py): fetching it (on by default; it
+        """Hearth's setting for the shared app catalog (catalog.py): fetching it (on by default; it
         sends nothing) and sending it public store ids and the corrections an adult shares (off until turned on).
         Options are for Home Assistant's administrators only, as the page is."""
         options = self._options()

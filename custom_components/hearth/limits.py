@@ -239,7 +239,7 @@ class Placement:
     # A pool's id, or None: Other (All screen time only)
     pool: str | None
     # moved (an adult's move), list (a list an adult keeps), starter (Hearth's curated lists), catalog (the shared
-    # catalog, confirmed), declared (the device's own category, or a Glint phone's copy of the catalog), suggested (the
+    # catalog, confirmed), declared (the device's own category), suggested (the
     # shared catalog, suggested), hint (where its time came from: a Switch's are games), other
     why: str
     # What the catalog or the device says it is (a detail or a category)
@@ -265,7 +265,7 @@ def placer(
     3. Hearth's curated (starter) lists.
     4. The shared catalog's confirmed answer ([catalog]: item -> catalog.Hit or None), by the household's map
        ([pools], pool_map's); a confirmed value the map sends to no pool is Other, and stops here.
-    5. The device's own category ([categories]; a Glint phone's copy of the catalog is below the device's).
+    5. The device's own category ([categories]).
     6. The shared catalog's suggested answer, only when it goes to a pool (a guess never takes an app out of one).
     7. Where its time came from ([hints]: a Switch's or an Xbox's titles are games).
     8. Other.

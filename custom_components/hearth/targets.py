@@ -151,7 +151,7 @@ _LEFT_BY = {VIA_FAMILY_LINK: "google", VIA_FAMILY_SAFETY: "microsoft", VIA_NINTE
 
 def with_time_left(household: Household, person: str, view: dict[str, Any]) -> list[dict[str, Any]]:
     """The person's targets (view["targets"]) each with the time actually left on it, worked out once for every
-    surface (the panel, the TV, Glint):
+    surface (the panel, the TV, a phone app):
 
         left         minutes, the smaller of Hearth's and the device's own limit (null: neither limits it)
         left_by      hearth | google | microsoft | nintendo: whose limit that is (null with left null)

@@ -48,6 +48,9 @@ from . import notices, parent_pin
 from .asks import AskError
 from .status import clean_status, text
 from .watch import MAX_EVENTS, clean_started
+from .client import clean_client, locked
+from .client_settings import MAX_DATA_BYTES, SettingsError, device_write, may_read, parse_scope, valid_name
+from .pin_grants import GRANT_SECONDS, GRANT_WRITES
 
 HEADER_SECRET = "X-Hearth-Secret"
 HEADER_NONCE = "X-Hearth-Nonce"
@@ -72,15 +75,15 @@ def _error(status: HTTPStatus, reason: str) -> web.Response:
     return web.json_response({"error": reason}, status=status)
 
 
-async def _json_body(request: web.Request) -> Any:
-    if request.content_length is not None and request.content_length > MAX_STATUS_BYTES:
+async def _json_body(request: web.Request, limit: int = MAX_STATUS_BYTES) -> Any:
+    if request.content_length is not None and request.content_length > limit:
         return None
     # StreamReader.read(n) returns what has arrived so far, not n bytes: a body split across TCP segments would be
     # cut short. Read to the end, but never past the limit.
     body = bytearray()
-    while chunk := await request.content.read(MAX_STATUS_BYTES + 1 - len(body)):
+    while chunk := await request.content.read(limit + 1 - len(body)):
         body += chunk
-        if len(body) > MAX_STATUS_BYTES:
+        if len(body) > limit:
             return None
     try:
         return json.loads(body)
@@ -88,11 +91,21 @@ async def _json_body(request: web.Request) -> Any:
         return None
 
 
+def _pair_client(body: dict[str, Any]) -> tuple[bool, dict[str, Any] | None]:
+    """(valid, the client) from a pair or redeem body: a device that sends none is a contract-2 device (no client
+    locked); one that sends a client that isn't valid is refused, so its developer hears of it."""
+    if body.get("client") is None:
+        return True, None
+    found = clean_client(body["client"])
+    return found is not None, found
+
+
 class PairStartView(HomeAssistantView):
-    """POST /api/hearth/pair {device_id, kind, name, model, version, nonce} -> {pairing_id, code, expires_in}.
+    """POST /api/hearth/pair {device_id, kind, name, model, version, nonce, client?} -> {pairing_id, code, expires_in}.
 
     The device shows the code; an administrator checks it matches in Home Assistant (Settings > Devices & services, a
-    discovered Hearth device) and confirms.
+    discovered Hearth device) and confirms. `client` ({"id", "version", "contract", "companions"}, client.py) is shown
+    to the administrator and locked when they confirm.
     """
 
     url = "/api/hearth/pair"
@@ -112,12 +125,14 @@ class PairStartView(HomeAssistantView):
         device_id, nonce = body.get("device_id"), body.get("nonce")
         kind = body.get("kind", KIND_TV)
         name = text(body.get("name"), 64)
+        client_ok, client = _pair_client(body)
         if (
             not isinstance(device_id, str)
             or not _ID.match(device_id)
             or not isinstance(nonce, str)
             or not _NONCE.match(nonce)
             or kind not in KINDS
+            or not client_ok
         ):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
         pairing = hub.start_pairing(
@@ -128,6 +143,7 @@ class PairStartView(HomeAssistantView):
             text(body.get("model"), 64),
             text(body.get("version"), 32),
             nonce,
+            client,
         )
         if pairing is None:
             return _error(HTTPStatus.TOO_MANY_REQUESTS, "try_later")
@@ -193,6 +209,8 @@ def _approved(hass: HomeAssistant, pairing, secret: str) -> dict[str, Any]:
         "role": roles.get(pairing.person) if pairing.person else None,
         # A phone's push channel: where to listen for "changed" (push.py); null without a push server
         "push": push_answer(_server(options), pairing.push_topic) if pairing.kind == KIND_MOBILE else None,
+        # The client locked with this pairing ({"id", "companions"}), null when the device sent none
+        "client": locked(pairing.client),
     }
 
 
@@ -254,17 +272,19 @@ class RedeemView(HomeAssistantView):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
         ticket, device_id = body.get("ticket"), body.get("device_id")
         kind = body.get("kind", KIND_TV)
+        client_ok, client = _pair_client(body)
         if (
             not isinstance(ticket, str)
             or not 16 <= len(ticket) <= 128
             or not isinstance(device_id, str)
             or not _ID.match(device_id)
             or kind not in KINDS
+            or not client_ok
         ):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
         name = text(body.get("name"), 64) or ("TV" if kind == KIND_TV else "Phone")
         pairing = await hub.async_redeem(
-            ticket, device_id, kind, name, text(body.get("model"), 64), text(body.get("version"), 32)
+            ticket, device_id, kind, name, text(body.get("model"), 64), text(body.get("version"), 32), client
         )
         if pairing is None:
             return _error(HTTPStatus.NOT_FOUND, "unknown")
@@ -375,9 +395,10 @@ class EventsView(HomeAssistantView):
 
 class VerifyPinView(HomeAssistantView):
     """POST /api/hearth/device/{device_id}/verify_pin (header X-Hearth-Secret): {"pin": "1234"} -> {"ok": true, "person":
-    "person.alex"} or {"ok": false}.
+    "person.alex", "grant", "grant_expires": seconds, "grant_writes": n} or {"ok": false}.
 
-    Checks the adults' parent PINs (Configure > Parent PINs), any of them; the answer says whose it was, and
+    The grant (contract 3, pin_grants.py) lets this device, and only it, make a few client-settings writes it couldn't
+    make alone, for a short while. Checks the adults' parent PINs (Configure > Parent PINs), any of them; the answer says whose it was, and
     hearth_parent_pin_used tells automations. The device never gets a PIN or a hash. After
     parent_pin.FREE_TRIES wrong ones in a row the device waits, longer each time: 429 {"error": "locked_out",
     "retry_in": s}, and a wrong answer says its own "retry_in" once it starts one. 404 "no_pin" when none is set (the
@@ -409,7 +430,15 @@ class VerifyPinView(HomeAssistantView):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
         person, wait_for = await _check_pin(hass, device_id, stored, pin)
         if person:
-            return web.json_response({"ok": True, "person": person})
+            return web.json_response(
+                {
+                    "ok": True,
+                    "person": person,
+                    "grant": hub.pin_grants.mint(device_id, person),
+                    "grant_expires": GRANT_SECONDS,
+                    "grant_writes": GRANT_WRITES,
+                }
+            )
         answer: dict[str, Any] = {"ok": False}
         if wait_for:
             answer["retry_in"] = wait_for
@@ -596,6 +625,123 @@ class WaitView(HomeAssistantView):
         return web.json_response({"changed": await hub.waits.wait(device_id, version, timeout)})
 
 
+HEADER_GRANT = "X-Hearth-Grant"
+# A settings body: the document's data (at most MAX_DATA_BYTES as stored) with its envelope, room for escaping
+MAX_SETTINGS_BODY = 2 * MAX_DATA_BYTES
+_SETTINGS_ERRORS = {
+    "changed": HTTPStatus.CONFLICT,
+    "too_large": HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+    "too_many": HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+    "forbidden": HTTPStatus.FORBIDDEN,
+    "bad_request": HTTPStatus.BAD_REQUEST,
+}
+
+
+class SettingsView(HomeAssistantView):
+    """/api/hearth/device/{device_id}/settings/{scope}/{name} (header X-Hearth-Secret): the device's client settings
+    (client_settings.py), for the client locked at its pairing.
+
+    GET -> the document, or 404 none. PUT {"schema", "data", "label"?, "if_etag"?, "grant"?} -> {"etag", "updated_by"}; DELETE {"if_etag"?,
+    "grant"?} -> {"ok": true}. 403 forbidden (this device may not, or its grant isn't live), 403 no_client (paired
+    before contract 3, or without a client: pair again), 409 changed {"etag": current}, 413 too_large or too_many, 400
+    bad_request. A grant may come as X-Hearth-Grant instead."""
+
+    url = "/api/hearth/device/{device_id}/settings/{scope}/{name}"
+    name = "api:hearth:device:settings"
+    requires_auth = False
+
+    async def _start(self, request: web.Request, device_id: str, scope: str, name: str):
+        """(hub, client, scope) or an error response."""
+        hass: HomeAssistant = request.app["hass"]
+        if not _local(request):
+            return _error(HTTPStatus.FORBIDDEN, "not_local")
+        hub = _hub(hass)
+        if hub is None:
+            return _error(HTTPStatus.SERVICE_UNAVAILABLE, "not_set_up")
+        if not hub.authorized(device_id, request.headers.get(HEADER_SECRET)):
+            return _error(HTTPStatus.UNAUTHORIZED, "not_paired")
+        if hub.too_many_settings_calls(device_id):
+            return _error(HTTPStatus.TOO_MANY_REQUESTS, "too_often")
+        parsed = parse_scope(scope)
+        if parsed is None or not valid_name(name):
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        client = hub.client_settings.device_client(device_id)
+        if client is None:
+            return _error(HTTPStatus.FORBIDDEN, "no_client")
+        return hub, client, parsed
+
+    async def get(self, request: web.Request, device_id: str, scope: str, name: str) -> web.Response:
+        started = await self._start(request, device_id, scope, name)
+        if isinstance(started, web.Response):
+            return started
+        hub, client, parsed = started
+        writer, person, people = hub.client_settings.device_writer(device_id)
+        if not may_read(writer, parsed, person=person, device=device_id, people=people):
+            return _error(HTTPStatus.FORBIDDEN, "forbidden")
+        doc = hub.client_settings.get(client, parsed, name)
+        if doc is None:
+            return _error(HTTPStatus.NOT_FOUND, "none")
+        return web.json_response(doc)
+
+    async def put(self, request: web.Request, device_id: str, scope: str, name: str) -> web.Response:
+        started = await self._start(request, device_id, scope, name)
+        if isinstance(started, web.Response):
+            return started
+        hub, client, parsed = started
+        if request.content_length is not None and request.content_length > MAX_SETTINGS_BODY:
+            return _error(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, "too_large")
+        body = await _json_body(request, MAX_SETTINGS_BODY)
+        if not isinstance(body, dict) or not isinstance(body.get("data"), dict) or not isinstance(body.get("schema"), str):
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        if_etag = body["if_etag"] if "if_etag" in body else ...
+        grant = body.get("grant") or request.headers.get(HEADER_GRANT)
+        try:
+            doc = device_write(
+                hub.client_settings,
+                hub.pin_grants,
+                device_id,
+                parsed,
+                grant,
+                lambda by: hub.client_settings.put(
+                    client, parsed, name, body["schema"], body["data"], by, if_etag, body.get("label")
+                ),
+            )
+        except SettingsError as err:
+            return _settings_error(err)
+        return web.json_response({"etag": doc["etag"], "updated_by": doc["updated_by"]})
+
+    async def delete(self, request: web.Request, device_id: str, scope: str, name: str) -> web.Response:
+        started = await self._start(request, device_id, scope, name)
+        if isinstance(started, web.Response):
+            return started
+        hub, client, parsed = started
+        body = await _json_body(request) if request.can_read_body else None
+        body = body if isinstance(body, dict) else {}
+        if_etag = body["if_etag"] if "if_etag" in body else ...
+        grant = body.get("grant") or request.headers.get(HEADER_GRANT)
+        try:
+            gone = device_write(
+                hub.client_settings,
+                hub.pin_grants,
+                device_id,
+                parsed,
+                grant,
+                lambda _by: hub.client_settings.delete(client, parsed, name, if_etag),
+            )
+        except SettingsError as err:
+            return _settings_error(err)
+        if not gone:
+            return _error(HTTPStatus.NOT_FOUND, "none")
+        return web.json_response({"ok": True})
+
+
+def _settings_error(err: SettingsError) -> web.Response:
+    body: dict[str, Any] = {"error": err.code}
+    if err.code == "changed":
+        body["etag"] = err.etag
+    return web.json_response(body, status=_SETTINGS_ERRORS.get(err.code, HTTPStatus.BAD_REQUEST))
+
+
 def async_register_views(hass: HomeAssistant) -> None:
     for view in (
         PairStartView,
@@ -608,5 +754,6 @@ def async_register_views(hass: HomeAssistant) -> None:
         AskView,
         WaitView,
         TicketView,
+        SettingsView,
     ):
         hass.http.register_view(view())

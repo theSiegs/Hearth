@@ -173,7 +173,7 @@ async def test_a_summary_with_alex_waiting_paused_and_low_and_sam_calm(
     )
 
     body = await _summary(ws)
-    assert body["contract"] == 2
+    assert body["contract"] == 3
     people = {p["id"]: p for p in body["people"]}
     alex, sam = people["person.alex"], people["person.sam"]
     # Contract 1 stays as it was
@@ -334,7 +334,7 @@ async def test_an_adult_who_isn_t_an_administrator_gets_contract_2_without_pairi
     await hass.async_block_till_done()
     assert hub.pending_pairings()
     body = await _summary(await hass_ws_client(hass))
-    assert body["contract"] == 2
+    assert body["contract"] == 3
     assert all(a["type"] != "pairing" for a in body["approvals"])
     assert "pair" not in body["household"]["headline"]["text"]
     sam = next(p for p in body["people"] if p["id"] == "person.sam")

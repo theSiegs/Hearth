@@ -364,7 +364,7 @@ async def test_screen_time_today_is_kept_over_a_restart(
     assert total.state == "45"
 
 
-async def test_a_parent_lets_a_person_share_with_the_tile_exchange(
+async def test_a_parent_lets_a_person_share_app_data(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
     client, secret = await _household_with_sam(hass, hass_client_no_auth)
@@ -372,8 +372,9 @@ async def test_a_parent_lets_a_person_share_with_the_tile_exchange(
     from test_init import _post
 
     body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
-    assert body["state"]["profiles"][KID]["tile_exchange_share"] is False
+    assert body["state"]["profiles"][KID]["share_app_data"] is False
+    assert "tile_exchange_share" not in body["state"]["profiles"][KID]
 
-    await _option(hass, "tile_exchange", {"people": ["person.sam"]})
+    await _option(hass, "share_app_data", {"people": ["person.sam"]})
     body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
-    assert body["state"]["profiles"][KID]["tile_exchange_share"] is True
+    assert body["state"]["profiles"][KID]["share_app_data"] is True

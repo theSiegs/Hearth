@@ -463,6 +463,8 @@ final class HaStatusReporter {
         status.put("parent_pins_version", HaParentPins.version(mContext));
         // What this TV does beyond what every TV did before caps: its state document carries notices
         status.put("caps", new JSONArray(CAPS));
+        // Contract 3: which app this is (checked against the one locked at pairing)
+        status.put("client", HaIntegration.clientJson(mContext));
         return status;
     }
 

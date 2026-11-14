@@ -33,12 +33,21 @@ from .auth import is_adult_user, register_service
 from .websocket import async_register_commands
 from .pause import end_app_pause, end_pause, set_app_pause, set_pause
 from .places import ARRIVE, LEAVE
-from . import llm_api, panel, suggest_push, todo_ws, weekly_ws
+from . import client_settings_ws, llm_api, panel, suggest_push, todo_ws, weekly_ws
 from .todos import migrated_options
 from .apps import ACTION_PREFIX
 from .asks import ACTION_PREFIX as ASK_ACTION_PREFIX
 from .commands import is_profile_id, what_to_play
-from .const import CAP_PLAY, CAP_PUSH, CONF_DEVICES, CONF_PROFILES, CONF_PUSH_TOPIC, DOMAIN
+from .const import (
+    CAP_PLAY,
+    CAP_PUSH,
+    CONF_DEVICES,
+    CONF_PROFILES,
+    CONF_PUSH_TOPIC,
+    CONF_SHARE_APP_DATA,
+    CONF_SHARE_APP_DATA_OLD,
+    DOMAIN,
+)
 from .profiles import ISSUE_PROFILE_KEYS, legacy_keys
 from .push import new_topic
 from .hub import HearthHub
@@ -766,6 +775,7 @@ def _register_watch_services(hass: HomeAssistant) -> None:
 async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bool:
     _check_profile_keys(hass, entry)
     _migrate_offer_more(hass, entry)
+    _migrate_share_app_data(hass, entry)
     old_chores = _migrate_chores(hass, entry)
     hub = HearthHub(hass, entry)
     await hub.async_load()
@@ -784,6 +794,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
         panel.async_register_commands(hass)
         todo_ws.async_register_commands(hass)
         weekly_ws.async_register_commands(hass)
+        client_settings_ws.async_register_commands(hass)
         hass.data[_VIEWS_REGISTERED] = True
     # Hearth's page in the sidebar, while the household is set up
     await panel.async_register_panel(hass)
@@ -952,6 +963,23 @@ def _migrate_offer_more(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
     """Configure > Offer more time's pairs (offer_more) become pushed suggestions with their amounts (suggest_push):
     before the update listener, so it doesn't reload."""
     if (options := suggest_push.migrated(entry.options)) is not None:
+        hass.config_entries.async_update_entry(entry, options=options)
+
+
+def share_app_data_migrated(options: dict) -> dict | None:
+    """The options with tile_exchange_share (the people who share) moved to share_app_data as it was; None when there's
+    nothing to move."""
+    if CONF_SHARE_APP_DATA_OLD not in options:
+        return None
+    moved = dict(options)
+    old = list(moved.pop(CONF_SHARE_APP_DATA_OLD) or [])
+    moved[CONF_SHARE_APP_DATA] = list(dict.fromkeys([*(moved.get(CONF_SHARE_APP_DATA) or []), *old]))
+    return moved
+
+
+def _migrate_share_app_data(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
+    """Who shares app data, once under its old name: before the update listener, so it doesn't reload."""
+    if (options := share_app_data_migrated(dict(entry.options))) is not None:
         hass.config_entries.async_update_entry(entry, options=options)
 
 

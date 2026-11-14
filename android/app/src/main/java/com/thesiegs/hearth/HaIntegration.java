@@ -148,7 +148,8 @@ final class HaIntegration {
                     .put("name", ShareDiscovery.deviceName(context))
                     .put("model", Build.MODEL)
                     .put("version", versionName(context))
-                    .put("nonce", nonce);
+                    .put("nonce", nonce)
+                    .put("client", clientJson(context));
             Answer answer = request(base + "/api/hearth/pair", "POST", body, null);
             if (answer.code == 200 && answer.body != null) return answer.body;
             return result.put("error", answer.code == 404 && "not_set_up".equals(answer.error()) ? "not_set_up"
@@ -233,7 +234,8 @@ final class HaIntegration {
                     .put("kind", "tv")
                     .put("name", ShareDiscovery.deviceName(context))
                     .put("model", Build.MODEL)
-                    .put("version", versionName(context));
+                    .put("version", versionName(context))
+                    .put("client", clientJson(context));
             Answer answer = request(base + "/api/hearth/pair/redeem", "POST", body, null);
             if (answer.code == 0) return "unreachable";
             String secret = answer.code == 200 && answer.body != null ? answer.body.optString("secret", "") : "";
@@ -508,6 +510,23 @@ final class HaIntegration {
         } catch (PackageManager.NameNotFoundException e) {
             return null;
         }
+    }
+
+    /** The device contract this build speaks (the integration's docs/contracts/device-api.md). */
+    static final int CONTRACT = 3;
+
+    /**
+     * Which app this is, for the pair and status bodies (contract 3): the integration locks it at pairing. Hearth TV
+     * names no companions.
+     */
+    static JSONObject clientJson(String packageName, String version) throws JSONException {
+        JSONObject client = new JSONObject().put("id", packageName).put("contract", CONTRACT);
+        if (version != null) client.put("version", version);
+        return client;
+    }
+
+    static JSONObject clientJson(Context context) throws JSONException {
+        return clientJson(context.getPackageName(), versionName(context));
     }
 
     private static String versionName(Context context) {
