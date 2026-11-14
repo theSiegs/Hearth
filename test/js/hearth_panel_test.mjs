@@ -261,8 +261,11 @@ test("For you is honest when it's empty, and folds what's held back with why", (
   assert.match(today(16)._page(), /Nothing needs you<\/div>/);
 });
 
-test("a suggestion shows as a sentence with +15, 30 and Not today; a request comes first with its own buttons", () => {
+test("a suggestion shows as a sentence with +15, the + box and Dismiss; a request comes first with its own buttons", () => {
   let html = today(16, { sam: { suggestions: [GAMES_OUT] } })._page();
+  // The second amount gave way to the "+" box
+  assert.doesNotMatch(html, /data-id="suggest:more:games:30"/);
+  assert.match(html, /<button class="b sq" data-action="give-menu" data-menu="list\|person.sam\|more:games" aria-label="More choices" aria-haspopup="menu" aria-expanded="false">/);
   assert.match(html, /1 thing for you/);
   assert.match(html, /<div class="t">Sam&#39;s Games time is up<\/div><div class="d">Used 2 h 05 of 2 h · 31 min of screen time left<\/div>/);
   assert.match(html, /data-action="sugg-give" data-person="person.sam" data-id="suggest:more:games:15">[^]*?15 min<\/button>/);
@@ -382,6 +385,190 @@ test("Not today hides the row at once and runs only when its Undo is gone; Undo 
   assert.deepEqual(calls, [["dismiss_suggestion", { person: "person.sam", key: "more:games" }]]);
   clearTimeout(p._undoTimer);
   for (const w of p._deferred.values()) clearTimeout(w.timer);
+});
+
+// The "+" box: 15, 30, 1 h and Unlock for today, on For you's suggestions and in the kid's sheet
+
+const GAMES_OVER = {
+  ...GAMES_OUT,
+  minutes: 25,
+  over: 10,
+  detail: "Used 2 h 10 of 2 h · 10 min over · 31 min of screen time left",
+  actions: [
+    { id: "suggest:more:games:25", label: "+25", service: "hearth.add_bonus", data: { person: "person.sam", minutes: 25, group: "games" }, primary: true },
+    { id: "suggest:more:games:40", label: "+40", service: "hearth.add_bonus", data: { person: "person.sam", minutes: 40, group: "games" } },
+    GAMES_OUT.actions[2],
+  ],
+};
+
+const XBOX_OUT = {
+  key: "device:fs:xbox",
+  reason: "device_limit",
+  group: "all",
+  device: "fs:xbox",
+  minutes: 15,
+  over: 0,
+  sentence: "Sam's Xbox is stopped by Microsoft's limit",
+  detail: "Microsoft's own limit for today",
+  actions: [
+    { id: "suggest:device:fs:xbox:15", label: "+15", service: "hearth.add_bonus", data: { person: "person.sam", minutes: 15, group: "all", device: "fs:xbox" }, primary: true },
+    { id: "suggest:device:fs:xbox:30", label: "+30", service: "hearth.add_bonus", data: { person: "person.sam", minutes: 30, group: "all", device: "fs:xbox" } },
+    { id: "suggest_dismiss:device:fs:xbox", label: "not today", service: "hearth.dismiss_suggestion", data: { person: "person.sam", key: "device:fs:xbox" } },
+  ],
+};
+
+const menuOf = (html) => html.match(/<div class="givemenu"[^]*?<\/span>/)?.[0] || "";
+
+test("the + box opens a menu of +15, +30, +1 h and Unlock for today, for the suggestion's own pool", async () => {
+  const p = today(16, { sam: { suggestions: [GAMES_OUT] } });
+  p._render = () => {};
+  assert.equal(menuOf(p._page()), "");
+  await p._act("give-menu", { dataset: { menu: "list|person.sam|more:games" } });
+  const html = p._page();
+  assert.match(html, /data-menu="list\|person.sam\|more:games"[^>]*aria-expanded="true"/);
+  const menu = menuOf(html);
+  assert.match(menu, /role="menu" aria-label="More choices"/);
+  const items = [...menu.matchAll(/<button role="menuitem" ([^>]*)>([^<]*)/g)].map((m) => [m[1], m[2]]);
+  assert.deepEqual(items.map((i) => i[1]), ["+15 min", "+30 min", "+1 h", ""]);
+  for (const [attrs, , m] of items.slice(0, 3).map((i, n) => [...i, [15, 30, 60][n]]))
+    assert.equal(attrs, `data-action="menu-give" data-person="person.sam" data-group="games" data-minutes="${m}"`);
+  assert.match(menu, /data-action="menu-unlock" data-person="person.sam" data-group="games">[^]*Unlock for today<small>Ends at midnight<\/small>/);
+  // Not over: no line under the items
+  assert.doesNotMatch(menu, /gnote/);
+  // The same box again closes it
+  await p._act("give-menu", { dataset: { menu: "list|person.sam|more:games" } });
+  assert.equal(menuOf(p._page()), "");
+});
+
+test("a catch-up suggestion keeps its own amount first; the menu stays at 15, 30, 1 h and says how far over", () => {
+  const p = today(16, { sam: { suggestions: [GAMES_OVER] } });
+  p._giveMenu = "list|person.sam|more:games";
+  const html = p._page();
+  assert.match(html, /data-action="sugg-give" data-person="person.sam" data-id="suggest:more:games:25">[^]*?25 min<\/button>/);
+  assert.doesNotMatch(html, /suggest:more:games:40/);
+  const menu = menuOf(html);
+  assert.deepEqual([...menu.matchAll(/data-minutes="(\d+)"/g)].map((m) => m[1]), ["15", "30", "60"]);
+  assert.match(menu, /<div class="gnote">10 min over: \+15 leaves 5<\/div>/);
+  // 20 over: +30 is the first that leaves some; past an hour, none does
+  p._summary.people[0].suggestions = [{ ...GAMES_OVER, over: 20 }];
+  assert.match(menuOf(p._page()), />20 min over: \+30 leaves 10</);
+  p._summary.people[0].suggestions = [{ ...GAMES_OVER, over: 75 }];
+  assert.match(menuOf(p._page()), />1 h 15 over: \+1 h won't cover it</);
+});
+
+test("each amount in the menu applies at once with Undo; on a device it answers with an id that Undo ends", async () => {
+  const p = today(16, { sam: { suggestions: [GAMES_OUT] } });
+  const calls = [];
+  p._hass.callService = async (domain, service, data) => calls.push([service, data]);
+  p._render = () => {};
+  for (const minutes of [15, 30, 60]) {
+    p._giveMenu = "list|person.sam|more:games";
+    await p._act("menu-give", { dataset: { person: "person.sam", group: "games", minutes: String(minutes) } });
+    assert.equal(p._giveMenu, null);
+    assert.deepEqual(calls.at(-1), ["add_bonus", { person: "person.sam", minutes, group: "games" }]);
+    assert.equal(p._undo.text, `Gave Sam ${minutes} min of Games`);
+  }
+  await p._act("undo", { dataset: {} });
+  assert.deepEqual(calls.at(-1), ["remove_bonus", { person: "person.sam", minutes: 60, group: "games" }]);
+  // A device's suggestion: its device goes with the give
+  const q = today(16, { sam: { suggestions: [XBOX_OUT] } });
+  const ws = [];
+  const qcalls = [];
+  q._hass.callWS = async (m) => (ws.push(m), { response: { id: "dx_1" } });
+  q._hass.callService = async (domain, service, data) => qcalls.push([service, data]);
+  q._render = () => {};
+  q._giveMenu = "list|person.sam|device:fs:xbox";
+  assert.match(menuOf(q._page()), /data-action="menu-give" data-person="person.sam" data-group="all" data-device="fs:xbox" data-minutes="30"/);
+  await q._act("menu-give", { dataset: { person: "person.sam", group: "all", device: "fs:xbox", minutes: "30" } });
+  assert.deepEqual(ws, [{ type: "call_service", domain: "hearth", service: "add_bonus", service_data: { person: "person.sam", minutes: 30, group: "all", device: "fs:xbox" }, return_response: true }]);
+  assert.equal(q._undo.text, "Gave Sam 30 min on Xbox");
+  await q._act("undo", { dataset: {} });
+  assert.deepEqual(qcalls, [["allow_end", { id: "dx_1" }]]);
+  clearTimeout(p._undoTimer);
+  clearTimeout(q._undoTimer);
+});
+
+test("Unlock for today allows the pool until midnight, and its Undo ends that allow by its id", async () => {
+  const p = today(16, { sam: { suggestions: [GAMES_OUT] } });
+  const ws = [];
+  const calls = [];
+  p._hass.callWS = async (m) => (ws.push(m), { response: { id: "al_7", until: { "person.sam": "2026-11-14T23:59:59" } } });
+  p._hass.callService = async (domain, service, data) => calls.push([service, data]);
+  p._render = () => {};
+  p._giveMenu = "list|person.sam|more:games";
+  await p._act("menu-unlock", { dataset: { person: "person.sam", group: "games" } });
+  assert.equal(p._giveMenu, null);
+  assert.deepEqual(ws, [{ type: "call_service", domain: "hearth", service: "allow", service_data: { people: ["person.sam"], group: "games", until: "end_of_day" }, return_response: true }]);
+  assert.equal(p._undo.text, "Unlocked Games for Sam until midnight");
+  assert.match(p._page(), /Unlocked Games for Sam until midnight<\/span><button data-action="undo">Undo<\/button>/);
+  await p._act("undo", { dataset: {} });
+  assert.deepEqual(calls, [["allow_end", { id: "al_7" }]]);
+  // All screen time, and a device (an allow on one device)
+  ws.length = 0;
+  await p._act("menu-unlock", { dataset: { person: "person.sam", group: "all" } });
+  assert.equal(p._undo.text, "Unlocked screen time for Sam until midnight");
+  await p._act("menu-unlock", { dataset: { person: "person.sam", group: "all", device: "fs:xbox" } });
+  assert.deepEqual(ws[1].service_data, { people: ["person.sam"], group: "all", until: "end_of_day", device: "fs:xbox" });
+  assert.equal(p._undo.text, "Unlocked Xbox for Sam until midnight");
+  // A failure says so, with no Undo
+  p._hass.callWS = async () => {
+    throw new Error("No group games");
+  };
+  p._undo = null;
+  await p._act("menu-unlock", { dataset: { person: "person.sam", group: "games" } });
+  assert.equal(p._undo, null);
+  assert.equal(p._toast, "No group games");
+  clearTimeout(p._undoTimer);
+  clearTimeout(p._toastTimer);
+});
+
+test("the kid's sheet has the same + box beside Give time, for the pool that stops them", () => {
+  const p = today(16, {
+    sam: {
+      groups: [
+        { id: "all", name: "All screen time", used_minutes: 155, minutes_left: 25, budget: 180, bonus: 0, state: "ok" },
+        { id: "games", name: "Games", used_minutes: 131, minutes_left: 0, budget: 120, bonus: 0, state: "out" },
+      ],
+    },
+  });
+  p._sel = "person.sam";
+  p._sheetOpen = true;
+  let sheet = p._page().split('class="detail on"')[1];
+  assert.match(sheet, /Give time<\/button><span class="givebox"><button class="b sq" data-action="give-menu" data-menu="bar\|person.sam"/);
+  p._giveMenu = "bar|person.sam";
+  sheet = p._page().split('class="detail on"')[1];
+  const menu = menuOf(sheet);
+  assert.match(menu, /data-action="menu-give" data-person="person.sam" data-group="games" data-minutes="15">\+15 min/);
+  assert.match(menu, /data-action="menu-unlock" data-person="person.sam" data-group="games"/);
+  // 11 past the 2 h: 15 over (rounded up to 5, as the server counts it)
+  assert.match(menu, /15 min over: \+30 leaves 15/);
+  // In bedtime: no Give time, no box
+  const q = today(23);
+  q._sel = "person.alex";
+  q._sheetOpen = true;
+  assert.doesNotMatch(q._page().split('class="detail on"')[1], /data-action="give-menu"/);
+});
+
+test("a tap outside the menu or Esc closes it; a tap inside doesn't", () => {
+  const p = today(16, { sam: { suggestions: [GAMES_OUT] } });
+  let renders = 0;
+  p._render = () => renders++;
+  const listeners = {};
+  p.shadowRoot.addEventListener = (type, fn) => (listeners[type] = fn);
+  p.connectedCallback();
+  const el = (inside, action = null) => ({ closest: (sel) => (sel === ".givebox" ? (inside ? {} : null) : action ? { dataset: { action } } : null) });
+  p._giveMenu = "list|person.sam|more:games";
+  listeners.click({ target: el(true), preventDefault() {} });
+  assert.equal(p._giveMenu, "list|person.sam|more:games");
+  listeners.click({ target: el(false), preventDefault() {} });
+  assert.equal(p._giveMenu, null);
+  assert.equal(renders, 1);
+  p._giveMenu = "list|person.sam|more:games";
+  p._sheetOpen = true;
+  listeners.keydown({ key: "Escape", target: { dataset: {}, getAttribute: () => null } });
+  assert.equal(p._giveMenu, null);
+  // Esc closed only the menu, not the sheet under it
+  assert.equal(p._sheetOpen, true);
 });
 
 test("the other tabs: names first with ids in tooltips, Home Assistant's other users folded away", () => {

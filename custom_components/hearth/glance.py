@@ -331,7 +331,8 @@ def _suggestion(
         for given in _amounts(minutes, over)
     ]
     actions.append(_action(f"suggest_dismiss:{key}", "not today", SERVICE_DISMISS, {"person": person, "key": key}))
-    return {"key": key, "text": text, "level": NOTICE, "reason": reason, "minutes": minutes, **about,
+    # over: minutes already past the limit (0 when it isn't really over), for a page that says what a give leaves
+    return {"key": key, "text": text, "level": NOTICE, "reason": reason, "minutes": minutes, "over": over, **about,
             "actions": actions}
 
 

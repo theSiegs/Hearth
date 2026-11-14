@@ -208,6 +208,8 @@ class HearthPanel extends HTMLElement {
     this._undo = null;
     this._deferred = new Map();
     this._hidden = new Set();
+    // The "+" box's menu that's open (15, 30, 1 h, Unlock for today): which one, by its key
+    this._giveMenu = null;
   }
 
   set hass(hass) {
@@ -258,6 +260,14 @@ class HearthPanel extends HTMLElement {
         e.preventDefault();
         this._act(e.target.dataset.enter, e.target);
       }
+      // Esc closes the "+" box's menu first, back to its box
+      if (e.key === "Escape" && this._giveMenu) {
+        const key = this._giveMenu;
+        this._giveMenu = null;
+        this._render();
+        [...(this.shadowRoot.querySelectorAll?.('[data-action="give-menu"]') || [])].find((b) => b.dataset.menu === key)?.focus();
+        return;
+      }
       // Esc closes a kid's sheet on a phone
       if (e.key === "Escape" && this._sheetOpen) this._act("sheet-close", e.target);
       // and the schedule's dialog, then its day sheet
@@ -267,6 +277,16 @@ class HearthPanel extends HTMLElement {
         this._render();
       }
     });
+    // A tap outside the page (Home Assistant's sidebar) closes the "+" box's menu too
+    if (typeof document !== "undefined" && !this._docClick) {
+      this._docClick = (e) => {
+        if (this._giveMenu && !e.composedPath().includes(this)) {
+          this._giveMenu = null;
+          this._render();
+        }
+      };
+      document.addEventListener("click", this._docClick);
+    }
     // Swiped down from its top, the sheet closes
     let swipeFrom = null;
     this.shadowRoot.addEventListener("touchstart", (e) => {
@@ -315,6 +335,10 @@ class HearthPanel extends HTMLElement {
   disconnectedCallback() {
     // Leaving the page: a "Not today" or "No" still waiting for its Undo runs now
     for (const key of [...this._deferred.keys()]) this._runDeferred(key);
+    if (this._docClick) {
+      document.removeEventListener("click", this._docClick);
+      this._docClick = null;
+    }
     if (this._unsub) {
       this._unsub.then((unsub) => unsub()).catch(() => {});
       this._unsub = null;
@@ -514,7 +538,83 @@ class HearthPanel extends HTMLElement {
     setTimeout(() => this._hidden.delete(key), 15000);
   }
 
+  // A device of the kid's, as the toasts name it
+  _targetName(person, device) {
+    const t = (this._summaryPerson(person)?.targets || []).find((x) => x.id === device);
+    return t ? t.display_name || t.name : null;
+  }
+
+  // Extra time now, with Undo: of a group (Undo takes back just that), or on one device (it answers with its id, and
+  // Undo ends just that one)
+  async _giveNow(person, data) {
+    const minutes = Number(data.minutes) || 0;
+    const where = data.device ? this._targetName(person, data.device) : null;
+    const what = data.device ? `on ${where || "that device"}` : `of ${!data.group || data.group === "all" ? "screen time" : this._groupName(data.group)}`;
+    const text = `Gave ${this._personName(person)} ${minutes} min ${what}`;
+    if (data.device) {
+      let id = null;
+      try {
+        const r = await this._hass.callWS({ type: "call_service", domain: "hearth", service: "add_bonus", service_data: data, return_response: true });
+        id = r?.response?.id || null;
+      } catch (err) {
+        this._notify(this._message(err));
+        return;
+      }
+      this._offerUndo(text, id ? () => this._call("allow_end", { id }) : null);
+      return;
+    }
+    await this._undoable("add_bonus", data, text, () => this._call("remove_bonus", { person: data.person || person, minutes, group: data.group || "all" }));
+  }
+
+  // Unlock for today: an allow of the group (or of the device) that ends at midnight; Undo ends that allow by its id
+  async _unlock(person, group, device) {
+    const data = { people: [person], group, until: "end_of_day", ...(device ? { device } : {}) };
+    let id = null;
+    try {
+      const r = await this._hass.callWS({ type: "call_service", domain: "hearth", service: "allow", service_data: data, return_response: true });
+      id = r?.response?.id || null;
+      if (Array.isArray(id)) id = id[0] || null;
+    } catch (err) {
+      this._notify(this._message(err));
+      return;
+    }
+    const name = this._personName(person);
+    const what = device ? this._targetName(person, device) || "that device" : group === "all" ? "screen time" : this._groupName(group);
+    const fallback = { people: [person], ...(device ? { device } : { group }) };
+    this._offerUndo(`Unlocked ${what} for ${name} until midnight`, () => this._call("allow_end", id ? { id } : fallback));
+  }
+
+  // How far past its limit (budget plus today's extra time) a group is, as glance.py's _over: rounded up to 5
+  // minutes, 0 under 10
+  _overOf(row) {
+    const budget = row?.budget;
+    if (budget === null || budget === undefined || budget < 0) return 0;
+    const past = (row.used_minutes || 0) - budget - Math.max(0, row.bonus || 0);
+    return past < 10 ? 0 : Math.ceil(Math.floor(past) / 5) * 5;
+  }
+
+  // The "+" box: a square button whose menu gives 15, 30 or 60 more minutes, or unlocks the group (or device) until
+  // midnight; with a line under it when the kid is already over ("10 min over: +15 leaves 5")
+  _giveBox(key, { person, group = "all", device = null, over = 0 }) {
+    const open = this._giveMenu === key;
+    const data = `data-person="${esc(person)}" data-group="${esc(group)}"${device ? ` data-device="${esc(device)}"` : ""}`;
+    let menu = "";
+    if (open) {
+      const items = [[15, "+15 min"], [30, "+30 min"], [60, "+1 h"]]
+        .map(([m, label]) => `<button role="menuitem" data-action="menu-give" ${data} data-minutes="${m}">${label}</button>`)
+        .join("");
+      let note = "";
+      if (over > 0) {
+        const enough = [15, 30, 60].find((m) => m > over);
+        note = `<div class="gnote">${esc(fmtMinutes(over))} over: ${enough ? `+${esc(amount(enough))} leaves ${esc(amount(enough - over))}` : "+1 h won't cover it"}</div>`;
+      }
+      menu = `<div class="givemenu" role="menu" aria-label="More choices">${items}<button role="menuitem" data-action="menu-unlock" ${data}>${icon("lock", "sm")}Unlock for today<small>Ends at midnight</small></button>${note}</div>`;
+    }
+    return `<span class="givebox"><button class="b sq" data-action="give-menu" data-menu="${esc(key)}" aria-label="More choices" aria-haspopup="menu" aria-expanded="${open}">${icon("plus")}</button>${menu}</span>`;
+  }
+
   _resetChoosers() {
+    this._giveMenu = null;
     this._giveOpen = false;
     this._allowOpen = false;
     this._moreOpen = false;
@@ -528,6 +628,11 @@ class HearthPanel extends HTMLElement {
 
   _onClick(e) {
     const target = e.target.closest("[data-action]");
+    // A tap outside the "+" box's menu closes it (and still does what it tapped)
+    if (this._giveMenu && !e.target.closest(".givebox")) {
+      this._giveMenu = null;
+      if (!target) this._render();
+    }
     if (!target) return;
     e.preventDefault();
     this._act(target.dataset.action, target);
@@ -682,27 +787,22 @@ class HearthPanel extends HTMLElement {
           this._notify("That's no longer on offer");
           return;
         }
-        const data = a.data || {};
-        const minutes = Number(data.minutes) || 0;
-        const where = data.device ? (this._summaryPerson(d.person)?.targets || []).find((t) => t.id === data.device) : null;
-        const what = where ? `on ${where.display_name || where.name}` : `of ${!data.group || data.group === "all" ? "screen time" : this._groupName(data.group)}`;
-        const text = `Gave ${this._personName(d.person)} ${minutes} min ${what}`;
-        if (data.device) {
-          // Extra time on one device answers with its id: Undo ends just that one
-          let id = null;
-          try {
-            const r = await this._hass.callWS({ type: "call_service", domain: "hearth", service: "add_bonus", service_data: data, return_response: true });
-            id = r?.response?.id || null;
-          } catch (err) {
-            this._notify(this._message(err));
-            return;
-          }
-          this._offerUndo(text, id ? () => this._call("allow_end", { id }) : null);
-          return;
-        }
-        await this._undoable("add_bonus", data, text, () => this._call("remove_bonus", { person: data.person || d.person, minutes, group: data.group || "all" }));
+        await this._giveNow(d.person, a.data || {});
         return;
       }
+      case "give-menu":
+        this._giveMenu = this._giveMenu === d.menu ? null : d.menu;
+        this._render();
+        if (this._giveMenu) this.shadowRoot.querySelector?.(".givemenu button")?.focus();
+        return;
+      case "menu-give":
+        this._giveMenu = null;
+        await this._giveNow(d.person, { person: d.person, minutes: Number(d.minutes), group: d.group || "all", ...(d.device ? { device: d.device } : {}) });
+        return;
+      case "menu-unlock":
+        this._giveMenu = null;
+        await this._unlock(d.person, d.group || "all", d.device || null);
+        return;
       case "sugg-dismiss": {
         const a = this._glanceAction(d.id, d.person);
         const data = a?.data || { person: d.person, key: d.key };
@@ -1343,7 +1443,19 @@ class HearthPanel extends HTMLElement {
       }
     }
     if (this._tab === "schedule" && this._sched && this._setupStep === null) this._schBindDrag();
+    this._placeGiveMenu();
     this._showAsk();
+  }
+
+  // The "+" box's menu opens below its box, left-aligned; it turns to end at the box's right edge when it would run off
+  // a phone's screen, and opens above when there's no room below
+  _placeGiveMenu() {
+    const m = this.shadowRoot.querySelector?.(".givemenu");
+    if (!m?.getBoundingClientRect || typeof window.innerWidth !== "number") return;
+    const r = m.getBoundingClientRect();
+    if (r.right > window.innerWidth - 8) m.classList.add("end");
+    const box = m.parentElement.getBoundingClientRect();
+    if (r.bottom > window.innerHeight - 8 && box.top - r.height - 6 > 8) m.classList.add("up");
   }
 
   // Once, after opening /hearth?ask=<id>: scroll to that request, or say it's already been answered
@@ -2302,9 +2414,18 @@ class HearthPanel extends HTMLElement {
       const actions = x.actions || [];
       const gives = actions.filter((a) => a.service === "hearth.add_bonus");
       const dismiss = actions.find((a) => a.service === "hearth.dismiss_suggestion");
-      acts = gives
-        .map((a, i) => `<button class="b ${i === 0 ? "primary" : ""}" data-action="sugg-give" data-person="${esc(item.person)}" data-id="${esc(a.id)}">${i === 0 ? `${icon("plus", "sm")}${esc(amount(a.data?.minutes))} min` : `${esc(amount(a.data?.minutes))} min`}</button>`)
-        .join("");
+      // The suggested amount (a catch-up one, +25, when they're well over), then the "+" box with 15, 30, 1 h and Unlock
+      const first = gives.find((a) => a.primary) || gives[0];
+      acts = first
+        ? `<button class="b primary" data-action="sugg-give" data-person="${esc(item.person)}" data-id="${esc(first.id)}">${icon("plus", "sm")}${esc(amount(first.data?.minutes))} min</button>`
+        : "";
+      if (first) {
+        const group = first.data?.group || x.group || "all";
+        const device = first.data?.device || null;
+        const row = device ? null : (s?.groups || []).find((g) => g.id === group);
+        const over = device ? 0 : typeof x.over === "number" ? x.over : this._overOf(row);
+        acts += this._giveBox(`${inSheet ? "sheet" : "list"}|${item.person}|${x.key}`, { person: item.person, group, device, over });
+      }
       if (dismiss) acts += `<button class="b ghost" data-action="sugg-dismiss" data-person="${esc(item.person)}" data-key="${esc(x.key)}" data-id="${esc(dismiss.id)}" title="Hides it until tomorrow">Dismiss</button>`;
     }
     const moreLine = more ? `<div class="more">+${more} more for ${esc(name)} · <button class="lnk" data-action="kid-sheet" data-kid="${esc(item.person)}">See</button></div>` : "";
@@ -2445,7 +2566,12 @@ class HearthPanel extends HTMLElement {
     const off = (s.school_time_off || [])[0];
     const schoolOpen = s.school_time && now < new Date(s.school_time.end);
     const bar = [];
-    if (!locked) bar.push(`<button class="b primary" data-action="give-open" aria-expanded="${Boolean(this._giveOpen)}">${icon("plus", "sm")}Give time</button>`);
+    if (!locked) {
+      bar.push(`<button class="b primary" data-action="give-open" aria-expanded="${Boolean(this._giveOpen)}">${icon("plus", "sm")}Give time</button>`);
+      // The same "+" box as For you's, for the pool that stops them (else All screen time)
+      const b = this._binding(s);
+      bar.push(this._giveBox(`bar|${kid.id}`, { person: kid.id, group: b?.id || "all", over: this._overOf(b) }));
+    }
     else bar.push(`<button class="b" data-action="allow-open" aria-expanded="${Boolean(this._allowOpen)}">${icon("shield", "sm")}Allow an app…</button>`);
     if (!lock) bar.push(`<button class="b" data-action="kid-pause" data-person="${p}" data-minutes="30">${icon("pause", "sm")}Pause 30 min</button>`);
     bar.push(`<button class="b ghost" data-action="more-open" aria-expanded="${Boolean(this._moreOpen)}" aria-label="More actions">${icon("more")}</button>`);
@@ -3689,6 +3815,18 @@ ol.steps { margin: 0; padding-left: 20px; line-height: 1.7; }
 .today .b.ghost { border-color: transparent; background: transparent; color: var(--secondary-text-color); }
 .today .b.ghost:hover { background: var(--h-surface-2); color: var(--primary-text-color); }
 .today .lnk { color: var(--h-accent); font-weight: 600; }
+.givebox { position: relative; display: inline-flex; }
+.today .b.sq { width: 36px; padding: 0; justify-content: center; border-radius: 10px; color: var(--h-accent); border-color: var(--h-btn-line); }
+.today .b.sq[aria-expanded="true"] { background: var(--h-accent-soft); border-color: var(--h-accent); }
+.givemenu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 9; min-width: 200px; display: flex; flex-direction: column; padding: 6px;
+  background: var(--h-surface); border: 1px solid var(--h-line); border-radius: 14px; box-shadow: 0 8px 28px rgba(0,0,0,.18); }
+.givemenu.end { left: auto; right: 0; }
+.givemenu.up { top: auto; bottom: calc(100% + 6px); }
+.today .givemenu button { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 12px; border-radius: 10px; font-weight: 600; font-size: 14px; text-align: left; white-space: nowrap; }
+.today .givemenu button:hover, .today .givemenu button:focus-visible { background: var(--h-surface-2); outline-offset: -2px; }
+.givemenu button[data-action="menu-unlock"] { border-top: 1px solid var(--h-line); border-radius: 0 0 10px 10px; margin-top: 4px; color: var(--h-accent); }
+.givemenu button small { flex-basis: 100%; padding-left: 24px; margin-top: -2px; font-weight: 400; font-size: 12px; color: var(--secondary-text-color); }
+.givemenu .gnote { padding: 8px 12px 4px; border-top: 1px solid var(--h-line); font-size: 12px; color: var(--secondary-text-color); white-space: nowrap; }
 .t-out { color: var(--h-out); font-weight: 600; } .t-low { color: var(--h-low); font-weight: 600; } .t-night { color: var(--h-night); } .t-school { color: var(--h-school); }
 .banner { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: var(--radius); background: var(--h-accent-soft); margin: 10px 0; color: var(--primary-text-color); }
 .banner .svg { color: var(--h-accent); }

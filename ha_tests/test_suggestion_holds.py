@@ -186,6 +186,24 @@ async def test_a_device_reads_by_the_name_given_in_home_assistant_else_its_sourc
     assert display_name(_household_stub(hass, [switch_source]), "person.alex", target) == "Switch 2"
 
 
+async def test_a_hearth_tv_reads_by_its_device_of_hearth_s_entry(hass: HomeAssistant) -> None:
+    """Hearth's own TV: its device found by identifier in Hearth's entry (async_get_device_by_identifier where Home
+    Assistant has it, the older lookup otherwise)."""
+    entry = MockConfigEntry(domain=DOMAIN)
+    entry.add_to_hass(hass)
+    devices = dr.async_get(hass)
+    tv = devices.async_get_or_create(config_entry_id=entry.entry_id, identifiers={(DOMAIN, "tv1")}, name="Hearth")
+    devices.async_update_device(tv.id, name_by_user="Den")
+    target = {"id": "hearth:tv1", "name": "Hearth", "kind": "tv"}
+    household = SimpleNamespace(hass=hass, sources=[], family_link_child=lambda _p: None,
+                                hub=SimpleNamespace(entry=SimpleNamespace(entry_id=entry.entry_id)))
+    assert display_name(household, "person.alex", target) == "Den TV"
+    # No entry to look in: the older lookup still finds it
+    assert display_name(_household_stub(hass), "person.alex", target) == "Den TV"
+    # Another TV of Hearth's: no device, its label
+    assert display_name(household, "person.alex", {"id": "hearth:tv2", "name": "Kitchen TV", "kind": "tv"}) == "Kitchen TV"
+
+
 # Taking back a bonus
 
 
