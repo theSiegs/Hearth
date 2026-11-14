@@ -1684,7 +1684,7 @@ class HearthPanel extends HTMLElement {
       ${(this._sched.kids || []).length > 1 ? `<button class="b ghost" data-action="sch-dlg" data-dlg="kids">Copy to another kid…</button>` : ""}</div>`;
     return `<div class="card s-ed"><div class="s-edh"><div class="s-grow"><h2>${esc(title)}</h2><div class="s-d">${esc(sub)}</div></div></div>
       ${scopeCtl}${big}
-      ${half ? "" : `<div class="s-hint">Drag a handle to move a change. Times snap to 15 minutes.</div>`}
+      ${half || !day.changes.length ? "" : `<div class="s-hint">Drag a handle to move a change. Times snap to 15 minutes.</div>`}
       <ul class="s-blocks">${carried}${rows}${empty}</ul>
       ${half ? halfCtl : day.changes.length < 12 ? `<button class="b sm s-add" data-action="sch-add">${icon("plus", "sm")}Add a change</button>` : ""}
       ${lim}${this._schControls(kid)}${foot}</div>`;
