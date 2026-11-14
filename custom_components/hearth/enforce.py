@@ -35,6 +35,10 @@ add, per person, the parental controls of other integrations (Configure > Enforc
   only one pausing and resuming, and an app is resumed only when no reason to hold it is left (its group out of time,
   School time). Chosen apps may include ones a budget never holds (Messages), never Hearth's own or Family Link's.
 
+- The weekly schedule (weekly.py): a mode that closes groups (Homework) holds them through the same holds as a group
+  out of time (Family Link's app pauses, Family Safety's platform lock and app pauses, the Switch), and Sleep and School
+  hold Family Safety's platforms and the Switch (schedule_wanted). Family Link keeps its own bedtime and School time.
+
 An adult's allow (hearth.allow, exceptions.py) takes its app or group out of every hold above while it lasts. A
 parent's grant (a change in the Family Link, Nintendo or Family Safety app, grants.py) takes out only the hold it came
 from.
@@ -116,6 +120,7 @@ KEPT_CURRENT = "kept_current"
 WHY_BUDGET = "budget"
 WHY_SCHOOL = "school_time"
 WHY_PAUSE = "pause"
+WHY_SCHEDULE = "schedule"
 # A change seen this soon after Hearth's own call is taken as Hearth's (the integration catching up), not a parent's
 QUIET_AFTER_CALL = timedelta(minutes=1)
 # After a write to Family Link, Family Safety or Nintendo, their entities are refreshed once this much later (their own
@@ -333,6 +338,47 @@ def paused_wanted(enforcer: Enforcer, packages: set[str], fs_pauses_apps: bool =
     return set()
 
 
+def schedule_wanted(
+    enforcer: Enforcer,
+    closed: set[str],
+    apps_of,
+    now: datetime | None = None,
+    playing: bool | None = None,
+    lifted: Lifted | None = None,
+    groups_of_app=None,
+    fs_pauses_apps: bool = True,
+) -> set[str]:
+    """What the weekly schedule holds now (weekly.py): [closed] is the groups its mode closes (Homework's), and All
+    screen time during Sleep and School. Family Link pauses the closed groups' apps (its own bedtime and School time do
+    the rest); Family Safety locks a chosen platform when one of its groups is closed (or All, at bedtime) and pauses
+    the closed groups' Xbox and Windows apps; the Switch is held when one of its groups is closed. An allow of a group
+    or app lifts a closed group as it lifts a budget's hold; Sleep and School are locks, which an allow doesn't lift."""
+    if not closed:
+        return set()
+    groups = {g for g in closed if g == ALL or not (lifted and lifted.group(g))}
+    if not groups:
+        return set()
+    if enforcer.kind == NINTENDO:
+        return paused_switch(enforcer, groups, now, playing)
+    found: set[str] = set()
+    if enforcer.kind == FAMILY_SAFETY:
+        if ALL in groups or groups & set(enforcer.groups):
+            found |= set(enforcer.platforms)
+        if fs_pauses_apps:
+            for group_id in groups - {ALL}:
+                found |= {
+                    p
+                    for p in apps_of(group_id, enforcer.person)
+                    if fs_app(p) and fs_app_platform(p) in enforcer.platforms and fs_app_platform(p) not in found
+                }
+    elif enforcer.kind == FAMILY_LINK:
+        for group_id in groups - {ALL}:
+            found |= {p for p in apps_of(group_id, enforcer.person) if not essential(p) and not fs_app(p)}
+    if lifted:
+        found = {p for p in found if p in enforcer.platforms or not lifted.app(p, groups_of_app(p) if groups_of_app else None)}
+    return set(sorted(found)[:MAX_PACKAGES])
+
+
 @dataclass
 class Held:
     items: set[str] = field(default_factory=set)
@@ -467,13 +513,15 @@ class Enforcement:
         paused_of=None,
         device_lifted_of=None,
         paused_groups_of=None,
+        closed_of=None,
     ) -> None:
         """[apps_of]: a group id's packages for a person (for All screen time, every app of theirs). [lifted_of]: what
         a person's allows lift (Lifted); [school_time_of]: whether an enforcer's child is in School time now;
         [groups_of_app]: an app's groups; [granted_of]: what a person's parent grants lift, by enforcer kind (the
         held items: grants.py); [paused_of]: the packages an adult paused for a person; [device_lifted_of]: what extra
         time on one device lifts of an enforcer's holds (a Family Safety platform, a Switch: device_extra.py);
-        [paused_groups_of]: the groups an adult paused for a person, All screen time for a family pause (a Switch)."""
+        [paused_groups_of]: the groups an adult paused for a person, All screen time for a family pause (a Switch);
+        [closed_of]: the groups the weekly schedule closes for a person now, All screen time in Sleep and School."""
         self.enforcers = enforcers
         now = dt_util.now()
         wanted_now: dict[str, set[str]] = {}
@@ -500,15 +548,37 @@ class Enforcement:
             if paused_groups_of:
                 # An adult's pause holds the Switch too (a family pause, or a group the enforcer covers)
                 paused |= paused_switch(e, set(paused_groups_of(e.person)), now, playing)
+            scheduled = (
+                schedule_wanted(
+                    e,
+                    set(closed_of(e.person)),
+                    apps_of,
+                    now,
+                    playing,
+                    lifted,
+                    groups_of_app,
+                    self.hass.services.has_service(FS_DOMAIN, "pause_app"),
+                )
+                if closed_of
+                else set()
+            )
+            if e.kind == FAMILY_LINK:
+                scheduled -= self._always_allowed(e.entity_id)
             device_lifted = device_lifted_of(e) if device_lifted_of else set()
-            wanted_now[e.key] = (budget | school | paused) - granted - device_lifted
+            wanted_now[e.key] = (budget | school | paused | scheduled) - granted - device_lifted
             if e.kind == FAMILY_LINK:
                 # Only apps the child has: pausing one they don't would only cost a call (and read as a parent's
                 # change later, its pause never showing)
                 wanted_now[e.key] = self._installed_only(e.entity_id, wanted_now[e.key])
             # School time first, then an adult's pause, then a budget: the reason a parent would name
             why_now[e.key] = {
-                item: WHY_SCHOOL if item in school else WHY_PAUSE if item in paused else WHY_BUDGET
+                item: WHY_SCHOOL
+                if item in school
+                else WHY_PAUSE
+                if item in paused
+                else WHY_SCHEDULE
+                if item in scheduled and item not in budget
+                else WHY_BUDGET
                 for item in wanted_now[e.key]
             }
         # What an enforcer no longer configured held is let go

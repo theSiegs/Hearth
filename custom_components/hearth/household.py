@@ -75,8 +75,9 @@ from .native_sync import NativeSync
 from . import family_link as fl
 from .todos import ChoreBook
 from .schedule import Scheduler
+from .weekly import EVENT_MODE, Now, Week, mode_closed, mode_lock
 from .watch import WatchLog
-from .pause import PAUSE, app_pauses_of, end_pause, lock_kinds, lock_until, next_lock, pause_ends_on, pause_of
+from .pause import PAUSE, SCHEDULE, app_pauses_of, end_pause, lock_kinds, lock_until, next_lock, pause_ends_on, pause_of
 from .places import Places, happened, matches
 from . import parent_pin
 from .media import media_rooms
@@ -190,6 +191,14 @@ class Household:
         self.history = History(hass, hub.entry.entry_id)
         self.sync = NativeSync(hass, self, hub.entry.entry_id)
         self.scheduler = Scheduler(hass, self, hub.entry.entry_id)
+        # The weekly schedule (weekly.py): each kid's modes and limits per day
+        self.week = Week(hass, hub.entry.entry_id, lambda: self.limits.data.budgets, lambda: self.options)
+        self.week.type_of = self.day_type_on
+        self.limits.week = self.week
+        # Each person's schedule now (weekly.Now, None without one), as of the last recompute; the mode last told
+        # (hearth_mode fires when it changes)
+        self.schedule_now: dict[str, Now | None] = {}
+        self._modes_told: dict[str, str] = {}
         self.todos = ChoreBook(hass, self, hub.entry.entry_id)
         # Chore minutes earned today count as bonus (todos.py)
         self.limits.chore_minutes = self.todos.minutes_today
@@ -222,6 +231,7 @@ class Household:
         await self.history.async_load()
         await self.sync.async_load()
         await self.scheduler.async_load()
+        await self.week.async_load()
         await self.todos.async_load()
 
     async def async_flush(self) -> None:
@@ -236,6 +246,7 @@ class Household:
         await self.history.async_flush()
         await self.sync.async_flush()
         await self.scheduler.async_flush()
+        await self.week.async_flush()
         await self.todos.async_flush()
 
     # The mapping
@@ -383,7 +394,15 @@ class Household:
     def bedtime_today(self, person: str, now: datetime | None = None) -> dict[str, str] | None:
         """Today's bedtime from the person's lock entities in Hearth's settings (those that say bedtime_start and
         bedtime_end, as Family Link's bedtime does): {start: tonight's, end: this morning's wake}, local ISO times on
-        today's date. With more than one, the earliest start and the latest end; None when none says."""
+        today's date. With more than one, the earliest start and the latest end; None when none says. A weekly
+        schedule with a Sleep tonight says it instead: {start: tonight's bedtime, end: this morning's wake}."""
+        local_now = dt_util.as_local(now or dt_util.now())
+        if (scheduled := self._schedule_bedtime(person, local_now)) is not None:
+            return scheduled
+        return self._locks_bedtime(person, local_now)
+
+    def _locks_bedtime(self, person: str, now: datetime | None = None) -> dict[str, str] | None:
+        """bedtime_today from the lock entities only."""
         today = dt_util.as_local(now or dt_util.now()).date()
         starts: list[time] = []
         ends: list[time] = []
@@ -403,19 +422,150 @@ class Household:
             return None
         return {"start": start.isoformat(), "end": end.isoformat()}
 
+    def _schedule_bedtime(self, person: str, now: datetime) -> dict[str, str] | None:
+        """Tonight's bedtime and this morning's wake from the weekly schedule, when today ends in Sleep."""
+        found = self.schedule_now.get(person)
+        if found is None or found.day.date != now.date() or found.bedtime is None or not found.day.changes:
+            return None
+        first = found.day.changes[0][0]
+        morning = datetime.combine(now.date(), time(first // 60, first % 60), found.bedtime.tzinfo)
+        if morning >= found.bedtime:
+            return None
+        return {"start": found.bedtime.isoformat(), "end": morning.isoformat()}
+
+    def schedule_lock(self, person: str) -> str | None:
+        """bedtime or school_time while the person's weekly schedule is in Sleep or School (School time taken off
+        today lifts School)."""
+        found = self.schedule_now.get(person)
+        if found is None:
+            return None
+        kind = mode_lock(self.week.data.modes, found.mode)
+        if kind == "school_time" and self.scheduler.off_now(person) is not None:
+            return None
+        return kind
+
+    def schedule_closed(self, person: str) -> list[str]:
+        """The groups the person's mode closes now (Homework, Wind down), those the household has."""
+        found = self.schedule_now.get(person)
+        if found is None:
+            return []
+        ids = {g.id for g in self.groups if g.id != ALL}
+        return [g for g in mode_closed(self.week.data.modes, found.mode) if g in ids]
+
+    def schedule_holds(self, person: str) -> set[str]:
+        """What the schedule closes now for the other parental controls: the mode's groups, and All screen time in
+        Sleep and School (Family Safety's platforms and the Switch are held then; Family Link keeps its own bedtime and
+        School time in phase 1)."""
+        found = set(self.schedule_closed(person))
+        if self.schedule_lock(person) is not None:
+            found.add(ALL)
+        return found
+
+    def week_people(self) -> list[str]:
+        """The people with a weekly schedule of their own: the kids."""
+        roles = self.options.get(CONF_ROLES, {})
+        return sorted(p for p in self.people() if roles.get(p) == "kid")
+
+    def mode_of(self, person: str) -> dict[str, Any]:
+        """The person's mode now, for their mode sensor: {mode, name, since, until, next {at, mode}, today_changed,
+        source}. From the weekly schedule; while it has no changes, from the lock entities (sleep in a bedtime,
+        school in School time, else free)."""
+        found = self.schedule_now.get(person)
+        modes = self.week.data.modes
+        if found is not None:
+            return {
+                "mode": found.mode,
+                "name": (modes.get(found.mode) or {}).get("name", found.mode),
+                "since": dt_util.as_local(found.since).isoformat() if found.since else None,
+                "until": dt_util.as_local(found.until).isoformat() if found.until else None,
+                "next": {"at": dt_util.as_local(found.next.at).isoformat(), "mode": found.next.mode} if found.next else None,
+                "today_changed": found.day.changed_today,
+                "source": "schedule",
+            }
+        day = self.days.get(person)
+        kinds = lock_kinds(self.hass, [e for e in (day.locked_by if day else []) if e != PAUSE])
+        mode = "sleep" if "bedtime" in kinds else "school" if "school_time" in kinds else "free"
+        return {
+            "mode": mode,
+            "name": (modes.get(mode) or {}).get("name", mode),
+            "since": None,
+            "until": None,
+            "next": None,
+            "today_changed": False,
+            "source": "locks",
+        }
+
+    def bedtime_tonight(self, person: str) -> dict[str, Any] | None:
+        """Tonight's bedtime: {at, wake, source}: the weekly schedule's Sleep, else the lock entities' bedtime."""
+        found = self.schedule_now.get(person)
+        if found is not None and found.bedtime is not None:
+            return {
+                "at": dt_util.as_local(found.bedtime).isoformat(),
+                "wake": dt_util.as_local(found.wake).isoformat() if found.wake else None,
+                "source": "schedule",
+            }
+        locks = self._locks_bedtime(person)
+        if locks is None:
+            return None
+        wake = dt_util.parse_datetime(locks["end"])
+        return {
+            "at": locks["start"],
+            "wake": (wake + timedelta(days=1)).isoformat() if wake else None,
+            "source": "locks",
+        }
+
+    def schedule_view(self, person: str) -> dict[str, Any] | None:
+        """The person's schedule now, as the household summary and the state document carry it: the mode, the next
+        change, tonight's bedtime and the day used. None while their schedule has no changes."""
+        found = self.schedule_now.get(person)
+        if found is None:
+            return None
+        modes = self.week.data.modes
+        mode = modes.get(found.mode) or {}
+
+        def iso(value: datetime | None) -> str | None:
+            return dt_util.as_local(value).isoformat() if value else None
+
+        return {
+            "mode": {
+                "id": found.mode,
+                "name": mode.get("name", found.mode),
+                "allows": mode.get("allows"),
+                "since": iso(found.since),
+                "until": iso(found.until),
+                "closed": self.schedule_closed(person),
+            },
+            "next": (
+                {"at": iso(found.next.at), "mode": found.next.mode, "name": (modes.get(found.next.mode) or {}).get("name")}
+                if found.next
+                else None
+            ),
+            "bedtime": {"at": iso(found.bedtime), "wake": iso(found.wake)} if found.bedtime else None,
+            "day": {
+                "date": found.day.date.isoformat(),
+                "uses": found.day.uses,
+                "changed_today": found.day.changed_today,
+            },
+        }
+
     def _locks_document(self, person: str, day: PersonDay | None) -> dict[str, Any]:
         """Why and until when the person is held ("lock" {by, until}), a family pause ("pause" {until, reason}), and
-        the next bedtime or school time ("next_lock" {at, by, kind}), for winding down before it."""
+        the next bedtime or school time ("next_lock" {at, by, kind}), for winding down before it. The weekly
+        schedule's Sleep and School are locks too (by "schedule"), and its next one is the next_lock when it comes
+        before the lock entities'."""
         out: dict[str, Any] = {}
         pause = pause_of(self.hass, person)
         if pause:
             out["pause"] = pause
+        scheduled = self.schedule_now.get(person)
         if day and day.locked:
-            ends = [lock_until(self.hass, [e for e in day.locked_by if e != PAUSE])]
+            ends = [lock_until(self.hass, [e for e in day.locked_by if e not in (PAUSE, SCHEDULE)])]
             if pause:
                 ends.append(dt_util.parse_datetime(pause["until"]))
+            if SCHEDULE in day.locked_by and scheduled is not None:
+                ends.append(scheduled.until)
             until = max((e for e in ends if e is not None), default=None)
-            kinds = lock_kinds(self.hass, day.locked_by)
+            kinds = lock_kinds(self.hass, day.locked_by, self.schedule_lock(person))
             out["lock"] = {
                 "by": list(day.locked_by),
                 # bedtime, school_time, pause or other: the first of them (bedtime before school time before a pause)
@@ -423,7 +573,12 @@ class Household:
                 "kinds": kinds,
                 "until": dt_util.as_local(until).isoformat() if until else None,
             }
-        if upcoming := next_lock(self.hass, self._lock_entities(person)):
+        upcoming = next_lock(self.hass, self._lock_entities(person))
+        if scheduled is not None and scheduled.next_lock is not None:
+            at, kind = scheduled.next_lock
+            if upcoming is None or at < dt_util.parse_datetime(upcoming["at"]):
+                upcoming = {"at": dt_util.as_local(at).isoformat(), "by": SCHEDULE, "kind": kind}
+        if upcoming:
             out["next_lock"] = upcoming
         return out
 
@@ -785,19 +940,31 @@ class Household:
             self.school.school if self.school.day == today else self.school.budget_is_school(self.school.decide_type(today))
         )
         kind = SCHOOL_DAY if is_school else OTHER_DAY
+        day_type = self.day_type_on(today)
+        if new_day or self.today != today:
+            # Today-only changes of the schedule end at midnight
+            self.week.new_day(today)
         days: dict[str, PersonDay] = {}
         for person in self.people():
+            # The weekly schedule now: the mode, and what it locks or closes (weekly.py); today's limits
+            self.schedule_now[person] = self.week.now(person, now)
+            day_limits = self.week.limits_on(person, today, day_type)
             devices = {device: merge(r) for device, r in readings.get(person, {}).items()}
             seconds = group_seconds(devices, membership, self.outside_all())
             locked_by = self._locked_by(person)
             # A family pause holds them as a lock does
             if pause_of(self.hass, person, now):
                 locked_by.append(PAUSE)
+            # The schedule's Sleep and School are locks
+            if self.schedule_lock(person) is not None:
+                locked_by.append(SCHEDULE)
             day = PersonDay(person, devices, seconds, playing=playing.get(person, []),
                             together_s=self.live.together_s.get(person, 0.0), locked=bool(locked_by),
                             locked_by=locked_by)
             for group in self.groups:
-                state = self.limits.state(person, group.id, seconds.get(group.id, 0.0) / 60, kind)
+                state = self.limits.state(
+                    person, group.id, seconds.get(group.id, 0.0) / 60, kind, day_limits.get(group.id)
+                )
                 day.limits[group.id] = state
                 if state.minutes_left == 0:
                     if self.limits.mark_reached(person, group.id):
@@ -809,6 +976,7 @@ class Household:
             days[person] = day
         self.days = days
         self.today = today
+        self._tell_modes()
         groups_by_id = {g.id: g for g in self.groups}
 
         def apps_of(group_id: str, person: str) -> list[str]:
@@ -835,12 +1003,44 @@ class Household:
             paused_of=lambda person: self.paused_packages(person, membership, with_fs=True),
             device_lifted_of=self._device_lifted,
             paused_groups_of=lambda person: self.paused_groups(person, now),
+            closed_of=self.schedule_holds,
         )
         # An adult's allow of All screen time opens Google's and Microsoft's own limits too
         self.sync.mirror_allows()
         for together, what in [(t, "started") for t in started] + [(t, "ended") for t in ended]:
             self.hass.bus.async_fire(EVENT_PLAYING_TOGETHER, self._together_event(together, what))
         async_dispatcher_send(self.hass, SIGNAL_PEOPLE, new_day)
+
+    def day_type_on(self, day: date) -> str:
+        """A date's day type: today's as last worked out (the entity and the calendar too), another day's from the
+        dates typed in and the rule (schooldays.type_by_dates)."""
+        if self.school.day == day:
+            return self.school.day_type
+        if day == dt_util.now().date():
+            return self.school.decide_type(day)
+        return self.school.type_by_dates(day)
+
+    def _tell_modes(self) -> None:
+        """hearth_mode when a person's mode changed since the last look (not on the first look after a start)."""
+        for person, found in self.schedule_now.items():
+            mode = found.mode if found is not None else None
+            before = self._modes_told.get(person)
+            if mode is None:
+                self._modes_told.pop(person, None)
+                continue
+            self._modes_told[person] = mode
+            if before is None or before == mode:
+                continue
+            self.hass.bus.async_fire(
+                EVENT_MODE,
+                {
+                    "person": person,
+                    "mode": mode,
+                    "mode_name": (self.week.data.modes.get(mode) or {}).get("name", mode),
+                    "previous": before,
+                    "until": dt_util.as_local(found.until).isoformat() if found.until else None,
+                },
+            )
 
     def day_minutes(self, day: PersonDay | None) -> dict[str, int]:
         """A person's minutes per group of the household (seconds / 60, rounded), as the summary's `week` shows them."""
@@ -856,8 +1056,8 @@ class Household:
         and the rule (schooldays.type_by_dates) and the budgets now."""
         if day == self.today and (today := self.days.get(person)) is not None:
             return self.day_budget(today)
-        kind = SCHOOL_DAY if self.school.budget_is_school(self.school.type_by_dates(day)) else OTHER_DAY
-        return {g.id: self.limits.budget(person, g.id, kind) for g in self.groups}
+        limits = self.week.limits_on(person, day, self.school.type_by_dates(day))
+        return {g.id: limits.get(g.id) for g in self.groups}
 
     # New apps
 
@@ -1153,6 +1353,39 @@ class Household:
             )
         return out
 
+    def _closed_groups_document(self, person: str, membership, lifted: Lifted) -> list[dict[str, Any]]:
+        """The groups the schedule's mode closes now (Homework, Wind down) as paused groups, which every Hearth TV and
+        phone already holds and offers no ask for more: {id "schedule:<group>", name "Games (Homework until 5 PM)",
+        minutes_left 0, apps, paused}. An allow of the group lifts it; an allowed app leaves it."""
+        found = self.schedule_now.get(person)
+        if found is None:
+            return []
+        mode = self.week.data.modes.get(found.mode) or {}
+        until = dt_util.as_local(found.until) if found.until else None
+        when = f" until {_say_clock(until)}" if until else ""
+        out = []
+        for group_id in self.schedule_closed(person):
+            group = self.group(group_id)
+            if group is None or (lifted and lifted.group(group_id)):
+                continue
+            apps = self._group_apps(group, membership)
+            if lifted:
+                apps = [p for p in apps if not lifted.app(p, membership(p))]
+            out.append(
+                {
+                    "id": f"schedule:{group_id}",
+                    "name": f"{group.name} ({mode.get('name', found.mode)}{when})",
+                    "minutes_left": 0,
+                    "apps": apps,
+                    "paused": {
+                        "until": until.isoformat() if until else None,
+                        "reason": mode.get("name", found.mode),
+                        "name": group.name,
+                    },
+                }
+            )
+        return out
+
     def app_pause_views(self, person: str) -> list[dict[str, Any]]:
         """The person's app and group pauses as an adult's app shows them: [{app, group, name, until, reason}]."""
         out = []
@@ -1255,6 +1488,7 @@ class Household:
                     entry["except"] = sorted(spared)
             groups.append(entry)
         groups += self._paused_groups_document(person, membership)
+        groups += self._closed_groups_document(person, membership, lifted)
         return {
             "person": person,
             "groups": groups,
@@ -1262,6 +1496,8 @@ class Household:
             **self._locks_document(person, day),
             # What they're playing now, anywhere (as the household summary's `playing`)
             "playing": [p.view() for p in (day.playing if day else [])],
+            # The weekly schedule now: the mode, the next change, tonight's bedtime (weekly.py)
+            **({"schedule": view} if (view := self.schedule_view(person)) else {}),
             # A parent let this person's phone share with the launcher's tile exchange (off unless chosen)
             "tile_exchange_share": person in self.options.get(CONF_TILE_EXCHANGE, []),
             # A kid's to-do list today, counts only (todos.py); the money balance stays on adults' screens
@@ -1813,6 +2049,12 @@ def _timing(duration: Any, position: Any, at: datetime | None) -> dict[str, Any]
 
 def person_identifier(person: str) -> tuple[str, str]:
     return (DOMAIN, f"person:{person}")
+
+
+def _say_clock(value: datetime) -> str:
+    """"5 PM", "8:30 PM"."""
+    hour, minute = value.hour, value.minute
+    return f"{hour % 12 or 12}{f':{minute:02d}' if minute else ''} {'AM' if hour < 12 else 'PM'}"
 
 
 def _clock_of(value: Any) -> time | None:

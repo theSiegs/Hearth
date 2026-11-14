@@ -124,6 +124,10 @@ async def async_setup_entry(
     # Where each kid is, as a place name (places.py)
     for person in household.places.people():
         people.append(PersonPlace(hub, person, "place"))
+    # Each kid's mode and tonight's bedtime from the weekly schedule (weekly.py)
+    for person in household.week_people():
+        people.append(PersonMode(hub, person, "mode"))
+        people.append(PersonBedtime(hub, person, "bedtime"))
     async_add_entities(people)
     async_add_entities([AppsToSort(hub), DayType(hub)])
 
@@ -295,6 +299,45 @@ class PersonHeld(HearthPersonEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         return self.hub.household.enforcement.held_for(self.person)
+
+
+class PersonMode(HearthPersonEntity, SensorEntity):
+    """The kid's mode now in their weekly schedule (Sleep, School, Free time, Homework...): the automation hook
+    ("when Homework starts, turn on the desk lamp"). With no changes in their schedule: from their lock entities
+    (sleep during a bedtime lock, school during School time, else free), as source "locks"."""
+
+    _attr_translation_key = "person_mode"
+    _attr_device_class = SensorDeviceClass.ENUM
+
+    @property
+    def options(self) -> list[str]:
+        return list(self.hub.household.week.data.modes)
+
+    @property
+    def native_value(self) -> str | None:
+        return self.hub.household.mode_of(self.person)["mode"]
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {k: v for k, v in self.hub.household.mode_of(self.person).items() if k != "mode"}
+
+
+class PersonBedtime(HearthPersonEntity, SensorEntity):
+    """Tonight's bedtime (a timestamp), from the weekly schedule's Sleep, else the lock entities' bedtime; the
+    morning's wake as an attribute."""
+
+    _attr_translation_key = "person_bedtime"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    @property
+    def native_value(self):
+        found = self.hub.household.bedtime_tonight(self.person)
+        return dt_util.parse_datetime(found["at"]) if found else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        found = self.hub.household.bedtime_tonight(self.person)
+        return {"wake": found.get("wake"), "source": found.get("source")} if found else {}
 
 
 class PersonLastVideoStarted(HearthPersonEntity, SensorEntity):

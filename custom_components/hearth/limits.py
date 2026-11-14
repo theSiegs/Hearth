@@ -468,6 +468,9 @@ class Limits:
         self.data = LimitsData()
         # (person, group) -> the minutes chores earned today (todos.ChoreBook.minutes_today), folded into the bonus
         self.chore_minutes: Callable[[str, str], int] | None = None
+        # The weekly schedule (weekly.Week): once an adult edited a person's, it holds their limits per day, and the
+        # two budgets read Monday's and Saturday's and write Monday to Friday or the weekend and the Day off
+        self.week: Any = None
 
     async def async_load(self) -> None:
         stored = await self._store.async_load() or {}
@@ -513,10 +516,14 @@ class Limits:
         return True
 
     def budget(self, person: str, group: str, kind: str) -> int | None:
+        if self.week is not None and self.week.is_set(person):
+            return self.week.budget_of_kind(person, group, kind)
         return self.data.budgets.get(person, {}).get(group, {}).get(kind)
 
     def set_budget(self, person: str, group: str, kind: str, minutes: int | None) -> None:
         self.data.budgets.setdefault(person, {}).setdefault(group, {})[kind] = minutes
+        if self.week is not None:
+            self.week.set_budget_kind(person, group, kind, minutes)
         self._save()
 
     def take_rules(self, key: str, person: str, budgets: dict[str, dict[str, int]], groups: set[str]) -> bool:
@@ -537,6 +544,8 @@ class Limits:
                 for kind, minutes in kinds.items():
                     if kind in DAY_TYPES:
                         self.data.budgets.setdefault(person, {}).setdefault(group, {})[kind] = minutes
+                        if self.week is not None:
+                            self.week.set_budget_kind(person, group, kind, minutes)
                         taken = True
         self._save()
         return taken
@@ -565,8 +574,9 @@ class Limits:
             marks.remove(group)
             self._save()
 
-    def state(self, person: str, group: str, counted_min: float, kind: str) -> GroupState:
-        """The group's state today, with the budget for [kind] of day (SCHOOL_DAY or OTHER_DAY)."""
+    def state(self, person: str, group: str, counted_min: float, kind: str, budget: Any = ...) -> GroupState:
+        """The group's state today, with the budget for [kind] of day (SCHOOL_DAY or OTHER_DAY), or [budget] (today's
+        limit from the weekly schedule) when given."""
         chores = max(0, self.chore_minutes(person, group)) if self.chore_minutes else 0
         bonus = max(-MAX_BONUS, min(MAX_BONUS, self.bonus(person, group) + chores))
-        return GroupState(counted_min, self.budget(person, group, kind), bonus, chores)
+        return GroupState(counted_min, self.budget(person, group, kind) if budget is ... else budget, bonus, chores)

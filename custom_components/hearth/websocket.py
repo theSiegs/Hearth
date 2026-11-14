@@ -137,6 +137,10 @@ def summary(hub) -> dict[str, Any]:
         # runs from wake to bed (6:00 to 22:00 without it)
         if (bedtime := household.bedtime_today(person, now)) is not None:
             people[-1]["bedtime"] = bedtime
+        # The weekly schedule now (weekly.py): the mode, the next change, tonight's bedtime and the day used; only
+        # while their schedule has changes
+        if (scheduled := household.schedule_view(person)) is not None:
+            people[-1]["schedule"] = scheduled
         # All screen time today as one part per pool plus "other" (apps in no pool): an app is in one pool, so the
         # parts add up to All's used minutes
         people[-1]["all_by_pool"] = _all_by_pool(household, people[-1])
