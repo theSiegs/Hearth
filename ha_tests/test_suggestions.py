@@ -27,6 +27,8 @@ def test_a_group_out_suggests_more_of_that_group() -> None:
     assert _keys(found) == ["more:games"]
     games = found[0]
     assert games["text"] == "games ran out · give 15?" and games["group"] == "games" and games["minutes"] == 15
+    # Not really over: the panel's give menu has no "min over" line
+    assert games["over"] == 0
     actions = {a["id"]: a for a in games["actions"]}
     assert actions["suggest:more:games:15"]["data"] == {"person": "person.alex", "minutes": 15, "group": "games"}
     assert actions["suggest:more:games:15"]["primary"] and "primary" not in actions["suggest:more:games:30"]
@@ -156,6 +158,8 @@ def test_a_group_already_over_offers_enough_to_catch_up() -> None:
     games = suggestions(person, [], [])[0]
     # 10 over after the 30 given: +25 leaves 15, +40 leaves 30
     assert games["minutes"] == 25
+    # How far over, for the panel's give menu ("10 min over: +15 leaves 5")
+    assert games["over"] == 10
     amounts = [a["data"]["minutes"] for a in games["actions"] if a["service"] == "hearth.add_bonus"]
     assert amounts == [25, 40]
     assert "still up" in games["sentence"] and "10 min over" in games["detail"] and "30 min extra" in games["detail"]

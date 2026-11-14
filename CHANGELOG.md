@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **A "+" box for more choices.** A suggestion on Today keeps its suggested amount and Dismiss; its second amount is now a square "+" that opens a small menu: +15 min, +30 min, +1 h and Unlock for today (an allow of that pool, or of that device for a device's own limit, until midnight). Each applies at once with the 6-second Undo; Unlock's Undo ends that allow. When the kid is already over, a line under the menu says by how much ("10 min over: +15 leaves 5"). The kid's sheet has the same box beside Give time, for the pool that stops them. Suggestions add `over` (minutes past the limit) to the household summary (added field: the contract stays at 2). Phones' suggestions are unchanged.
+
 ## 2026.11.16
 
 ### Home Assistant integration
