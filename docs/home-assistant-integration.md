@@ -308,8 +308,8 @@ streaming apps), say. **An app is in one pool at most**, besides All screen time
 3. Hearth's curated starter lists;
 4. the shared app catalog's **confirmed** answer (below), by the household's map; a confirmed value the map sends to
    no pool (a companion app, say) is Other, and nothing further down moves it;
-5. the device's own category (Android's, from a Hearth device), with a Glint phone's copy of the catalog
-   (`catalog_categories`) below it;
+5. the device's own category (Android's, from a Hearth device; a device's `catalog_categories` is no longer read
+   since contract 3: Hearth fetches the shared app catalog itself);
 6. the shared catalog's **suggested** answer, only when it goes to a pool: a guess never takes an app out of one;
 7. where its time came from (a Switch's or an Xbox's titles are games);
 8. Other.
@@ -328,10 +328,11 @@ marks as video (its `category`, kept when Hearth's page saves the pools). Remove
 streaming have pools of their own. Otherwise Video goes, with the apps added to it; those count in All screen time
 only until put in a pool (the log names them). Configure > Add apps to Games replaces Add apps to Video or Games.
 
-#### Shared app catalog
+#### Shared app catalog (App facts)
 
-Glint's catalog (glint-recipes) says what an app **is**, on every platform; the household says which pool that goes
-to. Hearth fetches it itself (catalog.py), so it works without a Glint phone.
+App facts, a public, signed dataset (published for now from the glint-recipes repository; its own repository comes
+later, [contracts/app-facts.md](contracts/app-facts.md)), says what an app **is**, on every platform; the household
+says which pool that goes to. Hearth fetches it itself (catalog.py), so it needs no other app.
 
 - **What it reads.** The signed index at `https://thesiegs.github.io/glint-recipes/` (`catalog_url` in the options)
   and its shards (`glint.catalog/1`, one per platform: android, msstore, xbox, pfn, steam, switch, web, name). Per key:
@@ -347,8 +348,9 @@ to. Hearth fetches it itself (catalog.py), so it works without a Glint phone.
   per app. The index is asked with its ETag, and a shard only when its SHA-256 changed. Nothing identifying is sent:
   a generic user agent, no household or device id.
 - **Checks**, any failure keeping the last good copy: the index's Ed25519 signature over its exact bytes with one of
-  the two pinned keys (`catalog_data/keys`, the same `exchange-1` and `exchange-2` Glint ships), its format, its `seq`
-  (lower than the copy's is a rollback and refused), and each shard's SHA-256, format and platform.
+  the two pinned keys (`catalog_data/keys`, `exchange-1` and `exchange-2`), its format, its `seq`
+  (lower than the copy's is a rollback and refused), and each shard's SHA-256, format and platform. An index that
+  lists no catalog entry, no shards, or only shards Hearth doesn't read keeps the copy: it never empties it.
 - **Kept** in Home Assistant's storage (`hearth.catalog.<entry>`) with no expiry: offline, the copy is used for good.
   Before the first fetch, the snapshot bundled with the integration (`catalog_data/snapshot`) is checked the same
   way and used. A newer copy places apps again at once.
@@ -362,16 +364,16 @@ to. Hearth fetches it itself (catalog.py), so it works without a Glint phone.
   where it is; moving it is an adult's move. Either way it leaves the list, and a later catalog change never moves
   it: Every app shows "the shared catalog now says X" instead.
 
-**Sending upward** (the tile exchange, as Glint's). Hearth has its own setting with Glint's defaults: fetching is on
-(it sends nothing); sending is off until an HA administrator turns it on, on Hearth's page (asked once, with what
-it sends) or Configure > Shared app catalog. While it's on, once a week at a random time, Hearth sends the relay
-(`catalog_relay`, by default Glint's) a challenge and then `POST /propose` (`glint.catalog-propose/1`): at most 20
+**Sending upward.** Fetching is on (it sends nothing); sending is off until an HA administrator turns it on, on
+Hearth's page (asked once, with what it sends) or Configure > App facts. While it's on, once a week at a random time,
+Hearth sends the relay (`catalog_relay`, by default the catalog's) a challenge and then `POST /propose`
+(`glint.catalog-propose/1`): at most 20
 public store ids the catalog lacks (today `pfn:` keys from Family Safety's Windows apps; never Android packages,
 `win32:`, `fs:`, names or titles) and at most 10 corrections an adult chose to share (the tick under a row in Check
 these: the catalog's key and value for the pool, never the pool). No household, person or device id, no per-install
-key, no usage, times or counts; keys sorted. A key seen only on kids whose tile sharing is off is never sent, and a
-messaging app never is. A key sent isn't sent again for 30 days. Until the relay has `/propose` (a 404), nothing
-changes and the queue waits; a refusal (400, 403) drops the batch; busy (429) or offline waits a week. Turning
+key, no usage, times or counts; keys sorted. A key seen only on kids who don't share app data (`share_app_data`,
+Hearth's page > Sharing app data) is never sent, and a messaging app never is. A key sent isn't sent again for 30
+days. A 404 or 410 (no such endpoint) changes nothing and the queue waits; a refusal (400, 403) drops the batch; busy (429) or offline waits a week. Turning
 sharing off drops anything waiting.
 
 **Not screen time** (Configure > Not screen time): a group whose minutes don't count toward All screen time, music
@@ -944,7 +946,7 @@ The answer to each status post carries the person's (or, on a TV, each profile's
       "locked": true,
       "pause": {"until": "2026-10-26T19:00:00-05:00", "reason": "Dinner"},
       "lock": {"by": ["pause"], "kind": "pause", "kinds": ["pause"], "until": "2026-10-26T19:00:00-05:00"},
-      "tile_exchange_share": false,
+      "share_app_data": false,
       "request": {"id": "…", "status": "approved", "minutes": 15, "asked_minutes": 15, "group": "all"},
       "youtube_blocks": {"videos": [], "channels": [], "words": [], "labels": {}}
     }
@@ -953,7 +955,7 @@ The answer to each status post carries the person's (or, on a TV, each profile's
   "people": {"user:10": "person.sam", "user:0:alex": "person.alex"},
   "parent_pins_version": "…",
   "version": "3f9c1a0b2d4e5f60",
-  "contract": 1
+  "contract": 3
 }
 ```
 
@@ -969,8 +971,12 @@ on); `version`, a hash of the content, lets it skip an unchanged one. This repla
 same meaning, from the integration instead of a template.
 
 A **phone** gets its person's part of the same document, in the answer to each post and pushed when it changes (see
-[Away from home](#away-from-home)). Each person's part also says `tile_exchange_share`: whether a parent let their
-phone share with its launcher's tile exchange (Configure > Tile exchange sharing; false unless chosen). And `playing`: what they're
+[Away from home](#away-from-home)). Each person's part also says `share_app_data`: whether a parent lets their devices
+share app data with public app datasets (Configure > Sharing app data, or Hearth's page; false unless chosen; an app
+turns its own sharing off when it's false). It replaced `tile_exchange_share` in contract 3, which is no longer sent.
+Since contract 3 a device paired with a client also gets `client_settings`, `{"<scope>/<name>": "<etag>"}` for the
+documents it may read ([contracts/client-settings.md](contracts/client-settings.md)): they're part of the document's
+`version`, so a change to one wakes its wait and push ping. And `playing`: what they're
 playing now, anywhere Hearth sees it, as in the household summary's `playing` (so a TV profile's part, a phone's and
 `hearth/me` all have it).
 
@@ -1002,8 +1008,8 @@ directly on the home network; the mailbox is for devices that are rarely on at t
 
 ### Contract
 
-`contract` (an integer, now 2) says which shape of the device API and the household summary this is: in the approved
-pair answer, every status answer (`{"ok": true, "contract": 1, "state": {...}}`), every state document and the
+`contract` (an integer, now 3) says which shape of the device API and the household summary this is: in the approved
+pair answer, every status answer (`{"ok": true, "contract": 3, "state": {...}}`), every state document and the
 summary. A device may send its own in its status (`contract`). It goes up only when a field changes meaning or type,
 becomes required, or goes away; an added field doesn't change it, so a reader ignores fields it doesn't know. It's
 apart from `version`, which changes with the content. A phone's person document also says `kind` (`kid`, `adult` or
@@ -1012,6 +1018,13 @@ The summary is for administrators and for adults on Hearth's page whose person i
 pairing codes); `hearth.add_bonus` and `hearth.set_budget` take a group's name as well as its id. Contract 2 added the
 summary's `headline`, `lines` and `actions` (per person) and `household` ([below](#contract-2-headline-lines-actions)):
 added fields, so nothing of contract 1 changed, but the number went up so an app knows they're there.
+
+Contract 3 is the generic client contract, written up in [contracts/device-api.md](contracts/device-api.md): a
+device says which app it is (`client`, locked when an adult approves the pairing) and its own `checks`; `verify_pin`
+answers a short-lived grant; paired apps keep small documents of their own in Hearth
+([contracts/client-settings.md](contracts/client-settings.md)); `share_app_data` replaces `tile_exchange_share`; and a
+device's `catalog_categories` is no longer read. A paired app's own packages are never paused for its person, so no
+app is named in Hearth's code any more.
 
 ### Ask for more
 
@@ -1125,14 +1138,14 @@ commands takes a person or any other key: an extra key gets Home Assistant's `in
                {"id": "games", "name": "Games", "minutes_left": 10, "apps": ["com.example.game"]}],
     "locked": false,
     "next_lock": {"at": "2026-11-07T20:00:00-05:00", "by": "binary_sensor.sam_bedtime", "kind": "bedtime"},
-    "tile_exchange_share": false,
+    "share_app_data": false,
     "request": {"id": "q2X0aZ1b", "status": "pending", "minutes": 30, "asked_minutes": 30, "group": "all",
                 "expires": "2026-11-07T18:30:00+00:00", "answered": null},
     "youtube_blocks": {"videos": [], "channels": [], "words": [], "labels": {}}
   },
   "media_rooms": [],
   "version": "3f1c2a9b0d4e5f67",
-  "contract": 2
+  "contract": 3
 }
 ```
 
@@ -1438,7 +1451,7 @@ whole summary, from a test (with a grant of Sam's from the Nintendo app added by
 
 ```json
 {
-  "contract": 2,
+  "contract": 3,
   "people": [
     {
       "id": "person.alex",
@@ -1883,7 +1896,7 @@ status post.
 **Hearth's page** (the Hearth entry in the sidebar, administrators only) does all of it in one place, with a guided
 setup the first time: who's a kid and who's an adult, parent PINs, pairing TVs and phones (the code is checked and
 approved on the page), TV profiles, screen time sources, daily limits, bedtime and school-time locks, other parental
-controls, groups and their apps, school days, Glint tile sharing and the push server for phones. Its **Today** tab
+controls, groups and their apps, school days, sharing app data and the push server for phones. Its **Today** tab
 shows each kid's time left and what's playing, with buttons for extra time, and each TV and phone. It is
 `custom_components/hearth/frontend/hearth-panel.js`, a plain custom element on the WebSocket commands in `panel.py`
 (`hearth/config`, `hearth/config/set`, `hearth/budget`, `hearth/pairing`, `hearth/parent_pin`) and the household
@@ -1970,7 +1983,7 @@ What step 1 built. Every endpoint answers local network addresses only (403 othe
 
 **Pairing.** Once the household is set up:
 
-1. `POST /api/hearth/pair` with `{"device_id", "kind", "name", "model", "version", "nonce"}`. `device_id` is the
+1. `POST /api/hearth/pair` with `{"device_id", "kind", "name", "model", "version", "nonce", "client"}` (`client` since contract 3, see [contracts/device-api.md](contracts/device-api.md); a malformed one is 400). `device_id` is the
    device's own stable id (8-64 of `A-Z a-z 0-9 _ -`, made once and kept); `kind` is `tv` (the default) or `mobile`;
    `nonce` is 32-128 of the same characters, random, made for this pairing and never shown. Answers
    `{"pairing_id", "code", "expires_in"}` (seconds, 600). The device shows `code`. 404 `not_set_up` when the household
@@ -2001,7 +2014,7 @@ notification.
 (see [Device status](#device-status)), at most 64 KB. 200 (below); 401 `not_paired` for an unknown device or
 wrong secret (it was removed: stop posting and offer to pair again); 429 `too_often` past 20 posts a minute; 400
 `bad_request`. A refused secret is a plain 401, never a failed Home Assistant login, so it doesn't count toward Home
-Assistant's IP ban. The 200 answer carries the device's state document, `{"ok": true, "contract": 1, "state": {...}}` (see
+Assistant's IP ban. The 200 answer carries the device's state document, `{"ok": true, "contract": 3, "state": {...}}` (see
 [What a device gets](#what-a-device-gets)). Every device endpoint answers 503 `not_set_up` while the integration is
 loading: try again, don't unpair. A TV with screen-time rules of its own (set before it was paired, household-sync.md "Screen time without Home
 Assistant") sends them as `local_rules`, `{"<profile_id>": {"all": {"weekday", "weekend"}, "groups": [{"id",
@@ -2044,7 +2057,7 @@ malformed body.
 **Parent PINs** (any paired device). Each adult on Hearth's page has their own (4 digits), set in Configure > Parent PINs or on Hearth's page, and kept as a salted
 hash in the TV's form (`v2$<iterations>$<salt>$<hash>`, PBKDF2-HMAC-SHA256); any of them is a parent PIN.
 `POST /api/hearth/device/<device_id>/verify_pin` with the same header and `{"pin": "<4 digits>"}`: 200
-`{"ok": true, "person": "person.alex"}` or `{"ok": false}`, and a right one fires `hearth_parent_pin_used`
+`{"ok": true, "person": "person.alex", "grant", "grant_expires": 120, "grant_writes": 8}` (the grant: contract 3, [contracts/device-api.md](contracts/device-api.md)) or `{"ok": false}`, and a right one fires `hearth_parent_pin_used`
 (`device_id`, `person`). After 5 wrong PINs in a row the device waits 30 seconds, doubling with each further wrong one
 up to an hour: the wrong answer that starts a wait says `retry_in` (seconds), and until it ends every try is 429
 `{"error": "locked_out", "retry_in": s}`, the right PIN included. A right PIN clears the count. Each lockout fires
