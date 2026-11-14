@@ -127,9 +127,12 @@ def test_a_shard_must_match_its_sha256_format_and_platform() -> None:
         shard_list({"catalog": {"format": "glint.catalog/1", "shards": {"xbox": {"path": "../x.json", "sha256": digest}}}})
     with pytest.raises(CatalogError):
         shard_list({"catalog": {"format": "glint.catalog/2", "shards": {}}})
-    # An unknown shard is skipped; an index with no catalog is an empty one
-    assert shard_list({"catalog": {"format": "glint.catalog/1", "shards": {"vr": {"path": "k/vr.0.json"}}}}) == {}
-    assert shard_list({"format": "glint.exchange/1"}) == {}
+    # An unknown shard is skipped; an index with no catalog, no shards or only unknown ones lists nothing (None): it
+    # never stands for an empty catalog
+    assert shard_list({"catalog": {"format": "glint.catalog/1", "shards": {"vr": {"path": "k/vr.0.json"}}}}) is None
+    assert shard_list({"format": "glint.exchange/1"}) is None
+    assert shard_list({"catalog": {"format": "glint.catalog/1", "shards": {}}}) is None
+    assert shard_list({"catalog": {"format": "glint.catalog/1"}}) is None
 
 
 def test_the_bundled_snapshot_verifies_with_the_pinned_keys() -> None:
@@ -319,6 +322,37 @@ async def test_a_bad_fetch_keeps_the_last_good_copy(hass: HomeAssistant, aioclie
 
     assert keeper.seq == seq and keeper.data.has("xbox:1828326430")
     assert keeper.data.lookup("com.example.tube") is None
+
+
+async def test_an_index_without_a_catalog_never_empties_the_copy(
+    hass: HomeAssistant, aioclient_mock, hass_storage
+) -> None:
+    private, public = _key()
+    keeper = await _keeper(hass, public)
+    seq = keeper.seq + 10
+    index, sig, files = _site(private, seq, {"xbox": _shard("xbox", XBOX)})
+    _serve(aioclient_mock, index, sig, files)
+    assert await keeper.async_fetch()
+    changed = []
+    keeper.on_change = lambda: changed.append(True)
+
+    # A newer, properly signed index whose publisher dropped the catalog entry (or moved it elsewhere)
+    bare = json.dumps({"format": "glint.exchange/1", "seq": seq + 1, "apps": {}, "revoked": []}).encode()
+    _serve(aioclient_mock, bare, base64.b64encode(private.sign(bare)), {}, etag='"bare"')
+    assert await keeper.async_fetch() is False and "no catalog" in keeper.error
+    # One with the entry but no shards
+    empty = json.dumps(
+        {"format": "glint.exchange/1", "seq": seq + 2, "catalog": {"format": "glint.catalog/1", "shards": {}}}
+    ).encode()
+    _serve(aioclient_mock, empty, base64.b64encode(private.sign(empty)), {}, etag='"empty"')
+    assert await keeper.async_fetch() is False
+
+    assert keeper.seq == seq and keeper.data.has("xbox:1828326430") and changed == []
+    # The copy isn't marked current: the next fetch asks for the index whole again
+    assert keeper.etag == '"one"'
+    await keeper.async_flush()
+    again = await _keeper(hass, public)
+    assert again.seq == seq and again.data.has("xbox:1828326430")
 
 
 async def test_a_fetch_reuses_shards_whose_hash_didn_t_change(hass: HomeAssistant, aioclient_mock) -> None:
