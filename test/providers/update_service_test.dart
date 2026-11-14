@@ -1,8 +1,10 @@
 import 'package:flauncher/providers/github_releases.dart';
+import 'package:flauncher/providers/update_deferral.dart';
 import 'package:flauncher/providers/update_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../mocks.mocks.dart';
 
@@ -94,6 +96,63 @@ void main() {
       expect(await service.updateQuietly(), isTrue);
       expect(service.status, UpdateStatus.upToDate);
       verifyNever(channel.installApk(any));
+    });
+  });
+
+  group("updating quietly while a kids profile runs", () {
+    late MockFLauncherChannel channel;
+    late SharedPreferences prefs;
+    late bool kids;
+    late DateTime now;
+    final newer = _FakeReleases([_release("v2026.12.01")]);
+
+    setUp(() async {
+      PackageInfo.setMockInitialValues(
+          appName: "Hearth", packageName: "x", version: "2026.10.05", buildNumber: "8113", buildSignature: "");
+      SharedPreferences.setMockInitialValues({});
+      prefs = await SharedPreferences.getInstance();
+      kids = true;
+      now = DateTime(2026, 11, 16, 2);
+      channel = MockFLauncherChannel();
+      when(channel.getSupportedAbis()).thenAnswer((_) async => ["arm64-v8a"]);
+      when(channel.isOwnerUser()).thenAnswer((_) async => true);
+      when(channel.isScreenOn()).thenAnswer((_) async => false);
+      when(channel.checkInstallPermission()).thenAnswer((_) async => true);
+    });
+
+    UpdateService service() => UpdateService(channel,
+        releases: newer, deferral: UpdateDeferral(prefs, () async => kids, now: () => now));
+
+    test("waits, and is tried again later", () async {
+      final s = service();
+      expect(await s.updateQuietly(), isFalse);
+      expect(s.status, UpdateStatus.available);
+      verifyNever(channel.getApkPackageName(any));
+      verifyNever(channel.installApk(any));
+    });
+
+    test("goes ahead once no kids profile is running", () async {
+      expect(await service().updateQuietly(), isFalse);
+      kids = false;
+      final s = service();
+      await s.updateQuietly();
+      // It went on to download (no download in a test: that's the failure it stops at)
+      expect(s.error, UpdateError.downloadFailed);
+    });
+
+    test("goes ahead after a week of waiting", () async {
+      expect(await service().updateQuietly(), isFalse);
+      now = now.add(updateDeferralCap);
+      final s = service();
+      await s.updateQuietly();
+      expect(s.error, UpdateError.downloadFailed);
+    });
+
+    test("an adult's own Install doesn't wait", () async {
+      final s = service();
+      await s.checkForUpdate();
+      await s.downloadAndInstall();
+      expect(s.error, UpdateError.downloadFailed);
     });
   });
 }

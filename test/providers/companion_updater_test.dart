@@ -110,4 +110,46 @@ void main() {
       expect(await updater(false).latestRelease(companionApps.first), isNull);
     });
   });
+
+  group("automatic updates wait while a kids profile runs", () {
+    late MockFLauncherChannel channel;
+    late SharedPreferences sharedPreferences;
+    final now = DateTime(2026, 11, 16, 20);
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      sharedPreferences = await SharedPreferences.getInstance();
+      channel = MockFLauncherChannel();
+      when(channel.getSupportedAbis()).thenAnswer((_) async => ["arm64-v8a"]);
+      when(channel.isOwnerUser()).thenAnswer((_) async => true);
+      when(channel.getPackageVersion(any)).thenAnswer((_) async => {"versionName": "32.50", "versionCode": 3250});
+      when(channel.isInstalledByHearth(any)).thenAnswer((_) async => true);
+      when(channel.getForegroundPackage()).thenAnswer((_) async => null);
+      when(channel.checkInstallPermission()).thenAnswer((_) async => true);
+      when(channel.isKidsUserRunning()).thenAnswer((_) async => true);
+    });
+
+    CompanionUpdater updater() => CompanionUpdater(channel, sharedPreferences,
+        includePrereleases: () => true, releasesFor: (_) => _FakeHearthTubeReleases(), now: () => now);
+
+    test("a newer HearthTube waits, and the wait is remembered", () async {
+      expect(await updater().autoUpdateApp(companionApps.first), isFalse);
+      verifyNever(channel.installApk(any));
+      expect(sharedPreferences.getInt("update_waiting_since_com.thesiegs.hearthtube"), now.millisecondsSinceEpoch);
+    });
+
+    test("an up-to-date HearthTube waits for nothing", () async {
+      await updater().autoUpdateApp(companionApps.first);
+      when(channel.getPackageVersion(any)).thenAnswer((_) async => {"versionName": "32.63", "versionCode": 3263});
+      expect(await updater().autoUpdateApp(companionApps.first), isTrue);
+      expect(sharedPreferences.getInt("update_waiting_since_com.thesiegs.hearthtube"), isNull);
+    });
+
+    test("a kids profile's Hearth leaves it to the owner's", () async {
+      when(channel.isOwnerUser()).thenAnswer((_) async => false);
+      expect(await updater().autoUpdateApp(companionApps.first), isTrue);
+      verifyNever(channel.getPackageVersion(any));
+      verifyNever(channel.installApk(any));
+    });
+  });
 }

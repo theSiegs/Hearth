@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/github_releases.dart';
+import 'package:flauncher/providers/update_deferral.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// An app made to go with Hearth, installed and updated from its GitHub releases.
@@ -74,7 +75,9 @@ class CompanionRelease {
 
 /// Finds, downloads and installs companion app releases, for the Updates page and on its own: Hearth is the
 /// TV's one updater for its companions. In the background it checks at start and then daily, and installs only where
-/// Android lets Hearth update without asking (it's the app's installer of record) and while the app isn't in front.
+/// Android lets Hearth update without asking (it's the app's installer of record), from the owner's Hearth, while the
+/// app isn't in front and no kids profile's user is running (UpdateDeferral; checked again each hour while one is,
+/// and after a week it installs anyway). Installing from the Updates page doesn't wait.
 class CompanionUpdater {
   /// SharedPreferences key: automatic updates on/off; unset = on exactly when Hearth installed HearthTube.
   static const String autoUpdateKey = "companion_auto_update";
@@ -95,14 +98,19 @@ class CompanionUpdater {
   final Future<bool> Function()? _selfUpdate;
   static const String _lastSelfCheckKey = "hearth_last_auto_check";
 
-  /// [releasesFor] is for tests; GitHub otherwise.
+  /// Holds automatic installs back while a kids profile's user is running.
+  final UpdateDeferral _deferral;
+
+  /// [releasesFor] and [now] are for tests; GitHub and the clock otherwise.
   CompanionUpdater(this._channel, this._sharedPreferences,
       {bool Function()? includePrereleases,
       GitHubReleases Function(String repo)? releasesFor,
-      Future<bool> Function()? selfUpdate})
+      Future<bool> Function()? selfUpdate,
+      DateTime Function()? now})
       : _includePrereleases = includePrereleases ?? (() => false),
         _releasesFor = releasesFor ?? ((repo) => GitHubReleases(repo, userAgent: _userAgent)),
-        _selfUpdate = selfUpdate;
+        _selfUpdate = selfUpdate,
+        _deferral = UpdateDeferral(_sharedPreferences, _channel.isKidsUserRunning, now: now);
 
   /// Starts the background checks (first a couple of minutes after Hearth starts, so it never slows the start).
   void start() {
@@ -131,9 +139,12 @@ class CompanionUpdater {
       if (!await autoUpdateEnabled()) return;
       if (_due(_lastCheckKey)) {
         await _sharedPreferences.setInt(_lastCheckKey, DateTime.now().millisecondsSinceEpoch);
+        var deferred = false;
         for (final app in companionApps) {
-          await _autoUpdate(app);
+          if (!await autoUpdateApp(app)) deferred = true;
         }
+        // Held back for a kids profile: look again at the next hourly tick, not tomorrow
+        if (deferred) await _sharedPreferences.remove(_lastCheckKey);
       }
       // Hearth last: installing it restarts Hearth
       final selfUpdate = _selfUpdate;
@@ -148,17 +159,25 @@ class CompanionUpdater {
   bool _due(String key) =>
       DateTime.now().millisecondsSinceEpoch - (_sharedPreferences.getInt(key) ?? 0) >= _checkEvery.inMilliseconds;
 
-  Future<void> _autoUpdate(CompanionApp app) async {
+  /// [app]'s automatic update, when there is one to install; false when it was held back for a kids profile.
+  Future<bool> autoUpdateApp(CompanionApp app) async {
+    // The owner's Hearth installs: the app is the same in every profile
+    if (!await _channel.isOwnerUser()) return true;
     final installed = await _channel.getPackageVersion(app.packageName);
     // Not installed (installing is the user's choice), or installed some other way, where Android would ask
-    if (installed == null || !await _channel.isInstalledByHearth(app.packageName)) return;
+    if (installed == null || !await _channel.isInstalledByHearth(app.packageName)) return true;
     final release = await latestRelease(app);
-    if (release == null || !release.isNewerThan(installed)) return;
-    if (await _channel.getForegroundPackage() == app.packageName) return; // next time, not mid-video
-    if (!await _channel.checkInstallPermission()) return;
+    if (release == null || !release.isNewerThan(installed)) {
+      await _deferral.done(app.packageName);
+      return true;
+    }
+    if (await _channel.getForegroundPackage() == app.packageName) return true; // next time, not mid-video
+    if (!await _channel.checkInstallPermission()) return true;
+    if (!await _deferral.mayInstall(app.packageName, release.versionName)) return false;
     log("Updating ${app.name} to ${release.versionName}", name: "CompanionUpdater");
     final apk = await download(app, release);
     await _channel.installApk(apk.path);
+    return true;
   }
 
   /// The newest non-draft release with an APK for this TV, or null; pre-releases count when the

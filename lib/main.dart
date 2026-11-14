@@ -46,6 +46,7 @@ import 'package:flauncher/providers/backup_service.dart';
 import 'package:flauncher/providers/household_looks_service.dart';
 import 'package:flauncher/share/household_join.dart';
 import 'package:flauncher/share/share_wallpapers.dart';
+import 'package:flauncher/providers/update_deferral.dart';
 import 'package:flauncher/providers/update_service.dart';
 import 'package:flauncher/providers/held_apps.dart';
 import 'package:flauncher/providers/profile_service.dart';
@@ -150,7 +151,9 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => WeatherService(fLauncherChannel, sharedPreferences: sharedPreferences)),
         ChangeNotifierProvider(create: (context) {
           final settings = context.read<SettingsService>();
-          return UpdateService(fLauncherChannel, includePrereleases: () => settings.updatesIncludePrereleases);
+          return UpdateService(fLauncherChannel,
+              includePrereleases: () => settings.updatesIncludePrereleases,
+              deferral: UpdateDeferral(sharedPreferences, fLauncherChannel.isKidsUserRunning));
         }),
         // The weather forecast over the home (the top bar's weather shows it)
         ChangeNotifierProvider(create: (_) => HomeForecast()),

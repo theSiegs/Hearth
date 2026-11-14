@@ -24,6 +24,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flauncher/flauncher_channel.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flauncher/providers/github_releases.dart';
+import 'package:flauncher/providers/update_deferral.dart';
 import 'package:flauncher/hearth_ids.dart';
 import 'package:flauncher/quiet_failure.dart';
 
@@ -83,9 +84,14 @@ class UpdateService extends ChangeNotifier {
   /// Whether pre-releases count, read at each check (Settings → System → Updates).
   final bool Function() _includePrereleases;
 
+  /// Holds the automatic update back while a kids profile is running (updateQuietly); none: it never waits.
+  final UpdateDeferral? _deferral;
+
   /// [releases] is for tests; Hearth's own releases otherwise.
-  UpdateService(this._channel, {bool Function()? includePrereleases, GitHubReleases? releases})
+  UpdateService(this._channel,
+      {bool Function()? includePrereleases, GitHubReleases? releases, UpdateDeferral? deferral})
       : _includePrereleases = includePrereleases ?? (() => false),
+        _deferral = deferral,
         _releases = releases ?? GitHubReleases("theSiegs/Hearth", userAgent: "Hearth-UpdateChecker") {
     _loadCurrentVersion();
   }
@@ -214,14 +220,19 @@ class UpdateService extends ChangeNotifier {
   }
 
   /// Hearth's own update in the background, with "Update automatically" on: only while the TV's screen is off, as
-  /// installing restarts Hearth and the home with it. Android lets an app update itself without asking. Only the
-  /// owner user's Hearth does it: the app is the same in every profile. Returns whether it got as far as looking for
-  /// a release (false: not now, try again later).
+  /// installing restarts Hearth and the home with it, and not while a kids profile's user is running (UpdateDeferral:
+  /// a package change then can sign the kid out of their apps) unless it has waited a week. Android lets an app update
+  /// itself without asking. Only the owner user's Hearth does it: the app is the same in every profile. An adult's
+  /// own Check for updates and Install (the update dialog) don't wait. Returns whether it got as far as looking for a
+  /// release and, with one, installing it (false: not now, try again later).
   Future<bool> updateQuietly() async {
     if (!await _channel.isOwnerUser()) return true;
     if (await _channel.isScreenOn() || !await _channel.checkInstallPermission()) return false;
     await checkForUpdate();
+    if (_status == UpdateStatus.upToDate) await _deferral?.done(_packageName);
     if (_status == UpdateStatus.available) {
+      final deferral = _deferral;
+      if (deferral != null && !await deferral.mayInstall(_packageName, _updateInfo!.tagName)) return false;
       developer.log("Updating Hearth to ${_updateInfo?.tagName}", name: "UpdateService");
       await downloadAndInstall();
     }

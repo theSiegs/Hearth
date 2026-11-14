@@ -2346,7 +2346,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updatesAutoUpdateDescription =>
-      'Hearth checks daily and installs updates to apps it installed, when they\'re not in use, and to itself while the TV is off';
+      'Hearth checks daily and installs updates to apps it installed, when they\'re not in use, and to itself while the TV is off. They wait while a kids profile is in use (a week at most); an update you install from this page doesn\'t wait';
 
   @override
   String get updatesIncludePrereleases => 'Include pre-releases';

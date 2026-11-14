@@ -257,6 +257,9 @@ kid's own HearthTube. Turn it off to give the button back to YouTube.
 **Settings → System → Updates.** Choose **Hearth TV** to check its GitHub releases for a newer version and install it.
 The same page installs HearthTube and keeps it up to date: with **Update automatically** on, Hearth TV checks daily and
 updates HearthTube when it's not in use, and Hearth TV itself while the TV's screen is off (installing restarts the home).
+Neither installs while a kids profile is in use, even in the background: Google TV can sign a kid out of their apps when
+a package changes then. They install once the TV is back on an adult's profile (Hearth TV's own with the screen off),
+or after a week of waiting. An update an adult installs from this page doesn't wait.
 The first install asks Android for permission to install apps; after that, updates go through without asking.
 
 **Include pre-releases** also offers early test builds, of both Hearth TV and HearthTube. It starts on in a pre-release

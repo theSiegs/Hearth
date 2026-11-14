@@ -16,6 +16,10 @@
 - **Only a confirmed answer loosens a limit.** Messaging and Accessibility (outside All screen time by default) take an app only on an adult's move or list, Hearth's starter lists, or the shared catalog's confirmed answer. A device's own category (any app can declare one) or the catalog's suggestion no longer puts an app there: it counts in Other, and Check these asks about a suggested one. Apps already in Messaging through Hearth's starter list or an adult's list or move stay there.
 - **A newer copy of the shared catalog ships with Hearth** (the bundled snapshot of 2026-11-14), so a new install no longer starts from one that called Chrome and Sound Amplifier messaging.
 
+### Hearth TV
+
+- **Updates wait while a kids profile is in use.** Hearth TV's automatic updates, its own and HearthTube's, no longer install while a Google TV kids profile's user is running, even in the background: a package change then can make Google TV take apps out of that profile and sign the kid out. They install once no kids profile runs (Hearth TV's own still only with the screen off), or anyway after waiting a week. HearthTube's check comes back every hour while it waits, and only the owner's Hearth TV installs. An update an adult installs from Settings → System → Updates doesn't wait. The log says `HearthUpdate: deferring …` while one waits.
+
 ## 2026.11.15
 
 ### Home Assistant integration

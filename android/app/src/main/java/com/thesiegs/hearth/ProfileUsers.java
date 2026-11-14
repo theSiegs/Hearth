@@ -99,6 +99,30 @@ final class ProfileUsers {
     }
 
     /**
+     * Whether a kids profile's user runs now: Google TV's kids profiles are profile users of the owner's, started on a
+     * switch to one (adults are accounts in the owner's user). A package installed or updated while one runs can make
+     * Google TV take third-party apps out of it, signing the kid out (so Hearth's automatic updates wait). True in a
+     * kids profile's own Hearth, and when it can't be read.
+     */
+    static boolean kidsUserRunning(Context context) {
+        if (Process.myUid() / 100000 != 0) return true;
+        UserManager users = (UserManager) context.getSystemService(Context.USER_SERVICE);
+        if (users == null) return true;
+        try {
+            UserHandle me = Process.myUserHandle();
+            for (UserHandle profile : users.getUserProfiles()) {
+                // Android 11's Google TV switches by quiet mode rather than by stopping users
+                if (!profile.equals(me) && users.isUserRunning(profile) && !users.isQuietModeEnabled(profile)) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (RuntimeException e) {
+            return true;
+        }
+    }
+
+    /**
      * A user's lasting key ("user:11"): what Hearth stores per-profile things under, so renaming a profile in
      * Google TV doesn't orphan them. It's the key of the user's first account's profile; another account's profile
      * in the same user has {@link #profileKey}. Null for UNKNOWN.
