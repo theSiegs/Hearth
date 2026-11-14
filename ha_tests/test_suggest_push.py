@@ -4,6 +4,8 @@ notification."""
 
 from datetime import timedelta
 
+import pytest
+
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_fire_time_changed
@@ -15,6 +17,9 @@ from custom_components.hearth.suggest_push import DEBOUNCE, MAX_PER_HOUR, migrat
 from test_attention import _household, _hub, _press
 from test_panel import _ws
 from test_phones import _options
+
+# Suggestions show at any hour here: in the evening they would be held back (glance.hold_back)
+pytestmark = pytest.mark.usefixtures("no_evening_hold")
 
 KEY = "suggest:person.sam:more:video"
 TAG = "hearth_suggest:person.sam:more:video"

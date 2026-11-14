@@ -3,6 +3,8 @@ history log (history.py) that sizes and silences them."""
 
 from datetime import datetime, timedelta
 
+import pytest
+
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
@@ -11,6 +13,9 @@ from custom_components.hearth.const import DOMAIN
 from custom_components.hearth.glance import household_glance, suggestions
 from custom_components.hearth.history import BONUS, DISMISS, History
 from test_glance import _kids_alex_and_sam, _person, _summary
+
+# Suggestions show at any hour here: in the evening they would be held back (glance.hold_back)
+pytestmark = pytest.mark.usefixtures("no_evening_hold")
 
 
 def _keys(found) -> list[str]:

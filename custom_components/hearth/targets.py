@@ -95,7 +95,53 @@ def targets_of(household: Household, person: str) -> list[dict[str, Any]]:
                     "groups": False,
                 }
             )
+    for target in found:
+        target["display_name"] = display_name(household, person, target)
     return found
+
+
+def display_name(household: Household, person: str, target: dict[str, Any]) -> str:
+    """How a person reads a device's name (never a model id like "SM-X230" when a better one is known): the name a
+    person gave its device in Home Assistant, else the name of the person's source counting it (Hearth's page), else
+    its label."""
+    from homeassistant.helpers import device_registry as dr
+
+    from .const import DOMAIN
+
+    hass = household.hass
+    registry = er.async_get(hass)
+    devices = dr.async_get(hass)
+    via, _, rest = target["id"].partition(":")
+    ha_devices: set[str] = set()
+    if via == HEARTH:
+        device = devices.async_get_device(identifiers={(DOMAIN, rest)})
+        if device is not None:
+            ha_devices.add(device.id)
+    elif via == "nintendo":
+        entry = registry.async_get(rest)
+        if entry is not None and entry.device_id:
+            ha_devices.add(entry.device_id)
+    elif via == "fl" and (child := household.family_link_child(person)) is not None:
+        for state in fl.devices(hass, child):
+            if str(state.attributes.get("device_id")) == rest:
+                entry = registry.async_get(state.entity_id)
+                if entry is not None and entry.device_id:
+                    ha_devices.add(entry.device_id)
+    for device_id in ha_devices:
+        device = devices.async_get(device_id)
+        if device is not None and device.name_by_user:
+            return _shown(device.name_by_user, target.get("kind") == "tv")
+    for source in household.sources:
+        if source.person != person:
+            continue
+        state = hass.states.get(source.entity_id)
+        if via == "fl" and state is not None and str(state.attributes.get("device_id")) == rest \
+                and state.attributes.get("child_id") is not None:
+            return source.name
+        entry = registry.async_get(source.entity_id)
+        if ha_devices and entry is not None and entry.device_id in ha_devices:
+            return source.name
+    return str(target.get("name") or target["id"])
 
 
 # Who sets a device's own limit, as `left_by` says it

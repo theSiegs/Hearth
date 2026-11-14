@@ -31,7 +31,7 @@ from .asks import CONF_OFFER_MORE
 from .attention import ADULTS, NOTICE, Action, Item
 from .const import SIGNAL_PAIRINGS, SIGNAL_PEOPLE
 from .counting import ALL
-from .glance import duration
+from .glance import HOLD_MORE, duration
 from .history import PUSHED
 
 if TYPE_CHECKING:
@@ -172,7 +172,13 @@ class SuggestPush:
         people = summary(self.hub)["people"] if chosen else []
         for person in people:
             pushed = None
-            for suggestion in person.get("suggestions") or []:
+            # What shows now, and the ones waiting only behind another of theirs; never one held back by a lock, the
+            # evening cutoff or a device not in use (glance.hold_back)
+            showing = [
+                *(person.get("suggestions") or []),
+                *(s for s in person.get("suggestions_held") or [] if s.get("held") == HOLD_MORE),
+            ]
+            for suggestion in showing:
                 if (person["id"], suggestion.get("device") or suggestion.get("group")) not in chosen:
                     continue
                 key = item_key(person["id"], suggestion["key"])
@@ -208,7 +214,7 @@ class SuggestPush:
         minutes = suggestion["minutes"]
         if suggestion.get("device"):
             target = next((t for t in person.get("targets") or [] if t.get("id") == suggestion["device"]), {})
-            device = target.get("name") or "a device"
+            device = target.get("display_name") or target.get("name") or "a device"
             title = f"{who}'s {device} reached its own limit"
             text = f"Give {_more(minutes)} on it today?"
         else:

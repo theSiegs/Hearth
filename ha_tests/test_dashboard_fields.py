@@ -92,7 +92,7 @@ def test_the_household_counts() -> None:
                   "group": "all"}]
     counts = household_glance([out, low], approvals)["counts"]
     assert counts == {"asks": 1, "suggestions": 1, "pairings": 0, "paused": 0, "out": 1, "low": 1, "locked": 0,
-                      "held": 0}
+                      "held": 0, "suggestions_held": 0, "needs": 2}
 
 
 def _view(play: Playing, now: datetime) -> dict:

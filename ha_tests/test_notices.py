@@ -6,6 +6,8 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from homeassistant.components import persistent_notification
+import pytest
+
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import (
@@ -27,6 +29,9 @@ from test_people import _tv_status
 from test_phones import _options
 from test_suggest_push import KEY, TAG, _check, _video_out
 from test_wait import _wait
+
+# Suggestions show at any hour here: in the evening they would be held back (glance.hold_back)
+pytestmark = pytest.mark.usefixtures("no_evening_hold")
 
 CAPS = ["commands.play", "events", "notices"]
 
