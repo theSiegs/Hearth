@@ -95,6 +95,11 @@ async def test_each_kid_has_a_list_with_today_s_items(hass: HomeAssistant, hass_
     summaries = sorted(i["summary"] for i in await _items(hass))
     # The reward shows, so the kid can choose to earn it
     assert summaries == ["Feed the cat (+15 min Games)", "Homework"]
+    # A kid's own phone or TV sees the counts in their state document, never the balance; an adult has none
+    household = _hub(hass).household
+    assert household._person_document("person.sam")["todo"] == {"left": 2, "done": 0, "total": 2}
+    assert "balance_cents" not in household._person_document("person.sam")
+    assert "todo" not in household._person_document("person.alex")
 
 
 async def test_the_kid_s_tick_grants_and_untick_takes_it_back(

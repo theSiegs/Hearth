@@ -1264,6 +1264,8 @@ class Household:
             "playing": [p.view() for p in (day.playing if day else [])],
             # A parent let this person's phone share with the launcher's tile exchange (off unless chosen)
             "tile_exchange_share": person in self.options.get(CONF_TILE_EXCHANGE, []),
+            # A kid's to-do list today, counts only (todos.py); the money balance stays on adults' screens
+            **({"todo": self.todos.counts(person)} if person in self.todos.kids() else {}),
             # Their latest request for more time and its answer (asks.py), while it's still news
             **({"request": ask.device_view()} if (ask := self.hub.asks.latest_for(person)) else {}),
             # What a parent blocked here, for HearthTube in the person's kids profiles (a TV's Hearth passes it on)
