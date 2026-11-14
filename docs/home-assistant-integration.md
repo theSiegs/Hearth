@@ -1172,7 +1172,9 @@ then sends the same object as an event whenever it changes, at most every 2 seco
   profiles, or their Hearth phone), `family_link` (each Family Link device, `fl:<device id>`), `family_safety` (each
   platform their Family Safety reports, whether or not Hearth's enforcer holds it, `fs:xbox`, `fs:windows`) or `nintendo` (their Switch,
   `nintendo:<the enforcer's entity>`); `groups` true where one group can be held or given on that device alone
-  (Hearth's own devices). A TV's `name` is as shown ("Kitchen" is "Kitchen TV"). One handset that's both a Hearth phone and
+  (Hearth's own devices). A TV's `name` is as shown ("Kitchen" is "Kitchen TV"). `display_name` is how a person reads
+  it, never a model id like `SM-X230` when a better one is known: the name given to its device in Home Assistant
+  (`name_by_user`), else the name of the person's source counting it ("Sam's tablet"), else `name`. One handset that's both a Hearth phone and
   a Family Link device of theirs (the same name) is both: the Family Link one says `same_as` (the Hearth phone's id)
   and the Hearth phone `also` (`["fl:<id>"]`); show it once. Extra time there for one group goes on the Hearth phone;
   for All screen time give it on both if Family Link holds the phone too. Each target also says the time actually
@@ -1306,9 +1308,12 @@ device waiting to pair; notice: kids out of time; calm: `all clear`) and `action
 (labelled with the kid's name), `pause_end` (`hearth.pause_end {}`, ends the family pause; app and group pauses stay) while anyone is paused, and
 `pause_all` (`hearth.pause {minutes: 30}`, confirm) unless everyone is. Approving a device to pair isn't an action:
 it's an administrator's step on Hearth's page, with no service. `counts` is what a tile's badge and a TV's top row
-show, counted once here: `{asks, suggestions, pairings, paused, out, low, locked, held}` (`asks`: requests for more
-time waiting; `suggestions`: the household's suggestions; `pairings`: devices waiting to pair, as the reader sees
-them; `paused`: people under the family pause; `out`, `low`, `locked`, `held`: kids whose `state` is that).
+show, counted once here: `{asks, suggestions, pairings, paused, out, low, locked, held, suggestions_held, needs}`
+(`asks`: requests for more time waiting; `suggestions`: the household's suggestions showing; `pairings`: devices
+waiting to pair, as the reader sees them; `paused`: people under the family pause; `out`, `low`, `locked`, `held`: kids
+whose `state` is that; `suggestions_held`: suggestions held back by a lock, the evening or a device not in use;
+`needs`: kids with a request waiting or a suggestion showing, one row each on Hearth's page). `household` also lists
+`suggestions_held` (below).
 
 #### Dashboard fields
 
@@ -1537,48 +1542,41 @@ Hearth's page opens on a tab from its link: `/hearth#today`, `#kids`, `#devices`
 
 #### Today on Hearth's page
 
-Today follows the round 2 dashboard spec (its sections 2 and 3) and draws only what the summary decides; the page
-capitalizes the first letter of the server's text and nothing else.
+Today follows the redesign of 2026-11-13: does anything need an adult, in one sentence; one row per kid; what's
+playing; the rest one tap away. Every action applies at once with a 6-second **Undo** instead of a confirm (a gift
+undoes with `hearth.remove_bonus`, a pause with `hearth.pause_end`, an allow with `hearth.allow_end`; "Not today" and
+"No" to a request wait for their Undo to pass before they're sent, and are sent at once when the page closes).
 
-- **Suggested now**, a slot at the top that keeps its height: the household's `headline`, then each request for more
-  time (its text as the kid's `ask:<id>` line says it, with No and +15, +30, +45, +1 h), then `household.suggestions`
-  with their own buttons (each calls its action's service with exactly its data, after its `confirm`). With nothing
-  waiting, the headline reads "All clear".
-- The family pause, then devices waiting to pair and parental controls that need a look, then the kids.
-- With two kids or more, a **compact row** per kid (the time-use design, decision 4a): avatar, name, the `day_line`
-  (else the headline), a short bar of All screen time, and a button only when there's something to answer: their
-  waiting request (`Yes 30`, the minutes asked) or a suggestion for them (its own primary action, `+15 youtube`, the
-  pool named). A tap on the row opens that kid's full card under the rows (again to close it); with one kid, the card
-  shows at once.
-- Each **kid card**: the minutes left of All screen time beside the name, the `day_line`, the card and its dot colored
-  by the person's `state`, then (decisions 1a and 2c) **All screen time as one bar** split by `all_by_pool` (a color
-  per pool, grey for other; one plain bar from an older summary), the day's limit as a mark and today's extra time as a
-  hatched end after it, with a legend (`games 10 · youtube 7 · other 6`); under it **a thin lane per pool with a
-  budget** on the same minute scale (fewest left first, each with its limit mark and `53 left`, `Out`, `Allowed` or
-  `Paused`), so it shows which cap comes first, and the pools without one in a muted line (`No limit: messaging 2
-  min`). Then **the day strip** (decision 3a) from this morning's wake to tonight's `bedtime` (6:00 to 22:00 without
-  it): bedtime shaded at the ends, School time striped, a line at now, and the minutes used each hour once the hourly
-  statistics are read; then **a tile per device** (decision 5a) from `targets`: `1 h 43 left · by google`, `2 h left ·
-  games, by hearth`, `Locked · school time` (one handset shown once). What's on comes from `playing[].text`. The give
-  button is the person's `bonus:<binding group>` action ("+15 games"); more of it, All
-  screen time and taking 15 back are under More. **Last 7 days** draws `week` oldest on the left in noiwid's bar
-  style: All (or the pool chip chosen) per day with the day's budget plus bonus as a tick, `+30` over a day with extra
-  time, a red dot under a day something ran out, and a hatched bar for a day with no record; a tap says `Tue · 2 h 40
-  of 3 h · games ran out · +30 given · 1 ask` (or `Tue · no record`). **Today, hour by hour** (opened) reads Home
-  Assistant's hourly statistics of the person's Screen time today sensor (`recorder/statistics_during_period`;
-  `hearth/config` names each person's sensor in `screen_time_sensors`) plus the sensor's live value for the current
-  hour, as noiwid's chart does. **Today by device and app**: `48 min today`, `25 left there`, `open there till 7:00`,
-  +15 there, and the top 8 apps with their pools (`Minecraft · 35 min · games`). A lock's chip names its kind and end
-  as the day line does (`School time till 3:00`, `Bedtime till 7:00`, `Locked till ...`), the entities that lock them
-  in its tooltip. A parent's app grants are one chip per parent's app and end, by name (`Pandora and Spotify open ·
-  Family Link till midnight`, more as `9 apps open · ...`), every name in the tooltip. Google's, Microsoft's and
-  Nintendo's own limits and what Hearth last did through each parental control fold under **Device limits** (its
-  summary says what didn't take or what stops them), apps by name and why (`Family Link: holding Google Messages for
-  School time · put back YouTube Music`).
-- TVs and phones say what's on with the summary's `text` (`Alex · bluey · s2e4 · 8 min left`), and **Family today, by
-  pool** shows each group with a budget with a short bar per kid (with two kids or more).
+- **The header**: "Today", "Tonight" once the earliest kid's cutoff has passed (their bedtime, else 9:00 pm), and one
+  line: `11:00 pm · 2 of 3 in bedtime · Sam still up`; Pause everyone (15, 30, 60 or 90 min and a reason).
+- **For you**: requests and the suggestions showing, one row per kid (a request first, then a pool that ran out, then a
+  device's own limit), each a sentence (`sentence`), a detail line and its buttons under the text (+15 min, 30 min,
+  Not today; a request: Give 30 min, 15 min, No), with "+1 more for Sam · See". Nothing waiting: "Nothing needs you"
+  (or "Nothing needs you tonight"), with "6 suggestions held back · why" folding `household.suggestions_held` and
+  each one's `why`.
+- **Kids**: a row per kid, bedtime last and faded: a ring around the initial (All screen time used of its limit, in
+  Hearth's warm accent; amber when a pool ran out, red when All did, indigo with a moon in bedtime, blue with a cap in
+  School time), the name and one status line (`Bedtime till 6:00`, `Games ran out · 31 min left overall`, `2 h 23
+  left · YouTube 49 min · bedtime 9:30`). A +15 only when time is what stops them, they're awake, it's before their
+  cutoff and For you doesn't already have them.
+- **Screens now**: what plays (Hearth's TVs and phones, consoles and Switches from `playing`), one row "Nothing
+  playing · 3 TVs off · no console or Switch in use" when nothing does (it opens to the TVs); a TV on Hearth's home
+  reads "Home screen", and a TV that's off has no profile.
+- **Adults** get one muted line: `Adults today: Robin 2 h · Jordan 31 min · no limits`.
+- **The kid's sheet** (a tap on their row): a bottom sheet on a phone (closed by the scrim, Esc, a swipe down or ×),
+  the column beside the list from 900 px of the page. Their lock (who set it, and why time wouldn't help), their
+  request or suggestions, the actions that help now (Give time with a pool and 15, 30 or 60; Pause 30 min; in a lock
+  Allow an app… instead, with Give time anyway under ⋯, as are No School time today while School time is still ahead
+  and Change limits), **Today** (All screen time split by pool, a lane per limited pool that opens to its apps, a
+  console as "On Switch 2", and +15 / +30 of that pool), **Devices** grouped by what they're doing (`3 TVs, 2 tablets ·
+  Follows screen time · 31 min left`, `All 9 screens · Bedtime till 6:00`), each by its `display_name` without the
+  kid's name, opening to each device and whose limit applies, **Exceptions** in plain sentences ("26 apps are allowed
+  without a limit till midnight. Someone changed their limits in the Family Link app.", "Hearth is blocking 46 apps
+  on Sam's Family Link devices because Games ran out."), **This week** (only the days Hearth recorded, the day's limit
+  dashed; "Hearth started counting today" while there are fewer than 3), and their to-do list.
 
-Every length of time on the page is in the one format (`45 min`, `2 h 10`), and times of day as `till 6:30`.
+Family today, by pool is on the Family tab. Every length of time on the page is in the one format (`45 min`, `2 h
+10`), and times of day as `till 6:30`. Ids (packages, entities) are only ever in a tooltip.
 
 #### The family card (a TV's dashboard)
 
@@ -1626,7 +1624,23 @@ There's no suggestion while a request for it waits (its yes and no are the actio
 device runs, or after an adult chose "not today". The amount is the household's own for that kid and group (Pushed to
 phones), else what an adult usually gives them (History), else 15 minutes (30 for All screen time). The actions
 are two amounts (`hearth.add_bonus`, the first `primary`) and "not today" (`hearth.dismiss_suggestion` with the key),
-which puts it off until midnight.
+which puts it off until midnight. Each also has `sentence` and `detail`, for a page that writes sentences: "Sam's
+YouTube time is up" / "Used 1 h 14 of 1 h · 1 h 45 of screen time left"; "Sam's Xbox is stopped by Microsoft's limit"
+/ "Microsoft's own limit for today" (a device by its `display_name`).
+
+**Held back.** A suggestion that wouldn't help now waits instead of showing (glance.hold_back): none while the kid is
+in a lock (bedtime, School time) or paused, none after their bedtime starts (or from 21:00 to 6:00 when they have no
+bedtime), and a device's own limit only while that device is in use (something plays there, or a request came from
+it). At most one shows per kid, and none while a request of theirs waits: the rest wait as `more`. The held ones are in
+each person's `suggestions_held` and in `household.suggestions_held` (with `person` and `person_name`): the suggestion
+with `held` (`lock`, `paused`, `after_bedtime`, `after_cutoff`, `not_in_use` or `more`) and `why` ("in bedtime till
+7:00", "after 9:00 pm", "not on the Xbox now"). The phones follow the same rules: a held suggestion isn't pushed (one
+waiting only behind another of the kid's still is).
+
+Extra time given by mistake comes back with `hearth.remove_bonus` (person, minutes, group: All screen time by
+default), the page's Undo: it takes back up to the minutes given today, never more (their own budget stays, and
+chores' minutes too), is logged as a negative bonus (`undo: true`), and when All screen time is none again, what Family
+Link and Family Safety got for it goes too. Adults only, as every Hearth service.
 
 ##### Pushed to phones
 
@@ -1852,7 +1866,7 @@ or ended), `hearth_enforced`, `hearth_new_app`, `hearth_parent_pin_used`, `heart
 
 Per person with a TV profile: **Last video started** (see [A kids profile's YouTube](#a-kids-profiles-youtube)).
 
-Services: `hearth.add_bonus`, `hearth.set_budget`, `hearth.pause`, `hearth.pause_end`, `hearth.allow`,
+Services: `hearth.add_bonus`, `hearth.remove_bonus`, `hearth.set_budget`, `hearth.pause`, `hearth.pause_end`, `hearth.allow`,
 `hearth.allow_end`, `hearth.explain`, `hearth.school_time_off`, `hearth.school_time_off_cancel` (see
 [Exceptions](#exceptions) and [Schedule](#schedule)), `hearth.play_on_tv` (event
 `hearth_command_done`, see [Play on a TV](#play-on-a-tv));
