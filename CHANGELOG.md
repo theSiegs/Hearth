@@ -3,7 +3,7 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
-## Unreleased
+## 2026.11.15
 
 ### Home Assistant integration
 
@@ -12,6 +12,7 @@
 - **Devices by the names you gave them.** Each device in the summary's `targets` has a `display_name`: the name given to its device in Home Assistant, else the name of the source counting it, so a Family Link tablet reads "Sam's tablet", not "SM-X230".
 - **Take back extra time.** `hearth.remove_bonus` takes back up to the minutes given today (never their own budget), logs it, and takes back what Family Link and Family Safety got for it. The page's Undo uses it.
 - **No more "ran out" at midnight from yesterday's numbers.** A screen time sensor that hasn't updated since midnight (Family Link's, before its first poll of the day) no longer counts as today's, so a kid no longer runs out of a pool for a moment at midnight and the week no longer marks it out.
+- **A kid's own to-do count on their phone.** The state document a kid's device reads carries `todo` {left, done, total} for their to-do list, so a phone can show "2 left" without reading the list.
 - **Other tabs:** apps, sources and lock sensors show names first with their ids in a tooltip, test builds are hidden from Apps, Home Assistant users with nothing in Hearth fold under "Others in Home Assistant", and "Suggest to phones" reads "Send suggestions to adults' phones".
 
 ## 2026.11.14
