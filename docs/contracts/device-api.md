@@ -30,7 +30,9 @@ Sent in the pair body (`POST /api/hearth/pair` and `/api/hearth/pair/redeem`) an
 - `id`: the client app's Android package, or a reverse-DNS id for a client that isn't an Android app. At most 128
   characters, two or more dot-separated parts of letters, digits and `_`.
 - `companions`: at most 4 more packages of the same app family. Each must be `id` + `.` + a suffix
-  (`com.example.launcher.phone`), so a client can't name anything outside its own family. Optional.
+  (`com.example.launcher.phone`), so a client can't name anything outside its own family. A build whose id ends in
+  `.debug` or `.nightly` (`com.example.launcher.debug`) may also name companions with that suffix at the end
+  (`com.example.launcher.phone.debug`). Optional.
 - `version`, `contract`: shown on Hearth's page.
 - A pair body with a malformed `client` (a bad id, a companion outside the family, more than 4) is refused with 400
   `bad_request`. A status post with a malformed one keeps the last good one.
@@ -88,12 +90,16 @@ A right PIN at `POST /api/hearth/device/<id>/verify_pin` now answers:
 ### Client settings
 
 Small documents a client keeps in Hearth, per scope: [client-settings.md](client-settings.md). The state document of a
-device paired with a client carries `client_settings`, `{"<scope>/<name>": "<etag>"}`, for every document it may read.
+device paired with a client carries `client_settings`, `{"<scope>/<name>": "<etag>"}`, for every document it may read
+(`{}` when there are none yet). A contract-3 state document **without** `client_settings` means the device paired
+without a client (before contract 3, or with no `client`): its settings calls get `403 no_client` until it pairs again.
 
 ### `share_app_data`
 
 In each person's document, in place of `tile_exchange_share` (which is no longer sent): whether a parent lets this
-person's devices share app data with public app datasets (Hearth's page > Sharing app data). `false` turns a client's
+person's devices share app data with public app datasets (Hearth's page > Sharing app data). Hearth sends it for every
+person; it's an adult's choice only for kids (adults' own apps follow the household's sharing switch), so a client
+may apply it on kids' devices only. `false` turns a client's
 own sharing off for that person. It's in the device path and in `hearth/me` alike.
 
 ### `catalog_categories` is no longer read

@@ -490,3 +490,17 @@ async def test_catalog_categories_are_no_longer_read(
     hub = entry.runtime_data
     assert "catalog_categories" not in hub.state(SAM_PHONE).status
     assert hub.household.placement()("com.example.newgame").why != "declared"
+
+
+def test_a_build_suffix_family_names_its_companions_with_the_same_suffix() -> None:
+    from custom_components.hearth.client import in_family
+
+    assert in_family("com.example.launcher.debug", "com.example.launcher.phone.debug")
+    assert in_family("com.example.launcher.nightly", "com.example.launcher.phone.nightly")
+    assert in_family("com.example.launcher", "com.example.launcher.phone")
+    # Not another suffix, not a different base, not a bare suffix
+    assert not in_family("com.example.launcher.debug", "com.example.launcher.phone.nightly")
+    assert not in_family("com.example.launcher.debug", "com.example.other.debug")
+    assert not in_family("com.example.launcher.beta", "com.example.launcher.phone.beta")
+    assert not in_family("com.example.launcher", "com.example.game")
+    assert in_family("com.example.launcher.debug", "com.example.launcher.debug.x")

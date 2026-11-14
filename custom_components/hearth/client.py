@@ -25,6 +25,9 @@ MAX_CHECKS = 10
 MAX_CHECK_LABEL = 40
 # A reverse-DNS id: two or more dot-separated parts of letters, digits and underscores (an Android package)
 _CLIENT_ID = re.compile(r"^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$")
+# A build of the app with a suffix (`<app>.debug`) may name its companions with the same suffix at the end
+# (`<app>.phone.debug`): the suffix family, for these suffixes only
+BUILD_SUFFIXES = ("debug", "nightly")
 _CHECK_ID = re.compile(r"^[a-z0-9_]{1,32}$")
 # Checks Hearth adds itself; a device's own with this prefix are dropped
 HEARTH_CHECK_PREFIX = "hearth_"
@@ -36,6 +39,18 @@ def client_id(value: Any) -> str | None:
     if not isinstance(value, str) or len(value) > MAX_CLIENT_ID or not _CLIENT_ID.match(value):
         return None
     return value
+
+
+def in_family(client: str, companion: str) -> bool:
+    """[companion] is in [client]'s own family: `<client>.` plus a suffix, or, for a build id ending in one of
+    BUILD_SUFFIXES (`<app>.debug`), `<app>.` plus a part plus that same suffix (`<app>.phone.debug`)."""
+    if companion.startswith(client + "."):
+        return True
+    base, _, suffix = client.rpartition(".")
+    if suffix not in BUILD_SUFFIXES or not base:
+        return False
+    middle = companion[len(base) + 1:-(len(suffix) + 1)] if companion.endswith("." + suffix) else ""
+    return companion.startswith(base + ".") and bool(middle) and client_id(base + "." + middle) is not None
 
 
 def clean_client(raw: Any) -> dict[str, Any] | None:
@@ -53,7 +68,7 @@ def clean_client(raw: Any) -> dict[str, Any] | None:
         return None
     kept: list[str] = []
     for companion in companions:
-        if client_id(companion) is None or not companion.startswith(found + "."):
+        if client_id(companion) is None or not in_family(found, companion):
             return None
         if companion not in kept:
             kept.append(companion)

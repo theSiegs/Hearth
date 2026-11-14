@@ -72,7 +72,7 @@ Header `X-Hearth-Secret` as on every device endpoint.
 | Call | Answer |
 |---|---|
 | `GET /api/hearth/device/{id}/settings/{scope}/{name}` | `200` the document; `404 none`; `403 forbidden` |
-| `PUT /api/hearth/device/{id}/settings/{scope}/{name}` `{"schema", "data", "label"?, "if_etag"?, "grant"?}` | `200 {"etag", "updated_by"}`; `403 forbidden`; `409 changed {"etag"}`; `413 too_large` / `too_many`; `400 bad_request` |
+| `PUT /api/hearth/device/{id}/settings/{scope}/{name}` `{"schema", "data", "label"?, "if_etag"?, "grant"?}` | `200 {"etag", "updated_by"}`; `403 forbidden`; `409 changed {"etag"}` (`"etag": null`: there is no document now); `413 too_large` / `too_many`; `400 bad_request` |
 | `DELETE` the same, body `{"if_etag"?, "grant"?}` (optional) | `200 {"ok": true}`; `404 none`; as above |
 
 - `if_etag`: the etag the document must have now; `null`: only when there is none yet; left out: any.
