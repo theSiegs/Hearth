@@ -264,7 +264,7 @@ def test_only_a_confirmed_answer_puts_an_app_in_messaging_or_accessibility() -> 
     assert (place("com.example.own").pool, place("com.example.own").why) == ("accessibility", "moved")
     assert place("com.example.reader").pool == "games"
     # Counting: Messaging and Accessibility are outside All screen time by default
-    assert {g.id for g in _groups() if not g.in_all} == {"messaging", "accessibility"}
+    assert {g.id for g in _groups() if not g.in_all} == {"messaging", "accessibility", "interface"}
     # A confirmed accessibility answer goes to Accessibility by the household's map
     assert pool_map(_groups())["accessibility"] == "accessibility"
 

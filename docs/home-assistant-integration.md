@@ -97,6 +97,12 @@ it (`screen`, `app`, `app_package`, `media_*`, `day`, `seconds_today`, `app_seco
 The integration keeps only known fields, cleaned, and keeps the last status across restarts. **Connected** turns off
 after 15 minutes without a post; the device's other entities show unavailable then.
 
+**Time from before pairing.** A phone's or tablet's counts start at local midnight, so on the day it pairs its first
+post carries time from before Hearth had it. That first post after an adult approves the pairing is kept as the
+device's baseline (with the status, across restarts) and taken off every later post that day, per app and in total;
+from the next day its counts are its own. Pairing again (a new approval) takes a new baseline. A TV counts its own
+profiles and has none. Apps in System screens (below) never count either way.
+
 **Caps.** A device may say what it can be sent: `"caps": [...]`, at most 16 of `commands.play` (`hearth.play_on_tv`),
 `events` (HearthTube's started videos, the Events endpoint), `push` (a ping channel, see [Away from
 home](#away-from-home)) and `notices` (attention items in its state document, to come); unknown ones are dropped, so a
@@ -306,6 +312,16 @@ A budget is set on a **group**: a set of apps and titles whose minutes count tog
   a device that can spare them from a lock too. It has no budget or bonus (no number entities, no minutes left).
   Family Link's own whole-device lock (All screen time out of time) is Google's: it spares only the apps a parent gave
   unlimited time in Family Link.
+- **System screens** (`interface`): what's in front when no app is: Android's own screens (`android`, System UI, the
+  permission and package installers), Family Link's lock and downtime screen (`com.google.android.gms.supervision`),
+  the stock launchers (Pixel, Samsung, AOSP, Google TV and Android TV, and other phone makers'), setup wizards and the
+  common keyboards. **Counted nowhere**: its seconds are taken out of a device's reading before anything is counted,
+  so they're in no group and not in All screen time (an adult can't put it in), and a phone or tablet that sends its
+  own per-app seconds gets its total from the apps kept. **Never paused**, like Accessibility, and no budget or bonus.
+  Stricter than the loosening pools below: only Hearth's list or an adult's move or list puts an app there, never the
+  shared catalog (not even a confirmed answer, nor an adult's map of a whole kind of app) and never a device's own
+  category. Settings and Files are not System screens: time in them still counts. A client that says its home screen
+  (the launcher it shows) was in front all night thus never empties a kid's All screen time.
 
 **Only a confirmed answer loosens a limit.** Messaging and Accessibility are outside All screen time (and
 Accessibility is never paused), so a guess never puts an app in them: only an adult's move or list, Hearth's starter

@@ -3400,7 +3400,7 @@ class HearthPanel extends HTMLElement {
     const appsCards = `${this._checkTheseCard()}
       <section class="card">
         <h3><ha-icon icon="mdi:new-box"></ha-icon>Sorted lately</h3>
-        <p class="muted">New apps go to a group on their own: one that lists them, else their kind (games, video, social…; Messaging and Accessibility only when the shared catalog confirms it), else Other. Accessibility apps are never paused. If one landed wrong, move it; your choice always wins.</p>
+        <p class="muted">New apps go to a group on their own: one that lists them, else their kind (games, video, social…; Messaging and Accessibility only when the shared catalog confirms it), else Other. Accessibility apps are never paused. System screens (the home screen, lock screen, keyboards) never count and are never paused; only Hearth's list or your move puts an app there. If one landed wrong, move it; your choice always wins.</p>
         ${recent.length ? `<ul class="list compact">${recent.map((a) => this._appRow(a, `${a.who ? ` · ${esc(a.who)}` : ""} · ${esc(new Date(a.seen).toLocaleDateString())}`)).join("")}</ul>` : `<p class="muted small">Nothing new lately.</p>`}
       </section>
       <section class="card">
@@ -3423,7 +3423,7 @@ class HearthPanel extends HTMLElement {
         .map(
           (g) => `<section class="card">
           <div class="row"><h3 class="grow">${esc(g.name)}</h3>
-            <label class="check"><input type="checkbox" data-change="outside-all" data-group="${esc(g.id)}" ${g.in_all ? "checked" : ""}> Screen time</label>
+            ${g.never_counted ? `<span class="chip small">never screen time</span>` : `<label class="check"><input type="checkbox" data-change="outside-all" data-group="${esc(g.id)}" ${g.in_all ? "checked" : ""}> Screen time</label>`}
             ${g.builtin ? "" : `<button class="icon-btn" data-action="group-remove" data-group="${esc(g.id)}" aria-label="Remove group"><ha-icon icon="mdi:delete-outline"></ha-icon></button>`}</div>
           <div class="chips">${g.apps
             .map((a) => {

@@ -43,8 +43,9 @@ An adult's allow (hearth.allow, exceptions.py) takes its app or group out of eve
 parent's grant (a change in the Family Link, Nintendo or Family Safety app, grants.py) takes out only the hold it came
 from.
 
-An app in the built-in Accessibility pool (Voice Access, Lookout, Live Transcribe) is never paused by any of these:
-a budget, a pause, School time's apps or the schedule (household.never_held). Family Link's whole-device lock (All
+An app in the built-in Accessibility pool (Voice Access, Lookout, Live Transcribe) or System screens (the home screen,
+Family Link's lock screen, keyboards) is never paused by any of these: a budget, a pause, School time's apps or the
+schedule (household.never_held). Family Link's whole-device lock (All
 screen time out of time) is Google's and spares only the apps a parent gave unlimited time there.
 
 What's held is kept with Home Assistant's storage helper, so only what Hearth held is let go, after a restart too. A

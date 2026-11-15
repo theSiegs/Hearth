@@ -47,7 +47,7 @@ from .apps import (
     phone_actions,
     update_notification,
 )
-from .counting import ALL, DeviceUsage, Reading, group_seconds, merge
+from .counting import ALL, DeviceUsage, Reading, group_seconds, merge, minus, without
 from .catalog import CatalogKeeper, correctable_key
 from .client import exempt_packages
 from .limits import (
@@ -56,6 +56,7 @@ from .limits import (
     ACCESSIBILITY,
     MESSAGING,
     OTHER,
+    INTERFACE,
     OTHER_DAY,
     SCHOOL_DAY,
     Group,
@@ -64,6 +65,7 @@ from .limits import (
     Placement,
     catalog_value,
     groups_from_options,
+    never_counted_group,
     never_held_group,
     placer,
     pool_map,
@@ -752,6 +754,25 @@ class Household:
 
         return of
 
+    def never_counted(self):
+        """item -> whether it's in System screens (limits.INTERFACE): never anyone's screen time, in no group. Only an
+        adult's move or list or Hearth's own list puts an app there, so the shared catalog and the devices' own
+        categories aren't read."""
+        group = self.group(INTERFACE)
+        if group is None or not never_counted_group(group):
+            return lambda item: False
+        place = placer(self.groups, {}, self.options.get(CONF_APP_GROUPS, {}))
+        return lambda item: place(item).pool == INTERFACE
+
+    def _device_reading(self, device_id: str, status: dict[str, Any]) -> Reading:
+        """A phone's or tablet's own count today. On the day it paired, only what came after: its first post after
+        pairing is the baseline (hub.py), taken off its later posts that day."""
+        reading = Reading(SOURCE_HEARTH, float(status.get("seconds_today") or 0), status.get("app_seconds_today") or {})
+        base = self.hub.state(device_id).baseline
+        if base and base.get("day") and base["day"] == status.get("day"):
+            reading = minus(reading, float(base.get("seconds") or 0), base.get("apps") or {})
+        return reading
+
     def membership(self):
         """An item's groups: All and at most one pool (placement)."""
         place = self.placement()
@@ -797,7 +818,17 @@ class Household:
             playing.setdefault(person, []).append(entry)
             plays.append((entry, (person, device, key)))
 
-        def add(person: str, device: str, reading: Reading, into: dict[str, dict[str, list[Reading]]] = readings) -> None:
+        never_counted = self.never_counted()
+
+        def add(
+            person: str,
+            device: str,
+            reading: Reading,
+            into: dict[str, dict[str, list[Reading]]] = readings,
+            own_items: bool = False,
+        ) -> None:
+            # System screens count nowhere; a device's own total is then its kept apps' sum ([own_items])
+            reading = without(reading, never_counted, own_items and bool(reading.items))
             items = {}
             for item, seconds in reading.items.items():
                 key = self._key(item)
@@ -832,8 +863,7 @@ class Household:
             else:
                 person = device.get(CONF_PERSON)
                 if person and into is not None:
-                    add(person, device_id, Reading(SOURCE_HEARTH, float(status.get("seconds_today") or 0),
-                                                   status.get("app_seconds_today") or {}), into)
+                    add(person, device_id, self._device_reading(device_id, status), into, own_items=True)
             package = status.get("app_package")
             if person and status.get("screen") == "on" and self.hub.connected(device_id) and package:
                 # A TV's media player says what's on, else the device's own media session: the show (else the title)
@@ -1449,13 +1479,18 @@ class Household:
 
     def never_held(self, membership) -> frozenset[str]:
         """The packages nothing of Hearth's ever pauses: the built-in Accessibility pool's (Voice Access, Lookout, Live
-        Transcribe: an app a kid may rely on). Not a budget running out, an adult's pause of an app or group, School
-        time's apps nor the weekly schedule. Only a confirmed answer puts an app there (limits.placer)."""
+        Transcribe: an app a kid may rely on) and System screens' (the home screen, keyboards, Android's own screens).
+        Not a budget running out, an adult's pause of an app or group, School time's apps nor the weekly schedule. Only
+        a confirmed answer puts an app there (limits.placer)."""
         cached = self._never_held_for
         if cached is not None and cached[0] is membership:
             return cached[1]
-        group = self.group(ACCESSIBILITY)
-        found = frozenset(self._group_apps(group, membership)) if group and never_held_group(group) else frozenset()
+        found = frozenset(
+            package
+            for group_id in (ACCESSIBILITY, INTERFACE)
+            if (group := self.group(group_id)) is not None and never_held_group(group)
+            for package in self._group_apps(group, membership)
+        )
         self._never_held_for = (membership, found)
         return found
 

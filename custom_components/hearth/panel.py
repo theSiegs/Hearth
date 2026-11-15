@@ -57,6 +57,7 @@ from .limits import (
     OTHER,
     OTHER_DAY,
     SCHOOL_DAY,
+    never_counted_group,
     never_held_group,
     one_pool_per_app,
     slug,
@@ -256,6 +257,8 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
             "in_all": g.in_all,
             # The Accessibility pool: never paused, so no budget to set
             "never_held": never_held_group(g),
+            # System screens: never screen time, whatever the options say
+            "never_counted": never_counted_group(g),
             "apps": [] if g.id == ALL else household._group_apps(g, membership, with_fs=True),
             "added_apps": list(options.get(CONF_GROUP_APPS, {}).get(g.id, [])),
         }
