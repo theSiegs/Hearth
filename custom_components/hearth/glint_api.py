@@ -412,7 +412,8 @@ def start_ops_text(states: list[dict[str, Any] | None]) -> str:
     """What glint_change_start says of its ops: the phone's own start.change from glint.hello, else START_OPS."""
     for state in states:
         action = hello_action(state, "start.change")
-        if action is not None and (action.get("about") or action.get("args")):
+        # A state document near its size cap drops args (args_cut): then the fixed list says more
+        if action is not None and not action.get("args_cut") and (action.get("about") or action.get("args")):
             about = str(action.get("about") or "").strip()
             args = str(action.get("args") or "").strip()
             text = f"Glint's start.change: {about}" + (f". Args: {args}" if args else "")

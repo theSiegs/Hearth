@@ -265,6 +265,12 @@ async def test_change_start_names_the_ops_glint_has(
     _publish(hass, ALEX_PHONE, {**ON_STATE, "hello": hello})
     text = described(await _api(hass, users["alex"]))
     assert "change start: add, move, fold" in text and "{ops: [{op: fold, tile}]}" in text
+    # A state document that hit its size cap drops args (args_cut): back to Glint's own list
+    cut = {"actions": [{"id": "start.change", "class": "write", "about": "change start: add, move, fold",
+                        "args_cut": True}]}
+    _publish(hass, ALEX_PHONE, {**ON_STATE, "hello": cut})
+    text = described(await _api(hass, users["alex"]))
+    assert "change start: add, move, fold" not in text and "remove_page" in text
 
 
 async def test_two_phones_with_one_name_are_never_guessed(
