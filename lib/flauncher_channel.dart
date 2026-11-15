@@ -199,6 +199,22 @@ class FLauncherChannel {
   /// protectionRead}. The *Kept columns are null unless [checkProtection] read them over Hearth's own adb, which
   /// happens only over a key the TV trusts already, so looking never asks "Allow debugging?". See
   /// [KidsProfilesState].
+  /// The phones paired with the remote API (docs/tv-remote-api.md): {phones: [{fingerprint, name, role (none, kid or
+  /// parent), profileKey (a kid's phone's kid), pairedAt, lastUsed}], kids: [{profileKey, name}], canBind} (false in a
+  /// kids profile, where a phone can't be bound).
+  Future<Map<dynamic, dynamic>> getRemotePhones() async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getRemotePhones") ?? {};
+
+  /// Binds a phone (V2.4): "none" (not this one), "parent" (an adult's phone) or "kid" with the kid's [profileKey].
+  Future<bool> setRemotePhoneRole(String fingerprint, String role, {String? profileKey}) async =>
+      await _methodChannel.invokeMethod<bool>(
+          "setRemotePhoneRole", {"fingerprint": fingerprint, "role": role, "profileKey": profileKey}) ??
+      false;
+
+  /// Forgets the phone now; its open session closes.
+  Future<bool> removeRemotePhone(String fingerprint) async =>
+      await _methodChannel.invokeMethod<bool>("removeRemotePhone", fingerprint) ?? false;
+
   Future<Map<dynamic, dynamic>> getKidsProfilesState({bool checkProtection = false}) async =>
       await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getKidsProfilesState", checkProtection) ?? {};
 

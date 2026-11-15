@@ -3882,4 +3882,33 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get adbAllowBody =>
       'For the next 2 minutes, when the TV asks \"Allow debugging?\", it\'s yours to answer. After that, Hearth says no to any computer but its own again.';
+
+  @override
+  String get remotePhonesTitle => 'Phones that control this TV';
+
+  @override
+  String get remotePhonesNone =>
+      'No phone is paired. A phone app such as Glint pairs with a code this TV shows.';
+
+  @override
+  String get remotePhonesAdult => 'An adult\'s phone';
+
+  @override
+  String get remotePhonesNotThisOne => 'Not this one';
+
+  @override
+  String remotePhonesKid(String name) {
+    return '$name\'s phone';
+  }
+
+  @override
+  String get remotePhonesRemove => 'Remove';
+
+  @override
+  String get remotePhonesAdultOnly =>
+      'Only an adult\'s profile can set whose phone it is.';
+
+  @override
+  String get remotePhonesAbout =>
+      'A kid\'s phone sees that kid\'s minutes and can ask for more. A phone that\'s not an adult\'s can\'t open apps the profile on the TV can\'t open now. Keys and power go through the TV\'s own remote, not Hearth.';
 }

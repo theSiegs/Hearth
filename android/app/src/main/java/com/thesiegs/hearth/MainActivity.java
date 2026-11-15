@@ -151,6 +151,35 @@ public class MainActivity extends FlutterActivity {
         return key != null ? key : LauncherAccessibilityService.getActiveProfileKey(this);
     }
 
+    private Map<String, Object> remotePhones() {
+        List<Map<String, Object>> phones = new ArrayList<>();
+        for (RemotePhones.Phone phone : new RemotePhones(this).list()) {
+            Map<String, Object> one = new HashMap<>();
+            one.put("fingerprint", phone.fingerprint);
+            one.put("name", phone.name);
+            one.put("role", phone.role);
+            one.put("profileKey", phone.profileKey);
+            one.put("pairedAt", phone.pairedAt);
+            one.put("lastUsed", phone.lastUsed);
+            phones.add(one);
+        }
+        // The kids a phone can be bound to
+        List<Map<String, Object>> kids = new ArrayList<>();
+        for (KidsProfiles.Kid kid : KidsProfiles.list(this)) {
+            String key = ProfileUsers.key(kid.serial);
+            if (key == null) continue;
+            Map<String, Object> one = new HashMap<>();
+            one.put("profileKey", key);
+            one.put("name", kid.name != null ? kid.name : ProfileUsers.displayName(this, key));
+            kids.add(one);
+        }
+        Map<String, Object> answer = new HashMap<>();
+        answer.put("phones", phones);
+        answer.put("kids", kids);
+        answer.put("canBind", !ProfileUsers.isKids(this));
+        return answer;
+    }
+
     private void onMethodCall(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
         switch (call.method) {
             case "getApplications" -> answerFrom(sAppsLoader, result, this::getApplications);
@@ -160,6 +189,26 @@ public class MainActivity extends FlutterActivity {
             case "launchApp" -> result.success(launchApp(call.arguments()));
             case "openUrl" -> result.success(openUrl(call.arguments()));
             case "openSettings" -> result.success(openSettings());
+            // The phones paired with the remote API (Settings > Family > Phones that control this TV)
+            case "getRemotePhones" -> result.success(remotePhones());
+            case "setRemotePhoneRole" -> {
+                // Only from an adult's profile: a kid can't make their own phone an adult's, or bind it at all
+                String role = call.argument("role");
+                String kidKey = call.argument("profileKey");
+                boolean knownKid = false;
+                for (KidsProfiles.Kid kid : KidsProfiles.list(this)) {
+                    knownKid |= kidKey != null && kidKey.equals(ProfileUsers.key(kid.serial));
+                }
+                boolean ok = !ProfileUsers.isKids(this) && (!RemoteSession.ROLE_KID.equals(role) || knownKid)
+                        && new RemotePhones(this).setRole(call.argument("fingerprint"), role, kidKey);
+                result.success(ok);
+            }
+            case "removeRemotePhone" -> {
+                String fingerprint = call.arguments();
+                boolean removed = fingerprint != null && new RemotePhones(this).remove(fingerprint);
+                if (removed) RemoteApiService.phoneRemoved(fingerprint);
+                result.success(removed);
+            }
             // When Google TV's own Kids daily limit was last seen (epoch ms), or null: never
             case "getGoogleTvLimitSeenAt" -> {
                 long at = ScreenTimeScreen.googleLimitSeenAt(this);
@@ -1819,6 +1868,7 @@ public class MainActivity extends FlutterActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        RemoteApiService.sync(this);
         HaBridgeService.sync(this);
         // In another Google TV profile's user Hearth is that profile's agent, not a home screen: the first time
         // it's started there it hides this screen from that profile's home and keeps a quiet connection instead.

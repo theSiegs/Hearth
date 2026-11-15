@@ -4807,5 +4807,43 @@
     "adbAllowBody": "For the next 2 minutes, when the TV asks \"Allow debugging?\", it's yours to answer. After that, Hearth says no to any computer but its own again.",
     "@adbAllowBody": {
         "description": "After the Parent PIN: what allowing a computer does; quotes Android's debugging prompt"
+    },
+    "remotePhonesTitle": "Phones that control this TV",
+    "@remotePhonesTitle": {
+        "description": "Settings > Family row and page title: phones paired with Hearth TV's remote API"
+    },
+    "remotePhonesNone": "No phone is paired. A phone app such as Glint pairs with a code this TV shows.",
+    "@remotePhonesNone": {
+        "description": "Phones that control this TV: shown when none is paired"
+    },
+    "remotePhonesAdult": "An adult's phone",
+    "@remotePhonesAdult": {
+        "description": "Phones that control this TV: a phone marked as an adult's"
+    },
+    "remotePhonesNotThisOne": "Not this one",
+    "@remotePhonesNotThisOne": {
+        "description": "Phones that control this TV: a phone that is neither a kid's nor an adult's (every new pairing); it follows kid rules and gets no minutes"
+    },
+    "remotePhonesKid": "{name}'s phone",
+    "@remotePhonesKid": {
+        "description": "Phones that control this TV: a phone bound to one kid (their minutes, their asks), and the action that binds it",
+        "placeholders": {
+            "name": {
+                "type": "String",
+                "example": "Sam"
+            }
+        }
+    },
+    "remotePhonesRemove": "Remove",
+    "@remotePhonesRemove": {
+        "description": "Phones that control this TV: action, forgets the phone"
+    },
+    "remotePhonesAdultOnly": "Only an adult's profile can set whose phone it is.",
+    "@remotePhonesAdultOnly": {
+        "description": "Phones that control this TV: shown in a kids profile"
+    },
+    "remotePhonesAbout": "A kid's phone sees that kid's minutes and can ask for more. A phone that's not an adult's can't open apps the profile on the TV can't open now. Keys and power go through the TV's own remote, not Hearth.",
+    "@remotePhonesAbout": {
+        "description": "Phones that control this TV: explanation under the list"
     }
 }

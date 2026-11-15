@@ -499,3 +499,77 @@ No polling, no background work, no push service, no ntfy. An app opens a session
 Where to connect: the last TV's address first (3 s), only when it is in the phone's current network
 (`LocalAddress.inNetwork`); NSD (`_hearth-tv._tcp`, ids from `tvs`) at most once per open and 15 minutes when that fails; on
 cellular or another network, nothing at all. Roles are read only at these moments.
+
+## As built on Hearth TV (notes, not contract)
+
+> Notes from the Hearth TV side on how the contract above is built. They explain; they don't change the contract.
+> Where a note and the contract differ, the contract wins and the note is a bug to fix or a question for Glint.
+
+### v1
+
+- The TV side is `RemoteApiService` (server, key, announcement, code), `RemotePolo` (pairing), `RemoteSession`
+  (messages and rules), `RemoteTv` (media, volume, apps) and `RemotePhones` (the list). The key is RSA in Android
+  Keystore under the alias `hearth-remote-api-v2`; TLS (1.3 included) presents only that key, through the server's own
+  `X509ExtendedKeyManager`.
+- A wrong pairing secret: status 402 and the connection closes; pairing again (after 10 seconds) shows a new code. One
+  pairing at a time.
+- **While a kids profile is in front.** A Google TV kids profile is another Android user, and the server runs in the
+  owner's user, which can't see or control that user's media sessions. There `state` carries what Hearth's agent in
+  that profile last reported playing (`title`, `subtitle`, `positionMs`, `durationMs`; `playing` while the report is
+  under 2 minutes old) with `artId` null and every `actions` flag false, so `media` and `seek` answer `unsupported`.
+  `launch` opens the app through the agent, and only an app approved for that profile.
+- Tried on a TV (a test build, 2026-11-08): pairing from Glint and the remote work. Still to try: the code pop-up over
+  a kids profile, `launch` from the background service in an adult profile, and the volume over HDMI-CEC to a soundbar
+  (`volumeSettable`).
+
+### v2 (first part, on branch `feature/tv-remote-api-2`)
+
+Built on the TV, per the contract above:
+
+- TXT `v` is `2`; a hello with `v` 1 gets version 1 exactly (no `welcome`, no `state.time`, no request ids, no new
+  messages or errors). A hello with `v` 2 gets `welcome` before the first `state`.
+- Request ids: a message with `id` gets `ok {re}`, or its answer (`welcome` for `hello`, `apps`, `art`, `synced`,
+  `kids`) or `error` with `re`. Version 2 errors also carry `message` (the code) and, for `too_often`, `retryInSec`.
+- Told roles, `none` (every new pairing), `kid` (bound to one kid) or `parent`, set in Settings > Family > Phones that
+  control this TV, in an adult's profile only. v1's adult mark reads as `parent`, restricted as `none`. The role is read
+  from the TV's store on every message (V2.9 table), and `restricted` (v1's kid rules) is every role but `parent`, or a
+  phone that said `kid: true`.
+- `state.time` (V2.3) for the profile in front: a `parent` phone always, a `kid` phone only when its kid is in front, a
+  `none` phone never. It comes from the same allowance entry the TV enforces (Hearth's own rules, or Home Assistant's
+  last word in mode `ha`). A minute ticking down isn't a change; more minutes, a lock or an unlock are. Sessions are
+  also checked once a minute, for what changes with the clock alone.
+- `launch` from a `kid` phone needs both the profile in front and the kid's own rules (what holds the kid now).
+- `sync` (V2.6): `role`, `mode`, `now`; for a kid, `rules` in mode `local` when the tag differs from `have` (with `tag`
+  and `tz`), `time`, and `ask` for the kid's last ask over the API. `sync {standDown: true}` makes the pairing
+  `none`.
+- `kids` for a parent: each kids profile of this TV with its `time`; `asks` is `[]` in mode `local`, absent in mode `ha`.
+- `ask` from a kid in mode `ha` goes to Hearth HA's asks for the bound kid (the person comes from the binding). A resend
+  of the same ask id isn't sent again. Home Assistant unreachable: still `ok`, and the TV sends it at the kid's next
+  `sync` or resend. HA's "too often" or "wait after not now" is `too_often {retryInSec}`. The answer comes as `answered`
+  on the open session once Home Assistant's status carries it, and as `synced.ask`.
+- `answer`, `hold`, `hold_end` in mode `ha`: `ha_rules`. Every other role rule of V2.9 answers `forbidden` or
+  `not_bound`.
+- `unpair` forgets the phone on this TV and ends the session.
+
+Not built yet (the TV answers `unsupported` where a message is involved):
+
+- Household sync: the signed `phone` binding entries (so a phone is bound on this TV only and pairs with each TV),
+  `remoteId` in `member` entries (so `tvs` lists this TV only), `unpair` on every TV, usage counters (V2.6 "Usage
+  counter rules"): the TV doesn't take a kid app's `usage` yet and answers `"usage": "not_taken"` in mode `local` too.
+- Asks and holds in mode `local` (V2.10a): `ask` from a kid and `answer`/`hold`/`hold_end` from a parent answer
+  `unsupported`; TXT `a` is never set.
+- One-tap Home Assistant (V2.10b): no `ha.offer` in `welcome`, and `ha_ticket` from a parent in mode `ha` answers
+  `unsupported`; Hearth HA has no ticket endpoint yet.
+- `time.hold` is always null; `time.until` is null while out of time (`why: time_up`).
+
+Choices the contract left open (to settle with Glint):
+
+- `art`'s v1 field `id` is the art's id, and v2's request id is also `id`. The TV reads `id` as the art's id unless
+  the message has `art`, in which case `art` is the art's id and `id` the request's.
+- A kid's `ask` carries `note`, which Hearth HA's TV asks don't take: it is dropped.
+- `time.*.used` is sent only where the rules say it (Hearth's own rules; Home Assistant's document doesn't yet).
+- A person's `id` is the household's person id (`a:…` from the profile's account, else `n:<name>`), or `k:<profile>` on
+  a TV in no household.
+- The household zone (`tz`) is the TV's own zone.
+- Settings says "An adult's phone" for the role `parent` (Hearth's wording: "adult", with "parent" for parental
+  controls only).

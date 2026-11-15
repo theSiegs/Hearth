@@ -6482,6 +6482,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'For the next 2 minutes, when the TV asks \"Allow debugging?\", it\'s yours to answer. After that, Hearth says no to any computer but its own again.'**
   String get adbAllowBody;
+
+  /// Settings > Family row and page title: phones paired with Hearth TV's remote API
+  ///
+  /// In en, this message translates to:
+  /// **'Phones that control this TV'**
+  String get remotePhonesTitle;
+
+  /// Phones that control this TV: shown when none is paired
+  ///
+  /// In en, this message translates to:
+  /// **'No phone is paired. A phone app such as Glint pairs with a code this TV shows.'**
+  String get remotePhonesNone;
+
+  /// Phones that control this TV: a phone marked as an adult's
+  ///
+  /// In en, this message translates to:
+  /// **'An adult\'s phone'**
+  String get remotePhonesAdult;
+
+  /// Phones that control this TV: a phone that is neither a kid's nor an adult's (every new pairing); it follows kid rules and gets no minutes
+  ///
+  /// In en, this message translates to:
+  /// **'Not this one'**
+  String get remotePhonesNotThisOne;
+
+  /// Phones that control this TV: a phone bound to one kid (their minutes, their asks), and the action that binds it
+  ///
+  /// In en, this message translates to:
+  /// **'{name}\'s phone'**
+  String remotePhonesKid(String name);
+
+  /// Phones that control this TV: action, forgets the phone
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get remotePhonesRemove;
+
+  /// Phones that control this TV: shown in a kids profile
+  ///
+  /// In en, this message translates to:
+  /// **'Only an adult\'s profile can set whose phone it is.'**
+  String get remotePhonesAdultOnly;
+
+  /// Phones that control this TV: explanation under the list
+  ///
+  /// In en, this message translates to:
+  /// **'A kid\'s phone sees that kid\'s minutes and can ask for more. A phone that\'s not an adult\'s can\'t open apps the profile on the TV can\'t open now. Keys and power go through the TV\'s own remote, not Hearth.'**
+  String get remotePhonesAbout;
 }
 
 class _AppLocalizationsDelegate

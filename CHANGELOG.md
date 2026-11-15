@@ -3,6 +3,13 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Hearth TV
+
+- **Phones can control the TV without Home Assistant.** A phone app such as Glint pairs with a code the TV shows, then sees what's playing (title, art, position) and controls play/pause, seeking, volume and opening apps over the home network (docs/tv-remote-api.md). New phones follow kid rules: they can't open an app the profile on the TV can't open now. Settings > Family > Phones that control this TV lists them, says whose each is (a kid's phone, an adult's phone, or not this one) and removes one.
+- **Remote API version 2, first part.** A phone app that says version 2 is told its role (none, a kid's or an adult's) and whether Home Assistant decides; it sees the minutes left for the app in front (a kid's phone only for its own kid), a kid's rules, minutes and lock, each kid's minutes on an adult's phone, and can ask for more time for its kid when Home Assistant decides (the answer comes back on the phone). A kid's phone can't open what the kid's own rules hold. Version 1 phones work as before. Not yet: phones bound once for every TV, a kid's phone use counting on the TV, asks and pauses without Home Assistant, and one-tap Home Assistant for an adult's phone (docs/tv-remote-api.md, "As built").
+
 ## 2026.11.17
 
 ### Home Assistant integration

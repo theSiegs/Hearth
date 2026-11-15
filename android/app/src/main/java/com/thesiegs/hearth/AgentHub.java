@@ -275,6 +275,9 @@ final class AgentHub {
                         // owner's user is Hearth's own recorder's)
                         Played p = played(message);
                         if (p == null || serial == ProfileUsers.ownerSerial(sContext)) break;
+                        // The remote API's state while this profile is in front (RemoteTv)
+                        sLastPlayed.put(serial, new LastPlayed(p, System.currentTimeMillis()));
+                        RemoteApiService.stateChanged();
                         // Saved while it plays, as for an adult: Continue Watching shows it when it's next read
                         HISTORY.execute(() -> WatchHistory.get(sContext).recordPlay(
                                 ProfileUsers.profileKey(sContext, serial), p.packageName, p.title, p.subtitle,
@@ -307,6 +310,23 @@ final class AgentHub {
             if (connection != null) sConnections.remove(connection.serial, connection);
             closeQuietly(socket);
         }
+    }
+
+    /** What an agent last said plays in its profile, and when (the remote API's now playing there). */
+    static final class LastPlayed {
+        final Played played;
+        final long at;
+
+        LastPlayed(Played played, long at) {
+            this.played = played;
+            this.at = at;
+        }
+    }
+
+    private static final Map<Long, LastPlayed> sLastPlayed = new ConcurrentHashMap<>();
+
+    static LastPlayed lastPlayed(long serial) {
+        return sLastPlayed.get(serial);
     }
 
     /** What an agent says plays in its profile, checked: the agent is another user's app, so nothing is taken as is. */
