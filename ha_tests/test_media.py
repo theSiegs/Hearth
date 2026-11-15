@@ -74,6 +74,22 @@ async def test_a_music_assistant_display_player_is_the_tv_s_twin(hass: HomeAssis
     assert [p["entity_id"] for p in lounge["players"]] == [tv]
 
 
+async def test_short_music_suffixes_are_twins_too(hass: HomeAssistant) -> None:
+    tv = _player(hass, "androidtv_remote", "lounge_tv", "Lounge TV", "Lounge", "Streaming stick", "tv")
+    shown = _player(hass, "music_assistant", "lounge_tv_music_display", "Lounge TV Music Display", model="Dashboard display",
+                    device_class="tv")
+    cast = _player(hass, "music_assistant", "lounge_tv_music", "Lounge TV Music")
+    receiver = _player(hass, "denonavr", "lounge_receiver", "Lounge Receiver", "Lounge", "AVR")
+    receiver_music = _player(hass, "music_assistant", "lounge_receiver_music", "Lounge Receiver Music")
+
+    [lounge] = media_rooms(hass)
+    assert lounge["entity_id"] == tv
+    assert sorted(lounge["also"]) == sorted([shown, cast])
+    players = {p["entity_id"]: p for p in lounge["players"]}
+    assert set(players) == {tv, receiver}
+    assert players[receiver]["also"] == [receiver_music]
+
+
 async def test_a_phone_and_the_summary_have_the_rooms(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client
 ) -> None:
