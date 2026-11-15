@@ -221,6 +221,19 @@ class GlintAgent:
     def person_of(self, device_id: str) -> str | None:
         return (self.hub.devices.get(device_id) or {}).get(CONF_PERSON)
 
+    def last_seen(self, device_id: str) -> datetime | None:
+        """When Hearth last heard from the phone: its last status post, or its last write of one of its own device
+        documents (an adult's Glint writes its state and outbox over the WebSocket and may never post a status)."""
+        if device_id not in self.hub.devices:
+            return None
+        seen = self.hub.state(device_id).seen
+        client = self.client_of(device_id)
+        own = self.hub.client_settings.docs.get(client or "", {}).get(f"{DEVICE}:{device_id}", {})
+        for doc in own.values():
+            if doc.get("updated_by") != BY_HEARTH and (written := parse_time(doc.get("updated"))) is not None:
+                seen = written if seen is None or written > seen else seen
+        return seen
+
     def name_of(self, device_id: str) -> str:
         return (self.hub.devices.get(device_id) or {}).get("name") or device_id
 

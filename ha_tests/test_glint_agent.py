@@ -10,6 +10,7 @@ import pytest
 
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import llm
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import async_capture_events, async_mock_service
@@ -77,8 +78,17 @@ async def _pair(hass, client, device_id: str, person: str, name: str) -> str:
     return answer["secret"]
 
 
-async def _household(hass: HomeAssistant, hass_client_no_auth, alex_user=None):
-    """Sam (a kid), Alex and Jordan (adults), each with a Glint phone paired to Hearth and a user of their own."""
+ON_STATE = {"format": "glint.state/1", "contract": 1, "updated": "2026-11-15T18:00:00Z", "channel": "on"}
+
+
+def _publish(hass, device_id: str, data=None) -> None:
+    """Glint on the phone publishes its state document (agents on, unless [data] says otherwise)."""
+    _hub(hass).client_settings.put(GLINT, ("device", device_id), STATE, "glint.state/1", data or ON_STATE, "adult")
+
+
+async def _household(hass: HomeAssistant, hass_client_no_auth, alex_user=None, states: bool = True):
+    """Sam (a kid), Alex and Jordan (adults), each with a Glint phone paired to Hearth and a user of their own; with
+    [states], each phone has published a state document with agents on."""
     alex_user = alex_user or await hass.auth.async_create_user("Alex")
     jordan_user = await hass.auth.async_create_user("Jordan")
     sam_user = await hass.auth.async_create_user("Sam")
@@ -96,6 +106,9 @@ async def _household(hass: HomeAssistant, hass_client_no_auth, alex_user=None):
         "jordan": await _pair(hass, client, JORDAN_PHONE, "person.jordan", "Jordan's phone"),
     }
     users = {"alex": alex_user, "jordan": jordan_user, "sam": sam_user}
+    if states:
+        for device_id in (SAM_PHONE, ALEX_PHONE, JORDAN_PHONE):
+            _publish(hass, device_id)
     return entry, client, secrets, users
 
 
@@ -232,6 +245,28 @@ async def test_the_glint_api_is_registered_with_eight_tools(
     assert {t.name for t in voice.tools} == TOOLS and "voice" in voice.api_prompt
 
 
+async def test_change_start_names_the_ops_glint_has(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    _entry, _client, _secrets, users = await _household(hass, hass_client_no_auth)
+
+    def described(api) -> str:
+        return next(t for t in api.tools if t.name == "glint_change_start").description
+
+    # Glint's own list when no phone published glint.hello
+    text = described(await _api(hass, users["alex"]))
+    for op in ("add", "duplicate", "take_out", "name_stack", "deals_at", "remove_page"):
+        assert op in text
+    for gone in ("add_page", "keep_clear", "tidy"):
+        assert gone not in text
+    # A phone's own glint.hello list, from its state document
+    hello = {"actions": [{"id": "start.change", "class": "write", "about": "change start: add, move, fold",
+                          "args": "{ops: [{op: fold, tile}]}"}]}
+    _publish(hass, ALEX_PHONE, {**ON_STATE, "hello": hello})
+    text = described(await _api(hass, users["alex"]))
+    assert "change start: add, move, fold" in text and "{ops: [{op: fold, tile}]}" in text
+
+
 async def test_two_phones_with_one_name_are_never_guessed(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
@@ -245,6 +280,8 @@ async def test_two_phones_with_one_name_are_never_guessed(
     devices[SAM_PHONE] = {**devices[SAM_PHONE], "name": "Alex's phone"}
     hass.config_entries.async_update_entry(hub.entry, data={**hub.entry.data, "devices": devices})
     await hass.async_block_till_done()
+    _publish(hass, "phone-sam-second-01")
+    _publish(hass, "phone-sam-third-001")
     api = await _api(hass, users["alex"])
     with pytest.raises(HomeAssistantError, match="More than one phone is called pixel 9: give its id"):
         await _call(api, "glint_dnd", phone="pixel 9", on=True)
@@ -254,6 +291,55 @@ async def test_two_phones_with_one_name_are_never_guessed(
     assert len(_hub(hass).glint_agent.pending(ALEX_PHONE)) == 1 and _hub(hass).glint_agent.pending(SAM_PHONE) == []
     with pytest.raises(HomeAssistantError, match="more than one Glint phone"):
         await _call(api, "glint_dnd", phone="Sam", on=True)
+
+
+async def test_the_caller_s_own_phone_seen_last_wins_and_a_stale_one_can_be_forgotten(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client, hass_admin_user, freezer,
+    monkeypatch,
+) -> None:
+    # The clock moves by hand here: nothing waits for the phone
+    monkeypatch.setattr(glint_agent, "WAIT_FOR", 0)
+    _entry, client, secrets, users = await _household(hass, hass_client_no_auth, alex_user=hass_admin_user)
+    # Alex paired again (a new install): two phones of theirs with one name, the old one stale
+    new = "phone-alex-second-01"
+    new_secret = await _pair(hass, client, new, "person.alex", "Alex's phone (new)")
+    hub = _hub(hass)
+    devices = {**hub.devices, new: {**hub.devices[new], "name": "Alex's phone"}}
+    hass.config_entries.async_update_entry(hub.entry, data={**hub.entry.data, "devices": devices})
+    await hass.async_block_till_done()
+    _publish(hass, new)
+    status = {"screen": "on", "day": dt_util.now().date().isoformat(), "seconds_today": 0, "client": CLIENT}
+    for device_id, secret in ((ALEX_PHONE, secrets["alex"]), (new, new_secret)):
+        response = await client.post(
+            f"/api/hearth/device/{device_id}/status", json=status, headers={"X-Hearth-Secret": secret}
+        )
+        assert response.status == 200
+        freezer.tick(timedelta(minutes=5))
+    api = await _api(hass, users["alex"])
+    await _call(api, "glint_dnd", phone="alex's phone", on=True)
+    assert len(_hub(hass).glint_agent.pending(new)) == 1 and _hub(hass).glint_agent.pending(ALEX_PHONE) == []
+    # With no phone named, the list says name · person · last seen
+    listed = r"Name the phone \(Sam's phone · Sam · last seen [0-9:]+ [ap]m; Alex's phone · Alex · last seen [0-9:]+ [ap]m;"
+    with pytest.raises(HomeAssistantError, match=listed):
+        await _call(api, "glint_activity")
+
+    # The stale one forgotten by an adult: gone from Hearth and from the device registry; never another adult's
+    ws = await hass_ws_client(hass)
+    await ws.send_json({"id": 1, "type": "hearth/glint/forget", "device_id": JORDAN_PHONE})
+    assert not (await ws.receive_json())["success"]
+    await ws.send_json({"id": 2, "type": "hearth/glint/forget", "device_id": ALEX_PHONE})
+    answer = await ws.receive_json()
+    assert answer["success"] and answer["result"]["forgotten"].startswith("Alex's phone · Alex · last seen")
+    await hass.async_block_till_done()
+    hub = _hub(hass)
+    assert ALEX_PHONE not in hub.devices
+    assert dr.async_get(hass).async_get_device_by_identifier((DOMAIN, ALEX_PHONE), hub.entry.entry_id) is None
+    old = await client.post(
+        f"/api/hearth/device/{ALEX_PHONE}/status", json=status, headers={"X-Hearth-Secret": secrets["alex"]}
+    )
+    assert old.status == 401
+    # One Alex's phone now: no name needed
+    assert (await _call(await _api(hass, users["alex"]), "glint_activity"))["phone"] == "Alex's phone"
 
 
 async def test_an_adult_reaches_their_own_phones_and_kids_never_another_adult_s(
@@ -446,13 +532,18 @@ async def test_the_doorbell_rings_the_linked_companion_app(
 async def test_reads_come_from_the_state_document(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
-    _entry, client, secrets, users = await _household(hass, hass_client_no_auth)
+    _entry, client, secrets, users = await _household(hass, hass_client_no_auth, states=False)
     hub = _hub(hass)
     api = await _api(hass, users["alex"])
-    # None published yet: start.get goes to the phone
-    missing = await _call(api, "glint_get_start", phone="Sam's phone")
-    assert missing["status"] == "queued" and "note" in missing
-    assert hub.glint_agent.pending(SAM_PHONE)[0]["action"] == "start.get"
+    # None published: agents count as off there; every tool says so and nothing goes to the phone
+    for tool, args in (
+        ("glint_get_start", {}), ("glint_activity", {}), ("glint_dnd", {"on": True}),
+        ("glint_change_start", {"ops": [{"op": "move", "tile": 1}]}), ("glint_system_setting", {}),
+    ):
+        with pytest.raises(HomeAssistantError, match="home assistant access is off"):
+            await _call(api, tool, phone="Sam's phone", **args)
+    assert hub.glint_agent.pending(SAM_PHONE) == []
+    assert hub.glint_agent.doc(SAM_PHONE, INBOX) is None
 
     assert (await _phone_puts(client, secrets["sam"], SAM_PHONE, STATE, STATE_DOC)).status == 200
     start = await _call(api, "glint_get_start", phone="Sam's phone")
@@ -463,7 +554,8 @@ async def test_reads_come_from_the_state_document(
     assert (await _call(api, "glint_system_setting", phone="sam"))["phone"] == STATE_DOC["phone"]
     activity = await _call(api, "glint_activity", phone="sam")
     assert activity["activity"] == STATE_DOC["activity"]
-    assert [w["action"] for w in activity["waiting"]] == ["start.get"]
+    assert activity["waiting"] == []
+    await _call(api, "glint_dnd", phone="sam", on=True)
 
     # The owner turned agents through Home Assistant off: reads and writes say so, nothing is queued
     off = {"format": "glint.state/1", "contract": 1, "updated": "2026-11-15T18:10:00Z", "channel": "off"}

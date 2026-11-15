@@ -2216,15 +2216,19 @@ with them). Hearth then fires **`glint_agent_done`** `{device_id, request, agent
 once.
 
 **Tools.** Each takes `phone` (a Glint phone's name, any case, or the name of the person whose only Glint phone it
-is; optional with one). Reads answer from `glint-state` with its age ("as of 6:02 pm"); with no state yet, the read
-goes to the phone as a request. Writes add a request, ring the doorbell if one is linked, and wait up to 20 seconds:
+is; optional with one). When several reachable phones share the name, the caller's own is used (the one seen last if
+they have several), else the tool asks for the id; phones are listed as "name · person · last seen". Reads answer from
+`glint-state` with its age ("as of 6:02 pm"). Writes add a request, ring the doorbell if one is linked, and wait up to 20 seconds:
 then the tool answers with Glint's own `said` and `undo`, or `asked_on_phone` ("waiting for Alex to allow it on the
 phone"), or `refused` with its `code`, or `queued` ("queued for Alex's phone: glint applies it the next time Start is
-open (request r-…)"). A phone whose owner turned agents off (`channel: "off"`) gets nothing queued: the tools say so.
+open (request r-…)"). A phone whose owner turned agents off (`channel: "off"`), or that has published no `glint-state`
+at all, counts as off: every tool says so and nothing is queued. `glint_change_start` describes its ops from a phone's
+`glint.hello` list when its state document carries one (`hello.actions` or `actions`), else Glint's own: add,
+duplicate, move, resize, remove, restyle, stack, unstack, take_out, name_stack, deals_at, remove_page.
 
 | Tool | Reads | Writes (request action) |
 |---|---|---|
-| `glint_get_start` | state `start` | (`start.get` when there's no state) |
+| `glint_get_start` | state `start` | |
 | `glint_change_start` | | `start.change` `{ops}` |
 | `glint_set_look` | state `look` (no `values`) | `look.set` `{values}` |
 | `glint_notification_rules` | state `notify` (no `ops`) | `notify.change` `{ops}` |
@@ -2245,6 +2249,10 @@ the phones they reach with their links. A write then also calls that service wit
 and `data: {intent_package_name: <the phone's client>, intent_action: com.thesiegs.glint.action.AGENT_BELL,
 intent_class_name: com.thesiegs.glint.start.agent.AgentBellReceiver}`: a hint only, carrying nothing; Glint reads its
 inbox over its own connection.
+
+**Forgetting a stale phone.** `{"type": "hearth/glint/forget", "device_id"}` (an adult, for their own Glint phone or a
+kid's) removes it as deleting its device in Home Assistant does: its secret stops working, its documents and doorbell
+link go, and its device entry is removed.
 
 ## Security
 
