@@ -70,9 +70,10 @@ def test_a_group_outside_all_screen_time_counts_only_in_itself():
         "outside_all": ["music"],
     }
     groups = groups_from_options(options)
-    # Messaging and Accessibility are outside All screen time too, unless an adult puts them in
-    assert [g.id for g in groups if not g.in_all] == ["messaging", "accessibility", "music"]
-    assert [g.id for g in groups_from_options({"inside_all": ["messaging"]}) if not g.in_all] == ["accessibility"]
+    # Messaging and Accessibility are outside All screen time too, unless an adult puts them in; System screens always
+    assert [g.id for g in groups if not g.in_all] == ["messaging", "accessibility", "interface", "music"]
+    inside = groups_from_options({"inside_all": ["messaging"]})
+    assert [g.id for g in inside if not g.in_all] == ["accessibility", "interface"]
     devices = {
         "phone": merge([Reading("hearth", 1500, {"com.example.music": 600, "com.example.game": 600})]),
         "speaker": merge([Reading("tablet", 300, {}, rest_group="music")]),
@@ -86,5 +87,7 @@ def test_a_group_outside_all_screen_time_counts_only_in_itself():
 
 
 def test_all_screen_time_never_goes_outside_itself():
-    groups = groups_from_options({"outside_all": ["all"], "inside_all": ["messaging", "accessibility"]})
-    assert all(g.in_all for g in groups)
+    groups = groups_from_options({"outside_all": ["all"], "inside_all": ["messaging", "accessibility", "interface"]})
+    assert all(g.in_all for g in groups if g.id != "interface")
+    # System screens is never screen time, whatever the options say
+    assert not next(g for g in groups if g.id == "interface").in_all

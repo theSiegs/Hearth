@@ -107,6 +107,20 @@ own sharing off for that person. It's in the device path and in `hearth/me` alik
 Hearth fetches the shared app catalog itself ([app-facts.md](app-facts.md)). A device may still send
 `app_categories` (Android's own category per package).
 
+### Usage Hearth doesn't count
+
+Additive, no contract change. A client keeps sending every package's seconds (`app_seconds_today`) from local
+midnight; Hearth, not the client, decides what counts:
+
+- **System screens** count nowhere and are never paused: `android`, `com.android.systemui`,
+  `com.android.permissioncontroller`, `com.google.android.permissioncontroller`, `com.android.packageinstaller`,
+  `com.google.android.packageinstaller`, `com.google.android.gms.supervision`, the stock launchers, setup wizards and
+  the common keyboards (`limits.STARTER_INTERFACE_APPS`), the apps App Facts confirms as `interface` (set only by
+  its owner's override), plus any app an adult moves there. A phone's or tablet's total
+  is then the sum of the apps kept. A client may leave these out itself as well; it changes nothing.
+- **Before pairing**: on the day a device pairs, its first status after the approval is a baseline taken off the rest
+  of that day. Pairing again takes a new one.
+
 ## What Hearth interprets
 
 Person kind (`kid`/`adult`), device kind (`tv`/`mobile`), the client id, usage, `app_categories`, `caps`,

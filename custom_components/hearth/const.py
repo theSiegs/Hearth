@@ -18,6 +18,8 @@ CONF_MODEL = "model"
 CONF_SW_VERSION = "sw_version"
 # The client app a device paired with ({"id", "companions"}), locked when an adult approved the pairing (client.py)
 CONF_CLIENT = "client"
+# When an adult approved the device's pairing (UTC, ISO): on that day a phone's or tablet's time counts from then
+CONF_PAIRED_AT = "paired_at"
 
 # A device not heard from in this long counts as not connected (a TV posts at least every 10 minutes)
 CONNECTED_WITHIN = timedelta(minutes=15)

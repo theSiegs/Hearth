@@ -34,13 +34,22 @@ SOCIAL = "social"
 MESSAGING = "messaging"
 # Apps a kid may rely on (Voice Access, Lookout, Live Transcribe): never paused, whatever runs out or holds
 ACCESSIBILITY = "accessibility"
+# System screens: the home screen, the lock and permission screens, keyboards, setup. Never screen time, counted in no
+# group, never paused: a phone that says its launcher was in front all night isn't a kid on their phone all night
+INTERFACE = "interface"
 # Built-in groups outside All screen time unless an adult puts them in (options "inside_all"): chatting isn't screen
 # time by default, nor is an accessibility app
 DEFAULT_OUTSIDE_ALL = frozenset({MESSAGING, ACCESSIBILITY})
+# Built-in groups outside All screen time whatever the options say
+ALWAYS_OUTSIDE_ALL = frozenset({INTERFACE})
 # The pools that loosen limits (outside All screen time by default; Accessibility is never paused): only a confirmed
 # answer puts an app in one (an adult's move or list, Hearth's starter lists, the shared catalog's confirmed answer),
 # never a guess (a device's own category, which any app declares for itself, or the catalog's suggestion)
 CONFIRMED_ONLY = frozenset({MESSAGING, ACCESSIBILITY})
+# Stricter still: only Hearth's own list, an adult's move or list, or the shared catalog's confirmed answer of a value
+# counted nowhere and set only by its owner's override (catalog.uncounted: `interface`) puts an app in System screens.
+# Never another catalog value, an adult's map of a whole kind of app, a suggestion, a device's category or a hint
+LISTED_ONLY = frozenset({INTERFACE})
 # Options: {package: group id or "other"}: where an adult moved an app; beats every list and category
 CONF_APP_GROUPS = "app_groups"
 CONF_INSIDE_ALL = "inside_all"
@@ -88,6 +97,44 @@ STARTER_ACCESSIBILITY_APPS = frozenset(
         "com.google.audio.hearing.visualization.accessibility.scribe",
         "com.google.android.accessibility.soundamplifier",
         "com.google.android.marvin.talkback",
+    }
+)
+
+# What System screens starts with: Android's own screens, Family Link's lock screen, stock launchers, setup and
+# keyboards
+STARTER_INTERFACE_APPS = frozenset(
+    {
+        "android",
+        "com.android.systemui",
+        "com.android.permissioncontroller",
+        "com.google.android.permissioncontroller",
+        "com.android.packageinstaller",
+        "com.google.android.packageinstaller",
+        # Family Link's lock and downtime screen
+        "com.google.android.gms.supervision",
+        # Launchers: Pixel, Samsung, AOSP, Google TV and Android TV, and other phone makers'
+        "com.google.android.apps.nexuslauncher",
+        "com.sec.android.app.launcher",
+        "com.android.launcher",
+        "com.android.launcher3",
+        "com.google.android.apps.tv.launcherx",
+        "com.google.android.tvlauncher",
+        "com.google.android.leanbacklauncher",
+        "com.motorola.launcher3",
+        "com.miui.home",
+        "com.mi.android.globallauncher",
+        "com.huawei.android.launcher",
+        "com.oppo.launcher",
+        "net.oneplus.launcher",
+        "com.amazon.firelauncher",
+        # Setup
+        "com.google.android.setupwizard",
+        "com.android.provision",
+        "com.sec.android.app.SecSetupWizard",
+        # Keyboards
+        "com.google.android.inputmethod.latin",
+        "com.android.inputmethod.latin",
+        "com.samsung.android.honeyboard",
     }
 )
 
@@ -145,12 +192,20 @@ BUILTIN_GROUPS = (
     Group(MESSAGING, "Messaging", STARTER_MESSAGING_APPS, "messaging", builtin=True),
     # No category: a device's own (any app can declare itself one) never puts an app here
     Group(ACCESSIBILITY, "Accessibility", STARTER_ACCESSIBILITY_APPS, builtin=True),
+    # No category either, and never screen time
+    Group(INTERFACE, "System screens", STARTER_INTERFACE_APPS, builtin=True, in_all=False),
 )
 
 
 def never_held_group(group: Group) -> bool:
-    """The built-in Accessibility pool: nothing pauses its apps, so it has no budget or bonus to set."""
-    return group.builtin and group.id == ACCESSIBILITY
+    """The built-in Accessibility and System screens pools: nothing pauses their apps, so they have no budget or bonus
+    to set."""
+    return group.builtin and group.id in (ACCESSIBILITY, INTERFACE)
+
+
+def never_counted_group(group: Group) -> bool:
+    """The built-in System screens pool: its time is no one's screen time, in no group."""
+    return group.builtin and group.id == INTERFACE
 
 
 def slug(name: str) -> str:
@@ -161,7 +216,8 @@ def groups_from_options(options: dict[str, Any]) -> list[Group]:
     """The built-in groups (with apps an adult added to them) and the adult's own groups."""
     added: dict[str, list[str]] = options.get("group_apps", {})
     outside = (set(options.get("outside_all", [])) | (DEFAULT_OUTSIDE_ALL - set(options.get(CONF_INSIDE_ALL, [])))) - {ALL}
-    # A household's own pool that already has a newer built-in's id (accessibility) keeps it
+    outside |= ALWAYS_OUTSIDE_ALL
+    # A household's own pool that already has a newer built-in's id (accessibility, interface) keeps it
     own_ids = {custom.get("id") for custom in options.get("groups", [])}
     groups = [
         Group(g.id, g.name, g.apps | frozenset(added.get(g.id, [])), g.category, True, g.id not in outside, g.apps)
@@ -241,7 +297,8 @@ def pool_map(groups: list[Group], adult: dict[str, str] | None = None) -> dict[s
     out.setdefault("companion", OTHER)
     out.setdefault("system", OTHER)
     for value, pool in (adult or {}).items():
-        if pool == OTHER or pool in ids:
+        # System screens takes only listed apps, never a whole kind of them
+        if pool == OTHER or (pool in ids and pool not in LISTED_ONLY):
             out[value] = pool
     return out
 
@@ -296,6 +353,8 @@ def placer(
     6. The shared catalog's suggested answer, only when it goes to a pool (a guess never takes an app out of one).
        Neither 5 nor 6 puts an app in Messaging or Accessibility (CONFIRMED_ONLY): a suggestion that would is Other,
        with why "suggested" so an adult is asked (Check these).
+       Only 1 to 3, and 4 for a value counted nowhere that only the catalog owner's override sets
+       (catalog.uncounted), put an app in System screens (LISTED_ONLY).
     7. Where its time came from ([hints]: a Switch's or an Xbox's titles are games).
     8. Other.
     """
@@ -306,7 +365,7 @@ def placer(
 
     def to_pool(value: str | None) -> str | None:
         pool = value_pools.get(value) if value else None
-        return pool if pool in ids and pool != ALL else None
+        return pool if pool in ids and pool != ALL and pool not in LISTED_ONLY else None
 
     def of(item: str) -> Placement:
         if moved and item in moved:
@@ -320,6 +379,9 @@ def placer(
             return Placement(found.id, "starter")
         declared = categories.get(item)
         hit = catalog(item) if catalog is not None else None
+        if hit is not None and hit.confirmed and getattr(hit, "uncounted", False):
+            # Owner-curated (an override only): System screens, whatever a map says
+            return Placement(INTERFACE if INTERFACE in ids else None, "catalog", hit.value, False, declared)
         if hit is not None and hit.confirmed:
             # Read the finer value first, then the category
             value = hit.detail if hit.detail in value_pools else hit.category
@@ -337,7 +399,7 @@ def placer(
                     return Placement(pool, "suggested", hit.value, declared=declared)
                 # Other, but an adult sees it in Check these and can move it there
                 held_back = Placement(None, "suggested", hit.value, declared=declared)
-        hinted = sorted((hints or {}).get(item, set()) & set(order), key=order.index)
+        hinted = sorted((hints or {}).get(item, set()) & (set(order) - LISTED_ONLY), key=order.index)
         if hinted:
             return Placement(hinted[0], "hint")
         return held_back or Placement(None, "other")

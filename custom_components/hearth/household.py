@@ -47,7 +47,7 @@ from .apps import (
     phone_actions,
     update_notification,
 )
-from .counting import ALL, DeviceUsage, Reading, group_seconds, merge
+from .counting import ALL, DeviceUsage, Reading, group_seconds, merge, minus, without
 from .catalog import CatalogKeeper, correctable_key
 from .client import exempt_packages
 from .limits import (
@@ -56,6 +56,7 @@ from .limits import (
     ACCESSIBILITY,
     MESSAGING,
     OTHER,
+    INTERFACE,
     OTHER_DAY,
     SCHOOL_DAY,
     Group,
@@ -64,6 +65,7 @@ from .limits import (
     Placement,
     catalog_value,
     groups_from_options,
+    never_counted_group,
     never_held_group,
     placer,
     pool_map,
@@ -75,6 +77,7 @@ from .history import BONUS, DEVICE_BONUS, History
 from .grants import Grants
 from .device_extra import ALLOW as EXTRA_ALLOW, BONUS as EXTRA_BONUS, DeviceExtra, DeviceExtras
 from .native_sync import NativeSync
+from .bedtime_lift import BedtimeLifts, in_family_link_bedtime, lift_minutes
 from . import family_link as fl
 from .todos import ChoreBook
 from .schedule import Scheduler
@@ -196,6 +199,8 @@ class Household:
         self.device_extras = DeviceExtras(hass, hub.entry.entry_id)
         self.history = History(hass, hub.entry.entry_id)
         self.sync = NativeSync(hass, self, hub.entry.entry_id)
+        # An adult's extra time at bedtime lifts it while it lasts (bedtime_lift.py)
+        self.bedtime_lift = BedtimeLifts(hass, self, hub.entry.entry_id)
         self.scheduler = Scheduler(hass, self, hub.entry.entry_id)
         # The weekly schedule (weekly.py): each kid's modes and limits per day
         self.week = Week(hass, hub.entry.entry_id, lambda: self.limits.data.budgets, lambda: self.options)
@@ -238,6 +243,7 @@ class Household:
         await self.device_extras.async_load()
         await self.history.async_load()
         await self.sync.async_load()
+        await self.bedtime_lift.async_load()
         await self.scheduler.async_load()
         await self.week.async_load()
         await self.todos.async_load()
@@ -253,6 +259,7 @@ class Household:
         await self.device_extras.async_flush()
         await self.history.async_flush()
         await self.sync.async_flush()
+        await self.bedtime_lift.async_flush()
         await self.scheduler.async_flush()
         await self.week.async_flush()
         await self.todos.async_flush()
@@ -396,6 +403,29 @@ class Household:
             and state.state == "on"
         ]
 
+    def _locks_now(self, person: str, now: datetime | None = None) -> list[str]:
+        """What locks the person now: their lock entities that are on, a family pause (PAUSE), the schedule's Sleep
+        or School (SCHEDULE). While extra time lifts their bedtime (bedtime_lift.py), its bedtime locks don't."""
+        locked_by = self._locked_by(person)
+        # A family pause holds them as a lock does
+        if pause_of(self.hass, person, now):
+            locked_by.append(PAUSE)
+        # The schedule's Sleep and School are locks
+        if self.schedule_lock(person) is not None:
+            locked_by.append(SCHEDULE)
+        if self.bedtime_lift.until(person, now) is None:
+            return locked_by
+        kind = self.schedule_lock(person)
+        return [e for e in locked_by if e == PAUSE or lock_kinds(self.hass, [e], kind) != ["bedtime"]]
+
+    def in_bedtime(self, person: str) -> bool:
+        """The person is in bedtime now, lifted or not: the schedule's Sleep, a lock entity of theirs that's a bedtime
+        (Family Link's, Family Safety's downtime), or Family Link's own bedtime on one of their devices."""
+        if self.schedule_lock(person) == "bedtime" or "bedtime" in lock_kinds(self.hass, self._locked_by(person)):
+            return True
+        child = self.family_link_child(person)
+        return child is not None and in_family_link_bedtime(self.hass, child)
+
     def _lock_entities(self, person: str) -> list[str]:
         return [lock["entity_id"] for lock in self.options.get(CONF_LOCKS, []) if lock.get("person") == person]
 
@@ -465,7 +495,9 @@ class Household:
         Sleep and School (Family Safety's platforms and the Switch are held then; Family Link keeps its own bedtime and
         School time in phase 1)."""
         found = set(self.schedule_closed(person))
-        if self.schedule_lock(person) is not None:
+        lock = self.schedule_lock(person)
+        # Extra time at bedtime lifts Sleep's hold while it lasts (bedtime_lift.py)
+        if lock is not None and not (lock == "bedtime" and self.bedtime_lift.until(person) is not None):
             found.add(ALL)
         return found
 
@@ -565,6 +597,9 @@ class Household:
         pause = pause_of(self.hass, person)
         if pause:
             out["pause"] = pause
+        # Extra time an adult gave at bedtime lifts it until then (bedtime_lift.py): {since, until}
+        if (lifted := self.bedtime_lift.view(person)) is not None:
+            out["bedtime_lifted"] = lifted
         scheduled = self.schedule_now.get(person)
         if day and day.locked:
             ends = [lock_until(self.hass, [e for e in day.locked_by if e not in (PAUSE, SCHEDULE)])]
@@ -752,6 +787,31 @@ class Household:
 
         return of
 
+    def never_counted(self):
+        """item -> whether it's in System screens (limits.INTERFACE): never anyone's screen time, in no group. Only an
+        adult's move or list, Hearth's own list or the shared catalog's owner-curated `interface` puts an app there
+        (limits.placer), so the devices' own categories aren't read."""
+        group = self.group(INTERFACE)
+        if group is None or not never_counted_group(group):
+            return lambda item: False
+        place = placer(
+            self.groups,
+            {},
+            self.options.get(CONF_APP_GROUPS, {}),
+            catalog=self.catalog.data.lookup,
+            pools=self.pools(),
+        )
+        return lambda item: place(item).pool == INTERFACE
+
+    def _device_reading(self, device_id: str, status: dict[str, Any]) -> Reading:
+        """A phone's or tablet's own count today. On the day it paired, only what came after: its first post after
+        pairing is the baseline (hub.py), taken off its later posts that day."""
+        reading = Reading(SOURCE_HEARTH, float(status.get("seconds_today") or 0), status.get("app_seconds_today") or {})
+        base = self.hub.state(device_id).baseline
+        if base and base.get("day") and base["day"] == status.get("day"):
+            reading = minus(reading, float(base.get("seconds") or 0), base.get("apps") or {})
+        return reading
+
     def membership(self):
         """An item's groups: All and at most one pool (placement)."""
         place = self.placement()
@@ -797,7 +857,17 @@ class Household:
             playing.setdefault(person, []).append(entry)
             plays.append((entry, (person, device, key)))
 
-        def add(person: str, device: str, reading: Reading, into: dict[str, dict[str, list[Reading]]] = readings) -> None:
+        never_counted = self.never_counted()
+
+        def add(
+            person: str,
+            device: str,
+            reading: Reading,
+            into: dict[str, dict[str, list[Reading]]] = readings,
+            own_items: bool = False,
+        ) -> None:
+            # System screens count nowhere; a device's own total is then its kept apps' sum ([own_items])
+            reading = without(reading, never_counted, own_items and bool(reading.items))
             items = {}
             for item, seconds in reading.items.items():
                 key = self._key(item)
@@ -832,8 +902,7 @@ class Household:
             else:
                 person = device.get(CONF_PERSON)
                 if person and into is not None:
-                    add(person, device_id, Reading(SOURCE_HEARTH, float(status.get("seconds_today") or 0),
-                                                   status.get("app_seconds_today") or {}), into)
+                    add(person, device_id, self._device_reading(device_id, status), into, own_items=True)
             package = status.get("app_package")
             if person and status.get("screen") == "on" and self.hub.connected(device_id) and package:
                 # A TV's media player says what's on, else the device's own media session: the show (else the title)
@@ -954,16 +1023,8 @@ class Household:
             day_limits = self.week.limits_on(person, today, day_type)
             devices = {device: merge(r) for device, r in readings.get(person, {}).items()}
             seconds = group_seconds(devices, membership, self.outside_all())
-            locked_by = self._locked_by(person)
-            # A family pause holds them as a lock does
-            if pause_of(self.hass, person, now):
-                locked_by.append(PAUSE)
-            # The schedule's Sleep and School are locks
-            if self.schedule_lock(person) is not None:
-                locked_by.append(SCHEDULE)
             day = PersonDay(person, devices, seconds, playing=playing.get(person, []),
-                            together_s=self.live.together_s.get(person, 0.0), locked=bool(locked_by),
-                            locked_by=locked_by)
+                            together_s=self.live.together_s.get(person, 0.0))
             for group in self.groups:
                 state = self.limits.state(
                     person, group.id, seconds.get(group.id, 0.0) / 60, kind, day_limits.get(group.id)
@@ -976,6 +1037,11 @@ class Household:
                         )
                 elif state.minutes_left is not None:
                     self.limits.clear_reached(person, group.id)
+            all_state = day.limits.get(ALL)
+            # Extra time at bedtime: over once its time is up or All screen time runs out again
+            self.bedtime_lift.check(person, all_state.minutes_left if all_state else None, now)
+            day.locked_by = self._locks_now(person, now)
+            day.locked = bool(day.locked_by)
             days[person] = day
         self.days = days
         self.today = today
@@ -1014,6 +1080,9 @@ class Household:
         )
         # An adult's allow of All screen time opens Google's and Microsoft's own limits too
         self.sync.mirror_allows()
+        # Family Link's bedtime in step with the lifts (moved while one lasts, put back after)
+        if self.bedtime_lift.lifts or self.bedtime_lift.moved:
+            self.bedtime_lift.sync()
         for together, what in [(t, "started") for t in started] + [(t, "ended") for t in ended]:
             self.hass.bus.async_fire(EVENT_PLAYING_TOGETHER, self._together_event(together, what))
         async_dispatcher_send(self.hass, SIGNAL_PEOPLE, new_day)
@@ -1449,13 +1518,18 @@ class Household:
 
     def never_held(self, membership) -> frozenset[str]:
         """The packages nothing of Hearth's ever pauses: the built-in Accessibility pool's (Voice Access, Lookout, Live
-        Transcribe: an app a kid may rely on). Not a budget running out, an adult's pause of an app or group, School
-        time's apps nor the weekly schedule. Only a confirmed answer puts an app there (limits.placer)."""
+        Transcribe: an app a kid may rely on) and System screens' (the home screen, keyboards, Android's own screens).
+        Not a budget running out, an adult's pause of an app or group, School time's apps nor the weekly schedule. Only
+        a confirmed answer puts an app there (limits.placer)."""
         cached = self._never_held_for
         if cached is not None and cached[0] is membership:
             return cached[1]
-        group = self.group(ACCESSIBILITY)
-        found = frozenset(self._group_apps(group, membership)) if group and never_held_group(group) else frozenset()
+        found = frozenset(
+            package
+            for group_id in (ACCESSIBILITY, INTERFACE)
+            if (group := self.group(group_id)) is not None and never_held_group(group)
+            for package in self._group_apps(group, membership)
+        )
         self._never_held_for = (membership, found)
         return found
 
@@ -2012,10 +2086,24 @@ class Household:
         self.limits.set_bonus(person, group, self.limits.bonus(person, group) + minutes)
         if minutes:
             self.history.log(BONUS, person, group=group, minutes=minutes)
+        in_bedtime = group == ALL and minutes > 0 and self.in_bedtime(person)
         self.recompute()
         if group == ALL and minutes > 0:
             # All screen time back: Google's and Microsoft's own limits get as much
             self.sync.mirror_bonus(person, had_none)
+            if in_bedtime:
+                self._lift_bedtime(person, minutes)
+
+    def _lift_bedtime(self, person: str, minutes: int) -> None:
+        """Extra time given in bedtime lifts it while it lasts, when the kid then has All screen time to use."""
+        day = self.days.get(person)
+        state = day.limits.get(ALL) if day else None
+        left = state.minutes_left if state else None
+        lift = lift_minutes(minutes, left)
+        if lift <= 0:
+            return
+        self.bedtime_lift.give(person, lift)
+        self.recompute()
 
     @callback
     def remove_bonus(self, person: str, group: str, minutes: int) -> int:
@@ -2029,6 +2117,9 @@ class Household:
             return 0
         self.limits.set_bonus(person, group, given - taken)
         self.history.log(BONUS, person, group=group, minutes=-taken, undo=True)
+        if group == ALL:
+            # Its bedtime lift is that much shorter too
+            self.bedtime_lift.take(person, taken)
         self.recompute()
         day = self.days.get(person)
         state = day.limits.get(ALL) if day else None

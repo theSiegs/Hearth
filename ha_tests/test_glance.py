@@ -127,6 +127,9 @@ async def _kids_alex_and_sam(hass: HomeAssistant, hass_client_no_auth, freezer):
     await hass.config_entries.flow.async_configure(flow["flow_id"], {"person": "person.alex"})
     await hass.async_block_till_done()
     phone = (await (await client.get(f"/api/hearth/pair/{pairing_id}", headers={"X-Hearth-Nonce": NONCE})).json())["secret"]
+    # Its first post after pairing (nothing yet), then 25 minutes
+    first = {"screen": "on", "day": _today(), "seconds_today": 0}
+    assert (await _post(client, phone, body=first, device_id=PHONE_ID)).status == 200
     status = {"screen": "on", "day": _today(), "seconds_today": 1500,
               "app_seconds_today": {"com.thesiegs.hearthtube": 1500}}
     assert (await _post(client, phone, body=status, device_id=PHONE_ID)).status == 200

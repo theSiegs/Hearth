@@ -331,7 +331,8 @@ def _summary(hub: HearthHub) -> dict[str, Any]:
 
 _BRIEF = (
     "id", "name", "kind", "all", "groups", "locked", "locked_by", "pause", "lock", "next_lock", "held_by",
-    "google_tv_limit", "school_time", "school_time_off", "bedtime", "place", "playing", "headline", "lines",
+    "google_tv_limit", "school_time", "school_time_off", "bedtime", "bedtime_lifted", "place", "playing", "headline",
+    "lines",
 )
 _DETAIL = _BRIEF + (
     "allows", "pauses", "grants", "device_extras", "devices_today", "apps_today", "first_party", "answered_elsewhere",

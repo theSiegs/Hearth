@@ -36,6 +36,28 @@ class DeviceUsage:
     sources: dict[str, float] = field(default_factory=dict)
 
 
+def without(reading: Reading, dropped: Callable[[str], bool], total_from_items: bool = False) -> Reading:
+    """[reading] without the items that are never screen time ([dropped]: System screens, limits.INTERFACE). The total
+    loses their seconds too; with [total_from_items] (a device's own per-app seconds), it's the kept items' sum."""
+    gone = {item for item in reading.items if dropped(item)}
+    if not gone:
+        return reading
+    kept = {item: seconds for item, seconds in reading.items.items() if item not in gone}
+    if total_from_items:
+        total = float(sum(kept.values()))
+    else:
+        total = max(float(sum(kept.values())), reading.total_s - sum(reading.items[item] for item in gone))
+    return Reading(reading.source, total, kept, reading.rest_group)
+
+
+def minus(reading: Reading, total_s: float, items: Mapping[str, float]) -> Reading:
+    """[reading] less a baseline taken earlier the same day (what a device counted before it paired): each item's
+    seconds and the total, never below 0. With items of its own, the total is the items' sum."""
+    kept = {item: max(0.0, seconds - float(items.get(item, 0))) for item, seconds in reading.items.items()}
+    total = float(sum(kept.values())) if kept else max(0.0, reading.total_s - total_s)
+    return Reading(reading.source, total, kept, reading.rest_group)
+
+
 def merge(readings: Iterable[Reading]) -> DeviceUsage:
     usage = DeviceUsage()
     best: Reading | None = None

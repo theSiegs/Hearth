@@ -21,6 +21,7 @@ from .const import (
     CONF_DEVICES,
     CONF_KIND,
     CONF_MODEL,
+    CONF_PAIRED_AT,
     CONF_PERSON,
     CONF_PUSH_TOPIC,
     CONF_SECRET_HASH,
@@ -152,6 +153,9 @@ class DeviceState:
     event_posts: list[datetime] = field(default_factory=list)
     notice_posts: list[datetime] = field(default_factory=list)
     settings_calls: list[datetime] = field(default_factory=list)
+    # A phone's or tablet's count at its first post after pairing, taken off the rest of that day (_note_baseline):
+    # {"paired_at", "day" (None: it first posted on a later day), "seconds", "apps"}
+    baseline: dict[str, Any] | None = None
 
 
 class HearthHub:
@@ -218,6 +222,8 @@ class HearthHub:
             state.status = kept.get("status")
             seen = kept.get("seen")
             state.seen = dt_util.parse_datetime(seen) if isinstance(seen, str) else None
+            baseline = kept.get("baseline")
+            state.baseline = baseline if isinstance(baseline, dict) else None
 
     def authorized(self, device_id: str, secret: str | None) -> bool:
         """The secret is this device's (compared in constant time; a removed device has none)."""
@@ -295,6 +301,7 @@ class HearthHub:
             if status.get(kept) is None and (state.status or {}).get(kept) is not None:
                 status = {**status, kept: state.status[kept]}
         self._tell_failed_checks(device_id, state.status, status)
+        self._note_baseline(device_id, status)
         state.status = status
         state.seen = dt_util.utcnow()
         # What the TV ran of its commands leaves the queue (its answer no longer carries them)
@@ -306,6 +313,28 @@ class HearthHub:
         if status.get("local_rules") and self.kind(device_id) == KIND_TV:
             self.household.import_local_rules(device_id, status["local_rules"])
         self.household.recompute()
+
+    def _note_baseline(self, device_id: str, status: dict[str, Any]) -> None:
+        """A phone's or tablet's first post after it paired: on the day it paired, what it counted so far is from
+        before Hearth had it (another launcher in front all night, say), so it's kept and taken off the rest of that
+        day (household._device_reading). Once per pairing: pairing again takes a new one. A TV counts its own
+        profiles."""
+        device = self.devices.get(device_id) or {}
+        paired_at = device.get(CONF_PAIRED_AT)
+        state = self.state(device_id)
+        if device.get(CONF_KIND) == KIND_TV or not paired_at or (state.baseline or {}).get("paired_at") == paired_at:
+            return
+        paired = dt_util.parse_datetime(paired_at)
+        day = dt_util.as_local(paired).date().isoformat() if paired else None
+        if day is None or status.get("day") != day:
+            state.baseline = {"paired_at": paired_at, "day": None}
+            return
+        state.baseline = {
+            "paired_at": paired_at,
+            "day": day,
+            "seconds": status.get("seconds_today") or 0,
+            "apps": dict(status.get("app_seconds_today") or {}),
+        }
 
     def checks(self, device_id: str) -> list[dict[str, Any]]:
         """A device's checks as its row shows them: its own, then Hearth's client check (client.py)."""
@@ -331,7 +360,11 @@ class HearthHub:
     @callback
     def _data_to_save(self) -> dict[str, Any]:
         return {
-            device_id: {"status": state.status, "seen": state.seen.isoformat() if state.seen else None}
+            device_id: {
+                "status": state.status,
+                "seen": state.seen.isoformat() if state.seen else None,
+                **({"baseline": state.baseline} if state.baseline else {}),
+            }
             for device_id, state in self._states.items()
             if device_id in self.devices
         }
@@ -436,6 +469,7 @@ class HearthHub:
                 CONF_SW_VERSION: pairing.sw_version,
                 CONF_SECRET_HASH: hash_secret(secret),
                 CONF_PERSON: person,
+                CONF_PAIRED_AT: dt_util.utcnow().isoformat(),
                 **({CONF_PUSH_TOPIC: topic} if topic else {}),
                 # The client app the adult saw when approving: pairing again is the only way to change it
                 **({CONF_CLIENT: pinned} if (pinned := locked(pairing.client)) else {}),

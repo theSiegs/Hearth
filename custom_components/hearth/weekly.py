@@ -691,10 +691,15 @@ class Week:
             end = minutes_of(until) if until not in (None, "") else next((m for m, _ in base if m > begin), None)
             if end is not None and end <= begin:
                 raise ScheduleError("It has to end after it starts")
-            # What ran at [end] before, so it picks up again there
+            # What ran at [end] before, so it picks up again there; with no schedule at all, nothing held them, so a
+            # mode that allows everything (Free time) takes over and the change keeps its end
             before_end = None
             if end is not None:
-                before_end = next((md for m, md in reversed(base) if m <= end), None) or self._carry(person, day)
+                before_end = (
+                    next((md for m, md in reversed(base) if m <= end), None)
+                    or self._carry(person, day)
+                    or next((m for m, d in self.data.modes.items() if d.get("allows") == EVERYTHING), FREE)
+                )
             kept = [c for c in base if c[0] < begin or (end is not None and c[0] > end)]
             new_items = [*kept, (begin, mode)]
             if end is not None and before_end is not None and not any(c[0] == end for c in kept):

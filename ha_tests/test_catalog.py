@@ -264,7 +264,7 @@ def test_only_a_confirmed_answer_puts_an_app_in_messaging_or_accessibility() -> 
     assert (place("com.example.own").pool, place("com.example.own").why) == ("accessibility", "moved")
     assert place("com.example.reader").pool == "games"
     # Counting: Messaging and Accessibility are outside All screen time by default
-    assert {g.id for g in _groups() if not g.in_all} == {"messaging", "accessibility"}
+    assert {g.id for g in _groups() if not g.in_all} == {"messaging", "accessibility", "interface"}
     # A confirmed accessibility answer goes to Accessibility by the household's map
     assert pool_map(_groups())["accessibility"] == "accessibility"
 
@@ -552,3 +552,102 @@ async def test_the_setting_in_configure(hass: HomeAssistant, hass_client_no_auth
     assert (entry.options["catalog_fetch"], entry.options["catalog_share"], entry.options["catalog_share_asked"]) == (False, True, True)
     catalog = entry.runtime_data.household.catalog
     assert catalog.fetch_on is False and catalog.share_on is True
+
+
+# System screens from the catalog: owner-curated values only
+
+HOME = {
+    "android:com.example.home": {"app": "home", "category": "interface", "state": "confirmed", "source": "override"},
+    "android:com.example.guess": {"app": "guess", "category": "interface", "state": "suggested", "source": "ai"},
+    "android:com.example.kiosk": {"app": "kiosk", "category": "kiosk", "state": "confirmed", "source": "override"},
+}
+
+
+def _values(categories: dict) -> bytes:
+    return json.dumps({"format": "glint.values/1", "categories": categories, "details": {}}).encode()
+
+
+def test_an_owner_curated_interface_answer_puts_an_app_in_system_screens() -> None:
+    """The catalog's `interface` is set only by its owner's override, so its confirmed answer is System screens, as
+    Hearth's own list is. A suggestion isn't, an unknown value is Other, and an adult's choice wins."""
+    data = CatalogData({"android": HOME})
+    assert data.lookup("com.example.home").uncounted
+    assert not data.lookup("com.example.guess").uncounted
+    groups = groups_from_options({})
+    place = placer(groups, {"com.example.guess": "game"}, catalog=data.lookup, pools=pool_map(groups))
+    assert (place("com.example.home").pool, place("com.example.home").why) == ("interface", "catalog")
+    # A suggestion never puts an app there (the device's own category answers instead), nor a value Hearth doesn't know
+    assert place("com.example.guess").pool == "games"
+    assert data.lookup("com.example.kiosk") is None and place("com.example.kiosk").pool is None
+    # An adult's map of a whole kind of app doesn't move it out, nor in
+    mapped = placer(groups, {}, catalog=data.lookup, pools=pool_map(groups, {"interface": "games", "game": "interface"}))
+    assert mapped("com.example.home").pool == "interface"
+    # An adult's move or list wins over the catalog
+    moved = placer(groups, {}, {"com.example.home": "games"}, catalog=data.lookup)
+    assert (moved("com.example.home").pool, moved("com.example.home").why) == ("games", "moved")
+    listed = groups_from_options({"group_apps": {"games": ["com.example.home"]}})
+    assert placer(listed, {}, catalog=data.lookup)("com.example.home").pool == "games"
+
+
+def test_the_values_table_says_which_values_count_nowhere() -> None:
+    """Read by what a value is (counted false, overrides only), not only by its name."""
+    shards = {"android": {
+        "android:com.example.lock": {"category": "lockscreen", "state": "confirmed"},
+        "android:com.example.loose": {"category": "chatter", "state": "confirmed"},
+    }}
+    data = CatalogData(shards, {
+        "lockscreen": {"label": "Lock screens", "counted": False, "overrides_only": True},
+        # Counted nowhere but not override-only: not trusted to free time
+        "chatter": {"label": "Chatter", "counted": False},
+    })
+    assert data.lookup("com.example.lock").uncounted and data.lookup("com.example.loose") is None
+    # Without a table, Hearth knows interface itself
+    assert CatalogData({"android": HOME}).lookup("com.example.home").uncounted
+
+
+async def test_the_values_table_is_fetched_verified_and_kept(hass: HomeAssistant, aioclient_mock) -> None:
+    private, public = _key()
+    keeper = await _keeper(hass, public)
+    values = _values({"interface": {"label": "System screens", "counted": False, "overrides_only": True}})
+    digest = hashlib.sha256(values).hexdigest()
+    shard = _shard("android", HOME)
+    shard_digest = hashlib.sha256(shard).hexdigest()
+
+    def site(seq: int, table_digest: str) -> tuple[bytes, bytes]:
+        index = json.dumps({
+            "format": "glint.exchange/1", "seq": seq, "issued": "2026-11-15T00:00:00Z", "apps": {}, "revoked": [],
+            "catalog": {"format": "glint.catalog/1",
+                        "shards": {"android": {"path": f"k/android.{shard_digest[:16]}.json", "sha256": shard_digest}}},
+            "values": {"path": f"c/{digest[:16]}.json", "sha256": table_digest, "count": 1},
+        }, separators=(",", ":")).encode()
+        return index, base64.b64encode(private.sign(index))
+
+    files = {f"k/android.{shard_digest[:16]}.json": shard, f"c/{digest[:16]}.json": values}
+    index, sig = site(keeper.seq + 10, digest)
+    _serve(aioclient_mock, index, sig, files)
+    assert await keeper.async_fetch() is True
+    assert keeper.data.values["interface"]["label"] == "System screens"
+    assert keeper.data.lookup("com.example.home").uncounted
+    await keeper.async_flush()
+    again = await _keeper(hass, public)
+    assert again.data.values["interface"]["label"] == "System screens"
+
+    # A table whose bytes aren't the signed index's: the copy stays
+    index, sig = site(keeper.seq + 20, "0" * 64)
+    _serve(aioclient_mock, index, sig, files, etag='"two"')
+    assert await keeper.async_fetch() is False and "values table" in keeper.error
+
+
+async def test_a_catalog_interface_app_s_time_counts_nowhere(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    await _household_with_sam(hass, hass_client_no_auth)
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    assert household.days["person.sam"].groups["all"] == 900
+    household.catalog.data = CatalogData({"android": {
+        "android:com.example.game": {"category": "interface", "state": "confirmed", "source": "override"},
+    }})
+    household.recompute()
+    day = household.days["person.sam"]
+    assert day.groups["all"] == 600 and not day.groups.get("games")
+    assert "com.example.game" in household.never_held(household.membership())

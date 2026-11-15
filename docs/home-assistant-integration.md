@@ -97,6 +97,12 @@ it (`screen`, `app`, `app_package`, `media_*`, `day`, `seconds_today`, `app_seco
 The integration keeps only known fields, cleaned, and keeps the last status across restarts. **Connected** turns off
 after 15 minutes without a post; the device's other entities show unavailable then.
 
+**Time from before pairing.** A phone's or tablet's counts start at local midnight, so on the day it pairs its first
+post carries time from before Hearth had it. That first post after an adult approves the pairing is kept as the
+device's baseline (with the status, across restarts) and taken off every later post that day, per app and in total;
+from the next day its counts are its own. Pairing again (a new approval) takes a new baseline. A TV counts its own
+profiles and has none. Apps in System screens (below) never count either way.
+
 **Caps.** A device may say what it can be sent: `"caps": [...]`, at most 16 of `commands.play` (`hearth.play_on_tv`),
 `events` (HearthTube's started videos, the Events endpoint), `push` (a ping channel, see [Away from
 home](#away-from-home)) and `notices` (attention items in its state document, to come); unknown ones are dropped, so a
@@ -306,6 +312,19 @@ A budget is set on a **group**: a set of apps and titles whose minutes count tog
   a device that can spare them from a lock too. It has no budget or bonus (no number entities, no minutes left).
   Family Link's own whole-device lock (All screen time out of time) is Google's: it spares only the apps a parent gave
   unlimited time in Family Link.
+- **System screens** (`interface`): what's in front when no app is: Android's own screens (`android`, System UI, the
+  permission and package installers), Family Link's lock and downtime screen (`com.google.android.gms.supervision`),
+  the stock launchers (Pixel, Samsung, AOSP, Google TV and Android TV, and other phone makers'), setup wizards and the
+  common keyboards. **Counted nowhere**: its seconds are taken out of a device's reading before anything is counted,
+  so they're in no group and not in All screen time (an adult can't put it in), and a phone or tablet that sends its
+  own per-app seconds gets its total from the apps kept. **Never paused**, like Accessibility, and no budget or bonus.
+  Stricter than the loosening pools below: only Hearth's list, an adult's move or list, or the shared catalog's
+  confirmed `interface` puts an app there. `interface` is set only by the catalog owner's override (its values table
+  marks it `counted: false` and `overrides_only: true`; Hearth reads those marks, and knows `interface` so itself
+  before a table is read), so it's curated as Hearth's list is. Never a suggestion, any other catalog value, an
+  adult's map of a whole kind of app, nor a device's own category; an adult's move or list wins over the catalog.
+  Settings and Files are not System screens: time in them still counts. A client that says its home screen
+  (the launcher it shows) was in front all night thus never empties a kid's All screen time.
 
 **Only a confirmed answer loosens a limit.** Messaging and Accessibility are outside All screen time (and
 Accessibility is never paused), so a guess never puts an app in them: only an adult's move or list, Hearth's starter
@@ -355,7 +374,10 @@ says which pool that goes to. Hearth fetches it itself (catalog.py), so it needs
   and its shards (`glint.catalog/1`, one per platform: android, msstore, xbox, pfn, steam, switch, web, name). Per key:
   `category` (the ten Android categories), `detail` (youtube, streaming, education, companion, system; read first),
   the app's slug `app` (the same app's keys on other platforms share it), `name` and `state` (`confirmed`, else
-  suggested). Unknown fields, values, shards and namespaces are ignored.
+  suggested). Unknown fields, values, shards and namespaces are ignored. The index may name the values table too
+  (`values`: `c/<hash>.json`, `glint.values/1`, checked by its SHA-256 like a shard and kept with the copy): a
+  category it marks `counted: false` and `overrides_only: true` (`interface`, System screens) is read, and a
+  confirmed answer of it puts the app in System screens.
 - **Keys.** An Android package (or Family Safety's `a:<package>`) is looked up as `android:<package>`, `appx:<pfn>` as
   `pfn:<pfn lower case>`, `x:<platform>:<hex>` as `fs:<platform>:<hex>` (the catalog has none yet), a Nintendo
   application id as `switch:<id>`, and a played title's name (Xbox's Now playing, a Switch's) as `name:xbox:`,
@@ -367,7 +389,8 @@ says which pool that goes to. Hearth fetches it itself (catalog.py), so it needs
 - **Checks**, any failure keeping the last good copy: the index's Ed25519 signature over its exact bytes with one of
   the two pinned keys (`catalog_data/keys`, `exchange-1` and `exchange-2`), its format, its `seq`
   (lower than the copy's is a rollback and refused), and each shard's SHA-256, format and platform. An index that
-  lists no catalog entry, no shards, or only shards Hearth doesn't read keeps the copy: it never empties it.
+  lists no catalog entry, no shards, or only shards Hearth doesn't read keeps the copy: it never empties it. A values
+  table whose bytes aren't the index's keeps the copy too.
 - **Kept** in Home Assistant's storage (`hearth.catalog.<entry>`) with no expiry: offline, the copy is used for good.
   Before the first fetch, the snapshot bundled with the integration (`catalog_data/snapshot`) is checked the same
   way and used. A newer copy places apps again at once.
@@ -799,7 +822,8 @@ or Nintendo's own schedules yet.
 - **Sleep and School are locks.** The kid's state document says `locked`, with `lock` `{by: ["schedule"], kind:
   bedtime | school_time, until}`; an allow doesn't lift them (change today or take School off instead; a School time
   taken off with `hearth.school_time_off` lifts the schedule's School too). Family Safety's chosen platforms are
-  locked and the Switch is held during them; Family Link keeps its own bedtime and School time.
+  locked and the Switch is held during them; Family Link keeps its own bedtime and School time. An adult's extra time
+  at bedtime lifts Sleep while it lasts ([Extra time at bedtime](#extra-time-at-bedtime)).
 - **A closed group** (Homework, Wind down) is a hold, as a group out of time is: on Hearth's TVs and phones it's a
   paused group, `{id: "schedule:games", name: "Games (Homework until 5 PM)", minutes_left: 0, apps, paused: {until,
   reason: "Homework", name}}`, so a device holds it and offers no ask for more; Family Link pauses its apps; Family
@@ -1208,6 +1232,40 @@ while they're locked, `lock` {by: the lock entities and/or "pause", kind: bedtim
 sensors carry `bedtime_start`/`bedtime_end` too and are a bedtime), so a device can wind down. Without
 a push, a device learns of a pause with its next status answer: a TV within 2 minutes (it posts at least that often
 while on), a phone at its next post.
+
+#### Extra time at bedtime
+
+An adult's extra time of All screen time given while a kid is in bedtime (`hearth.add_bonus`, the page's +15, +30 or
++1 h, an approved ask) **lifts bedtime** for that kid while it lasts, when All screen time then has minutes left
+(without that, nothing is lifted). In bedtime: the weekly schedule's Sleep, one of the kid's lock entities that's a
+bedtime (Family Link's Bedtime active, Family Safety's downtime), or Family Link's own bedtime on one of their devices.
+Extra time of one group only (Games, say) and extra time on one device lift nothing; nor does an allow.
+
+- **How long**: as many minutes from now as were given (more extra time adds on; never more than All screen time has
+  left). It ends sooner when All screen time runs out again, or when an adult takes the extra time back
+  (`hearth.remove_bonus` shortens it by what was taken). Then bedtime is back. `hearth_bedtime_lifted` {person,
+  until} and `hearth_bedtime_back` {person} are fired.
+- **Hearth's own**: the bedtime lock entities and the schedule's Sleep don't lock the kid: `locked` is false and
+  there's no `lock` in their state document (Hearth's TVs and the phones let go), and Sleep's hold of Family Safety's
+  platforms and the Switch is let go. A family pause and School time still hold. The person's state document and the
+  household summary say **`bedtime_lifted`** `{since, until}` (local ISO times) while it lasts; Hearth's page shows
+  "Bedtime paused until 9:45 for extra time".
+- **Family Link's bedtime**: tonight's start moves to when the extra time ends, through `familylink.set_bedtime` with
+  `scope: "today"` (a one-off override of today's weekday; the weekly schedule is left alone), `start_time` the end
+  of the extra time (to the minute, rounded up), `end_time` tonight's end as it was, `day` today's ISO weekday. More
+  extra time moves it again. When the lift ends, the start Hearth found is put back the same way, only while
+  Family Link still reads Hearth's start (or the one it found): a start a parent changed in the Family Link app
+  meanwhile is theirs and stays (`kept_current`, as for the daily limit). What Hearth moved is kept across restarts,
+  so it's put back after one too; a move of another day isn't (that day's override is over). Hearth's page shows
+  what was done in the kid's Family Link line (`bedtime_moved`, `bedtime`: `restored` or `kept_current`).
+- **Which night**: Family Link keys a bedtime by the weekday it starts on, and a `today` override is for today's. So
+  only a bedtime that starts today, before the extra time ends, is moved (from the child's Bedtime active sensors'
+  `bedtime_start`/`bedtime_end`). After midnight the bedtime under way started yesterday: it's left alone, since an
+  override of yesterday's weekday isn't known to reach a night already under way, and today's would move tonight's
+  bedtime instead. Hearth's own locks are lifted all the same, so the TVs open but a Family Link phone stays in its
+  bedtime. A moved start is 23:59 at the latest (a start after midnight would read as a bedtime of this morning), so
+  extra time that runs past midnight ends at 23:59 on the phone.
+- Family Safety's own downtime (Microsoft's) isn't moved: only Hearth's hold of the platforms is let go.
 
 **One app or group.** `hearth.pause` with `app` (a package) or `group` (an id or name; `all` is the family pause) pauses
 only that, for the people (everyone by default), for `minutes` or `until` a time (no `ends_on`). Nobody is locked:

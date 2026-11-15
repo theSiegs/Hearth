@@ -189,6 +189,8 @@ async def test_a_phone_counts_for_its_person(
         "secret"
     ]
 
+    # Its first post after pairing: nothing yet today
+    await _post(client, secret, body={"screen": "on", "day": _today(), "seconds_today": 0}, device_id=PHONE_ID)
     status = {"screen": "on", "day": _today(), "seconds_today": 1200, "app_seconds_today": {"com.example.game": 1200},
               "app_categories": {"com.example.game": "game"}}
     response = await _post(client, secret, body=status, device_id=PHONE_ID)

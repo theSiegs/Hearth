@@ -2322,6 +2322,8 @@ class HearthPanel extends HTMLElement {
     if (!s) return "";
     if (lock?.kind === "paused") return `<b>Paused</b>${lock.reason ? ` · ${esc(lock.reason)}` : ""}${lock.until ? ` till ${esc(clock(lock.until))}` : ""}`;
     if (lock) return `${esc(LOCK_WORDS[lock.kind])}${lock.until ? ` till ${esc(clock(lock.until))}` : ""}`;
+    // Extra time an adult gave at bedtime lifts it while it lasts
+    if (s.bedtime_lifted) return `Bedtime paused until ${esc(clock(s.bedtime_lifted.until))} for extra time`;
     const allLimited = all && all.minutes_left !== null && all.minutes_left !== undefined;
     if (all?.state === "out") return `<b class="t-out">Out of screen time</b>`;
     if (binding && binding.id !== "all" && binding.state === "out")
@@ -2563,8 +2565,10 @@ class HearthPanel extends HTMLElement {
       const from = this._lockSource(lock.by);
       h.push(`<div class="lockbox ${lock.kind === "bedtime" ? "night" : "school"}">${icon(lock.kind === "bedtime" ? "moon" : lock.kind === "school_time" ? "school" : "lock")}<div>
         <div class="strong">${esc(word)}${lock.until ? ` till ${esc(clock(lock.until))}` : ""}</div>
-        <div class="d">${esc(`${from ? `Set in ${from}. ` : ""}Every screen is off for ${kid.name} until then, so extra time wouldn't help.${lock.kind === "school_time" ? " School time apps still work." : ""}`)}</div></div></div>`);
+        <div class="d">${esc(`${from ? `Set in ${from}. ` : ""}Every screen is off for ${kid.name} until then${lock.kind === "bedtime" ? ". Extra time pauses bedtime while it lasts." : ", so extra time wouldn't help."}${lock.kind === "school_time" ? " School time apps still work." : ""}`)}</div></div></div>`);
     }
+    if (!lock && s.bedtime_lifted)
+      h.push(`<div class="banner">${icon("moon")}<div class="grow">Bedtime paused until ${esc(clock(s.bedtime_lifted.until))} for extra time</div></div>`);
     if (lock?.kind === "paused")
       h.push(`<div class="banner">${icon("pause")}<div class="grow">Paused${lock.until ? ` till ${esc(clock(lock.until))}` : ""}${lock.reason ? ` · ${esc(lock.reason)}` : ""}</div><button class="lnk" data-action="kid-pause-end" data-person="${esc(kid.id)}">End</button></div>`);
     // Their request or suggestions
@@ -2611,7 +2615,8 @@ class HearthPanel extends HTMLElement {
     bar.push(`<button class="b ghost" data-action="more-open" aria-expanded="${Boolean(this._moreOpen)}" aria-label="More actions">${icon("more")}</button>`);
     const menu = [];
     if (this._moreOpen) {
-      if (locked) menu.push(`<button data-action="give-open">Give time anyway<small>Counts after ${lock.kind === "bedtime" ? "bedtime" : lock.kind === "school_time" ? "School time" : "the lock"} ends</small></button>`);
+      if (locked && lock.kind === "bedtime") menu.push(`<button data-action="give-open">Give extra time<small>Pauses bedtime while it lasts</small></button>`);
+      else if (locked) menu.push(`<button data-action="give-open">Give time anyway<small>Counts after ${lock.kind === "school_time" ? "School time" : "the lock"} ends</small></button>`);
       else menu.push(`<button data-action="allow-open">Allow an app…<small>Lets one app or pool through limits for a while</small></button>`);
       if (off) menu.push(`<button data-action="school-off-cancel" data-person="${p}">School time is back today<small>Undo "No School time today"</small></button>`);
       else if (schoolOpen) menu.push(`<button data-action="school-off" data-person="${p}">No School time today<small>For a sick day or a day off</small></button>`);
@@ -3400,7 +3405,7 @@ class HearthPanel extends HTMLElement {
     const appsCards = `${this._checkTheseCard()}
       <section class="card">
         <h3><ha-icon icon="mdi:new-box"></ha-icon>Sorted lately</h3>
-        <p class="muted">New apps go to a group on their own: one that lists them, else their kind (games, video, social…; Messaging and Accessibility only when the shared catalog confirms it), else Other. Accessibility apps are never paused. If one landed wrong, move it; your choice always wins.</p>
+        <p class="muted">New apps go to a group on their own: one that lists them, else their kind (games, video, social…; Messaging and Accessibility only when the shared catalog confirms it), else Other. Accessibility apps are never paused. System screens (the home screen, lock screen, keyboards) never count and are never paused; only Hearth's list, App Facts' curated list or your move puts an app there. If one landed wrong, move it; your choice always wins.</p>
         ${recent.length ? `<ul class="list compact">${recent.map((a) => this._appRow(a, `${a.who ? ` · ${esc(a.who)}` : ""} · ${esc(new Date(a.seen).toLocaleDateString())}`)).join("")}</ul>` : `<p class="muted small">Nothing new lately.</p>`}
       </section>
       <section class="card">
@@ -3423,7 +3428,7 @@ class HearthPanel extends HTMLElement {
         .map(
           (g) => `<section class="card">
           <div class="row"><h3 class="grow">${esc(g.name)}</h3>
-            <label class="check"><input type="checkbox" data-change="outside-all" data-group="${esc(g.id)}" ${g.in_all ? "checked" : ""}> Screen time</label>
+            ${g.never_counted ? `<span class="chip small">never screen time</span>` : `<label class="check"><input type="checkbox" data-change="outside-all" data-group="${esc(g.id)}" ${g.in_all ? "checked" : ""}> Screen time</label>`}
             ${g.builtin ? "" : `<button class="icon-btn" data-action="group-remove" data-group="${esc(g.id)}" aria-label="Remove group"><ha-icon icon="mdi:delete-outline"></ha-icon></button>`}</div>
           <div class="chips">${g.apps
             .map((a) => {

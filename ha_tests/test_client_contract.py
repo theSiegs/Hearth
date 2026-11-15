@@ -115,6 +115,9 @@ async def _household(hass: HomeAssistant, hass_client_no_auth):
     client = await hass_client_no_auth()
     sam = await _pair_phone(hass, client, SAM_PHONE, "person.sam")
     alex = await _pair_phone(hass, client, ALEX_PHONE, "person.alex")
+    # Each phone's first post after pairing: nothing counted yet today (what came before pairing never counts)
+    await _status(client, sam, seconds_today=0, app_seconds_today={})
+    await _status(client, alex, device_id=ALEX_PHONE, seconds_today=0, app_seconds_today={})
     return entry, client, sam, alex
 
 
@@ -504,3 +507,119 @@ def test_a_build_suffix_family_names_its_companions_with_the_same_suffix() -> No
     assert not in_family("com.example.launcher.beta", "com.example.launcher.phone.beta")
     assert not in_family("com.example.launcher", "com.example.game")
     assert in_family("com.example.launcher.debug", "com.example.launcher.debug.x")
+
+
+# System screens and the time from before pairing
+
+PIXEL_HOME = "com.google.android.apps.nexuslauncher"
+LOCK_SCREEN = "com.google.android.gms.supervision"
+
+
+def _minutes_today(hass: HomeAssistant) -> str:
+    return hass.states.get("sensor.hearth_sam_screen_time_today").state
+
+
+async def test_system_screens_are_never_screen_time_nor_paused(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """A phone that says its home screen was in front all night: those 22 hours are no one's screen time."""
+    paused = async_mock_service(hass, "familylink", "pause_app")
+    async_mock_service(hass, "familylink", "resume_app")
+    async_mock_service(hass, "familylink", "set_daily_limit")
+    entry, client, sam, _alex = await _household(hass, hass_client_no_auth)
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    await hass.services.async_call(
+        DOMAIN, "set_budget", {"person": "person.sam", "group": "all", "minutes": 120}, blocking=True
+    )
+    await _status(
+        client,
+        sam,
+        seconds_today=22 * 3600 + 900,
+        app_seconds_today={PIXEL_HOME: 22 * 3600, LOCK_SCREEN: 300, "com.example.tube": 600},
+        app_categories={PIXEL_HOME: "video", "com.example.tube": "video"},
+    )
+    await hass.async_block_till_done()
+    # The device's total is its kept apps' sum: 10 minutes, so All screen time has 110 left and nothing is locked
+    household = entry.runtime_data.household
+    assert _minutes_today(hass) == "10"
+    assert household.days["person.sam"].limits["all"].minutes_left == 110
+    assert household.placement()(PIXEL_HOME).pool == "interface"
+    # A device's own category doesn't take it out of System screens
+    assert household.membership()(PIXEL_HOME) == {"all", "interface"}
+
+    # Never paused either, whatever runs out
+    await hass.services.async_call(
+        DOMAIN, "set_budget", {"person": "person.sam", "group": "video", "minutes": 1}, blocking=True
+    )
+    await hass.async_block_till_done()
+    held = set(paused[-1].data["packages"])
+    assert "com.example.tube" in held and PIXEL_HOME not in held and LOCK_SCREEN not in held
+
+    # An adult's move puts an app there too
+    hass.config_entries.async_update_entry(
+        entry, options={**entry.options, "app_groups": {"com.example.tube": "interface"}}
+    )
+    await hass.async_block_till_done()
+    await _status(client, sam, seconds_today=600, app_seconds_today={"com.example.tube": 600})
+    await hass.async_block_till_done()
+    assert entry.runtime_data.household.days["person.sam"].groups["all"] == 0
+
+
+def test_only_a_list_puts_an_app_in_system_screens() -> None:
+    """Not the shared catalog's answer, not a device's category, not an adult's map of a whole kind of app."""
+    from custom_components.hearth.limits import groups_from_options, placer, pool_map
+
+    groups = groups_from_options({})
+    assert pool_map(groups, {"system": "interface"})["system"] == "other"
+
+    class Hit:
+        confirmed = True
+        detail = "system"
+        category = "productivity"
+        value = "system"
+
+    place = placer(
+        groups,
+        {"com.example.tool": "productivity"},
+        catalog=lambda item: Hit(),
+        pools={"system": "interface", "productivity": "interface"},
+    )
+    assert place("com.example.tool").pool is None
+    assert (place(PIXEL_HOME).pool, place(PIXEL_HOME).why) == ("interface", "starter")
+    moved = placer(groups, {}, {"com.example.tool": "interface"})
+    assert moved("com.example.tool").pool == "interface"
+
+
+async def test_time_from_before_pairing_doesn_t_count_that_day(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """The first post after pairing carries the day so far: it's the baseline, taken off the rest of the day, after a
+    restart too. Pairing again takes a new one."""
+    entry, client, sam, _alex = await _household(hass, hass_client_no_auth)
+    # Pairing again counts as newly paired
+    sam = await _pair_phone(hass, client, SAM_PHONE, "person.sam")
+    await _status(client, sam, seconds_today=3000, app_seconds_today={"com.example.tube": 3000})
+    await hass.async_block_till_done()
+    assert _minutes_today(hass) == "0"
+
+    apps = {"com.example.tube": 3600, "com.example.game": 120}
+    await _status(client, sam, seconds_today=3720, app_seconds_today=apps)
+    await hass.async_block_till_done()
+    assert _minutes_today(hass) == "12"
+
+    # Kept over a restart
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    hub = entry.runtime_data
+    assert hub.state(SAM_PHONE).baseline["apps"] == {"com.example.tube": 3000}
+    apps = {"com.example.tube": 3660, "com.example.game": 120}
+    await _status(client, sam, seconds_today=3780, app_seconds_today=apps)
+    await hass.async_block_till_done()
+    assert _minutes_today(hass) == "13"
+
+    # Another day's counts are its own
+    tomorrow = (dt_util.now().date() + timedelta(days=1)).isoformat()
+    reading = hub.household._device_reading(
+        SAM_PHONE, {"day": tomorrow, "seconds_today": 600, "app_seconds_today": {"com.example.tube": 600}}
+    )
+    assert reading.total_s == 600 and reading.items == {"com.example.tube": 600}
