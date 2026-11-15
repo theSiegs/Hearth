@@ -229,7 +229,8 @@ public class HaEventSessionTest {
     }
 
     private static void eventually(String what, BooleanSupplier condition) throws InterruptedException {
-        long until = System.currentTimeMillis() + 5_000;
+        // Generous: a busy CI runner can take seconds to start a thread; a passing run never waits this long
+        long until = System.currentTimeMillis() + 20_000;
         while (!condition.getAsBoolean()) {
             if (System.currentTimeMillis() > until) fail("never: " + what);
             Thread.sleep(5);
