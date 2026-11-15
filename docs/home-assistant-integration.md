@@ -318,9 +318,12 @@ A budget is set on a **group**: a set of apps and titles whose minutes count tog
   common keyboards. **Counted nowhere**: its seconds are taken out of a device's reading before anything is counted,
   so they're in no group and not in All screen time (an adult can't put it in), and a phone or tablet that sends its
   own per-app seconds gets its total from the apps kept. **Never paused**, like Accessibility, and no budget or bonus.
-  Stricter than the loosening pools below: only Hearth's list or an adult's move or list puts an app there, never the
-  shared catalog (not even a confirmed answer, nor an adult's map of a whole kind of app) and never a device's own
-  category. Settings and Files are not System screens: time in them still counts. A client that says its home screen
+  Stricter than the loosening pools below: only Hearth's list, an adult's move or list, or the shared catalog's
+  confirmed `interface` puts an app there. `interface` is set only by the catalog owner's override (its values table
+  marks it `counted: false` and `overrides_only: true`; Hearth reads those marks, and knows `interface` so itself
+  before a table is read), so it's curated as Hearth's list is. Never a suggestion, any other catalog value, an
+  adult's map of a whole kind of app, nor a device's own category; an adult's move or list wins over the catalog.
+  Settings and Files are not System screens: time in them still counts. A client that says its home screen
   (the launcher it shows) was in front all night thus never empties a kid's All screen time.
 
 **Only a confirmed answer loosens a limit.** Messaging and Accessibility are outside All screen time (and
@@ -371,7 +374,10 @@ says which pool that goes to. Hearth fetches it itself (catalog.py), so it needs
   and its shards (`glint.catalog/1`, one per platform: android, msstore, xbox, pfn, steam, switch, web, name). Per key:
   `category` (the ten Android categories), `detail` (youtube, streaming, education, companion, system; read first),
   the app's slug `app` (the same app's keys on other platforms share it), `name` and `state` (`confirmed`, else
-  suggested). Unknown fields, values, shards and namespaces are ignored.
+  suggested). Unknown fields, values, shards and namespaces are ignored. The index may name the values table too
+  (`values`: `c/<hash>.json`, `glint.values/1`, checked by its SHA-256 like a shard and kept with the copy): a
+  category it marks `counted: false` and `overrides_only: true` (`interface`, System screens) is read, and a
+  confirmed answer of it puts the app in System screens.
 - **Keys.** An Android package (or Family Safety's `a:<package>`) is looked up as `android:<package>`, `appx:<pfn>` as
   `pfn:<pfn lower case>`, `x:<platform>:<hex>` as `fs:<platform>:<hex>` (the catalog has none yet), a Nintendo
   application id as `switch:<id>`, and a played title's name (Xbox's Now playing, a Switch's) as `name:xbox:`,
@@ -383,7 +389,8 @@ says which pool that goes to. Hearth fetches it itself (catalog.py), so it needs
 - **Checks**, any failure keeping the last good copy: the index's Ed25519 signature over its exact bytes with one of
   the two pinned keys (`catalog_data/keys`, `exchange-1` and `exchange-2`), its format, its `seq`
   (lower than the copy's is a rollback and refused), and each shard's SHA-256, format and platform. An index that
-  lists no catalog entry, no shards, or only shards Hearth doesn't read keeps the copy: it never empties it.
+  lists no catalog entry, no shards, or only shards Hearth doesn't read keeps the copy: it never empties it. A values
+  table whose bytes aren't the index's keeps the copy too.
 - **Kept** in Home Assistant's storage (`hearth.catalog.<entry>`) with no expiry: offline, the copy is used for good.
   Before the first fetch, the snapshot bundled with the integration (`catalog_data/snapshot`) is checked the same
   way and used. A newer copy places apps again at once.

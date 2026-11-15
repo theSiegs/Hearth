@@ -5,7 +5,11 @@ at a stable URL: a signed index (`glint.exchange/1`) naming one shard per
 platform (`glint.catalog/1`): for each key (android:<package>, pfn:<package family>, xbox:<title id>, name:switch:<name>
 and so on) what the app is (`category`, one of the ten Android categories, and the finer `detail`: youtube,
 streaming, education, companion, system), its app slug (`app`, shared by the same app's keys on every platform) and
-whether that's `confirmed` (an owner's override, a store rule, a passing review) or only `suggested`.
+whether that's `confirmed` (an owner's override, a store rule, a passing review) or only `suggested`. The index may
+also name the values table (`values`, `glint.values/1`): what each category value is. A value it marks counted
+nowhere (`counted: false`) and set only by an owner's override (`overrides_only: true`), the category `interface`
+(System screens), puts a confirmed app in Hearth's System screens pool (limits.placer). Before a table is read,
+Hearth knows `interface` so itself (BUILTIN_VALUES); any other value it doesn't know is dropped (Other).
 
 Hearth's side, as the catalog's contract says (docs/home-assistant-integration.md, Shared app catalog):
 
@@ -57,6 +61,7 @@ DEFAULT_URL = "https://thesiegs.github.io/glint-recipes/"
 DEFAULT_RELAY = "https://glint-relay.glint-tiles.workers.dev/"
 EXCHANGE_FORMAT = "glint.exchange/1"
 CATALOG_FORMAT = "glint.catalog/1"
+VALUES_FORMAT = "glint.values/1"
 PROPOSE_FORMAT = "glint.catalog-propose/1"
 # Options (fetching on, sending off until an adult is asked and turns it on)
 CONF_CATALOG_FETCH = "catalog_fetch"
@@ -68,6 +73,9 @@ CONF_CATALOG_RELAY = "catalog_relay"
 # The finer values (glint.catalog/1 `detail`) Hearth knows, and the category each sits under
 DETAILS = {"youtube": "video", "streaming": "video", "education": "productivity", "companion": "productivity",
            "system": "productivity"}
+# What Hearth knows of the category values the values table may describe, before it's read (the table wins): System
+# screens is counted nowhere and set only by an owner's override
+BUILTIN_VALUES = {"interface": {"counted": False, "overrides_only": True}}
 # The shards Hearth reads (an unknown one is skipped, as is an unknown namespace)
 SHARDS = ("android", "msstore", "xbox", "pfn", "fs", "steam", "switch", "web", "name")
 # Namespaces of public store ids the relay may be sent (fs: stays in the household until the catalog accepts it)
@@ -91,6 +99,8 @@ MAX_CANDIDATES = 200
 DATA_DIR = Path(__file__).parent / "catalog_data"
 _BUNDLED = "hearth_catalog_bundled"
 _SHARD_PATH = re.compile(r"^k/[a-z]+\.[0-9a-f]{16}\.json$")
+_VALUES_PATH = re.compile(r"^c/[0-9a-f]{16}\.json$")
+_VALUE_NAME = re.compile(r"^[a-z_]{1,32}$")
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 _PACKAGE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$")
 _SWITCH_ID = re.compile(r"^01[0-9A-Fa-f]{14}$")
@@ -187,6 +197,42 @@ def check_shard(name: str, digest: str, data: bytes) -> dict[str, Any]:
     return keys
 
 
+def values_entry(index: dict[str, Any]) -> tuple[str, str] | None:
+    """The values table the index names: (path, sha256); None when it names none."""
+    entry = index.get("values")
+    if entry is None:
+        return None
+    if not isinstance(entry, dict):
+        raise CatalogError("the index's values table is malformed")
+    path, digest = entry.get("path"), entry.get("sha256")
+    if not isinstance(path, str) or not _VALUES_PATH.match(path) or not isinstance(digest, str) or not _HEX64.match(digest):
+        raise CatalogError("the index's values table is malformed")
+    return path, digest
+
+
+def check_values(digest: str, data: bytes) -> dict[str, dict[str, Any]]:
+    """The values table's categories ({value: what it is}), once its bytes' SHA-256 is the index's and it's
+    glint.values/1."""
+    if hashlib.sha256(data).hexdigest() != digest:
+        raise CatalogError("the values table's SHA-256 isn't the index's")
+    try:
+        doc = json.loads(data.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError) as err:
+        raise CatalogError("the values table isn't JSON") from err
+    if not isinstance(doc, dict) or doc.get("format") != VALUES_FORMAT or not isinstance(doc.get("categories"), dict):
+        raise CatalogError("the values table isn't glint.values/1")
+    return {
+        name: dict(props)
+        for name, props in doc["categories"].items()
+        if isinstance(name, str) and _VALUE_NAME.match(name) and isinstance(props, dict)
+    }
+
+
+def uncounted(props: dict[str, Any] | None) -> bool:
+    """A category value counted nowhere and set only by an owner's override: System screens."""
+    return bool(props) and props.get("counted") is False and props.get("overrides_only") is True
+
+
 def read_bundled(folder: Path = DATA_DIR) -> tuple[list[bytes], dict[str, Any] | None, dict[str, dict[str, Any]]]:
     """The pinned keys and the bundled snapshot, verified as a fetch is: (keys, index, shards), or no index if it
     fails (it never should; the catalog is empty until the first fetch then). Runs in the executor."""
@@ -266,6 +312,8 @@ class Hit:
     category: str | None
     detail: str | None
     name: str | None = None
+    # A confirmed category that's counted nowhere and set only by an owner's override (System screens)
+    uncounted: bool = False
 
     @property
     def value(self) -> str | None:
@@ -273,10 +321,11 @@ class Hit:
         return self.detail or self.category
 
 
-def _clean(entry: Any) -> dict[str, Any] | None:
+def _clean(entry: Any, known: frozenset[str] = frozenset()) -> dict[str, Any] | None:
+    """An entry's facts; a category Hearth doesn't know ([known] adds to the ten) is dropped."""
     if not isinstance(entry, dict):
         return None
-    category = entry.get("category") if entry.get("category") in APP_CATEGORIES else None
+    category = entry.get("category") if entry.get("category") in APP_CATEGORIES or entry.get("category") in known else None
     detail = entry.get("detail") if entry.get("detail") in DETAILS else None
     app = entry.get("app") if isinstance(entry.get("app"), str) else None
     name = entry.get("name")[:64] if isinstance(entry.get("name"), str) else None
@@ -286,16 +335,22 @@ def _clean(entry: Any) -> dict[str, Any] | None:
 class CatalogData:
     """The catalog's keys, looked up by key and by app slug."""
 
-    def __init__(self, shards: dict[str, dict[str, Any]] | None = None) -> None:
+    def __init__(
+        self, shards: dict[str, dict[str, Any]] | None = None, values: dict[str, dict[str, Any]] | None = None
+    ) -> None:
         self.keys: dict[str, dict[str, Any]] = {}
         self.by_app: dict[str, list[str]] = {}
+        # What each category value is: Hearth's own, then the values table's
+        self.values = {**BUILTIN_VALUES, **(values or {})}
+        # The category values beyond the ten that Hearth reads: those counted nowhere, set only by an override
+        self.uncounted = frozenset(name for name, props in self.values.items() if uncounted(props))
         for name, keys in (shards or {}).items():
             if name not in SHARDS:
                 continue
             for key, entry in keys.items():
                 if not isinstance(key, str) or not key.startswith(f"{name}:"):
                     continue
-                if (clean := _clean(entry)) is not None:
+                if (clean := _clean(entry, self.uncounted)) is not None:
                     self.keys[key] = clean
         for key in sorted(self.keys):
             if app := self.keys[key]["app"]:
@@ -312,7 +367,7 @@ class CatalogData:
         if e["category"] is None and e["detail"] is None:
             return None
         return Hit(key, e["confirmed"], e["detail"] and DETAILS[e["detail"]] if e["category"] is None else e["category"],
-                   e["detail"], e["name"])
+                   e["detail"], e["name"], e["confirmed"] and e["category"] in self.uncounted)
 
     def lookup(self, item: str) -> Hit | None:
         """What the catalog says [item] is: a confirmed answer by its key, then by its app's other keys; else a
@@ -352,6 +407,9 @@ class CatalogKeeper:
         self.error: str | None = None
         self._raw: dict[str, dict[str, Any]] = {}
         self._digests: dict[str, str] = {}
+        # The values table's categories, when the index named one (None: Hearth's own BUILTIN_VALUES), and its digest
+        self._values: dict[str, dict[str, Any]] | None = None
+        self._values_digest: str | None = None
         # Upward: public store ids seen (key -> last seen, ISO date), corrections an adult chose to share, and keys
         # sent lately (key -> when)
         self.candidates: dict[str, str] = {}
@@ -377,11 +435,13 @@ class CatalogKeeper:
             self.seq, self.issued = stored.get("seq"), stored.get("issued")
             self.etag, self.fetched = stored.get("etag"), stored.get("fetched")
             self.origin = stored.get("origin", "fetched")
+            self._values = stored.get("values") if isinstance(stored.get("values"), dict) else None
+            self._values_digest = stored.get("values_digest")
         elif index is not None:
             # First run (or a newer integration than the copy): the bundled snapshot
             self._use(index, shards, {n: d for n, (_p, d) in (shard_list(index) or {}).items()}, origin="bundled")
             self.fetched = stored.get("fetched")
-        self.data = CatalogData(self._raw)
+        self.data = CatalogData(self._raw, self._values)
         if self.share_on:
             self.candidates = dict(stored.get("candidates") or {})
             self.corrections = list(stored.get("corrections") or [])[-MAX_CORRECTIONS:]
@@ -400,6 +460,8 @@ class CatalogKeeper:
             "origin": self.origin,
             "digests": self._digests,
             "shards": self._raw,
+            "values": self._values,
+            "values_digest": self._values_digest,
             "candidates": self.candidates,
             "corrections": self.corrections,
             "sent": self.sent,
@@ -412,12 +474,20 @@ class CatalogKeeper:
     async def async_flush(self) -> None:
         await self._store.async_save(self._data())
 
-    def _use(self, index: dict[str, Any], shards: dict[str, dict[str, Any]], digests: dict[str, str], origin: str) -> None:
+    def _use(
+        self,
+        index: dict[str, Any],
+        shards: dict[str, dict[str, Any]],
+        digests: dict[str, str],
+        origin: str,
+        values: tuple[dict[str, dict[str, Any]], str] | None = None,
+    ) -> None:
         self._raw, self._digests = shards, digests
+        self._values, self._values_digest = values if values is not None else (None, None)
         self.seq = index["seq"]
         self.issued = index.get("issued") if isinstance(index.get("issued"), str) else None
         self.origin = origin
-        self.data = CatalogData(shards)
+        self.data = CatalogData(shards, self._values)
 
     # Timing
 
@@ -496,6 +566,16 @@ class CatalogKeeper:
                 if status != 200:
                     raise CatalogError(f"{path} answered {status}")
                 shards[name] = check_shard(name, digest, data)
+            values = None
+            if (listed_values := values_entry(index)) is not None:
+                path, digest = listed_values
+                if self._values_digest == digest and self._values is not None:
+                    values = (self._values, digest)
+                else:
+                    status, data, _ = await self._get(self.url + path)
+                    if status != 200:
+                        raise CatalogError(f"{path} answered {status}")
+                    values = (check_values(digest, data), digest)
         except CatalogError as err:
             self.error = str(err)
             _LOGGER.warning("Hearth kept its copy of the shared app catalog: %s", err)
@@ -505,7 +585,7 @@ class CatalogKeeper:
             _LOGGER.debug("Hearth couldn't fetch the shared app catalog: %s", err)
             return False
         changed = index["seq"] != self.seq or self.origin != "fetched"
-        self._use(index, shards, {n: d for n, (_p, d) in listed.items()}, origin="fetched")
+        self._use(index, shards, {n: d for n, (_p, d) in listed.items()}, origin="fetched", values=values)
         self.etag, self.fetched, self.error = etag, dt_util.utcnow().isoformat(), None
         self._save()
         if changed and self.on_change is not None:

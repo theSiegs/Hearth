@@ -789,12 +789,18 @@ class Household:
 
     def never_counted(self):
         """item -> whether it's in System screens (limits.INTERFACE): never anyone's screen time, in no group. Only an
-        adult's move or list or Hearth's own list puts an app there, so the shared catalog and the devices' own
-        categories aren't read."""
+        adult's move or list, Hearth's own list or the shared catalog's owner-curated `interface` puts an app there
+        (limits.placer), so the devices' own categories aren't read."""
         group = self.group(INTERFACE)
         if group is None or not never_counted_group(group):
             return lambda item: False
-        place = placer(self.groups, {}, self.options.get(CONF_APP_GROUPS, {}))
+        place = placer(
+            self.groups,
+            {},
+            self.options.get(CONF_APP_GROUPS, {}),
+            catalog=self.catalog.data.lookup,
+            pools=self.pools(),
+        )
         return lambda item: place(item).pool == INTERFACE
 
     def _device_reading(self, device_id: str, status: dict[str, Any]) -> Reading:

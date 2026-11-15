@@ -115,7 +115,8 @@ midnight; Hearth, not the client, decides what counts:
 - **System screens** count nowhere and are never paused: `android`, `com.android.systemui`,
   `com.android.permissioncontroller`, `com.google.android.permissioncontroller`, `com.android.packageinstaller`,
   `com.google.android.packageinstaller`, `com.google.android.gms.supervision`, the stock launchers, setup wizards and
-  the common keyboards (`limits.STARTER_INTERFACE_APPS`), plus any app an adult moves there. A phone's or tablet's total
+  the common keyboards (`limits.STARTER_INTERFACE_APPS`), the apps App Facts confirms as `interface` (set only by
+  its owner's override), plus any app an adult moves there. A phone's or tablet's total
   is then the sum of the apps kept. A client may leave these out itself as well; it changes nothing.
 - **Before pairing**: on the day a device pairs, its first status after the approval is a baseline taken off the rest
   of that day. Pairing again takes a new one.

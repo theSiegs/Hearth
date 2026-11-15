@@ -46,8 +46,9 @@ ALWAYS_OUTSIDE_ALL = frozenset({INTERFACE})
 # answer puts an app in one (an adult's move or list, Hearth's starter lists, the shared catalog's confirmed answer),
 # never a guess (a device's own category, which any app declares for itself, or the catalog's suggestion)
 CONFIRMED_ONLY = frozenset({MESSAGING, ACCESSIBILITY})
-# Stricter still: only Hearth's own list or an adult's move or list puts an app in System screens, never the shared
-# catalog (not even its confirmed answer) nor a device
+# Stricter still: only Hearth's own list, an adult's move or list, or the shared catalog's confirmed answer of a value
+# counted nowhere and set only by its owner's override (catalog.uncounted: `interface`) puts an app in System screens.
+# Never another catalog value, an adult's map of a whole kind of app, a suggestion, a device's category or a hint
 LISTED_ONLY = frozenset({INTERFACE})
 # Options: {package: group id or "other"}: where an adult moved an app; beats every list and category
 CONF_APP_GROUPS = "app_groups"
@@ -352,7 +353,8 @@ def placer(
     6. The shared catalog's suggested answer, only when it goes to a pool (a guess never takes an app out of one).
        Neither 5 nor 6 puts an app in Messaging or Accessibility (CONFIRMED_ONLY): a suggestion that would is Other,
        with why "suggested" so an adult is asked (Check these).
-       Only 1 to 3 put an app in System screens (LISTED_ONLY).
+       Only 1 to 3, and 4 for a value counted nowhere that only the catalog owner's override sets
+       (catalog.uncounted), put an app in System screens (LISTED_ONLY).
     7. Where its time came from ([hints]: a Switch's or an Xbox's titles are games).
     8. Other.
     """
@@ -377,6 +379,9 @@ def placer(
             return Placement(found.id, "starter")
         declared = categories.get(item)
         hit = catalog(item) if catalog is not None else None
+        if hit is not None and hit.confirmed and getattr(hit, "uncounted", False):
+            # Owner-curated (an override only): System screens, whatever a map says
+            return Placement(INTERFACE if INTERFACE in ids else None, "catalog", hit.value, False, declared)
         if hit is not None and hit.confirmed:
             # Read the finer value first, then the category
             value = hit.detail if hit.detail in value_pools else hit.category
