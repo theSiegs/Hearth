@@ -1,7 +1,8 @@
 """Client settings on Home Assistant's WebSocket, for an adult's app (client_settings.py, docs/contracts/client-settings.md).
 
 Administrators and the users linked to an adult on Hearth's page (auth.py) read and write every scope, kept with
-updated_by "adult". `hearth/client_settings/subscribe` sends {client, scope, name, etag} for each change (etag null:
+updated_by "adult", except a Glint phone's agent documents (glint_agent.py): the inbox is Hearth's alone, the outbox
+and the state are the phone owner's, and none of the three is another adult's phone's to read. `hearth/client_settings/subscribe` sends {client, scope, name, etag} for each change (etag null:
 it went), never the contents. `hearth/client_settings/clear` (Hearth's page, administrators) removes everything kept for
 one client.
 """
@@ -28,6 +29,8 @@ from .client_settings import (
     valid_name,
 )
 from .const import CONF_PERSON, DOMAIN
+from .glint_agent import hearth_only, is_agent_doc
+from .websocket import own_person
 
 _CLIENT = vol.All(str, vol.Length(min=1, max=128))
 _ADDRESS = {
@@ -42,7 +45,7 @@ def _hub(hass: HomeAssistant):
     return entries[0].runtime_data if entries else None
 
 
-def _start(hass: HomeAssistant, connection, msg, address: bool = True):
+def _start(hass: HomeAssistant, connection, msg, address: bool = True, write: bool = False):
     """(hub, client, scope) after the caller's checks, or None after an error was sent."""
     hub = _hub(hass)
     if hub is None:
@@ -60,7 +63,25 @@ def _start(hass: HomeAssistant, connection, msg, address: bool = True):
     if scope[0] == DEVICE and scope[1] not in hub.devices:
         connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "No such device")
         return None
+    if is_agent_doc(msg["client"], scope, msg["name"]) and not _agent_access(hass, hub, connection.user, msg, scope, write):
+        connection.send_error(msg["id"], "forbidden", "forbidden")
+        return None
     return hub, msg["client"], scope
+
+
+def _agent_access(hass: HomeAssistant, hub, user, msg, scope, write: bool) -> bool:
+    """A Glint phone's agent documents (glint_agent.py): only for the client the phone locked at pairing; the inbox is
+    Hearth's alone (never written or deleted here); the outbox and the state are written only by the user whose
+    person the phone is paired to (Glint, signed in as them), and the three are read by that user or, for a kid's
+    phone, by an adult. Never another adult's phone."""
+    device_id = scope[1]
+    agent = hub.glint_agent
+    if agent.client_of(device_id) != msg["client"]:
+        return False
+    own = (person := own_person(hass, user)) is not None and agent.person_of(device_id) == person
+    if write:
+        return own and not hearth_only(msg["client"], scope, msg["name"])
+    return own or agent.is_kid_phone(device_id)
 
 
 def _refused(connection, msg, err: SettingsError) -> None:
@@ -106,7 +127,7 @@ def ws_get(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg:
 @callback
 def ws_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
     """Saves a document as an adult: its envelope (without data)."""
-    if (started := _start(hass, connection, msg)) is None:
+    if (started := _start(hass, connection, msg, write=True)) is None:
         return
     hub, client, scope = started
     try:
@@ -131,7 +152,7 @@ def ws_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg:
 )
 @callback
 def ws_delete(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
-    if (started := _start(hass, connection, msg)) is None:
+    if (started := _start(hass, connection, msg, write=True)) is None:
         return
     hub, client, scope = started
     try:

@@ -52,6 +52,7 @@ from .asks import Asks
 from .attention import ADMINS, Attention, Item
 from .client import checks_of, locked
 from .client_settings import ClientSettings
+from .glint_agent import GlintAgent
 from .pin_grants import PinGrants
 from .commands import Commands
 from .push import PushChannel, new_topic
@@ -185,6 +186,8 @@ class HearthHub:
         # typed on a device allows it (pin_grants.py)
         self.client_settings = ClientSettings(hass, self)
         self.pin_grants = PinGrants(hass)
+        # Glint agents through Hearth: each Glint phone's inbox, the tool calls waiting on it, its doorbell (glint_agent.py)
+        self.glint_agent = GlintAgent(hass, self)
 
     # The devices
 
@@ -210,6 +213,7 @@ class HearthHub:
     async def async_load(self) -> None:
         await self.household.async_load()
         await self.client_settings.async_load()
+        await self.glint_agent.async_load()
         stored = await self._store.async_load() or {}
         for device_id, kept in stored.items():
             if device_id not in self.devices or not isinstance(kept, dict):
@@ -342,12 +346,14 @@ class HearthHub:
         await self.household.async_flush()
         await self.household.apps.async_flush()
         await self.client_settings.async_flush()
+        await self.glint_agent.async_flush()
 
     async def async_remove_device(self, device_id: str) -> None:
         """Forgets a device: its secret stops working at once."""
         # Its device documents go with it, first and saved at once: updating the entry may reload it straight away;
         # person and household documents stay until an adult removes them
         self.pin_grants.forget(device_id)
+        self.glint_agent.forget(device_id)
         self.client_settings.remove_device(device_id)
         await self.client_settings.async_flush()
         devices = {k: v for k, v in self.devices.items() if k != device_id}

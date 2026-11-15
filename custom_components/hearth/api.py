@@ -49,6 +49,7 @@ from .asks import AskError
 from .status import clean_status, text
 from .watch import MAX_EVENTS, clean_started
 from .client import clean_client, locked
+from .glint_agent import hearth_only
 from .client_settings import MAX_DATA_BYTES, SettingsError, device_write, may_read, parse_scope, valid_name
 from .pin_grants import GRANT_SECONDS, GRANT_WRITES
 
@@ -693,6 +694,9 @@ class SettingsView(HomeAssistantView):
         body = await _json_body(request, MAX_SETTINGS_BODY)
         if not isinstance(body, dict) or not isinstance(body.get("data"), dict) or not isinstance(body.get("schema"), str):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        if hearth_only(client, parsed, name):
+            # A Glint phone's agent inbox is Hearth's alone (glint_agent.py)
+            return _error(HTTPStatus.FORBIDDEN, "forbidden")
         if_etag = body["if_etag"] if "if_etag" in body else ...
         grant = body.get("grant") or request.headers.get(HEADER_GRANT)
         try:
@@ -717,6 +721,8 @@ class SettingsView(HomeAssistantView):
         hub, client, parsed = started
         body = await _json_body(request) if request.can_read_body else None
         body = body if isinstance(body, dict) else {}
+        if hearth_only(client, parsed, name):
+            return _error(HTTPStatus.FORBIDDEN, "forbidden")
         if_etag = body["if_etag"] if "if_etag" in body else ...
         grant = body.get("grant") or request.headers.get(HEADER_GRANT)
         try:
