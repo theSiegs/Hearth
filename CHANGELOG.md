@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Hearth TV
+
+- **Phones can control the TV without Home Assistant.** A phone app such as Glint pairs with a code the TV shows, then sees what's playing (title, art, position) and controls play/pause, seeking, volume and opening apps over the home network (docs/tv-remote-api.md). New phones follow kid rules: they can't open an app the profile on the TV can't open now. Settings > Family > Phones that control this TV lists them, marks an adult's phone and removes one.
+
 ## 2026.11.17
 
 ### Home Assistant integration

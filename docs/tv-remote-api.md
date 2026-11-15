@@ -499,3 +499,25 @@ No polling, no background work, no push service, no ntfy. An app opens a session
 Where to connect: the last TV's address first (3 s), only when it is in the phone's current network
 (`LocalAddress.inNetwork`); NSD (`_hearth-tv._tcp`, ids from `tvs`) at most once per open and 15 minutes when that fails; on
 cellular or another network, nothing at all. Roles are read only at these moments.
+
+## As built on Hearth TV (notes, not contract)
+
+> Notes from the Hearth TV side on how the contract above is built. They explain; they don't change the contract.
+> Where a note and the contract differ, the contract wins and the note is a bug to fix or a question for Glint.
+
+### v1
+
+- The TV side is `RemoteApiService` (server, key, announcement, code), `RemotePolo` (pairing), `RemoteSession`
+  (messages and rules), `RemoteTv` (media, volume, apps) and `RemotePhones` (the list). The key is RSA in Android
+  Keystore under the alias `hearth-remote-api-v2`; TLS (1.3 included) presents only that key, through the server's own
+  `X509ExtendedKeyManager`.
+- A wrong pairing secret: status 402 and the connection closes; pairing again (after 10 seconds) shows a new code. One
+  pairing at a time.
+- **While a kids profile is in front.** A Google TV kids profile is another Android user, and the server runs in the
+  owner's user, which can't see or control that user's media sessions. There `state` carries what Hearth's agent in
+  that profile last reported playing (`title`, `subtitle`, `positionMs`, `durationMs`; `playing` while the report is
+  under 2 minutes old) with `artId` null and every `actions` flag false, so `media` and `seek` answer `unsupported`.
+  `launch` opens the app through the agent, and only an app approved for that profile.
+- Tried on a TV (a test build, 2026-11-08): pairing from Glint and the remote work. Still to try: the code pop-up over
+  a kids profile, `launch` from the background service in an adult profile, and the volume over HDMI-CEC to a soundbar
+  (`volumeSettable`).

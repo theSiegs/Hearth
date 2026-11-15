@@ -176,6 +176,14 @@
                 android:value="Keeps the home screen (Hearth, in the TV owner's user) in step with this Google TV profile's user: reports its Continue Watching and opens what Hearth asks for there" />
         </service>
         <service
+            android:name=".RemoteApiService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Lets the family's paired phones see what this TV plays and control it on the home network (docs/tv-remote-api.md); it must answer while another app is in front" />
+        </service>
+        <service
             android:name=".HaBridgeService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
