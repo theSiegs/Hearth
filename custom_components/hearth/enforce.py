@@ -39,6 +39,11 @@ add, per person, the parental controls of other integrations (Configure > Enforc
   out of time (Family Link's app pauses, Family Safety's platform lock and app pauses, the Switch), and Sleep and School
   hold Family Safety's platforms and the Switch (schedule_wanted). Family Link keeps its own bedtime and School time.
 
+- Extra time at bedtime (bedtime_lift.py): an adult's extra time of All screen time given in bedtime lifts the
+  schedule's Sleep and the bedtime locks while it lasts, so Sleep's holds above are let go; Family Link's bedtime
+  tonight is moved to start when the extra time ends (a today-only override) and put back after, only while it still
+  reads Hearth's start.
+
 An adult's allow (hearth.allow, exceptions.py) takes its app or group out of every hold above while it lasts. A
 parent's grant (a change in the Family Link, Nintendo or Family Safety app, grants.py) takes out only the hold it came
 from.

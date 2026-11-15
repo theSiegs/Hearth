@@ -815,7 +815,8 @@ or Nintendo's own schedules yet.
 - **Sleep and School are locks.** The kid's state document says `locked`, with `lock` `{by: ["schedule"], kind:
   bedtime | school_time, until}`; an allow doesn't lift them (change today or take School off instead; a School time
   taken off with `hearth.school_time_off` lifts the schedule's School too). Family Safety's chosen platforms are
-  locked and the Switch is held during them; Family Link keeps its own bedtime and School time.
+  locked and the Switch is held during them; Family Link keeps its own bedtime and School time. An adult's extra time
+  at bedtime lifts Sleep while it lasts ([Extra time at bedtime](#extra-time-at-bedtime)).
 - **A closed group** (Homework, Wind down) is a hold, as a group out of time is: on Hearth's TVs and phones it's a
   paused group, `{id: "schedule:games", name: "Games (Homework until 5 PM)", minutes_left: 0, apps, paused: {until,
   reason: "Homework", name}}`, so a device holds it and offers no ask for more; Family Link pauses its apps; Family
@@ -1224,6 +1225,40 @@ while they're locked, `lock` {by: the lock entities and/or "pause", kind: bedtim
 sensors carry `bedtime_start`/`bedtime_end` too and are a bedtime), so a device can wind down. Without
 a push, a device learns of a pause with its next status answer: a TV within 2 minutes (it posts at least that often
 while on), a phone at its next post.
+
+#### Extra time at bedtime
+
+An adult's extra time of All screen time given while a kid is in bedtime (`hearth.add_bonus`, the page's +15, +30 or
++1 h, an approved ask) **lifts bedtime** for that kid while it lasts, when All screen time then has minutes left
+(without that, nothing is lifted). In bedtime: the weekly schedule's Sleep, one of the kid's lock entities that's a
+bedtime (Family Link's Bedtime active, Family Safety's downtime), or Family Link's own bedtime on one of their devices.
+Extra time of one group only (Games, say) and extra time on one device lift nothing; nor does an allow.
+
+- **How long**: as many minutes from now as were given (more extra time adds on; never more than All screen time has
+  left). It ends sooner when All screen time runs out again, or when an adult takes the extra time back
+  (`hearth.remove_bonus` shortens it by what was taken). Then bedtime is back. `hearth_bedtime_lifted` {person,
+  until} and `hearth_bedtime_back` {person} are fired.
+- **Hearth's own**: the bedtime lock entities and the schedule's Sleep don't lock the kid: `locked` is false and
+  there's no `lock` in their state document (Hearth's TVs and the phones let go), and Sleep's hold of Family Safety's
+  platforms and the Switch is let go. A family pause and School time still hold. The person's state document and the
+  household summary say **`bedtime_lifted`** `{since, until}` (local ISO times) while it lasts; Hearth's page shows
+  "Bedtime paused until 9:45 for extra time".
+- **Family Link's bedtime**: tonight's start moves to when the extra time ends, through `familylink.set_bedtime` with
+  `scope: "today"` (a one-off override of today's weekday; the weekly schedule is left alone), `start_time` the end
+  of the extra time (to the minute, rounded up), `end_time` tonight's end as it was, `day` today's ISO weekday. More
+  extra time moves it again. When the lift ends, the start Hearth found is put back the same way, only while
+  Family Link still reads Hearth's start (or the one it found): a start a parent changed in the Family Link app
+  meanwhile is theirs and stays (`kept_current`, as for the daily limit). What Hearth moved is kept across restarts,
+  so it's put back after one too; a move of another day isn't (that day's override is over). Hearth's page shows
+  what was done in the kid's Family Link line (`bedtime_moved`, `bedtime`: `restored` or `kept_current`).
+- **Which night**: Family Link keys a bedtime by the weekday it starts on, and a `today` override is for today's. So
+  only a bedtime that starts today, before the extra time ends, is moved (from the child's Bedtime active sensors'
+  `bedtime_start`/`bedtime_end`). After midnight the bedtime under way started yesterday: it's left alone, since an
+  override of yesterday's weekday isn't known to reach a night already under way, and today's would move tonight's
+  bedtime instead. Hearth's own locks are lifted all the same, so the TVs open but a Family Link phone stays in its
+  bedtime. A moved start is 23:59 at the latest (a start after midnight would read as a bedtime of this morning), so
+  extra time that runs past midnight ends at 23:59 on the phone.
+- Family Safety's own downtime (Microsoft's) isn't moved: only Hearth's hold of the platforms is let go.
 
 **One app or group.** `hearth.pause` with `app` (a package) or `group` (an id or name; `all` is the family pause) pauses
 only that, for the people (everyone by default), for `minutes` or `until` a time (no `ends_on`). Nobody is locked:
