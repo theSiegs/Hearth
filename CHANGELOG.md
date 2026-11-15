@@ -3,7 +3,15 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
-## Unreleased
+## 2026.11.18
+
+### Home Assistant integration
+
+- **System screens never count.** Launchers, settings and other system screens (an `interface` answer in App Facts, or the built-in list) stay out of every pool, and a device's time from before it was paired is ignored.
+- **Extra time at bedtime lifts bedtime while it lasts.** When an adult gives a kid extra time during bedtime, Hearth lifts bedtime for that long (Family Link's bedtime too, before midnight) and puts it back after; an adult's own change in the meantime is kept.
+- **A today-only mode with an end keeps it** when the kid has no weekly schedule: Free time takes over at the end.
+- **Glint agents.** A new `glint` LLM API lets Home Assistant's assistant and the MCP server read and change a paired Glint phone (Start, look, notification rules, undo, activity, Do Not Disturb, system settings) through a per-phone mailbox. Adults reach only their own phones and kids' phones; kid phones refuse voice writes and anything that loosens a limit; off on each phone until its owner turns it on (docs/home-assistant-integration.md, "Glint agents").
+- **Media players ending in `_music` or `_music_display`** are recognized as twins of the TV they belong to.
 
 ### Hearth TV
 
