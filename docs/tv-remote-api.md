@@ -528,8 +528,8 @@ Built on the TV, per the contract above:
 
 - TXT `v` is `2`; a hello with `v` 1 gets version 1 exactly (no `welcome`, no `state.time`, no request ids, no new
   messages or errors). A hello with `v` 2 gets `welcome` before the first `state`.
-- Request ids: a message with `id` gets `ok {re}`, or its answer (`apps`, `art`, `synced`, `kids`) or `error` with
-  `re`. Version 2 errors also carry `message` (the code) and, for `too_often`, `retryInSec`.
+- Request ids: a message with `id` gets `ok {re}`, or its answer (`welcome` for `hello`, `apps`, `art`, `synced`,
+  `kids`) or `error` with `re`. Version 2 errors also carry `message` (the code) and, for `too_often`, `retryInSec`.
 - Told roles, `none` (every new pairing), `kid` (bound to one kid) or `parent`, set in Settings > Family > Phones that
   control this TV, in an adult's profile only. v1's adult mark reads as `parent`, restricted as `none`. The role is read
   from the TV's store on every message (V2.9 table), and `restricted` (v1's kid rules) is every role but `parent`, or a

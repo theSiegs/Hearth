@@ -266,7 +266,13 @@ final class RemoteSession {
                 version = asked;
                 started = true;
                 saidKid = message.optBoolean("kid", false);
-                if (version >= 2) out.add(welcome());
+                if (version >= 2) {
+                    // The hello's own id: its answer is the welcome
+                    String helloId = requestId(message);
+                    JSONObject welcome = welcome();
+                    if (helloId != null) welcome.put("re", helloId);
+                    out.add(welcome);
+                }
                 out.add(stateMessage(true));
                 return true;
             }

@@ -178,6 +178,24 @@ public class RemoteSessionV2Test {
     }
 
     @Test
+    public void aHellosIdComesBackOnTheWelcomeAndOkRepliesCarryTheirs() throws Exception {
+        TvV2 tv = new TvV2();
+        RemoteSession session = new RemoteSession(tv, phone(RemoteSession.ROLE_PARENT, null));
+        List<JSONObject> out = session.handle(msg("{\"t\":\"hello\",\"v\":2,\"id\":\"h1\"}"));
+        assertEquals("welcome", out.get(0).getString("t"));
+        assertEquals("h1", out.get(0).getString("re"));
+        assertFalse(out.get(1).has("re")); // the state isn't an answer
+        JSONObject ok = one(session.handle(msg("{\"t\":\"volume\",\"step\":1,\"id\":\"v2\"}")));
+        assertEquals("ok", ok.getString("t"));
+        assertEquals("v2", ok.getString("re"));
+        // Without an id, no re; a v1 hello's id is ignored
+        assertFalse(new RemoteSession(tv, phone(RemoteSession.ROLE_PARENT, null))
+                .handle(msg("{\"t\":\"hello\",\"v\":2}")).get(0).has("re"));
+        assertEquals("state", new RemoteSession(tv, phone(RemoteSession.ROLE_PARENT, null))
+                .handle(msg("{\"t\":\"hello\",\"v\":1,\"id\":\"h2\"}")).get(0).getString("t"));
+    }
+
+    @Test
     public void timeIsOnlyForTheProfileInFrontThatTheRoleMaySee() throws Exception {
         TvV2 tv = new TvV2();
         // A parent's phone: the profile in front's
