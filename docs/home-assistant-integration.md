@@ -1193,6 +1193,11 @@ commands takes a person or any other key: an extra key gets Home Assistant's `in
 
 `pause`, `lock` and `allow_ends` come as in the state document when they apply.
 
+For an adult (on Hearth's page) the document also has `client_settings`: the `device:<id>/agent-inbox` etag of each
+Glint phone paired to them (`{}` with none), so a new agent request changes `version` and reaches Glint on
+`hearth/me/subscribe` (see [Glint agents](#glint-agents)). Only the inbox is listed: Glint's own outbox and state writes
+don't wake it.
+
 **`{"type": "hearth/me/subscribe"}`** answers success, then sends the same document as an event at once and again
 whenever it changes (its `version`), at most every 2 seconds. Errors as `hearth/me`.
 
@@ -2237,6 +2242,75 @@ model is told.
 or who tapped Allow). An action that logs nothing of its own (a pause, an allow, School time off) logs an `assist`
 event: the `tool` and what it did (app, group, minutes, device, until, date), never a reason. Home Assistant's
 logbook also has the service call's user.
+
+## Glint agents
+
+Beside `hearth`, Hearth registers a second LLM API, **`glint`** ("Glint", `glint_api.py`), ticked on its own in the MCP
+Server's or an Assist agent's options. It lets an agent read and change Glint (the phone home screen, Start) on the
+household's phones without waking them, through a mailbox Hearth keeps for each Glint phone (`glint_agent.py`). The
+contract is Glint's: `docs/contracts/glint-agent-ha.md` (version 1) in the Glint repository.
+
+**The mailbox.** Three [client settings](contracts/client-settings.md) documents in the phone's own device scope, for
+the Glint client it locked at pairing (`com.thesiegs.glint`, or its `.debug` / `.nightly` build):
+
+| Name | `schema` | Written by | Read by |
+|---|---|---|---|
+| `agent-inbox` | `glint.agent-inbox/1` ("agent requests") | Hearth only (`updated_by: hearth`) | Glint |
+| `agent-outbox` | `glint.agent-outbox/1` | Glint only | Hearth |
+| `glint-state` | `glint.state/1` | Glint only | Hearth (the tools' reads) |
+
+Neither the phone (device API) nor anyone on the WebSocket may write or delete the inbox (`forbidden`). On the
+WebSocket the outbox and state are written only by the user whose person the phone is paired to (Glint, signed in as
+them), and the three are read only by that user or, for a kid's phone, by an adult: never another adult's phone. A
+kid's phone writes its outbox and state over the device API, and sees its inbox's etag in its state document. An
+adult's Glint sees its inbox's etag in `hearth/me`.
+
+A request is `{id, agent, user, user_name, origin, action, args, created, expires}`: `agent` is `mcp` (the MCP Server)
+or `assist`, `origin` `text` for the MCP Server and `voice` for anything through Assist (a typed Assist chat can't be
+told from a spoken one, so it counts as voice and Glint asks on the phone). At most **20** wait per phone and 32 KiB;
+a 21st is refused with `inbox_full`. A request leaves the inbox when Glint's outbox holds a final result for it
+(`applied`, `refused`, `expired`) or once past its `expires` (at most 24 hours; a `glint_dnd` for some minutes expires
+with them). Hearth then fires **`glint_agent_done`** `{device_id, request, agent, action, status, said, undo, code}`,
+once.
+
+**Tools.** Each takes `phone` (a Glint phone's name, any case, or the name of the person whose only Glint phone it
+is; optional with one). When several reachable phones share the name, the caller's own is used (the one seen last if
+they have several), else the tool asks for the id; phones are listed as "name · person · last seen". Reads answer from
+`glint-state` with its age ("as of 6:02 pm"). Writes add a request, ring the doorbell if one is linked, and wait up to 20 seconds:
+then the tool answers with Glint's own `said` and `undo`, or `asked_on_phone` ("waiting for Alex to allow it on the
+phone"), or `refused` with its `code`, or `queued` ("queued for Alex's phone: glint applies it the next time Start is
+open (request r-…)"). A phone whose owner turned agents off (`channel: "off"`), or that has published no `glint-state`
+at all, counts as off: every tool says so and nothing is queued. `glint_change_start` describes its ops from a phone's
+`glint.hello` list when its state document carries one (`hello.actions` or `actions`), else Glint's own: add,
+duplicate, move, resize, remove, restyle, stack, unstack, take_out, name_stack, deals_at, remove_page.
+
+| Tool | Reads | Writes (request action) |
+|---|---|---|
+| `glint_get_start` | state `start` | |
+| `glint_change_start` | | `start.change` `{ops}` |
+| `glint_set_look` | state `look` (no `values`) | `look.set` `{values}` |
+| `glint_notification_rules` | state `notify` (no `ops`) | `notify.change` `{ops}` |
+| `glint_undo` | | `undo` `{undo?}` |
+| `glint_activity` | state `activity`, the outbox's results, the requests waiting | |
+| `glint_dnd` | | `phone.dnd` `{on, minutes? or until?}` |
+| `glint_system_setting` | state `phone` (no arguments) | `phone.settings` `{values}`, `phone.sound` `{ringer?, volume?}` |
+
+**Who may use it.** An adult (as for `hearth`): their own Glint phones and kids', never another adult's. A voice call
+with no user, wherever the voice agent has `glint` ticked: adults' phones only, every write `origin: voice` (Glint asks
+on the phone first). Anyone else: no tools. On a kid's phone Hearth refuses up front what Glint would refuse anyway:
+any voice write (`voice_on_kid_phone`) and the loosening it can see (do not disturb off, any system setting or sound:
+`needs_parent`). Each write logs an `assist` history event (`tool`, `device`, `request_id`, `via`, `user`).
+
+**The doorbell (optional).** An adult links a Home Assistant companion app to a Glint phone (their own or a kid's) with
+`{"type": "hearth/glint/bell", "device_id", "notify": "notify.mobile_app_<name>" | null}`; `hearth/glint/phones` lists
+the phones they reach with their links. A write then also calls that service with `message: command_broadcast_intent`
+and `data: {intent_package_name: <the phone's client>, intent_action: com.thesiegs.glint.action.AGENT_BELL,
+intent_class_name: com.thesiegs.glint.start.agent.AgentBellReceiver}`: a hint only, carrying nothing; Glint reads its
+inbox over its own connection.
+
+**Forgetting a stale phone.** `{"type": "hearth/glint/forget", "device_id"}` (an adult, for their own Glint phone or a
+kid's) removes it as deleting its device in Home Assistant does: its secret stops working, its documents and doorbell
+link go, and its device entry is removed.
 
 ## Security
 

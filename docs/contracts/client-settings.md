@@ -30,8 +30,8 @@ ones. Removing a device deletes its device documents. Example: a launcher on Sam
 - `label`: optional, at most 40 characters (control characters are stripped; longer is 400). Hearth's page shows it
   verbatim on the device row's "Settings kept for …" line; without one it shows `<client> · <name>`.
 - `etag`, `updated`, `updated_by`: set by Hearth. `updated_by` is `adult` (an adult in HA, or an adult's device),
-  `kid_device` (a kid's device, its own device scope), `device` (a TV, its own device scope) or `pin` (a write a PIN
-  grant allowed).
+  `kid_device` (a kid's device, its own device scope), `device` (a TV, its own device scope), `pin` (a write a PIN
+  grant allowed) or `hearth` (Hearth's own: a Glint phone's `agent-inbox`).
 
 ## Limits
 
@@ -58,6 +58,13 @@ freely. Nothing in client settings changes what Hearth holds or allows.
 
 **Offline.** A client never queues a person-scope change made on a kid's device for later: with Home Assistant
 unreachable, it's refused ("needs Home Assistant right now").
+
+**Glint's agent documents.** A Glint phone's `device:<id>/agent-inbox`, `agent-outbox` and `glint-state` (client
+`com.thesiegs.glint` or its `.debug` / `.nightly` build; Glint's `glint-agent-ha.md`) have one writer each: the inbox
+is Hearth's alone (never written or deleted by the device or on the WebSocket, `403 forbidden`); on the WebSocket the
+outbox and state are written only by the user whose person the phone is paired to, for the phone's own client, and
+the three are read only by that user or, for a kid's phone, by an adult. See home-assistant-integration.md, Glint
+agents.
 
 ## Who may read
 

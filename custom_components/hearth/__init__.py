@@ -33,7 +33,7 @@ from .auth import is_adult_user, register_service
 from .websocket import async_register_commands
 from .pause import end_app_pause, end_pause, set_app_pause, set_pause
 from .places import ARRIVE, LEAVE
-from . import client_settings_ws, llm_api, panel, suggest_push, todo_ws, weekly_ws
+from . import client_settings_ws, glint_api, llm_api, panel, suggest_push, todo_ws, weekly_ws
 from .todos import migrated_options
 from .apps import ACTION_PREFIX
 from .asks import ACTION_PREFIX as ASK_ACTION_PREFIX
@@ -307,6 +307,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     _register_copy_sites(hass, loaded_household)
     # Hearth for assistants: Home Assistant's MCP Server and Assist (llm_api.py)
     llm_api.async_register(hass)
+    # Glint agents through Hearth: the "glint" LLM API beside it (glint_api.py)
+    glint_api.async_register(hass)
     return True
 
 
@@ -795,6 +797,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
         todo_ws.async_register_commands(hass)
         weekly_ws.async_register_commands(hass)
         client_settings_ws.async_register_commands(hass)
+        glint_api.async_register_commands(hass)
         hass.data[_VIEWS_REGISTERED] = True
     # Hearth's page in the sidebar, while the household is set up
     await panel.async_register_panel(hass)
@@ -935,6 +938,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     entry.async_on_unload(hub.push.stop)
     hub.waits.start()
     entry.async_on_unload(hub.waits.stop)
+    # Glint phones' agent results: the waiting tool calls hear them, the inbox is pruned (glint_agent.py)
+    hub.glint_agent.start()
+    entry.async_on_unload(hub.glint_agent.stop)
     # People and groups come from the entry: when it changes (options, a phone paired), its entities are made again
     entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
     return True

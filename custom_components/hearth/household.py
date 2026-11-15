@@ -1721,6 +1721,11 @@ class Household:
         """A person's own document, for their own Home Assistant user (hearth/me): what a paired phone of theirs gets,
         version and contract included. Nothing about anyone else."""
         body = self._phone_body(person)
+        if self.options.get(CONF_ROLES, {}).get(person) == "adult":
+            # The agent inbox etags of the adult's Glint phones (glint_agent.py): a new request changes the version, so
+            # a Glint with Start in front hears it on hearth/me/subscribe. Always there for an adult ({} with none),
+            # so Glint knows this Hearth pushes them
+            body["client_settings"] = self.hub.glint_agent.inbox_etags(person)
         body["version"] = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()[:16]
         body["contract"] = CONTRACT
         return body
