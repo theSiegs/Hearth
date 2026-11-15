@@ -3,7 +3,7 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
-## Unreleased
+## 2026.11.17
 
 ### Home Assistant integration
 
@@ -14,6 +14,10 @@
 - **"Sharing app data"** replaces "Glint tile sharing": the same people are on (the setting moved, as it was, when Hearth starts), its card says what it does without naming an app, and each person's state document says `share_app_data` instead of `tile_exchange_share`.
 - **App facts.** The shared app catalog's card is now "App facts", in plain words. A published index that leaves out the catalog (or lists no shards) no longer empties Hearth's copy: the copy stays. A device's `catalog_categories` is no longer read, since Hearth fetches the catalog itself.
 - **New docs:** docs/contracts/device-api.md, client-settings.md and app-facts.md.
+
+### Hearth TV
+
+- **Hearth TV says which app it is when it pairs** (contract 3), so Home Assistant shows it in the pairing dialog and on the device row.
 
 ## 2026.11.16
 
