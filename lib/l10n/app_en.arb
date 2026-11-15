@@ -4820,27 +4820,29 @@
     "@remotePhonesAdult": {
         "description": "Phones that control this TV: a phone marked as an adult's"
     },
-    "remotePhonesRestricted": "Kid rules",
-    "@remotePhonesRestricted": {
-        "description": "Phones that control this TV: a phone that follows the current profile's rules (new phones)"
+    "remotePhonesNotThisOne": "Not this one",
+    "@remotePhonesNotThisOne": {
+        "description": "Phones that control this TV: a phone that is neither a kid's nor an adult's (every new pairing); it follows kid rules and gets no minutes"
     },
-    "remotePhonesMarkAdult": "Mark as an adult's phone",
-    "@remotePhonesMarkAdult": {
-        "description": "Phones that control this TV: action"
-    },
-    "remotePhonesMarkRestricted": "Use kid rules",
-    "@remotePhonesMarkRestricted": {
-        "description": "Phones that control this TV: action"
+    "remotePhonesKid": "{name}'s phone",
+    "@remotePhonesKid": {
+        "description": "Phones that control this TV: a phone bound to one kid (their minutes, their asks), and the action that binds it",
+        "placeholders": {
+            "name": {
+                "type": "String",
+                "example": "Sam"
+            }
+        }
     },
     "remotePhonesRemove": "Remove",
     "@remotePhonesRemove": {
         "description": "Phones that control this TV: action, forgets the phone"
     },
-    "remotePhonesAdultOnly": "Only an adult's profile can mark a phone as an adult's.",
+    "remotePhonesAdultOnly": "Only an adult's profile can set whose phone it is.",
     "@remotePhonesAdultOnly": {
         "description": "Phones that control this TV: shown in a kids profile"
     },
-    "remotePhonesAbout": "A phone with kid rules can't open apps the profile on the TV can't open now. Keys and power go through the TV's own remote, not Hearth.",
+    "remotePhonesAbout": "A kid's phone sees that kid's minutes and can ask for more. A phone that's not an adult's can't open apps the profile on the TV can't open now. Keys and power go through the TV's own remote, not Hearth.",
     "@remotePhonesAbout": {
         "description": "Phones that control this TV: explanation under the list"
     }

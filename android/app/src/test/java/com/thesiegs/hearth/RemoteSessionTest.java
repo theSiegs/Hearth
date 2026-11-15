@@ -16,7 +16,7 @@ import java.util.List;
 /** A phone's session on the remote API: its commands, the TV's answers, and the kid rules. */
 public class RemoteSessionTest {
     /** A TV that records what it was asked. */
-    static final class FakeTv implements RemoteSession.Tv {
+    static class FakeTv implements RemoteSession.Tv {
         final List<String> did = new ArrayList<>();
         JSONObject state;
         boolean mediaSession = true;
@@ -101,7 +101,7 @@ public class RemoteSessionTest {
         assertEquals("bad_request", before.getString("code"));
         assertTrue(tv.did.isEmpty());
 
-        assertEquals("unsupported", one(session.handle(msg("{\"t\":\"hello\",\"v\":2}"))).getString("code"));
+        assertEquals("unsupported", one(session.handle(msg("{\"t\":\"hello\",\"v\":3}"))).getString("code"));
         JSONObject state = one(session.handle(msg("{\"t\":\"hello\",\"v\":1,\"client\":\"Glint\"}")));
         assertEquals("state", state.getString("t"));
         assertEquals("A film", state.getString("title"));
@@ -198,10 +198,10 @@ public class RemoteSessionTest {
     public void phonesPairRestrictedAndAnAdultMarkSurvivesPairingAgain() {
         RemotePhones phones = new RemotePhones(new FakeContext("com.thesiegs.hearth"));
         phones.add("aa", "Alex's phone", 10);
-        assertFalse(phones.get("aa").adult);
+        assertFalse(phones.get("aa").adult());
         assertTrue(phones.setAdult("aa", true));
         phones.add("aa", "Alex's phone", 20);
-        assertTrue(phones.get("aa").adult);
+        assertTrue(phones.get("aa").adult());
         assertEquals(20, phones.get("aa").pairedAt);
         phones.add("bb", "Sam's phone", 30);
         assertEquals("bb", phones.list().get(0).fingerprint);

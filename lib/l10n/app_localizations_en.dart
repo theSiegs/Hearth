@@ -3894,22 +3894,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get remotePhonesAdult => 'An adult\'s phone';
 
   @override
-  String get remotePhonesRestricted => 'Kid rules';
+  String get remotePhonesNotThisOne => 'Not this one';
 
   @override
-  String get remotePhonesMarkAdult => 'Mark as an adult\'s phone';
-
-  @override
-  String get remotePhonesMarkRestricted => 'Use kid rules';
+  String remotePhonesKid(String name) {
+    return '$name\'s phone';
+  }
 
   @override
   String get remotePhonesRemove => 'Remove';
 
   @override
   String get remotePhonesAdultOnly =>
-      'Only an adult\'s profile can mark a phone as an adult\'s.';
+      'Only an adult\'s profile can set whose phone it is.';
 
   @override
   String get remotePhonesAbout =>
-      'A phone with kid rules can\'t open apps the profile on the TV can\'t open now. Keys and power go through the TV\'s own remote, not Hearth.';
+      'A kid\'s phone sees that kid\'s minutes and can ask for more. A phone that\'s not an adult\'s can\'t open apps the profile on the TV can\'t open now. Keys and power go through the TV\'s own remote, not Hearth.';
 }

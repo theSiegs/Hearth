@@ -1510,6 +1510,11 @@ final class Household {
         return personOf(context, LauncherAccessibilityService.getActiveProfileKey(context));
     }
 
+    /** Who a profile of this TV is to the household (the remote API's person id); null when that isn't known. */
+    static String personIdOf(Context context, String key) {
+        return personOf(context, key);
+    }
+
     private static String personOf(Context context, String key) {
         if (key == null) return null;
         if (!member(context)) return "k:" + key;

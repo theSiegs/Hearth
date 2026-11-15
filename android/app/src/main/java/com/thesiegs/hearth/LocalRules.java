@@ -64,7 +64,8 @@ final class LocalRules {
                 if (!notCounted.contains(app.getKey()) && app.getValue() != null) used += app.getValue();
             }
             JSONObject group = new JSONObject().put("id", ALL).put("name", ALL_NAME)
-                    .put("minutes_left", left(allLimit, used)).put("apps", new JSONArray());
+                    .put("minutes_left", left(allLimit, used)).put("minutes_used", usedMinutes(used))
+                    .put("apps", new JSONArray());
             if (!notCounted.isEmpty()) group.put("except", new JSONArray(sorted(notCounted)));
             groups.put(group);
         }
@@ -85,7 +86,8 @@ final class LocalRules {
             }
             String name = rule.optString("name", "");
             groups.put(new JSONObject().put("id", id).put("name", name.trim().isEmpty() ? id : name)
-                    .put("minutes_left", left(limit, used)).put("apps", new JSONArray(sorted(apps))));
+                    .put("minutes_left", left(limit, used)).put("minutes_used", usedMinutes(used))
+                    .put("apps", new JSONArray(sorted(apps))));
         }
         out.put("groups", groups);
 
@@ -119,8 +121,12 @@ final class LocalRules {
 
     /** Whole minutes left of a limit after {@code usedMs}: used time is counted up to the minute it's in. */
     static int left(int limitMinutes, long usedMs) {
-        long usedMinutes = (usedMs + 59_999) / 60_000;
-        return (int) Math.max(0, limitMinutes - usedMinutes);
+        return Math.max(0, limitMinutes - usedMinutes(usedMs));
+    }
+
+    /** Whole minutes used, counted up to the minute it's in (as {@link #left} counts them). */
+    static int usedMinutes(long usedMs) {
+        return (int) Math.min(Integer.MAX_VALUE, Math.max(0, (usedMs + 59_999) / 60_000));
     }
 
     /** The apps a group holds: its list, and with a category every known app Android files under it. */

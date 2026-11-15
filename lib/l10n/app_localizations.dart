@@ -6501,23 +6501,17 @@ abstract class AppLocalizations {
   /// **'An adult\'s phone'**
   String get remotePhonesAdult;
 
-  /// Phones that control this TV: a phone that follows the current profile's rules (new phones)
+  /// Phones that control this TV: a phone that is neither a kid's nor an adult's (every new pairing); it follows kid rules and gets no minutes
   ///
   /// In en, this message translates to:
-  /// **'Kid rules'**
-  String get remotePhonesRestricted;
+  /// **'Not this one'**
+  String get remotePhonesNotThisOne;
 
-  /// Phones that control this TV: action
+  /// Phones that control this TV: a phone bound to one kid (their minutes, their asks), and the action that binds it
   ///
   /// In en, this message translates to:
-  /// **'Mark as an adult\'s phone'**
-  String get remotePhonesMarkAdult;
-
-  /// Phones that control this TV: action
-  ///
-  /// In en, this message translates to:
-  /// **'Use kid rules'**
-  String get remotePhonesMarkRestricted;
+  /// **'{name}\'s phone'**
+  String remotePhonesKid(String name);
 
   /// Phones that control this TV: action, forgets the phone
   ///
@@ -6528,13 +6522,13 @@ abstract class AppLocalizations {
   /// Phones that control this TV: shown in a kids profile
   ///
   /// In en, this message translates to:
-  /// **'Only an adult\'s profile can mark a phone as an adult\'s.'**
+  /// **'Only an adult\'s profile can set whose phone it is.'**
   String get remotePhonesAdultOnly;
 
   /// Phones that control this TV: explanation under the list
   ///
   /// In en, this message translates to:
-  /// **'A phone with kid rules can\'t open apps the profile on the TV can\'t open now. Keys and power go through the TV\'s own remote, not Hearth.'**
+  /// **'A kid\'s phone sees that kid\'s minutes and can ask for more. A phone that\'s not an adult\'s can\'t open apps the profile on the TV can\'t open now. Keys and power go through the TV\'s own remote, not Hearth.'**
   String get remotePhonesAbout;
 }
 

@@ -47,6 +47,8 @@ final class RemoteTv implements RemoteSession.Tv {
     private MediaSessionManager mSessions;
     private String mArtId;
     private byte[] mArt;
+    private volatile String mSelfId;
+    private volatile String mSelfName;
 
     private final MediaSessionManager.OnActiveSessionsChangedListener mSessionsListener = this::setControllers;
 
@@ -391,6 +393,76 @@ final class RemoteTv implements RemoteSession.Tv {
             }
         }
         return list;
+    }
+
+    // --- Version 2
+
+    /** This TV's remote id and name, for {@code welcome}'s {@code tvs}. */
+    void setSelf(String id, String name) {
+        mSelfId = id;
+        mSelfName = name;
+    }
+
+    @Override
+    public String mode() {
+        return HaIntegration.isPaired(mContext) ? RemoteSession.MODE_HA : RemoteSession.MODE_LOCAL;
+    }
+
+    @Override
+    public JSONArray tvs() {
+        JSONArray tvs = new JSONArray();
+        if (mSelfId != null) {
+            try {
+                tvs.put(new JSONObject().put("id", mSelfId).put("n", mSelfName != null ? mSelfName : ""));
+            } catch (JSONException ignored) {
+            }
+        }
+        return tvs;
+    }
+
+    @Override
+    public String frontProfileKey() {
+        return LauncherAccessibilityService.getActiveProfileKey(mContext);
+    }
+
+    @Override
+    public JSONObject entry(String profileKey) {
+        return profileKey == null ? null : HaAllowance.entryFor(mContext, profileKey, System.currentTimeMillis());
+    }
+
+    @Override
+    public JSONObject person(String profileKey) {
+        if (profileKey == null) return null;
+        String id = Household.personIdOf(mContext, profileKey);
+        try {
+            return new JSONObject().put("id", id != null ? id : "k:" + profileKey)
+                    .put("name", ProfileUsers.displayName(mContext, profileKey));
+        } catch (JSONException e) {
+            return null;
+        }
+    }
+
+    @Override
+    public List<String> kids() {
+        List<String> keys = new ArrayList<>();
+        for (KidsProfiles.Kid kid : KidsProfiles.list(mContext)) {
+            String key = ProfileUsers.key(kid.serial);
+            if (key != null) keys.add(key);
+        }
+        return keys;
+    }
+
+    @Override
+    public JSONObject rules(String profileKey) {
+        return LocalAllowance.rules(mContext, profileKey);
+    }
+
+    @Override
+    public JSONObject askHomeAssistant(String profileKey, int minutes, String group) {
+        JSONObject answer = HaIntegration.ask(mContext, profileKey, minutes, group);
+        // The answer shows in the next status answer: post soon
+        if (answer.optBoolean("ok", false)) mMain.post(HaBridgeService::refreshNow);
+        return answer;
     }
 
     @Override

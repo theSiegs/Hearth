@@ -42,6 +42,11 @@ final class HaAllowance {
     static final String LOCKS_KEY = "locks";
     /** The groups with no time left today, [{id, name}], kept for asking for more (HaLocks). */
     static final String TIME_UP_GROUPS_KEY = "time_up_groups";
+    /**
+     * Every group with a limit, [{id, name, minutes_left, apps, except, minutes_used}] as the document listed them, for
+     * the remote API's minutes (RemoteTime).
+     */
+    static final String GROUPS_KEY = "groups";
     private static final String[] LOCK_FIELDS = {"pause", "lock", "next_lock", "request"};
 
     /** The integration's group of every app: its time up holds every app (but these). */
@@ -211,11 +216,13 @@ final class HaAllowance {
                 JSONArray timeUpGroups = new JSONArray();
                 String allOutOfTime = null;
                 JSONArray allExcept = null;
+                JSONArray limits = new JSONArray();
                 for (int i = 0; groups != null && i < groups.length(); i++) {
                     JSONObject group = groups.optJSONObject(i);
                     if (group == null || group.isNull("minutes_left")) continue;
                     int left = Math.max(0, group.optInt("minutes_left", 0));
                     JSONArray apps = group.optJSONArray("apps");
+                    limits.put(limit(group, left));
                     if (left == 0) {
                         String name = group.optString("name", "");
                         if (name.trim().isEmpty()) name = group.optString("id", "");
@@ -243,6 +250,7 @@ final class HaAllowance {
                 entry.put("youtube_minutes_left", least == null ? JSONObject.NULL : least);
                 entry.put("out_of_time", outOfTime);
                 if (timeUpGroups.length() > 0) entry.put(TIME_UP_GROUPS_KEY, timeUpGroups);
+                if (limits.length() > 0) entry.put(GROUPS_KEY, limits);
                 if (allOutOfTime != null) entry.put("all_out_of_time", allOutOfTime);
                 if (allOutOfTime != null && allExcept != null) entry.put("all_except", allExcept);
                 entry.put("schedule_locked", person != null && person.optBoolean("locked", false));
@@ -258,6 +266,20 @@ final class HaAllowance {
             return null;
         }
         return profiles;
+    }
+
+    /** A group of the document as an entry keeps it: what the remote API reads, nothing else. */
+    private static JSONObject limit(JSONObject group, int left) throws JSONException {
+        JSONObject limit = new JSONObject().put("id", group.optString("id", "")).put("name", group.optString("name", ""))
+                .put("minutes_left", left);
+        for (String list : new String[]{"apps", "except"}) {
+            JSONArray value = group.optJSONArray(list);
+            if (value != null) limit.put(list, value);
+        }
+        if (group.has("minutes_used") && !group.isNull("minutes_used")) {
+            limit.put("minutes_used", Math.max(0, group.optInt("minutes_used", 0)));
+        }
+        return limit;
     }
 
     private static boolean holdsHearthTube(JSONArray apps) {

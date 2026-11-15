@@ -312,7 +312,6 @@ final class AgentHub {
         }
     }
 
-    /** What an agent says plays in its profile, checked: the agent is another user's app, so nothing is taken as is. */
     /** What an agent last said plays in its profile, and when (the remote API's now playing there). */
     static final class LastPlayed {
         final Played played;
@@ -330,6 +329,7 @@ final class AgentHub {
         return sLastPlayed.get(serial);
     }
 
+    /** What an agent says plays in its profile, checked: the agent is another user's app, so nothing is taken as is. */
     static final class Played {
         final String packageName;
         final String title;

@@ -70,6 +70,8 @@ public class RemoteApiService extends Service {
     private static final long PUSH_DEBOUNCE_MS = 300;
     private static final long IN_USE_RECENT_MS = 10 * 60 * 1000;
     private static final long NSD_UPDATE_MIN_MS = 30_000;
+    /** While sessions are open, states are checked this often even without an event. */
+    private static final long TICK_MS = 60_000;
 
     private static volatile RemoteApiService sInstance;
 
@@ -92,6 +94,7 @@ public class RemoteApiService extends Service {
     private long mLastPlayingAt;
 
     private final Runnable mPush = this::pushState;
+    private final Runnable mTick = this::pushState;
 
     /** Starts the API in the TV owner's user (from Hearth's start, boot and its accessibility service). */
     static void sync(Context context) {
@@ -355,8 +358,12 @@ public class RemoteApiService extends Service {
                 return;
             }
             mPhones.touch(fp, System.currentTimeMillis());
-            connection = new Connection(ssl, fp, new RemoteSession(mTv, paired.adult));
+            connection = new Connection(ssl, fp, new RemoteSession(mTv, new StoredPhone(fp)));
             mSessions.put(connection, true);
+            mMain.post(() -> {
+                mMain.removeCallbacks(mTick);
+                mMain.postDelayed(mTick, TICK_MS);
+            });
             Log.i(TAG, "Session: " + paired.name);
             InputStream in = ssl.getInputStream();
             while (true) {
@@ -383,17 +390,59 @@ public class RemoteApiService extends Service {
         }
     }
 
-    /** Main thread: each open session gets the state if it changed for it. */
+    /**
+     * Main thread: each open session gets the state if it changed for it (and a kid's v2 session the answer to its
+     * ask). While sessions are open this also runs every minute, for what changes with the clock alone (a bedtime
+     * starting, Home Assistant's answer arriving in its status).
+     */
     private void pushState() {
+        mMain.removeCallbacks(mTick);
         if (!mSessions.isEmpty()) {
             mWorkers.execute(() -> {
                 for (Connection c : mSessions.keySet()) {
-                    JSONObject state = c.session.stateIfChanged();
-                    if (state != null) c.send(state);
+                    for (JSONObject push : c.session.pushes()) c.send(push);
                 }
             });
+            mMain.postDelayed(mTick, TICK_MS);
         }
         updateAnnouncement();
+    }
+
+    /** What the TV keeps about one phone, read from the store on every message (RemoteSession.Phone). */
+    private final class StoredPhone implements RemoteSession.Phone {
+        private final String mFingerprint;
+
+        StoredPhone(String fingerprint) {
+            mFingerprint = fingerprint;
+        }
+
+        @Override public RemoteSession.Binding binding() {
+            RemotePhones.Phone phone = mPhones.get(mFingerprint);
+            return phone != null ? phone.binding() : new RemoteSession.Binding(RemoteSession.ROLE_NONE, null);
+        }
+
+        @Override public void unpair() {
+            if (!mPhones.remove(mFingerprint)) return;
+            Log.i(TAG, "Unpaired by the phone");
+            // After this session's "ok" has gone out: then its other sessions close too
+            mMain.postDelayed(() -> phoneRemoved(mFingerprint), 500);
+        }
+
+        @Override public void standDown() {
+            RemotePhones.Phone phone = mPhones.get(mFingerprint);
+            if (phone != null && !RemoteSession.ROLE_NONE.equals(phone.role)) {
+                mPhones.setRole(mFingerprint, RemoteSession.ROLE_NONE, null);
+                Log.i(TAG, "Stood down: " + phone.name);
+            }
+        }
+
+        @Override public JSONObject lastAsk() {
+            return mPhones.lastAsk(mFingerprint);
+        }
+
+        @Override public void setLastAsk(JSONObject ask) {
+            mPhones.setLastAsk(mFingerprint, ask);
+        }
     }
 
     // --- The key
@@ -422,6 +471,7 @@ public class RemoteApiService extends Service {
         X509Certificate cert = (X509Certificate) keyStore.getCertificate(KEY_ALIAS);
         mPublicKey = (RSAPublicKey) cert.getPublicKey();
         mTvId = Hex.of(MessageDigest.getInstance("SHA-256").digest(mPublicKey.getEncoded())).substring(0, 16);
+        mTv.setSelf(mTvId, ShareDiscovery.deviceName(this));
         java.security.PrivateKey key = (java.security.PrivateKey) keyStore.getKey(KEY_ALIAS, null);
         mTls = SSLContext.getInstance("TLS");
         // Only this key: the keystore also holds Hearth's other keys (the household's EC key), which a key manager

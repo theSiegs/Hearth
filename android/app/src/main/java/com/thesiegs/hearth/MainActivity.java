@@ -157,14 +157,26 @@ public class MainActivity extends FlutterActivity {
             Map<String, Object> one = new HashMap<>();
             one.put("fingerprint", phone.fingerprint);
             one.put("name", phone.name);
-            one.put("adult", phone.adult);
+            one.put("role", phone.role);
+            one.put("profileKey", phone.profileKey);
             one.put("pairedAt", phone.pairedAt);
             one.put("lastUsed", phone.lastUsed);
             phones.add(one);
         }
+        // The kids a phone can be bound to
+        List<Map<String, Object>> kids = new ArrayList<>();
+        for (KidsProfiles.Kid kid : KidsProfiles.list(this)) {
+            String key = ProfileUsers.key(kid.serial);
+            if (key == null) continue;
+            Map<String, Object> one = new HashMap<>();
+            one.put("profileKey", key);
+            one.put("name", kid.name != null ? kid.name : ProfileUsers.displayName(this, key));
+            kids.add(one);
+        }
         Map<String, Object> answer = new HashMap<>();
         answer.put("phones", phones);
-        answer.put("canMarkAdult", !ProfileUsers.isKids(this));
+        answer.put("kids", kids);
+        answer.put("canBind", !ProfileUsers.isKids(this));
         return answer;
     }
 
@@ -179,10 +191,16 @@ public class MainActivity extends FlutterActivity {
             case "openSettings" -> result.success(openSettings());
             // The phones paired with the remote API (Settings > Family > Phones that control this TV)
             case "getRemotePhones" -> result.success(remotePhones());
-            case "setRemotePhoneAdult" -> {
-                // Only from an adult's profile: a kid can't make their own phone an adult's
-                boolean ok = !ProfileUsers.isKids(this) && new RemotePhones(this).setAdult(
-                        call.argument("fingerprint"), Boolean.TRUE.equals(call.argument("adult")));
+            case "setRemotePhoneRole" -> {
+                // Only from an adult's profile: a kid can't make their own phone an adult's, or bind it at all
+                String role = call.argument("role");
+                String kidKey = call.argument("profileKey");
+                boolean knownKid = false;
+                for (KidsProfiles.Kid kid : KidsProfiles.list(this)) {
+                    knownKid |= kidKey != null && kidKey.equals(ProfileUsers.key(kid.serial));
+                }
+                boolean ok = !ProfileUsers.isKids(this) && (!RemoteSession.ROLE_KID.equals(role) || knownKid)
+                        && new RemotePhones(this).setRole(call.argument("fingerprint"), role, kidKey);
                 result.success(ok);
             }
             case "removeRemotePhone" -> {
