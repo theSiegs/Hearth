@@ -237,6 +237,14 @@ async def test_today_only_changes_and_resume(hass: HomeAssistant) -> None:
     assert week.resume(["person.sam"]) == ["person.sam"]
 
 
+async def test_today_mode_until_keeps_its_end_without_a_schedule(hass: HomeAssistant) -> None:
+    week = _week(hass)
+    tuesday = MONDAY + timedelta(days=1)
+    assert week.is_set("person.sam") is False
+    week.change_today("person.sam", tuesday, mode="sleep", start=0, until="07:00")
+    assert week.resolve("person.sam", tuesday).changes == [(0, "sleep"), (7 * 60, "free")]
+
+
 async def test_modes_are_the_family_s(hass: HomeAssistant) -> None:
     week = _week(hass)
     week.set_days(["person.sam"], ["mon"], SCHOOL_DAY)
