@@ -1,61 +1,39 @@
-# App facts: Hearth's side
+# App facts: retired
 
-Owner of the data: the App Facts dataset (both clients' leads review changes). Owner of this page: Hearth.
+**Status: retired (2026-11).** Hearth no longer reads the App Facts dataset and sends nothing to its relay. The
+dataset's repositories are archived. This page stays so older links land somewhere; it describes what Hearth does now.
 
-App facts is a neutral, public, signed dataset of what an app **is**: a category, a finer detail, a cross-platform app
-slug, a name, and whether that's confirmed or only suggested. Hearth reads it to put apps in pools; which pool a
-fact goes to is the household's own choice (Hearth's page > App facts > Which group each kind of app goes to).
+## What replaced it
 
-It's published from its own repository, app-facts (Pages: `https://thesiegs.github.io/app-facts/`), still under its
-current format ids (`glint.exchange/1`, `glint.catalog/1`, `glint.catalog-propose/1`) and keys (`exchange-1`,
-`exchange-2`). Moving to `appfacts.*` formats and its own keys is a later step: the new keys and formats will replace
-these in one Hearth release, with no overlap. Until then this page describes the rules both sides keep.
+Hearth keeps app categories itself (`custom_components/hearth/categories.py`; the full description is in
+[home-assistant-integration.md](../home-assistant-integration.md), App categories). For any app, the first answer of:
 
-## Reading
+1. an adult's answer of what the app is (`app_categories` in the options), set on Hearth's page;
+2. the **starter list** shipped with the integration (`categories_data/starter.json`, format `hearth.starter/1`),
+   made from the dataset's last confirmed answers and hand overrides by `tool/categories_starter.py`;
+3. a **store's genre**, looked up once when a kid first uses an app (Google Play, Microsoft Store and Xbox, Steam),
+   mapped only where the old classifier was sure;
+4. an **AI Task** answer, only with an entity the owner chose, only for an unclear genre, and never confirmed;
+5. unknown.
 
-**Source.** The signed index at `catalog_url` (by default the publisher's Pages URL): `index.json`,
-`index.json.sig`, then the shards it names. A generic user agent and `If-None-Match`; nothing else is sent.
+What each value is (its label, default pool, whether it loosens a limit, and System screens' counted-nowhere mark) is
+built into Hearth (`categories.BUILTIN_VALUES`), as the dataset's values table was. The household's map from a value
+to a pool (`catalog_pools`) is unchanged.
 
-**Cadence.** Once a day at a random minute; at startup when the copy is over a day old; never per app. A fetch that
-fails a check below (or a 404) is tried again within about an hour, with jittered backoff, at most three times a day;
-offline isn't retried.
+## What leaves the house now
 
-**Verify, in order** (any failure keeps the last good copy):
+Only a store lookup: one public store id to that store (no household, person or device id, no usage, no cookies),
+at most 100 a day. An AI question goes only to the AI Task entity the owner chose. No signed index is fetched, no
+relay is called, and no proposals or corrections are sent anywhere.
 
-1. Ed25519 over the exact bytes of `index.json`, with one pinned key.
-2. The index's `format`.
-3. `seq` at least the cached `seq` (lower is a rollback).
-4. Per shard: the SHA-256 matches the index, its `format`, and `platform` equals the shard's name.
-5. **An index that lists no catalog, no shards, or only shards Hearth doesn't read keeps the current copy.** It never
-   empties it.
+## Migration
 
-**Shard entries** (example):
+On its first start after the update Hearth removes the catalog's options (`catalog_fetch`, `catalog_share`,
+`catalog_share_asked`, `catalog_url`, `catalog_relay`) and its kept copy (`hearth.catalog.<entry>`), once. The
+corrections an adult had queued to share become that adult's answers (`app_categories`), and fetching turned off
+becomes store lookups off (`category_lookup: false`).
 
-```json
-{"android:com.example.chat": {"app": "example-chat", "name": "Example Chat", "category": "messaging",
-                              "state": "confirmed", "source": "play", "checked": "2026-12-01"}}
-```
+## Formats no longer read
 
-Unknown fields, values, shards and namespaces are ignored. `category` is one of the ten Android categories; `detail`
-(`youtube`, `streaming`, `education`, `companion`, `system`) is add-only.
-
-**Absent or unverifiable:** the last good copy, then the snapshot bundled with the integration, then each device's
-own category, then Other. Nothing gets looser when the facts are missing: an unknown app is Other, which still counts
-toward All screen time.
-
-**Not used for enforcement:** a future `parental_control` flag never exempts anything from pausing. What Hearth never
-pauses is its own list plus each device's client locked at pairing ([device-api.md](device-api.md)).
-
-## Writing (proposals)
-
-Only while sending is on (an HA administrator's choice, asked once). Weekly, to the relay's `/challenge` then
-`/propose`: at most 20 keys and 10 corrections, sorted, with no household, person or device id, no usage, times or
-counts. A key is sent only if the dataset lacks it, it was seen on an adult or on a person with `share_app_data`, and
-it isn't a messaging app. Answers: `202` taken; `400`/`403` dropped, never resent; `429` wait; `404`/`410` no
-endpoint, wait.
-
-## Consent per person: `share_app_data`
-
-A per-person option (Hearth's page > Sharing app data), in each person's state document. It gates Hearth's own
-proposals (kids' apps are proposed only when it's on) and tells a client to turn its own sharing off when it's
-`false`. It replaced `tile_exchange_share` (moved once, as it was, when the integration loads).
+`glint.exchange/1` (the signed index), `glint.catalog/1` (shards), `glint.values/1` (the values table) and
+`glint.catalog-propose/1` (the relay's proposals), and the pinned keys `exchange-1` and `exchange-2`.

@@ -566,7 +566,7 @@ async def test_system_screens_are_never_screen_time_nor_paused(
 
 
 def test_only_a_list_puts_an_app_in_system_screens() -> None:
-    """Not the shared catalog's answer, not a device's category, not an adult's map of a whole kind of app."""
+    """Not another answer of what the app is, not a device's category, not an adult's map of a whole kind of app."""
     from custom_components.hearth.limits import groups_from_options, placer, pool_map
 
     groups = groups_from_options({})
@@ -581,7 +581,7 @@ def test_only_a_list_puts_an_app_in_system_screens() -> None:
     place = placer(
         groups,
         {"com.example.tool": "productivity"},
-        catalog=lambda item: Hit(),
+        lookup=lambda item: Hit(),
         pools={"system": "interface", "productivity": "interface"},
     )
     assert place("com.example.tool").pool is None

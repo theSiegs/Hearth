@@ -43,12 +43,12 @@ DEFAULT_OUTSIDE_ALL = frozenset({MESSAGING, ACCESSIBILITY})
 # Built-in groups outside All screen time whatever the options say
 ALWAYS_OUTSIDE_ALL = frozenset({INTERFACE})
 # The pools that loosen limits (outside All screen time by default; Accessibility is never paused): only a confirmed
-# answer puts an app in one (an adult's move or list, Hearth's starter lists, the shared catalog's confirmed answer),
-# never a guess (a device's own category, which any app declares for itself, or the catalog's suggestion)
+# answer puts an app in one (an adult's move, list or override of what it is, Hearth's starter lists), never a guess (a
+# device's own category, which any app declares for itself, a store's genre or an AI's answer: categories.py)
 CONFIRMED_ONLY = frozenset({MESSAGING, ACCESSIBILITY})
-# Stricter still: only Hearth's own list, an adult's move or list, or the shared catalog's confirmed answer of a value
-# counted nowhere and set only by its owner's override (catalog.uncounted: `interface`) puts an app in System screens.
-# Never another catalog value, an adult's map of a whole kind of app, a suggestion, a device's category or a hint
+# Stricter still: only Hearth's own list, an adult's move or list, or `interface` from an adult's override or the
+# categories starter list (categories.Hit.uncounted) puts an app in System screens. Never another value, an adult's map
+# of a whole kind of app, a suggestion, a device's category or a hint
 LISTED_ONLY = frozenset({INTERFACE})
 # Options: {package: group id or "other"}: where an adult moved an app; beats every list and category
 CONF_APP_GROUPS = "app_groups"
@@ -89,7 +89,7 @@ STARTER_MESSAGING_APPS = frozenset(
         "kik.android",
     }
 )
-# Google's own accessibility apps, so they're spared before the shared catalog is read
+# Google's own accessibility apps, spared whatever else is known about them
 STARTER_ACCESSIBILITY_APPS = frozenset(
     {
         "com.google.android.apps.accessibility.voiceaccess",
@@ -254,15 +254,12 @@ def groups_of(
     return of
 
 
-# Options: {catalog value: pool id or "other"}: an adult's own map from what the shared catalog (or the device) says an
-# app is to a pool; the rest come from pool_map's defaults
-CONF_CATALOG_POOLS = "catalog_pools"
-# The values a pool map knows: the shared catalog's finer values (`detail`) and the ten categories
+# Options: {value: pool id or "other"}: an adult's own map from what an app is (categories.py, or the device's own
+# category) to a pool; the rest come from pool_map's defaults. Its stored name dates from the retired shared catalog
+CONF_CATEGORY_POOLS = "catalog_pools"
+# The values a pool map knows: the finer values (`detail`) and the ten categories
 DETAIL_VALUES = ("youtube", "streaming", "education", "companion", "system")
 CATEGORY_VALUES = ("game", "video", "audio", "image", "social", "messaging", "news", "maps", "productivity", "accessibility")
-# The category each finer value sits under (glint.catalog/1)
-DETAIL_CATEGORY = {"youtube": "video", "streaming": "video", "education": "productivity", "companion": "productivity",
-                   "system": "productivity"}
 # Pools of an adult's own, found by name, for the finer values' defaults
 _DEFAULT_NAMES = {
     "youtube": ("youtube",),
@@ -273,7 +270,7 @@ _DEFAULT_NAMES = {
 
 
 def pool_map(groups: list[Group], adult: dict[str, str] | None = None) -> dict[str, str]:
-    """What each value the shared catalog or a device says an app is goes to in this household: a pool id, or "other"
+    """What each value an app is (categories.py, or the device's own category) goes to in this household: a pool id, or "other"
     (no pool). Hearth's defaults: a game to Games, social to Social, messaging to Messaging, accessibility to
     Accessibility (placer lets only a confirmed answer put an app in those two), a value a pool claims by its
     category (the Video pool retire_video kept) to it, YouTube, streaming, music and education to a pool of the
@@ -303,32 +300,20 @@ def pool_map(groups: list[Group], adult: dict[str, str] | None = None) -> dict[s
     return out
 
 
-def catalog_value(pools: dict[str, str], pool: str) -> dict[str, str] | None:
-    """What an adult's move to [pool] says the app is, in the catalog's terms ({category, detail?}), for sharing a
-    correction: the first value the household's map sends there; None for Other or a pool no value goes to."""
-    if pool == OTHER:
-        return None
-    for value in (*DETAIL_VALUES, *CATEGORY_VALUES):
-        if pools.get(value) == pool:
-            if value in DETAIL_CATEGORY:
-                return {"category": DETAIL_CATEGORY[value], "detail": value}
-            return {"category": value}
-    return None
-
-
 @dataclass(frozen=True)
 class Placement:
     """Where an item counts, and why."""
 
     # A pool's id, or None: Other (All screen time only)
     pool: str | None
-    # moved (an adult's move), list (a list an adult keeps), starter (Hearth's curated lists), catalog (the shared
-    # catalog, confirmed), declared (the device's own category), suggested (the
-    # shared catalog, suggested), hint (where its time came from: a Switch's are games), other
+    # moved (an adult's move), list (a list an adult keeps), starter (Hearth's curated lists), category (a confirmed
+    # answer of what the app is: an adult's, the starter list's, a store's sure genre), declared (the device's own
+    # category), suggested (an unconfirmed answer: a store's loose genre, an AI's), hint (where its time came from: a
+    # Switch's are games), other
     why: str
-    # What the catalog or the device says it is (a detail or a category)
+    # What the app is (a detail or a category), from categories.py or the device
     value: str | None = None
-    # The catalog's confirmed answer and the device's disagree on whether it's a game
+    # The confirmed answer and the device's own category disagree on whether it's a game
     disagree: bool = False
     declared: str | None = None
 
@@ -338,7 +323,7 @@ def placer(
     categories: dict[str, str],
     moved: dict[str, str] | None = None,
     *,
-    catalog: Callable[[str], Any] | None = None,
+    lookup: Callable[[str], Any] | None = None,
     pools: dict[str, str] | None = None,
     hints: dict[str, set[str]] | None = None,
 ) -> Callable[[str], Placement]:
@@ -347,14 +332,15 @@ def placer(
     1. Where an adult moved it ([moved]: item -> pool or "other").
     2. A list an adult keeps it in.
     3. Hearth's curated (starter) lists.
-    4. The shared catalog's confirmed answer ([catalog]: item -> catalog.Hit or None), by the household's map
-       ([pools], pool_map's); a confirmed value the map sends to no pool is Other, and stops here.
+    4. A confirmed answer of what the app is ([lookup]: item -> categories.Hit or None: an adult's override, the
+       starter list, a store's sure genre), by the household's map ([pools], pool_map's); a confirmed value the map
+       sends to no pool is Other, and stops here.
     5. The device's own category ([categories]).
-    6. The shared catalog's suggested answer, only when it goes to a pool (a guess never takes an app out of one).
-       Neither 5 nor 6 puts an app in Messaging or Accessibility (CONFIRMED_ONLY): a suggestion that would is Other,
-       with why "suggested" so an adult is asked (Check these).
-       Only 1 to 3, and 4 for a value counted nowhere that only the catalog owner's override sets
-       (catalog.uncounted), put an app in System screens (LISTED_ONLY).
+    6. An unconfirmed answer (a store's loose genre, an AI's), only when it goes to a pool (a guess never takes an app
+       out of one). Neither 5 nor 6 puts an app in Messaging or Accessibility (CONFIRMED_ONLY): a suggestion that
+       would is Other, with why "suggested" so an adult is asked (Check these).
+       Only 1 to 3, and 4 for System screens from an override or the starter list (Hit.uncounted), put an app in
+       System screens (LISTED_ONLY).
     7. Where its time came from ([hints]: a Switch's or an Xbox's titles are games).
     8. Other.
     """
@@ -378,17 +364,17 @@ def placer(
         if found:
             return Placement(found.id, "starter")
         declared = categories.get(item)
-        hit = catalog(item) if catalog is not None else None
+        hit = lookup(item) if lookup is not None else None
         if hit is not None and hit.confirmed and getattr(hit, "uncounted", False):
-            # Owner-curated (an override only): System screens, whatever a map says
-            return Placement(INTERFACE if INTERFACE in ids else None, "catalog", hit.value, False, declared)
+            # Curated (an adult's override or the starter list): System screens, whatever a map says
+            return Placement(INTERFACE if INTERFACE in ids else None, "category", hit.value, False, declared)
         if hit is not None and hit.confirmed:
             # Read the finer value first, then the category
             value = hit.detail if hit.detail in value_pools else hit.category
             disagree = declared is not None and (declared == "game") != (hit.category == "game")
-            return Placement(to_pool(value), "catalog", hit.value, disagree, declared)
+            return Placement(to_pool(value), "category", hit.value, disagree, declared)
         # A guess never puts an app in a pool that loosens limits (Messaging, Accessibility): any app can declare
-        # itself a category, and a suggestion isn't checked
+        # itself a category, and an unconfirmed answer isn't checked
         if (pool := to_pool(declared)) is not None and pool not in CONFIRMED_ONLY:
             return Placement(pool, "declared", declared, declared=declared)
         held_back = None

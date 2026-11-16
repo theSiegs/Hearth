@@ -1104,45 +1104,41 @@ class HearthPanel extends HTMLElement {
       case "app-group": {
         const moved = { ...(cfg.app_groups || {}) };
         moved[d.app] = el.value;
-        // From Check these, with its tick: shared with the shared app catalog too (what the app is, never the pool)
-        const tick = d.idx != null ? this.shadowRoot.querySelector(`#catalog-suggest-${d.idx}`) : null;
-        let shared = "";
-        if (tick?.checked) {
-          try {
-            const r = await this._hass.callWS({ type: "hearth/catalog/correct", app: d.app, group: el.value });
-            shared = r?.queued ? ", and suggested for the shared catalog" : "";
-          } catch (err) {
-            this._notify(this._message(err));
-          }
-        }
-        await this._setOption("app_groups", moved, `Moved to ${el.value === "other" ? "Other" : this._groupName(el.value)}${shared}`);
+        await this._setOption("app_groups", moved, `Moved to ${el.value === "other" ? "Other" : this._groupName(el.value)}`);
         return;
       }
+      case "app-category": {
+        // What the app is, said by an adult ("auto": Hearth's answer again); its group then follows what it is
+        const [category, detail] = String(el.value).split("/");
+        const said = category === "auto" ? "Hearth decides again" : `Now ${this._categoryLabel(category, detail)}`;
+        await this._ws({ type: "hearth/apps/category", app: d.app, category, ...(detail ? { detail } : {}) }, said);
+        await new Promise((r) => setTimeout(r, 900));
+        await this._loadConfig();
+        return;
+      }
+      case "app-source":
+        this._appSource = el.value;
+        this._render();
+        return;
       case "app-confirm": {
-        // Right where it is: it stays there whatever the catalog says later
+        // Right where it is: it stays there whatever Hearth learns about the app later
         const moved = { ...(cfg.app_groups || {}), [d.app]: d.group };
         await this._setOption("app_groups", moved, `Kept in ${d.group === "other" ? "Other" : this._groupName(d.group)}`);
         return;
       }
-      case "catalog-fetch":
-        await this._setOption("catalog_fetch", el.checked, el.checked ? "Fetching the shared catalog" : "Not fetching it");
+      case "category-lookup":
+        await this._setOption("category_lookup", el.checked, el.checked ? "New apps are looked up in their store" : "No store lookups");
         return;
-      case "catalog-share":
-        await this._setOption("catalog_share", el.checked, el.checked ? "Sharing with the shared catalog" : "Not sharing");
+      case "category-ai":
+        await this._setOption("category_ai_task", el.value || null, el.value ? "Unclear apps go to the AI" : "No AI is asked");
         return;
       case "client-settings-clear":
         if (!window.confirm(`Remove everything Hearth keeps for ${d.client}? The app's settings on every device go with it.`)) return;
         await this._ws({ type: "hearth/client_settings/clear", client: d.client }, "Removed");
         await this._loadConfig();
         return;
-      case "catalog-share-on":
-      case "catalog-share-no":
-        // Asked once: either answer is remembered
-        await this._ws({ type: "hearth/config/set", key: "catalog_share_asked", value: true });
-        await this._setOption("catalog_share", action === "catalog-share-on", action === "catalog-share-on" ? "Sharing with the shared catalog" : "Not sharing");
-        return;
-      case "catalog-pool": {
-        const own = { ...(cfg.catalog?.own_pools || {}) };
+      case "category-pool": {
+        const own = { ...(cfg.categories?.own_pools || {}) };
         if (el.value) own[d.value] = el.value;
         else delete own[d.value];
         await this._setOption("catalog_pools", own, "Saved");
@@ -3335,11 +3331,47 @@ class HearthPanel extends HTMLElement {
       <option value="other" ${group === "other" ? "selected" : ""}>Other</option></select>`;
   }
 
+  // What an app is, in words: "YouTube", "Games", "System screens"
+  _categoryLabel(category, detail) {
+    const labels = this._config.categories?.labels || {};
+    if (category === "none") return "none of Hearth's kinds";
+    return labels[detail] || labels[category] || cap(detail || category || "");
+  }
+
+  // Where Hearth's answer of what an app is came from
+  _sourceLabel(a) {
+    switch (a.source) {
+      case "override": return "set by you";
+      case "starter": return "Hearth's list";
+      case "store": return a.genre ? `store: ${a.genre}` : "store";
+      case "ai": return "AI guess";
+      default: return a.waiting ? "not known yet, looking it up" : "not known";
+    }
+  }
+
+  // An adult says what an app is: Hearth's answer (auto), a category, a finer kind, or none of them
+  _categorySelect(a) {
+    const c = this._config.categories || {};
+    const details = c.detail_choices || {};
+    const current = a.source === "override" ? (a.category === null ? "none" : a.detail ? `${a.category}/${a.detail}` : a.category) : "auto";
+    const auto = a.source && a.source !== "unknown" && a.source !== "override"
+      ? `Hearth: ${a.category ? this._categoryLabel(a.category, a.detail) : "none"}` : "Hearth decides";
+    const options = [["auto", auto]];
+    for (const category of c.category_choices || []) {
+      options.push([category, this._categoryLabel(category)]);
+      for (const [detail, parent] of Object.entries(details)) if (parent === category) options.push([`${category}/${detail}`, `${this._categoryLabel(category)}: ${this._categoryLabel(category, detail)}`]);
+    }
+    options.push(["none", "None of these"]);
+    return `<select data-change="app-category" data-app="${esc(a.package)}" aria-label="What it is">
+      ${options.map(([v, label]) => `<option value="${esc(v)}" ${v === current ? "selected" : ""}>${esc(label)}</option>`).join("")}</select>`;
+  }
+
   _appRow(a, extra = "") {
-    const says = a.catalog_says ? ` · the shared catalog now says ${esc(a.catalog_says)}` : "";
-    const sub = `${extra}${says}`.replace(/^ · /, "");
-    return `<li><div class="grow"><div title="${esc(a.package)}">${esc(this._appName(a))}${a.moved ? ` <span class="chip small">moved by you</span>` : ""}</div>
-      ${sub ? `<div class="muted small">${sub}</div>` : ""}</div>${this._groupSelect(a.package, a.group)}</li>`;
+    const says = a.category_says ? ` · Hearth now knows it as ${esc(this._categoryLabel(a.category_says))}` : "";
+    const kind = a.source ? ` · ${esc(a.category ? this._categoryLabel(a.category, a.detail) : a.source === "unknown" ? "kind not known" : "none of Hearth's kinds")} (${esc(this._sourceLabel(a))})` : "";
+    const sub = `${extra}${kind}${says}`.replace(/^ · /, "");
+    return `<li><div class="grow"><div title="${esc(a.package)}">${esc(this._appName(a))}${a.moved ? ` <span class="chip small">moved by you</span>` : ""}${a.source === "ai" ? ` <span class="chip small warn">AI guess</span>` : ""}</div>
+      ${sub ? `<div class="muted small">${sub}</div>` : ""}</div>${a.source ? this._categorySelect(a) : ""}${this._groupSelect(a.package, a.group)}</li>`;
   }
 
   // An app's name, never its package: a guess from the package when nothing better is known
@@ -3355,47 +3387,47 @@ class HearthPanel extends HTMLElement {
     return /\.(ardtest|debug|dev|test)$/.test(String(pkg || ""));
   }
 
-  // Apps the shared catalog only guessed, or where it and the device disagree: an adult keeps or moves each
+  // Apps placed on a guess (a store's loose genre, an AI's), or where Hearth's answer and the device disagree: an
+  // adult keeps or moves each
   _checkTheseCard() {
     const rows = this._config.check_these || [];
     if (!rows.length) return "";
-    const share = !!this._config.catalog?.share;
     return `<section class="card">
       <h3><ha-icon icon="mdi:help-circle-outline"></ha-icon>Check these</h3>
-      <p class="muted">Placed on the shared app catalog's guess, or where the catalog and the device disagree (Hearth goes by the catalog). Keep each where it is, or move it; your choice always wins.</p>
+      <p class="muted">Placed on a guess (an AI's, or a store's), or where what Hearth knows and the device disagree (Hearth goes by what it knows). Keep each where it is, or move it; your choice always wins.</p>
       <ul class="list compact">${rows
         .map((a, i) => `<li><div class="grow"><div title="${esc(a.package)}">${esc(this._appName(a))}</div>
-          <div class="muted small">${esc(a.why)}</div>
-          ${share && a.shareable ? `<label class="check small"><input type="checkbox" id="catalog-suggest-${i}"> Suggest my move for the shared catalog</label>` : ""}</div>
+          <div class="muted small">${esc(a.why)}</div></div>
           <button class="btn" data-action="app-confirm" data-app="${esc(a.package)}" data-group="${esc(a.group)}">Right</button>
           ${this._groupSelect(a.package, a.group, i)}</li>`)
         .join("")}</ul>
     </section>`;
   }
 
-  // App facts (the shared app catalog): fetching (sends nothing) and sharing (asked once)
-  _catalogCard() {
-    const c = this._config.catalog;
+  // App categories: how the apps are known, store lookups, the AI Task entity, and which group each kind goes to
+  _categoriesCard() {
+    const c = this._config.categories;
     if (!c) return "";
     const groups = (this._config.groups || []).filter((g) => g.id !== "all");
     const names = { other: "Other", ...Object.fromEntries(groups.map((g) => [g.id, g.name])) };
-    const status = c.keys
-      ? `${c.keys} app keys${c.issued ? `, published ${esc(new Date(c.issued).toLocaleDateString())}` : ""}${c.origin === "bundled" ? " (the copy Hearth came with)" : ""}`
-      : "No copy yet";
-    const ask = !c.share && !c.asked
-      ? `<p class="muted">Share with App facts? What Hearth sends: names and store ids of public apps (Microsoft Store, Xbox, Steam, Switch) the list lacks, and corrections you choose to share; never who uses them, no usage or times, never chat, health, money or sign-in apps. Once a week.</p>
-        <div class="actions"><button class="btn" data-action="catalog-share-no">Not now</button><button class="btn primary" data-action="catalog-share-on">Turn on</button></div>`
-      : `<label class="check"><input type="checkbox" data-change="catalog-share" ${c.share ? "checked" : ""}> Share with App facts</label>
-        ${c.share ? `<div class="muted small">Waiting for the weekly send: ${c.waiting?.keys || 0} apps, ${c.waiting?.corrections || 0} corrections</div>` : ""}`;
+    const n = c.sources || {};
+    const counts = [["override", "set by you"], ["starter", "from Hearth's list"], ["store", "from their store"], ["ai", "AI guesses"], ["unknown", "not known"]]
+      .filter(([k]) => n[k]).map(([k, label]) => `${n[k]} ${label}`).join(", ");
+    const ais = c.ai_entities || [];
     return `<section class="card">
-      <h3><ha-icon icon="mdi:book-open-variant"></ha-icon>App facts</h3>
-      <p class="muted">A public list of what apps are (a game, YouTube, streaming, a companion app) on phones, TVs, Xbox, Windows and Switch, so new apps land in the right group. Fetching it sends nothing.</p>
-      <label class="check"><input type="checkbox" data-change="catalog-fetch" ${c.fetch ? "checked" : ""}> Fetch App facts</label>
-      <div class="muted small">${status}${c.error ? ` · last try: ${esc(c.error)}` : ""}</div>
-      ${ask}
+      <h3><ha-icon icon="mdi:shape-outline"></ha-icon>App categories</h3>
+      <p class="muted">What each app is (a game, YouTube, streaming, a companion app) decides its group unless you moved it. Hearth knows ${c.starter || 0} apps from its own list. When a kid first uses one it doesn't know, it can look the app's genre up in its store: that sends the app's public store id to Google Play, the Microsoft Store or Steam, and nothing else. Your choice always wins.</p>
+      ${counts ? `<div class="muted small">Apps here: ${esc(counts)}${c.waiting ? ` · ${c.waiting} waiting to be looked up` : ""}</div>` : ""}
+      <label class="check"><input type="checkbox" data-change="category-lookup" ${c.lookup ? "checked" : ""}> Look new apps up in their store</label>
+      <label class="field">Ask an AI when the store doesn't say
+        <select data-change="category-ai" aria-label="AI Task entity">
+          <option value="" ${c.ai_entity ? "" : "selected"}>No AI</option>
+          ${ais.map((e) => `<option value="${esc(e)}" ${c.ai_entity === e ? "selected" : ""}>${esc(this._hass?.states?.[e]?.attributes?.friendly_name || e)}</option>`).join("")}
+        </select></label>
+      <div class="muted small">${ais.length ? "An AI Task entity (a local model works) gets the app's name, store id and the store's one-line description. Its answer is only a guess: it never puts an app in Messaging or Accessibility." : "No AI Task entity is set up in Home Assistant."}</div>
       <details><summary>Which group each kind of app goes to</summary>
         <ul class="list compact">${(c.values || [])
-          .map((v) => `<li><div class="grow">${esc(v)}</div><select data-change="catalog-pool" data-value="${esc(v)}" aria-label="${esc(v)}">
+          .map((v) => `<li><div class="grow">${esc(c.labels?.[v] || v)}</div><select data-change="category-pool" data-value="${esc(v)}" aria-label="${esc(v)}">
             <option value="" ${c.own_pools?.[v] ? "" : "selected"}>Hearth's default (${esc(names[c.pools?.[v]] || "Other")})</option>
             ${groups.map((g) => `<option value="${esc(g.id)}" ${c.own_pools?.[v] === g.id ? "selected" : ""}>${esc(g.name)}</option>`).join("")}
             <option value="other" ${c.own_pools?.[v] === "other" ? "selected" : ""}>Other</option></select></li>`)
@@ -3408,20 +3440,27 @@ class HearthPanel extends HTMLElement {
     const cfg = this._config;
     const known = cfg.known_apps || {};
     const filter = this._appFilter || "";
-    const all = (cfg.apps || []).filter((a) => !this._testBuild(a.package)).filter((a) => !filter || a.name.toLowerCase().includes(filter) || a.package.includes(filter));
+    const source = this._appSource || "";
+    const all = (cfg.apps || []).filter((a) => !this._testBuild(a.package)).filter((a) => !filter || a.name.toLowerCase().includes(filter) || a.package.includes(filter))
+      .filter((a) => !source || a.source === source);
     const recent = (cfg.recent || []).filter((a) => !this._testBuild(a.package));
     const appsCards = `${this._checkTheseCard()}
       <section class="card">
         <h3><ha-icon icon="mdi:new-box"></ha-icon>Sorted lately</h3>
-        <p class="muted">New apps go to a group on their own: one that lists them, else their kind (games, video, social…; Messaging and Accessibility only when the shared catalog confirms it), else Other. Accessibility apps are never paused. System screens (the home screen, lock screen, keyboards) never count and are never paused; only Hearth's list, App Facts' curated list or your move puts an app there. If one landed wrong, move it; your choice always wins.</p>
+        <p class="muted">New apps go to a group on their own: one that lists them, else what they are (games, video, social…; Messaging and Accessibility only from Hearth's list or your choice, never a guess), else Other. Accessibility apps are never paused. System screens (the home screen, lock screen, keyboards) never count and are never paused; only Hearth's list or your choice puts an app there. If one landed wrong, move it or say what it is; your choice always wins.</p>
         ${recent.length ? `<ul class="list compact">${recent.map((a) => this._appRow(a, `${a.who ? ` · ${esc(a.who)}` : ""} · ${esc(new Date(a.seen).toLocaleDateString())}`)).join("")}</ul>` : `<p class="muted small">Nothing new lately.</p>`}
       </section>
       <section class="card">
         <h3><ha-icon icon="mdi:apps"></ha-icon>Every app</h3>
-        <input id="app-filter" class="filter" placeholder="Find an app" value="${esc(this._appFilter || "")}">
+        <div class="inline"><input id="app-filter" class="filter" placeholder="Find an app" value="${esc(this._appFilter || "")}">
+          <select data-change="app-source" aria-label="Show">
+            ${[["", "Every app"], ["ai", "AI guesses"], ["unknown", "Not known"], ["store", "From their store"], ["starter", "From Hearth's list"], ["override", "Set by you"]]
+              .map(([v, label]) => `<option value="${v}" ${source === v ? "selected" : ""}>${label}</option>`).join("")}
+          </select></div>
         <ul class="list compact">${all.slice(0, 200).map((a) => this._appRow(a)).join("") || `<li class="muted small">No apps match.</li>`}</ul>
         ${all.length > 200 ? `<p class="muted small">Showing 200 of ${all.length}: narrow it down above.</p>` : ""}
-      </section>`;
+      </section>
+      ${this._categoriesCard()}`;
     const datalist = `<datalist id="known-apps">${Object.entries(known)
       .map(([pkg, name]) => `<option value="${esc(pkg)}">${esc(name)}</option>`)
       .join("")}</datalist>`;
@@ -3511,7 +3550,6 @@ class HearthPanel extends HTMLElement {
       ${this._summary ? this._familyPools(this._kids()) : ""}
       ${this._pinsCard()}
       ${this._sharingCard()}
-      ${this._catalogCard()}
       ${this._voiceCard()}
       ${this._schoolCard()}
       ${this._placesCard()}

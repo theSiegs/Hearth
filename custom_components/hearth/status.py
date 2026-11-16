@@ -158,7 +158,7 @@ def clean_status(raw: Any) -> dict[str, Any] | None:
     status["profile_ref"] = _ref(raw.get("profile_ref"))
     status["app_categories"] = _categories(raw.get("app_categories"))
     # Contract 3: the client app (its id is checked against the one locked at pairing) and its own checks, shown as
-    # given (client.py). catalog_categories is no longer read: Hearth fetches the shared app catalog itself
+    # given (client.py). catalog_categories is no longer read: Hearth knows app categories itself (categories.py)
     from .client import clean_checks, clean_client
 
     status["client"] = clean_client(raw.get("client"))

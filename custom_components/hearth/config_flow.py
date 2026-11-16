@@ -50,7 +50,7 @@ from .const import (
 )
 from .counting import ALL
 from .limits import BUILTIN_GROUPS, CONF_POOLS, GAMES, POOLS_VERSION, one_pool_per_app, slug
-from .catalog import CONF_CATALOG_ASKED, CONF_CATALOG_FETCH, CONF_CATALOG_SHARE
+from .categories import CONF_CATEGORY_AI, CONF_CATEGORY_LOOKUP
 from .apps import CONF_APP_WATCH, CONF_ASK_NOTIFY, OTHER, options_with_app_in_group, update_notification
 from .enforce import (
     CONF_ENFORCE,
@@ -178,7 +178,7 @@ class HearthOptionsFlow(OptionsFlow):
                 "not_screen_time",
                 "remove_group",
                 "share_app_data",
-                "app_catalog",
+                "app_categories",
                 "voice_assistants",
                 "parent_pin",
                 "push",
@@ -296,27 +296,29 @@ class HearthOptionsFlow(OptionsFlow):
         )
         return self.async_show_form(step_id="share_app_data", data_schema=schema)
 
-    async def async_step_app_catalog(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Hearth's setting for the shared app catalog (catalog.py): fetching it (on by default; it
-        sends nothing) and sending it public store ids and the corrections an adult shares (off until turned on).
-        Options are for Home Assistant's administrators only, as the page is."""
+    async def async_step_app_categories(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Hearth's settings for app categories (categories.py): looking a new app's genre up in its store (on by
+        default; it sends the app's public store id and nothing else) and the AI Task entity asked when that's unclear
+        (none by default). Options are for Home Assistant's administrators only, as the page is."""
         options = self._options()
         if user_input is not None:
             return self.async_create_entry(
                 data={
                     **options,
-                    CONF_CATALOG_FETCH: bool(user_input.get("fetch", True)),
-                    CONF_CATALOG_SHARE: bool(user_input.get("share", False)),
-                    CONF_CATALOG_ASKED: True,
+                    CONF_CATEGORY_LOOKUP: bool(user_input.get("lookup", True)),
+                    CONF_CATEGORY_AI: user_input.get("ai_task") or None,
                 }
             )
+        ai = options.get(CONF_CATEGORY_AI)
         schema = vol.Schema(
             {
-                vol.Optional("fetch", default=options.get(CONF_CATALOG_FETCH, True) is not False): BooleanSelector(),
-                vol.Optional("share", default=bool(options.get(CONF_CATALOG_SHARE))): BooleanSelector(),
+                vol.Optional("lookup", default=options.get(CONF_CATEGORY_LOOKUP, True) is not False): BooleanSelector(),
+                vol.Optional("ai_task", **({"description": {"suggested_value": ai}} if ai else {})): EntitySelector(
+                    EntitySelectorConfig(domain="ai_task")
+                ),
             }
         )
-        return self.async_show_form(step_id="app_catalog", data_schema=schema)
+        return self.async_show_form(step_id="app_categories", data_schema=schema)
 
     async def async_step_voice_assistants(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Voice assistants may use Hearth (llm_api.py): calls without a Home Assistant user (a voice satellite) get

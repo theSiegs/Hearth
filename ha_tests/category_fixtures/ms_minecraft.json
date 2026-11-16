@@ -1,0 +1,33 @@
+{
+ "Products": [
+  {
+   "ProductId": "9NBLGGH2JHXJ",
+   "ProductKind": "Game",
+   "AlternateIds": [
+    {
+     "IdType": "LegacyWindowsStoreProductId",
+     "Value": "d25480ca-36aa-46e6-b76b-39608d49558c"
+    },
+    {
+     "IdType": "XboxTitleId",
+     "Value": "896928775"
+    }
+   ],
+   "LocalizedProperties": [
+    {
+     "ProductTitle": "Minecraft for Windows",
+     "ShortDescription": "Explore randomly generated worlds and build amazing things from the simplest of homes to the grandest of castles.\r\n"
+    }
+   ],
+   "Properties": {
+    "Category": "Action & adventure",
+    "Categories": [
+     "Action & adventure",
+     "Family & kids",
+     "Simulation"
+    ],
+    "PackageFamilyName": "Microsoft.MinecraftUWP_8wekyb3d8bbwe"
+   }
+  }
+ ]
+}

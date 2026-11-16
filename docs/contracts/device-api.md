@@ -47,8 +47,8 @@ on Hearth's page, and they're kept with the device when they approve. The approv
 - Routes the client's settings ([client-settings.md](client-settings.md)).
 - **Never paused**: the locked id and companions of every device paired for a person are never paused for that
   person by Hearth's Family Link holds (budgets, School time, an adult's pause, the weekly schedule). Except: an id
-  that the household or the shared app catalog put in a pool (an adult's move or list, Hearth's own lists, App facts'
-  answer) is held like any other app. The client's own category for itself doesn't count as putting it in a pool.
+  that the household or what it is put in a pool (an adult's move, list or answer, Hearth's own lists, Hearth's app
+  categories) is held like any other app. The client's own category for itself doesn't count as putting it in a pool.
 - Shows it on the device's row.
 
 A later status post that names another `id` changes nothing: the new id isn't exempt and doesn't route settings.
@@ -104,7 +104,7 @@ own sharing off for that person. It's in the device path and in `hearth/me` alik
 
 ### `catalog_categories` is no longer read
 
-Hearth fetches the shared app catalog itself ([app-facts.md](app-facts.md)). A device may still send
+Hearth knows app categories itself ([app-facts.md](app-facts.md), retired). A device may still send
 `app_categories` (Android's own category per package).
 
 ### Usage Hearth doesn't count

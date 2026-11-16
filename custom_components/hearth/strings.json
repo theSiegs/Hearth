@@ -151,7 +151,7 @@
           "not_screen_time": "Not screen time",
           "remove_group": "Remove a group",
           "share_app_data": "Sharing app data",
-          "app_catalog": "App facts",
+          "app_categories": "App categories",
           "voice_assistants": "Voice assistants",
           "parent_pin": "Parent PINs",
           "push": "Push to phones (ntfy)",
@@ -215,12 +215,12 @@
           "people": "People"
         }
       },
-      "app_catalog": {
-        "title": "App facts",
-        "description": "A public list of what apps are (a game, YouTube, streaming, a companion app) on phones, TVs, Xbox, Windows and Switch, so new apps land in the right pool. Fetching it sends nothing. Sharing sends, once a week, the names and store ids of public apps (Microsoft Store, Xbox, Steam, Switch) the list lacks and the corrections you choose to share; never who uses them, no usage, no times, never chat, health, money or sign-in apps.",
+      "app_categories": {
+        "title": "App categories",
+        "description": "Hearth knows what many apps are (a game, YouTube, streaming, a companion app) from its starter list. When a kid first uses an app it doesn't know, Hearth can look the app's genre up in its store (Google Play, Microsoft Store, Steam): that sends the app's public store id and nothing else. When the genre is unclear, an AI Task entity you choose (a local model works) can be asked; its answer is only a guess and never puts an app in Messaging or Accessibility. Your own choice on Hearth's page always wins.",
         "data": {
-          "fetch": "Fetch the shared app catalog",
-          "share": "Share with the shared app catalog"
+          "lookup": "Look new apps up in their store",
+          "ai_task": "AI Task entity to ask (none: no AI)"
         }
       },
       "voice_assistants": {

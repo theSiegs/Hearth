@@ -3,7 +3,7 @@
 The integration keeps a catalog of every app it has seen: from the screen time the devices report and from the app
 lists the household chose to watch (Family Link's allowed apps, say). The first time it looks at a source (a device, a
 list), everything already there is taken as known. After that, an app it hasn't seen before goes, with nobody asked,
-where the household places it (limits.placer: a group that lists it, the shared app catalog, its own category, and so
+where the household places it (limits.placer: a group that lists it, what it is (categories.py), its own category, and so
 on), else Other; Hearth's page shows the ones sorted lately, and an adult moves one there (options "app_groups",
 which beats every list and category).
 """
