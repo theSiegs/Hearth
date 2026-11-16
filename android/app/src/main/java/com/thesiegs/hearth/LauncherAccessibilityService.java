@@ -1600,7 +1600,11 @@ public class LauncherAccessibilityService extends AccessibilityService {
         if (event != null) reportScreenTimeText(className, event, wellbeing);
         if (isProfileLock(className)) mProfileLockSeenAt = SystemClock.elapsedRealtime();
         // Google TV's PIN screen: its owner may allow the switch from their phone instead (PhoneApproval)
-        if (GOOGLE_TV_REAUTH_ACTIVITY.equals(className)) mHandler.postDelayed(() -> PhoneApproval.onPinScreen(this), 500);
+        if (GOOGLE_TV_REAUTH_ACTIVITY.equals(className)) {
+            // When it came up (uptime, as key events' times): the press that opened it isn't someone typing the PIN
+            long shownAt = event != null ? event.getEventTime() : SystemClock.uptimeMillis();
+            mHandler.postDelayed(() -> PhoneApproval.onPinScreen(this, shownAt), 500);
+        }
         if (isChooser(className)) {
             mHandler.removeCallbacks(mReadChooser);
             mHandler.postDelayed(mReadChooser, CHOOSER_READ_DELAY_MS);
@@ -2212,7 +2216,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             // Typing the PIN with the remote instead of waiting for the phone (keys Hearth types come from no device)
             if (!ProfilePairingService.isEnteringPin()) {
                 InputDevice device = event.getDevice();
-                PhoneApproval.onRemoteKey(this, event.getKeyCode(), event.getRepeatCount(),
+                PhoneApproval.onRemoteKey(this, event.getKeyCode(), event.getRepeatCount(), event.getDownTime(),
                         device == null ? "no device" : device.getName());
             }
         }

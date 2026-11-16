@@ -55,6 +55,75 @@ public class HouseholdBridgeTest {
             if (digits == null) pins(key).remove(item);
             else pins(key).put(item, digits);
         }
+
+        final Map<String, Map<String, String>> approvals = new HashMap<>();
+
+        @Override
+        public Map<String, String> approval(String key) {
+            return approvals.computeIfAbsent(key, k -> new HashMap<>());
+        }
+
+        @Override
+        public void setApproval(String key, String item, String value) {
+            writes++;
+            if (value == null) approval(key).remove(item);
+            else approval(key).put(item, value);
+        }
+    }
+
+    @Test
+    public void phoneApprovalIsPublishedAndTakenPerAdult() {
+        FakeTv here = new FakeTv().with("alex", "user:0");
+        here.approval("user:0").put(HouseholdBridge.APPROVAL_ON, "1");
+        here.approval("user:0").put(HouseholdBridge.APPROVAL_NOTIFY, "mobile_app_alex_phone");
+        HouseholdLog log = new HouseholdLog("tv-a");
+        Map<String, String[]> out = HouseholdBridge.unpublished(here, log);
+        assertEquals(2, out.size());
+        assertEquals("1", out.get("approval|alex|on")[3]);
+        assertEquals("mobile_app_alex_phone", out.get("approval|alex|notify")[3]);
+        for (String[] f : out.values()) log.put(f[0], f[1], f[2], f[3], T0);
+
+        // Another TV, where Alex's profile has another key, takes both
+        FakeTv there = new FakeTv().with("alex", "user:14");
+        HouseholdLog other = new HouseholdLog("tv-b");
+        for (HouseholdEntry e : log.all()) other.merge(e, T0);
+        assertEquals(2, HouseholdBridge.apply(there, other));
+        assertEquals("1", there.approval("user:14").get(HouseholdBridge.APPROVAL_ON));
+        assertEquals("mobile_app_alex_phone", there.approval("user:14").get(HouseholdBridge.APPROVAL_NOTIFY));
+        assertEquals(0, HouseholdBridge.apply(there, other));
+
+        // Turned off and the phone cleared on the first TV (later): the second follows, back to Home Assistant's phones
+        other.merge(log.put("approval", "alex", HouseholdBridge.APPROVAL_ON, "0", T0 + 1), T0);
+        other.merge(log.delete("approval", "alex", HouseholdBridge.APPROVAL_NOTIFY, T0 + 2), T0);
+        assertEquals(2, HouseholdBridge.apply(there, other));
+        assertEquals("0", there.approval("user:14").get(HouseholdBridge.APPROVAL_ON));
+        assertNull(there.approval("user:14").get(HouseholdBridge.APPROVAL_NOTIFY));
+    }
+
+    @Test
+    public void theNewestApprovalWriteWins() {
+        HouseholdLog a = new HouseholdLog("tv-a");
+        HouseholdLog b = new HouseholdLog("tv-b");
+        HouseholdEntry older = a.put("approval", "alex", HouseholdBridge.APPROVAL_NOTIFY, "mobile_app_alex_phone", T0);
+        HouseholdEntry newer = b.put("approval", "alex", HouseholdBridge.APPROVAL_NOTIFY, "mobile_app_alex_tablet",
+                T0 + 1_000);
+        a.merge(newer, T0);
+        b.merge(older, T0);
+        assertEquals("mobile_app_alex_tablet", a.get("approval", "alex", HouseholdBridge.APPROVAL_NOTIFY).value);
+        assertEquals("mobile_app_alex_tablet", b.get("approval", "alex", HouseholdBridge.APPROVAL_NOTIFY).value);
+    }
+
+    @Test
+    public void junkApprovalIsNotApplied() {
+        FakeTv tv = new FakeTv().with("alex", "user:12");
+        HouseholdLog log = new HouseholdLog("tv-b");
+        HouseholdLog other = new HouseholdLog("tv-a");
+        log.merge(other.put("approval", "alex", HouseholdBridge.APPROVAL_ON, "yes", T0), T0);
+        log.merge(other.put("approval", "alex", HouseholdBridge.APPROVAL_NOTIFY, "persistent_notification", T0 + 1), T0);
+        log.merge(other.put("approval", "alex", "other", "1", T0 + 2), T0);
+        assertEquals(0, HouseholdBridge.apply(tv, log));
+        assertEquals(0, tv.writes);
+        assertTrue(HouseholdMembers.signs(HouseholdBridge.APPROVAL));
     }
 
     @Test

@@ -35,7 +35,8 @@ replaces both Copy profiles between TVs and Household sync.
 |---|---|---|
 | Members | household | the member list; see Members |
 | Profile Pairing | profile and streaming app | the chosen app profile, or "always ask" |
-| Streaming app PINs | profile and streaming app | secret |
+| Streaming app PINs | profile and streaming app | secret; an adult's Google TV PIN (for phone approval) too, never a kids profile's |
+| Phone approval | adult profile | on or off, and the phone chosen; signed; see below |
 | Look | profile | wallpaper kind and pictures, day/night picture, gradient, theme, clock/format choices |
 | Home layout | profile | the dock, rows, app order, hidden apps, per-profile panel choices |
 | Continue Watching | profile | Hearth TV's own watch history (see below) |
@@ -186,6 +187,18 @@ network now that has no state entry and no ticket from the last five minutes, an
 (item that TV's id, value `{"url", "ticket"}`). That TV redeems it (`/api/hearth/pair/redeem`), keeps its own secret,
 and deletes the entry; a refused ticket is deleted too, and a paired TV makes another. Tickets leave the log after ten
 minutes (HouseholdHa).
+
+**Phone approval.** An adult's "Approve switches from my phone" (PhoneApproval) follows them to every TV: kind
+`approval`, the person as for PINs, item `on` (value `1` or `0`) and item `notify` (the companion app's notify service
+they chose, `mobile_app_…`; deleted when they go back to no phone chosen). Each item is written when it's changed on a
+TV, and one set on a TV before it joined goes out only when the household has none; the newest write of each item
+wins. The entries are signed like the member list and the Parent PIN (they say which phone may let someone into a
+profile), so only a listed TV can change them. A kids profile's are never written nor taken. The Google TV PIN that
+Hearth types once the phone allows it is a saved PIN (`pin`, item `<Google TV's package>|#google-tv-pin`) and already
+syncs with the streaming app PINs, never for a kids profile. With no phone chosen, a TV paired with the Hearth
+integration asks the phones Home Assistant has for the profile's person (see
+[home-assistant.md](home-assistant.md#approve-switches-from-a-phone)); a phone chosen on any TV wins over those. Without
+Home Assistant there is no phone to ask: the settings still sync, for when it's set up.
 
 **Screen time without Home Assistant.** A kid's own rules (Settings > Family > Kids profiles > the kid > Screen time:
 minutes a day for All screen time, Games and YouTube, weekdays and weekends, and a bedtime) are one `rules` entry per
@@ -552,11 +565,12 @@ What a TV checks before it takes part or takes something, and what that guards a
   A request ends when the asking TV hangs up, and one address asking again and again waits longer each time. Its
   buttons answer only while an adult's profile is on: a kids profile's Bell never lists it, and the Bell refuses an
   answer sent while a kids profile is on.
-- **Member, removal and Parent PIN entries are signed.** Each carries its writer's signature (ECDSA with its TV key,
-  over every field of the entry: kind, person, item, value, clock, writer and sequence). A TV takes one only when its
-  writer is on its member list at that moment (not unknown, not removed) and the signature checks against the writer's
-  listed key. So a TV that was removed, or never admitted, can't add, remove or rename TVs or change the Parent PIN,
-  even through a TV that hasn't heard of the removal; and a member can't write those in another member's name.
+- **Member, removal, Parent PIN and phone approval entries are signed.** Each carries its writer's signature (ECDSA
+  with its TV key, over every field of the entry: kind, person, item, value, clock, writer and sequence). A TV takes one
+  only when its writer is on its member list at that moment (not unknown, not removed) and the signature checks against
+  the writer's listed key. So a TV that was removed, or never admitted, can't add, remove or rename TVs, change the
+  Parent PIN or point an adult's phone approval at another phone, even through a TV that hasn't heard of the removal;
+  and a member can't write those in another member's name.
 - **Admissions.** A `member` entry must hold the key its TV id was made from, and one for another TV (an admission)
   must name its writer as the TV that added it. So every TV on the list shows which member added it, and an admission
   can't be put in another member's name. What it can't stop: a TV that is a member, while it is one, can list a key of

@@ -28,7 +28,14 @@ import java.util.concurrent.Executors;
  * while waiting, so typing the PIN still works.
  *
  * Settings are per profile (each adult sets their own, from their profile): on/off and the notify service; the PIN
- * is in PinVault under the profile's key.
+ * is in PinVault under the profile's key. The settings follow the adult to the household's other TVs (Household,
+ * kind "approval", signed); the PIN does too, as a saved PIN. With no phone chosen, a TV paired with the Hearth
+ * integration asks the companion apps of the person Home Assistant maps the profile to (the state document's
+ * {@code adult_phones}); a phone chosen on any TV wins over those.
+ *
+ * Paired with the Hearth integration, the integration does the asking (switch_approval.py: it sends, hears the first
+ * answer and clears the phones) and this TV reads the outcome, so no Home Assistant token is needed here; otherwise
+ * the TV asks with its own token and listens on Home Assistant's WebSocket.
  */
 final class PhoneApproval {
     private static final String TAG = "HearthApproval";
@@ -38,25 +45,44 @@ final class PhoneApproval {
     private static final String TAG_PREFIX = "hearth-approval-";
     /** How long a phone has to answer. */
     static final long ANSWER_MS = 120_000;
+    /**
+     * After the PIN screen comes up, how long the arrows, OK, Back and Delete don't count as someone using it: the OK
+     * that picked the profile on the chooser (its key-up, a repeat, or a second press of a laggy remote) lands about
+     * then. A digit always counts.
+     */
+    static final long GRACE_MS = 2_000;
+    /** Home Assistant's phones for each adult profile (the state document's adult_phones), as JSON. */
+    private static final String HA_PREFS = "phone_approval_ha";
+    private static final String HA_PHONES = "adult_phones";
     private static final ExecutorService WORKER = Executors.newCachedThreadPool();
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
 
-    /** The request waiting for an answer, if any (main thread). */
-    private static Request sPending;
+    /** The request waiting for an answer, if any (set on the main thread; the integration's wait reads it). */
+    private static volatile Request sPending;
 
     static final class Request {
         final String key;
         final String name;
         final String nonce;
+        /** The phones asked (their notify services), cleared the same when it ends. */
+        final List<String> services;
+        /** When Google TV's PIN screen came up, in uptime (as key events' times). */
+        final long pinShownAt;
         final long at = SystemClock.elapsedRealtime();
-        /** Its wait for the phone's answer (main thread). */
+        /** Its wait for the phone's answer (main thread), on the TV's own token's path. */
         HaEventSession.Waiter waiter;
+        /** Asked through the Hearth integration (it sends, hears and clears), not with the TV's own token. */
+        volatile boolean viaIntegration;
+        /** The integration's id for it, once it took it. */
+        volatile String remoteId;
 
-        Request(String key, String name, String nonce) {
+        Request(String key, String name, String nonce, List<String> services, long pinShownAt) {
             this.key = key;
             this.name = name;
             this.nonce = nonce;
+            this.services = services;
+            this.pinShownAt = pinShownAt;
         }
     }
 
@@ -71,36 +97,122 @@ final class PhoneApproval {
         return key != null && prefs(context).getBoolean(key + "|on", false);
     }
 
+    /** Turned on or off here by the profile's owner: the household's other TVs take it. */
     static void setOn(Context context, String key, boolean on) {
-        prefs(context).edit().putBoolean(key + "|on", on).apply();
+        if (key == null) return;
+        putSynced(context, key, HouseholdBridge.APPROVAL_ON, on ? "1" : "0");
+        Household.onApprovalChanged(context, key, HouseholdBridge.APPROVAL_ON);
     }
 
-    /** The Home Assistant notify service that reaches this profile's owner ("mobile_app_alex_phone"), or null. */
+    /** The notify service the profile's owner chose ("mobile_app_alex_phone"), or null (none chosen). */
     static String notifyService(Context context, String key) {
         return key == null ? null : prefs(context).getString(key + "|notify", null);
     }
 
+    /** Chosen here by the profile's owner (null: none, Home Assistant's phones apply): the other TVs take it. */
     static void setNotifyService(Context context, String key, String service) {
-        if (service == null || !isNotifyService(service)) {
-            prefs(context).edit().remove(key + "|notify").apply();
+        if (key == null) return;
+        putSynced(context, key, HouseholdBridge.APPROVAL_NOTIFY, isNotifyService(service) ? service : null);
+        Household.onApprovalChanged(context, key, HouseholdBridge.APPROVAL_NOTIFY);
+    }
+
+    /** The settings that sync for a profile, as household items (HouseholdBridge.APPROVAL): only those set here. */
+    static java.util.Map<String, String> synced(Context context, String key) {
+        java.util.Map<String, String> out = new java.util.HashMap<>();
+        if (key == null) return out;
+        SharedPreferences prefs = prefs(context);
+        if (prefs.contains(key + "|on")) out.put(HouseholdBridge.APPROVAL_ON, prefs.getBoolean(key + "|on", false) ? "1" : "0");
+        String service = prefs.getString(key + "|notify", null);
+        if (service != null) out.put(HouseholdBridge.APPROVAL_NOTIFY, service);
+        return out;
+    }
+
+    /** Saves one synced setting without publishing it (the household's, or the caller publishes); null clears it. */
+    static void putSynced(Context context, String key, String item, String value) {
+        if (key == null) return;
+        SharedPreferences.Editor editor = prefs(context).edit();
+        if (HouseholdBridge.APPROVAL_ON.equals(item)) {
+            if ("1".equals(value) || "0".equals(value)) editor.putBoolean(key + "|on", "1".equals(value));
+            else editor.remove(key + "|on");
+        } else if (HouseholdBridge.APPROVAL_NOTIFY.equals(item)) {
+            if (isNotifyService(value)) editor.putString(key + "|notify", value);
+            else editor.remove(key + "|notify");
         } else {
-            prefs(context).edit().putString(key + "|notify", service).apply();
+            return;
         }
+        editor.apply();
     }
 
     /** Only a companion app's notify service: what a phone's actionable notifications go through. */
     static boolean isNotifyService(String service) {
-        return service != null && service.matches("mobile_app_[a-z0-9_]{1,100}");
+        return HouseholdBridge.isNotifyService(service);
+    }
+
+    /**
+     * Takes the Hearth integration's phones for each adult profile from its state document ({@code adult_phones}:
+     * {profile key: [notify service, ...]}); none in the document: none.
+     */
+    static void applyHaDocument(Context context, JSONObject state) {
+        if (state == null) return;
+        JSONObject phones = state.optJSONObject(HA_PHONES);
+        SharedPreferences.Editor editor = context.getSharedPreferences(HA_PREFS, Context.MODE_PRIVATE).edit();
+        if (phones == null || phones.length() == 0) editor.remove(HA_PHONES);
+        else editor.putString(HA_PHONES, phones.toString());
+        editor.apply();
+    }
+
+    /** Home Assistant's phones for this profile's person (while the TV is paired with the integration); maybe empty. */
+    static List<String> haPhones(Context context, String key) {
+        if (key == null || !HaIntegration.isPaired(context)) return new ArrayList<>();
+        return phonesIn(context.getSharedPreferences(HA_PREFS, Context.MODE_PRIVATE).getString(HA_PHONES, null), key);
+    }
+
+    /** The notify services {@code json} (adult_phones) lists for {@code key}, companion apps' only, once each. */
+    static List<String> phonesIn(String json, String key) {
+        List<String> out = new ArrayList<>();
+        if (json == null || key == null) return out;
+        try {
+            JSONArray services = new JSONObject(json).optJSONArray(key);
+            for (int i = 0; services != null && i < services.length(); i++) {
+                String service = services.optString(i, "");
+                if (isNotifyService(service) && !out.contains(service)) out.add(service);
+            }
+        } catch (Exception ignored) {
+            // None
+        }
+        return out;
+    }
+
+    /** The phones that are asked for this profile: the one its owner chose (on any TV), else Home Assistant's. */
+    static List<String> phones(Context context, String key) {
+        return choose(notifyService(context, key), haPhones(context, key));
+    }
+
+    /** A chosen phone wins over Home Assistant's. */
+    static List<String> choose(String chosen, List<String> fromHa) {
+        if (isNotifyService(chosen)) {
+            List<String> out = new ArrayList<>();
+            out.add(chosen);
+            return out;
+        }
+        return fromHa;
     }
 
     static boolean hasPin(Context context, String key) {
         return PinVault.has(context, key, LauncherAccessibilityService.GOOGLE_TV_PACKAGE, GooglePinRecipe.VAULT_NAME);
     }
 
-    /** Everything this profile needs for an approval: Home Assistant, the switch, a phone and the PIN. */
+    /**
+     * Everything this profile needs for an approval: a way to Home Assistant (the Hearth integration, or the TV's own
+     * address and token), the switch, a phone and the PIN.
+     */
     static boolean isReady(Context context, String key) {
-        return HaConfig.isConfigured(context) && isOn(context, key) && notifyService(context, key) != null
-                && hasPin(context, key);
+        return canAsk(context) && isOn(context, key) && !phones(context, key).isEmpty() && hasPin(context, key);
+    }
+
+    /** A way to ask a phone: paired with the Hearth integration, or the TV's own Home Assistant token. */
+    static boolean canAsk(Context context) {
+        return HaIntegration.isPaired(context) || HaConfig.isConfigured(context);
     }
 
     /** The companion apps' notify services Home Assistant has ({service, name}), for Settings; empty when unreachable. */
@@ -122,26 +234,29 @@ final class PhoneApproval {
         return out;
     }
 
-    /** A plain notification to the chosen phone, so its owner knows it reaches them. False when it couldn't be sent. */
+    /** A plain notification to the profile's phones, so its owner knows it reaches them. False when none got it. */
     static boolean sendTest(Context context, String key) {
-        String service = notifyService(context, key);
-        if (service == null) return false;
-        try {
-            return HaApi.callService(context, "notify", service, new JSONObject()
-                    .put("title", context.getString(R.string.approval_test_title))
-                    .put("message", context.getString(R.string.approval_test_message)));
-        } catch (Exception e) {
-            return false;
+        boolean sent = false;
+        for (String service : phones(context, key)) {
+            try {
+                sent |= HaApi.callService(context, "notify", service, new JSONObject()
+                        .put("title", context.getString(R.string.approval_test_title))
+                        .put("message", context.getString(R.string.approval_test_message)));
+            } catch (Exception e) {
+                // The next phone
+            }
         }
+        return sent;
     }
 
     /**
      * Google TV's PIN screen came up (LauncherAccessibilityService, main thread). Works out whose it is from the account
-     * address it shows, off the main thread, and asks that person's phone if they have this on.
+     * address it shows, off the main thread, and asks that person's phone if they have this on. {@code shownAt}: when
+     * the screen came up, in uptime.
      */
-    static void onPinScreen(LauncherAccessibilityService service) {
+    static void onPinScreen(LauncherAccessibilityService service, long shownAt) {
         Context context = service.getApplicationContext();
-        if (!HaConfig.isConfigured(context)) return;
+        if (!canAsk(context)) return;
         AccessibilityNodeInfo root = service.getRootInActiveWindow();
         if (root == null) return;
         WORKER.execute(() -> {
@@ -150,7 +265,7 @@ final class PhoneApproval {
             String key = profileOnScreen(context, texts);
             if (key == null || !isReady(context, key)) return;
             String name = ProfileUsers.displayName(context, key);
-            MAIN.post(() -> ask(context, key, name));
+            MAIN.post(() -> ask(context, key, name, shownAt));
         });
     }
 
@@ -178,23 +293,110 @@ final class PhoneApproval {
     }
 
     /** Sends the request once its answer can be heard, then waits for it (main thread). */
-    private static void ask(Context context, String key, String name) {
+    private static void ask(Context context, String key, String name, long shownAt) {
         Request pending = sPending;
         // The same profile's screen again (Google redraws it): still the same request
         if (pending != null && pending.key.equals(key) && SystemClock.elapsedRealtime() - pending.at < ANSWER_MS) return;
         if (pending != null && pending.waiter != null) pending.waiter.close();
+        List<String> services = phones(context, key);
+        if (services.isEmpty()) return;
         byte[] bytes = new byte[8];
         RANDOM.nextBytes(bytes);
-        Request request = new Request(key, name, AgentAuth.hex(bytes));
+        Request request = new Request(key, name, AgentAuth.hex(bytes), services, shownAt);
         sPending = request;
-        String service = notifyService(context, key);
         Toast.makeText(context, context.getString(R.string.approval_asked, name), Toast.LENGTH_LONG).show();
-        Log.i(TAG, "Asking " + LogNames.key(key) + "'s phone to allow the switch");
+        request.viaIntegration = HaIntegration.isPaired(context);
+        Log.i(TAG, "Asking " + LogNames.key(key) + "'s phone to allow the switch"
+                + (notifyService(context, key) == null ? " (Home Assistant's phones for their person)" : "")
+                + (request.viaIntegration ? ", through the Hearth integration" : ""));
+        if (request.viaIntegration) {
+            askThroughIntegration(context, request);
+        } else {
+            askDirectly(context, request);
+        }
+    }
+
+    /**
+     * The Hearth integration sends the request, hears the answer and clears the phones (its switch_approval.py); this
+     * TV only reads the outcome. An integration from before it, or one out of reach, falls back to the TV's own token
+     * when it has one.
+     */
+    private static void askThroughIntegration(Context context, Request request) {
+        WORKER.execute(() -> {
+            HaIntegration.SwitchAnswer start = HaIntegration.startSwitchApproval(context, request.key,
+                    notifyService(context, request.key));
+            if (start.id == null) {
+                Log.i(TAG, "The Hearth integration didn't take the request: " + start.error);
+                boolean fallBack = ("unsupported".equals(start.error) || "unreachable".equals(start.error))
+                        && HaConfig.isConfigured(context);
+                MAIN.post(() -> {
+                    if (sPending != request) return;
+                    if (fallBack) {
+                        request.viaIntegration = false;
+                        askDirectly(context, request);
+                    } else {
+                        sPending = null;
+                    }
+                });
+                return;
+            }
+            request.remoteId = start.id;
+            Log.i(TAG, "The Hearth integration took the request");
+            // Withdrawn while it was being sent (the remote was used): off the phones
+            if (sPending != request) {
+                HaIntegration.withdrawSwitchApproval(context, start.id);
+                return;
+            }
+            String outcome = waitForIntegration(context, request, start.id);
+            if (HaIntegration.SWITCH_ALLOWED.equals(outcome) || HaIntegration.SWITCH_DENIED.equals(outcome)) {
+                boolean allowed = HaIntegration.SWITCH_ALLOWED.equals(outcome);
+                MAIN.post(() -> onAnswer(context, request, allowed));
+                return;
+            }
+            Log.i(TAG, "The phone's request ended without an answer (" + outcome + ")");
+            MAIN.post(() -> {
+                if (sPending == request) sPending = null;
+            });
+        });
+    }
+
+    /** Reads the integration's request until it's answered, ends, or this TV stops waiting (a worker thread). */
+    private static String waitForIntegration(Context context, Request request, String id) {
+        long until = SystemClock.elapsedRealtime() + ANSWER_MS + 15_000;
+        int failures = 0;
+        while (sPending == request && SystemClock.elapsedRealtime() < until) {
+            HaIntegration.SwitchAnswer read = HaIntegration.readSwitchApproval(context, id, 25);
+            if (read.status == null) {
+                if ("gone".equals(read.error) || "not_paired".equals(read.error) || ++failures > 10) {
+                    return read.error;
+                }
+                // Out of reach for a moment (Home Assistant restarting): try again shortly
+                try {
+                    Thread.sleep(2_000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return "interrupted";
+                }
+                continue;
+            }
+            failures = 0;
+            if (!HaIntegration.SWITCH_PENDING.equals(read.status)) return read.status;
+        }
+        return sPending == request ? "timeout" : "stopped";
+    }
+
+    /** With the TV's own token: sends the request once its answer can be heard, then waits for it (main thread). */
+    private static void askDirectly(Context context, Request request) {
         request.waiter = HaBridgeService.events(context).await(ANSWER_MS, new HaEventSession.Listener() {
             @Override
             public void onOpen(HaEventSession.Waiter waiter) {
-                if (sendRequest(context, service, request)) {
-                    Log.i(TAG, "Home Assistant took the request for " + LogNames.of(service));
+                if (sendRequest(context, request)) {
+                    StringBuilder names = new StringBuilder();
+                    for (String service : request.services) {
+                        if (names.length() > 0) names.append(", ");
+                        names.append(LogNames.of(service));
+                    }
+                    Log.i(TAG, "Home Assistant took the request for " + names);
                 } else {
                     Log.i(TAG, "Couldn't send the request to the phone");
                     waiter.close();
@@ -213,28 +415,36 @@ final class PhoneApproval {
                 MAIN.post(() -> {
                     if (sPending == request) {
                         sPending = null;
-                        clearOnPhone(context, service, request);
+                        clearOnPhone(context, request);
                     }
                 });
             }
         });
     }
 
-    private static boolean sendRequest(Context context, String service, Request request) {
-        try {
-            boolean sent = HaApi.callService(context, "notify", service, new JSONObject()
-                    .put("title", context.getString(R.string.approval_title, request.name))
-                    .put("message", context.getString(R.string.approval_message))
-                    .put("data", pushData(context.getString(R.string.approval_allow),
-                            context.getString(R.string.approval_deny), request.nonce)));
-            // Also inside Home Assistant, so someone who opens it (or a push that was dismissed) can see the request
-            if (sent) {
-                HaApi.callService(context, "persistent_notification", "create", persistentNotification(context, request));
+    /** The request to each of its phones (the first answer decides); true when at least one took it. */
+    private static boolean sendRequest(Context context, Request request) {
+        boolean sent = false;
+        for (String service : request.services) {
+            try {
+                sent |= HaApi.callService(context, "notify", service, new JSONObject()
+                        .put("title", context.getString(R.string.approval_title, request.name))
+                        .put("message", context.getString(R.string.approval_message))
+                        .put("data", pushData(context.getString(R.string.approval_allow),
+                                context.getString(R.string.approval_deny), request.nonce)));
+            } catch (Exception e) {
+                // The next phone
             }
-            return sent;
-        } catch (Exception e) {
-            return false;
         }
+        // Also inside Home Assistant, so someone who opens it (or a push that was dismissed) can see the request
+        if (sent) {
+            try {
+                HaApi.callService(context, "persistent_notification", "create", persistentNotification(context, request));
+            } catch (Exception ignored) {
+                // The phones have it
+            }
+        }
+        return sent;
     }
 
     /**
@@ -273,24 +483,41 @@ final class PhoneApproval {
     /**
      * A remote key while a request waits (main thread): someone at the TV is using the PIN screen themselves, so the
      * phone's answer must not type over what they do. The request ends and its notification goes from the phone.
-     * Only a key someone presses on the PIN screen counts: a held key's repeats, and the keys a TV's own power and
-     * volume buttons or an HDMI-CEC device send, are not typing the PIN.
+     * Only a key someone presses on the PIN screen counts ({@link #endsRequest}): a held key's repeats, the keys a
+     * TV's own power and volume buttons or an HDMI-CEC device send, and the press that picked the profile are not
+     * typing the PIN. {@code downTime}: when the press began, in uptime.
      */
-    static void onRemoteKey(Context context, int keyCode, int repeatCount, String device) {
+    static void onRemoteKey(Context context, int keyCode, int repeatCount, long downTime, String device) {
         Request request = sPending;
-        if (request == null || !isPinScreenKey(keyCode, repeatCount)) return;
+        if (request == null || !endsRequest(keyCode, repeatCount, downTime, request.pinShownAt)) return;
         sPending = null;
         if (request.waiter != null) request.waiter.close();
         Log.i(TAG, "The remote is in use on the PIN screen (key " + android.view.KeyEvent.keyCodeToString(keyCode)
-                + " from " + device + "): no longer asking the phone");
-        clearOnPhone(context, notifyService(context, request.key), request);
+                + " from " + device + ", " + (downTime - request.pinShownAt) + " ms after it came up): no longer asking"
+                + " the phone");
+        clearOnPhone(context, request);
+    }
+
+    /**
+     * Whether a key pressed at {@code downTime} (uptime) means someone is using the PIN screen that came up at
+     * {@code pinShownAt}: a first press of a key it takes ({@link #isPinScreenKey}) that began after it came up; a
+     * digit at once, the arrows, OK, Back and Delete only once {@link #GRACE_MS} has passed (the OK that picked the
+     * profile on the chooser, or a second press of it, lands in that time).
+     */
+    static boolean endsRequest(int keyCode, int repeatCount, long downTime, long pinShownAt) {
+        if (!isPinScreenKey(keyCode, repeatCount) || downTime < pinShownAt) return false;
+        return isDigit(keyCode) || downTime - pinShownAt >= GRACE_MS;
+    }
+
+    static boolean isDigit(int keyCode) {
+        return (keyCode >= android.view.KeyEvent.KEYCODE_0 && keyCode <= android.view.KeyEvent.KEYCODE_9)
+                || (keyCode >= android.view.KeyEvent.KEYCODE_NUMPAD_0 && keyCode <= android.view.KeyEvent.KEYCODE_NUMPAD_9);
     }
 
     /** A first press of a key the PIN screen takes: digits, the arrows, OK, Back, Delete. */
     static boolean isPinScreenKey(int keyCode, int repeatCount) {
         if (repeatCount != 0) return false;
-        if (keyCode >= android.view.KeyEvent.KEYCODE_0 && keyCode <= android.view.KeyEvent.KEYCODE_9) return true;
-        if (keyCode >= android.view.KeyEvent.KEYCODE_NUMPAD_0 && keyCode <= android.view.KeyEvent.KEYCODE_NUMPAD_9) return true;
+        if (isDigit(keyCode)) return true;
         switch (keyCode) {
             case android.view.KeyEvent.KEYCODE_DPAD_UP:
             case android.view.KeyEvent.KEYCODE_DPAD_DOWN:
@@ -306,12 +533,22 @@ final class PhoneApproval {
         }
     }
 
-    /** The notification goes from the phone, and from Home Assistant's own list, once the request is over. */
-    private static void clearOnPhone(Context context, String service, Request request) {
+    /**
+     * The notification goes from the phones, and from Home Assistant's own list, once the request is over. Through
+     * the integration: it clears them itself on an answer; a withdrawal tells it (harmless once it's over).
+     */
+    private static void clearOnPhone(Context context, Request request) {
+        if (request.viaIntegration) {
+            String id = request.remoteId;
+            if (id != null) WORKER.execute(() -> HaIntegration.withdrawSwitchApproval(context, id));
+            return;
+        }
         HaApi.EXECUTOR.execute(() -> {
             try {
-                HaApi.callService(context, "notify", service, new JSONObject().put("message", "clear_notification")
-                        .put("data", new JSONObject().put("tag", TAG_PREFIX + request.nonce)));
+                for (String service : request.services) {
+                    HaApi.callService(context, "notify", service, new JSONObject().put("message", "clear_notification")
+                            .put("data", new JSONObject().put("tag", TAG_PREFIX + request.nonce)));
+                }
                 HaApi.callService(context, "persistent_notification", "dismiss",
                         new JSONObject().put("notification_id", TAG_PREFIX + request.nonce));
             } catch (Exception e) {
@@ -324,7 +561,8 @@ final class PhoneApproval {
         if (sPending != request) return;
         sPending = null;
         if (request.waiter != null) request.waiter.close();
-        clearOnPhone(context, notifyService(context, request.key), request);
+        // The integration took it off the phones itself when it heard the answer
+        if (!request.viaIntegration) clearOnPhone(context, request);
         if (!allowed) {
             Log.i(TAG, LogNames.key(request.key) + " didn't allow the switch");
             Toast.makeText(context, context.getString(R.string.approval_denied, request.name), Toast.LENGTH_LONG).show();

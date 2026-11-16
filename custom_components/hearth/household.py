@@ -87,6 +87,7 @@ from .pause import PAUSE, SCHEDULE, app_pauses_of, end_pause, lock_kinds, lock_u
 from .places import Places, happened, matches
 from . import parent_pin
 from .media import media_rooms
+from .phones import person_phones
 from .profiles import REF_PREFIX, is_ref, split_tv_key, tv_key
 from .schooldays import SchoolDays
 from .live import LiveTracker, Observation, Together
@@ -1674,6 +1675,11 @@ class Household:
                 # ("person.sam"), and the TV finds that person's profile here
                 "people": {profile_id: person for profile_id, person in sorted(profiles.items()) if person},
             }
+            # Each adult profile's phones, by this TV's own keys: the notify services of their person's companion
+            # apps (phones.py person_phones), so phone approval reaches them without anyone picking a phone on the
+            # TV. A phone chosen on a TV (synced between the household's TVs) wins over these.
+            if adult_phones := self.adult_phones(profiles):
+                body["adult_phones"] = adult_phones
             # What the adults should see on this TV (attention items for TVs: the chosen suggestions), for a TV that
             # says it shows them; it shows each in its adult profiles only ("for" names one person, else every adult)
             if self.hub.has_cap(device_id, CAP_NOTICES):
@@ -1704,6 +1710,18 @@ class Household:
         body["version"] = hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()[:16]
         body["contract"] = CONTRACT
         return body
+
+    def adult_phones(self, profiles: dict[str, str]) -> dict[str, list[str]]:
+        """{profile_id: [notify service, ...]} for [profiles] (a TV's keys -> person) whose person is an adult on
+        Hearth's page and has a companion app; the services in person_phones' order."""
+        roles = self.options.get(CONF_ROLES, {})
+        out: dict[str, list[str]] = {}
+        for profile_id, person in sorted(profiles.items()):
+            if not person or roles.get(person) != "adult":
+                continue
+            if services := [service for service, _ in person_phones(self.hass, person)]:
+                out[profile_id] = services
+        return out
 
     def _phone_body(self, person: str | None, device_id: str | None = None) -> dict[str, Any]:
         """What a phone of [person]'s is told (without version and contract)."""

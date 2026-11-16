@@ -39,6 +39,14 @@ final class HouseholdBridge {
      * that TV writes it and its counts only grow, so the newest write is also the largest; every TV sums them.
      */
     static final String USAGE = "usage";
+    /**
+     * An adult's phone approval (PhoneApproval): item {@link #APPROVAL_ON} ("1" or "0") and item
+     * {@link #APPROVAL_NOTIFY} (the companion app's notify service they chose; deleted: none chosen, so Home
+     * Assistant's phones for their person apply). Signed by the writing TV; the newest write of each item wins.
+     */
+    static final String APPROVAL = "approval";
+    static final String APPROVAL_ON = "on";
+    static final String APPROVAL_NOTIFY = "notify";
     /** Where a wallpaper picture shows: always, by day, by night. */
     static final List<String> SLOTS = Arrays.asList("any", "day", "night");
     /** A look or layout's JSON may be this long; a layout with hundreds of apps is some 100 KB. */
@@ -62,6 +70,18 @@ final class HouseholdBridge {
 
         /** Saves a PIN; {@code digits} null removes it. */
         void setPin(String key, String item, String digits);
+
+        /**
+         * An adult profile's phone approval settings that are set here, as {@code item -> value} ({@link #APPROVAL});
+         * empty for a kids profile.
+         */
+        default Map<String, String> approval(String key) {
+            return new HashMap<>();
+        }
+
+        /** Sets one of them, without publishing it again; {@code value} null clears it. */
+        default void setApproval(String key, String item, String value) {
+        }
     }
 
     private HouseholdBridge() {
@@ -126,6 +146,11 @@ final class HouseholdBridge {
             for (Map.Entry<String, String> pin : local.pins(profile.getValue()).entrySet()) {
                 addIfNew(out, log, PIN, name, pin.getKey(), pin.getValue());
             }
+            for (Map.Entry<String, String> approval : local.approval(profile.getValue()).entrySet()) {
+                if (validApproval(approval.getKey(), approval.getValue())) {
+                    addIfNew(out, log, APPROVAL, name, approval.getKey(), approval.getValue());
+                }
+            }
         }
         for (Map.Entry<String, String> pin : local.pins(null).entrySet()) {
             addIfNew(out, log, PIN, SHARED, pin.getKey(), pin.getValue());
@@ -179,9 +204,31 @@ final class HouseholdBridge {
                     local.setPin(key, entry.item, entry.value);
                     changed++;
                 }
+            } else if (APPROVAL.equals(entry.kind) && key != null) {
+                String have = local.approval(key).get(entry.item);
+                if (entry.deleted) {
+                    if (have != null) {
+                        local.setApproval(key, entry.item, null);
+                        changed++;
+                    }
+                } else if (!entry.value.equals(have) && validApproval(entry.item, entry.value)) {
+                    local.setApproval(key, entry.item, entry.value);
+                    changed++;
+                }
             }
         }
         return changed;
+    }
+
+    /** A phone approval item: on ("1" or "0"), or a companion app's notify service. */
+    static boolean validApproval(String item, String value) {
+        if (APPROVAL_ON.equals(item)) return "1".equals(value) || "0".equals(value);
+        return APPROVAL_NOTIFY.equals(item) && isNotifyService(value);
+    }
+
+    /** Only a companion app's notify service: what a phone's actionable notifications go through. */
+    static boolean isNotifyService(String service) {
+        return service != null && service.matches("mobile_app_[a-z0-9_]{1,100}");
     }
 
     static boolean validPairing(String value) {

@@ -85,13 +85,15 @@ final class ParentApproval {
         }
     }
 
-    /** The phones that may answer: each adult profile that has phone approval on and a phone chosen, once each. */
+    /**
+     * The phones that may answer: those of each adult profile that has phone approval on (the one chosen, else Home
+     * Assistant's for their person), once each.
+     */
     static List<String> parentPhones(Context context) {
         Set<String> services = new LinkedHashSet<>();
         for (String key : ProfilePairing.getHearthProfiles(context)) {
             if (ProfilePairing.isKids(context, key) || !PhoneApproval.isOn(context, key)) continue;
-            String service = PhoneApproval.notifyService(context, key);
-            if (service != null) services.add(service);
+            services.addAll(PhoneApproval.phones(context, key));
         }
         return new ArrayList<>(services);
     }

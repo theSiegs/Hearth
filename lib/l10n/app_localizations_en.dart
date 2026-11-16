@@ -2501,6 +2501,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get approvalPhoneNone => 'Not chosen';
 
   @override
+  String approvalPhoneFromHa(String phones) {
+    return '$phones (from Home Assistant)';
+  }
+
+  @override
+  String approvalPhoneUseHa(String phones) {
+    return 'My phones in Home Assistant ($phones)';
+  }
+
+  @override
   String get approvalPhonePick => 'Which phone asks?';
 
   @override
@@ -2526,7 +2536,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get approvalFooter =>
-      'When Google TV asks for your PIN to open your profile, your phone gets Allow and Deny. Allow, and Hearth enters the PIN; the PIN can always be typed with the remote too. Turn the Google TV PIN on for your profile first.';
+      'When Google TV asks for your PIN to open your profile, your phone gets Allow and Deny. Allow, and Hearth enters the PIN; the PIN can always be typed with the remote too. Turn the Google TV PIN on for your profile first. These choices follow you to the household’s other TVs.';
 
   @override
   String profilePinUnsupported(String app) {

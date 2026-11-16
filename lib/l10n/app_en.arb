@@ -2998,6 +2998,24 @@
     "@approvalPhoneNone": {
         "description": "Profiles: approving switches into a PIN-locked profile from a phone"
     },
+    "approvalPhoneFromHa": "{phones} (from Home Assistant)",
+    "@approvalPhoneFromHa": {
+        "description": "Profiles: approving switches from a phone; no phone chosen, so the person's phones in Home Assistant are asked",
+        "placeholders": {
+            "phones": {
+                "type": "String"
+            }
+        }
+    },
+    "approvalPhoneUseHa": "My phones in Home Assistant ({phones})",
+    "@approvalPhoneUseHa": {
+        "description": "Profiles: approving switches from a phone; the choice that goes back to the person's phones in Home Assistant",
+        "placeholders": {
+            "phones": {
+                "type": "String"
+            }
+        }
+    },
     "approvalPhonePick": "Which phone asks?",
     "@approvalPhonePick": {
         "description": "Profiles: approving switches into a PIN-locked profile from a phone"
@@ -3026,7 +3044,7 @@
     "@approvalTestFailed": {
         "description": "Profiles: approving switches into a PIN-locked profile from a phone"
     },
-    "approvalFooter": "When Google TV asks for your PIN to open your profile, your phone gets Allow and Deny. Allow, and Hearth enters the PIN; the PIN can always be typed with the remote too. Turn the Google TV PIN on for your profile first.",
+    "approvalFooter": "When Google TV asks for your PIN to open your profile, your phone gets Allow and Deny. Allow, and Hearth enters the PIN; the PIN can always be typed with the remote too. Turn the Google TV PIN on for your profile first. These choices follow you to the household’s other TVs.",
     "@approvalFooter": {
         "description": "Profiles: approving switches into a PIN-locked profile from a phone"
     },

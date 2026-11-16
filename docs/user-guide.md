@@ -151,16 +151,19 @@ profile's PIN to come back. Turn the PIN on for your account in Google TV first.
 **Approve switches from my phone** (**Settings → Profiles → Unlock from my phone**, in your own profile; needs Home Assistant and its phone
 app). When Google TV asks for your PIN to open your profile, your phone gets a notification with Allow and Deny.
 Allow, and Hearth TV enters your Google TV PIN; Deny, or no answer, leaves Google's PIN screen as it is. The PIN can always
-be typed with the remote instead: pressing a key on the PIN screen withdraws the phone's request. Choose your phone and
-save your Google TV PIN on that page (or on the phone page from Streaming app PINs). A PIN Google refuses isn't typed
-again until it's saved anew.
+be typed with the remote instead: typing a digit on the PIN screen withdraws the phone's request (so does any other key
+once the screen has been up for two seconds). Choose your phone and
+save your Google TV PIN on that page (or on the phone page from Streaming app PINs). With the Hearth integration and your
+profile mapped to you in Home Assistant, your phones are asked without choosing one ("from Home Assistant"). In a
+household your choices and PIN follow you to the other TVs. A PIN Google refuses isn't typed again until it's saved
+anew.
 
 In a kids profile, or a profile without a Google TV PIN, holding the profile button opens the profile chooser
 instead. In a kids profile the remote's profile button always does Google TV's own job.
 
 **Your other TVs** (**Settings → Family → Household sync**). Hearth TVs in a household keep each person's look, home
-layout (the dock, rows, hidden apps), wallpaper pictures, streaming app profile choices, saved PINs and Continue
-Watching in step, and share one Parent PIN; each TV keeps its own name, Home Assistant connection and Home Button Fix.
+layout (the dock, rows, hidden apps), wallpaper pictures, streaming app profile choices, saved PINs, an adult's
+phone approval (on or off, and the phone) and Continue Watching in step, and share one Parent PIN; each TV keeps its own name, Home Assistant connection and Home Button Fix.
 A person is the same person on every TV by their Google account. When two TVs change different things, both keep
 theirs; when they change the same thing, the later change wins. An app that isn't installed on a TV is left off its
 home, and comes back where the person put it once it's installed.

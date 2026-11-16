@@ -44,7 +44,7 @@ from .hub import HearthHub, collect_secret, find_pairing, pin_lockout
 from .wait import WAIT_MAX
 from .push import clean_server, push_answer
 from .notifications import notify_pairing
-from . import notices, parent_pin
+from . import notices, parent_pin, switch_approval
 from .asks import AskError
 from .status import clean_status, text
 from .watch import MAX_EVENTS, clean_started
@@ -595,6 +595,102 @@ class AskView(HomeAssistantView):
         return web.json_response({"ok": True, "request": ask.device_view()})
 
 
+class SwitchApprovalView(HomeAssistantView):
+    """POST /api/hearth/device/{device_id}/switch_approval (header X-Hearth-Secret, a TV): {"profile_id": the TV's
+    profile, "phone": the notify service chosen for it, optional} -> {"ok": true, "request": {id, status}, "phones": n,
+    "expires": seconds}. The integration asks the profile's adult on their phones (switch_approval.py). 404 no_person,
+    403 not_adult, 404 no_phone, 502 not_sent, 429 too_often, 400 bad_request."""
+
+    url = "/api/hearth/device/{device_id}/switch_approval"
+    name = "api:hearth:device:switch_approval"
+    requires_auth = False
+
+    async def post(self, request: web.Request, device_id: str) -> web.Response:
+        hass: HomeAssistant = request.app["hass"]
+        if not _local(request):
+            return _error(HTTPStatus.FORBIDDEN, "not_local")
+        hub = _hub(hass)
+        if hub is None:
+            return _error(HTTPStatus.SERVICE_UNAVAILABLE, "not_set_up")
+        if not hub.authorized(device_id, request.headers.get(HEADER_SECRET)):
+            return _error(HTTPStatus.UNAUTHORIZED, "not_paired")
+        if hub.kind(device_id) != KIND_TV:
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        if hub.too_many_events(device_id):
+            return _error(HTTPStatus.TOO_MANY_REQUESTS, "too_often")
+        body = await _json_body(request)
+        if not isinstance(body, dict):
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        profile_id = text(body.get("profile_id"), 64)
+        phone = body.get("phone")
+        if not profile_id or (phone is not None and not switch_approval.valid_service(phone)):
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        try:
+            asked = await hub.switch_approvals.ask(device_id, profile_id, phone)
+        except switch_approval.SwitchApprovalError as err:
+            status = {
+                "no_person": HTTPStatus.NOT_FOUND,
+                "no_phone": HTTPStatus.NOT_FOUND,
+                "not_adult": HTTPStatus.FORBIDDEN,
+            }.get(err.code, HTTPStatus.BAD_GATEWAY)
+            return _error(status, err.code)
+        return web.json_response(
+            {
+                "ok": True,
+                "request": asked.view(),
+                "phones": len(asked.services),
+                "expires": switch_approval.ANSWER_SECONDS,
+            }
+        )
+
+
+class SwitchApprovalRequestView(HomeAssistantView):
+    """GET /api/hearth/device/{device_id}/switch_approval/{request_id}?timeout=<s> (header X-Hearth-Secret): {"ok":
+    true, "request": {id, status}} as soon as its status isn't "pending", or after <s> seconds (at most 55): pending,
+    allowed, denied, expired or withdrawn. DELETE withdraws it. 404 gone (no such request of this TV's)."""
+
+    url = "/api/hearth/device/{device_id}/switch_approval/{request_id}"
+    name = "api:hearth:device:switch_approval:request"
+    requires_auth = False
+
+    async def _find(self, request: web.Request, device_id: str, request_id: str):
+        hass: HomeAssistant = request.app["hass"]
+        if not _local(request):
+            return None, _error(HTTPStatus.FORBIDDEN, "not_local")
+        hub = _hub(hass)
+        if hub is None:
+            return None, _error(HTTPStatus.SERVICE_UNAVAILABLE, "not_set_up")
+        if not hub.authorized(device_id, request.headers.get(HEADER_SECRET)):
+            return None, _error(HTTPStatus.UNAUTHORIZED, "not_paired")
+        found = hub.switch_approvals.get(device_id, request_id) if switch_approval.valid_id(request_id) else None
+        if found is None:
+            return None, _error(HTTPStatus.NOT_FOUND, "gone")
+        return (hub, found), None
+
+    async def get(self, request: web.Request, device_id: str, request_id: str) -> web.Response:
+        found, error = await self._find(request, device_id, request_id)
+        if error is not None:
+            return error
+        hub, asked = found
+        try:
+            timeout = float(request.query.get("timeout", 0))
+        except ValueError:
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        if not math.isfinite(timeout):
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        timeout = min(max(timeout, 0.0), float(switch_approval.WAIT_MAX))
+        await hub.switch_approvals.wait(asked, timeout)
+        return web.json_response({"ok": True, "request": asked.view()})
+
+    async def delete(self, request: web.Request, device_id: str, request_id: str) -> web.Response:
+        found, error = await self._find(request, device_id, request_id)
+        if error is not None:
+            return error
+        hub, asked = found
+        await hub.switch_approvals.withdraw(asked)
+        return web.json_response({"ok": True, "request": asked.view()})
+
+
 class WaitView(HomeAssistantView):
     """GET /api/hearth/device/{device_id}/wait?version=<v>&timeout=<s> (header X-Hearth-Secret): {"changed": bool}
     once the device's state document isn't <v>, or after <s> seconds (wait.py)."""
@@ -758,6 +854,8 @@ def async_register_views(hass: HomeAssistant) -> None:
         VerifyPinView,
         NoticeView,
         AskView,
+        SwitchApprovalView,
+        SwitchApprovalRequestView,
         WaitView,
         TicketView,
         SettingsView,

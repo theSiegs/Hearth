@@ -59,6 +59,7 @@ from .commands import Commands
 from .push import PushChannel, new_topic
 from .suggest_push import SuggestPush
 from .wait import DeviceWaits
+from .switch_approval import SwitchApprovals
 from .household import Household
 from .parent_pin import EVENT_PARENT_PIN_LOCKED_OUT
 
@@ -192,6 +193,8 @@ class HearthHub:
         self.pin_grants = PinGrants(hass)
         # Glint agents through Hearth: each Glint phone's inbox, the tool calls waiting on it, its doorbell (glint_agent.py)
         self.glint_agent = GlintAgent(hass, self)
+        # Phone approval of a switch into an adult's Google TV profile, asked for a paired TV (switch_approval.py)
+        self.switch_approvals = SwitchApprovals(hass, self)
 
     # The devices
 

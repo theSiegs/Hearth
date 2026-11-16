@@ -35,7 +35,7 @@ webhook status and `sensor.hearth_allowance` are retired.
 |---|---|---|---|
 | TV status | the TV posts to a webhook; an automation writes seven helpers per TV | needs an administrator's token to create them; renames break them; one webhook ID per TV to guard | a device per TV with its own entities |
 | Dashboard panel | long-lived token of a non-admin user | a hand-made token with that user's full rights | (later) a dashboard endpoint, see [Open questions](#open-questions) |
-| Phone approval of a switch | Hearth calls `notify.mobile_app_*` and listens on the WebSocket | the token can call any service; the notify service is picked by hand | the integration asks the person's phone and answers the device |
+| Phone approval of a switch | Hearth calls `notify.mobile_app_*` and listens on the WebSocket | the token can call any service; the notify service is picked by hand | built: the integration tells the TV the person's phones (`adult_phones`), asks them and answers the TV ([Phone approval of a switch](#the-devices-side-of-the-api)), so a paired TV needs no token |
 | Pop-ups and buttons | `rest_command` posts to the TV on port 7676 | hand-written YAML per automation | `hearth.notify` to any device |
 | YouTube allowance, pooled | template sensors adding a pool, a bonus, Family Link minutes and Hearth's seconds; `sensor.hearth_allowance` read by the TV | hand-made per kid; one source per template; JSON in a state string | per-person screen time from every source, and budgets the devices read |
 | Household sync mailbox | nowhere yet | a plain sensor loses its value on restart | a small stored mailbox |
@@ -994,6 +994,7 @@ The answer to each status post carries the person's (or, on a TV, each profile's
   },
   "youtube_blocks": {"user:10": {"videos": [], "channels": [], "words": [], "labels": {}}},
   "people": {"user:10": "person.sam", "user:0:alex": "person.alex"},
+  "adult_phones": {"user:0:alex": ["mobile_app_alex_phone"]},
   "parent_pins_version": "…",
   "version": "3f9c1a0b2d4e5f60",
   "contract": 3
@@ -1008,7 +1009,10 @@ the accessibility apps, which no group's `apps` holds: a device may spare them f
 [Pause and locks](#pause-and-locks); an allow of theirs that ends on a place is in `allow_ends` [{id, app, group,
 until, text: "ends when you get home"}] (never where they are); a TV's also has every mapped profile's `youtube_blocks`, `people` (each mapped
 profile of that TV by its own key, with its person: a notification's `for` may name a person, and the TV finds their
-profile here) and the [parent PINs](#the-devices-side-of-the-api). Own-limit titles (`open_titles`) aren't built. A TV gets it in the answer to each post (at least every 2 minutes while it's
+profile here), `adult_phones` (only when there are any: each mapped profile whose person is an adult on Hearth's page,
+by the TV's own key, with the notify services of that person's companion apps, as for requests; the TV's phone
+approval asks them when no phone was chosen for the profile on any TV of the household) and the
+[parent PINs](#the-devices-side-of-the-api). Own-limit titles (`open_titles`) aren't built. A TV gets it in the answer to each post (at least every 2 minutes while it's
 on); `version`, a hash of the content, lets it skip an unchanged one. This replaces `sensor.hearth_allowance`:
 same meaning, from the integration instead of a template.
 
@@ -2171,6 +2175,29 @@ Parent PIN), with `retry_after` (seconds) on the wrong one that starts a lockout
 right PIN included; 400 `bad_request` (a malformed body, both or neither of `pin` and `approval`, a button that isn't
 there or doesn't run); 429 `too_many` past 6 presses a minute; 401, 403 `not_local` and 503 as for Status; 500
 `failed` when the service itself failed.
+
+**Phone approval of a switch** (a TV; switch_approval.py). A paired TV asks the integration to have an adult allow a
+switch into their PIN-locked Google TV profile from their phone, so it needs no Home Assistant token of its own:
+- `POST /api/hearth/device/<device_id>/switch_approval` with the same header and `{"profile_id": "<the TV's profile
+  key>", "phone": "mobile_app_…"}` (`phone` optional: the one chosen on the household's TVs). The profile must be
+  mapped to a person who is an adult on Hearth's page. The phones asked are `phone` when Home Assistant has that
+  notify service, else the person's companion apps (as `adult_phones`). Each gets "TV: switch to <name>'s profile?"
+  with Allow and Deny (action ids `HEARTH_SWITCH_ALLOW_<id>` and `HEARTH_SWITCH_DENY_<id>`, `tag` `hearth-switch-<id>`,
+  sticky, two minutes), and Home Assistant's own list gets the same request. 200 `{"ok": true, "request": {"id",
+  "status": "pending"}, "phones": n, "expires": 120}`. `id` is 128 random bits (32 hex), used once. A TV's newer request
+  withdraws its waiting one. Errors: 404 `no_person` (the profile is nobody's), 403 `not_adult`, 404 `no_phone`, 502
+  `not_sent` (no phone took it), 400 `bad_request` (not a TV, no profile, a `phone` that isn't a companion app's), 429
+  `too_often` (counted with Events), 401, 403 `not_local` and 503 as for Status.
+- `GET /api/hearth/device/<device_id>/switch_approval/<id>?timeout=<s>` answers `{"ok": true, "request": {"id",
+  "status"}}` as soon as the status isn't `pending`, or after `s` seconds (at most 55): `allowed`, `denied`, `expired`
+  (no answer in two minutes) or `withdrawn`. A finished request stays readable for five minutes. 404 `gone` for no
+  such request of this TV's (another TV's never shows).
+- `DELETE` the same withdraws it (someone at the TV uses the remote, or the PIN screen went): it leaves the phones.
+
+The first answer decides, and the notification then leaves every phone asked and Home Assistant's list. Anyone with
+Home Assistant's companion app may answer (whoever holds the adult's phone); the log says who (their person, else
+their user id), and `hearth_switch_approval` (`device_id`, `profile_id`, `person`, `answer`, `by`, `user_id`) tells
+automations. On Allow the TV types the adult's saved Google TV PIN, only if that profile's PIN screen is still up.
 
 **Entities**, per device, by kind as in [Kinds](#kinds). Screen time today is in seconds (shown in minutes), with
 per-app, playing and (on a TV) per-profile attributes kept out of history. All but Connected are unavailable until the
