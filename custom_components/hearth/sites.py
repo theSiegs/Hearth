@@ -22,6 +22,7 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 
 from .enforce import FAMILY_LINK, FAMILY_SAFETY, FS_DOMAIN, enforcers_from_options
+from .activity import call_service
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -92,7 +93,7 @@ class CopySites:
             domain, data = FL_DOMAIN, {"entity_id": entity_id}
         else:
             domain, data = FS_DOMAIN, self._fs_target(entity_id)
-        response = await self.hass.services.async_call(domain, "get_sites", data, blocking=True, return_response=True)
+        response = await call_service(self.hass, domain, "get_sites", data, blocking=True, return_response=True)
         return response if isinstance(response, dict) else {}
 
     async def _write(self, side: str, entity_id: str, kind: str, hosts: list[str]) -> None:
@@ -103,12 +104,12 @@ class CopySites:
             else:
                 sites = list(hosts)
             service = "block_site" if kind == BLOCKED else "allow_site"
-            await self.hass.services.async_call(
+            await call_service(self.hass,
                 FL_DOMAIN, service, {"entity_id": entity_id, "sites": sites}, blocking=True
             )
             return
         service = "block_website" if kind == BLOCKED else "allow_website"
-        await self.hass.services.async_call(
+        await call_service(self.hass,
             FS_DOMAIN, service, {**self._fs_target(entity_id), "website": list(hosts)}, blocking=True
         )
 

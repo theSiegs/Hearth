@@ -87,6 +87,7 @@ from .enforce import (
 )
 from .schooldays import DAY_OFF, HALF_DAY, SCHOOL
 from .temporary_limit import DONE, SET, SKIP, SWITCH, WAIT, WINDOWS, WRITE, XBOX, TemporaryLimits
+from .activity import call_service
 
 if TYPE_CHECKING:
     from .household import Household
@@ -531,7 +532,7 @@ class Scheduler:
         if self._waiting(key):
             return False
         try:
-            await self.hass.services.async_call(domain, service, data, blocking=True)
+            await call_service(self.hass, domain, service, data, blocking=True)
         except Exception as err:  # noqa: BLE001 - one person's failure mustn't stop the others
             _LOGGER.warning("Hearth's schedule: %s.%s failed for %s: %s", domain, service, key, err)
             self._failed[key] = dt_util.utcnow()
@@ -1144,7 +1145,7 @@ class Scheduler:
                         "every site failed: " + "; ".join(f"{f['site']} ({f['error']})" for f in failed[:5])
                     )
             else:
-                await self.hass.services.async_call(domain, "sync_site_list", data, blocking=True)
+                await call_service(self.hass, domain, "sync_site_list", data, blocking=True)
         except Exception as err:  # noqa: BLE001 - one child's list failing mustn't stop the others
             _LOGGER.warning("Hearth couldn't sync the website list for %s through %s: %s", person, via, err)
             self._failed[key] = dt_util.utcnow()

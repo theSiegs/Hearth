@@ -48,6 +48,7 @@ from .client_settings import (
     parse_scope,
 )
 from .const import CONF_KIND, CONF_PERSON, KIND_TV
+from .activity import GLINT_INBOX, _log_of, call_service
 
 if TYPE_CHECKING:
     from .hub import HearthHub
@@ -347,6 +348,9 @@ class GlintAgent:
         if data_size(inbox_data(requests)) > MAX_INBOX_BYTES:
             raise InboxFull(len(kept))
         self._write_inbox(device_id, requests)
+        # The action log: a Glint inbox write (the phone, the action and its id; never its arguments or who by name)
+        if (log := _log_of(self.hass)) is not None:
+            log.add(GLINT_INBOX, target=[device_id], service=action, args={"request_id": request["id"]}, why=origin, result="queued")
         return request
 
     def watch(self, device_id: str, request_id: str) -> asyncio.Future[dict[str, Any]]:
@@ -439,7 +443,7 @@ class GlintAgent:
         if not self.hass.services.has_service(domain, name):
             return False
         try:
-            await self.hass.services.async_call(
+            await call_service(self.hass,
                 domain,
                 name,
                 {

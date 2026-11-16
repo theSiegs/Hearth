@@ -49,6 +49,7 @@ from .enforce import FAMILY_SAFETY, enforcers_from_options, fs_account_of
 from .exceptions import end_of_day
 from .history import ACTOR, ASSIST
 from .pause import pause_of
+from .activity import call_service
 
 if TYPE_CHECKING:
     from .household import Household
@@ -287,7 +288,7 @@ async def nintendo_block_of(household: Household, person: str, *names: Any) -> d
         return None
     for switch in nintendo.switches(household, person):
         try:
-            response = await hass.services.async_call(
+            response = await call_service(hass,
                 nintendo.NINTENDO_DOMAIN,
                 nintendo.LIST_APPS,
                 {"device_id": switch["device_id"]},
@@ -568,7 +569,7 @@ class ActionTool(HearthTool):
                 self.name,
                 plan.person,
                 plan.audit,
-                hass.services.async_call(
+                call_service(hass,
                     DOMAIN,
                     plan.service,
                     dict(plan.data),

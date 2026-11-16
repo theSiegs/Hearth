@@ -91,6 +91,7 @@ from .entry_tasks import entry_task
 from . import family_link as fl
 from .counting import ALL
 from .exceptions import Lifted, end_of_day
+from .activity import call_service
 
 if TYPE_CHECKING:
     from .household import PersonDay
@@ -457,6 +458,8 @@ class Enforcement:
         self.fs_bonus_until = None
         # The values Hearth's Family Link backstop wrote today (backstop.py sets it): never put back as a weekday's limit
         self.backstop_values = None
+        # The action log (activity.py; the household sets it): each hold started and ended
+        self.activity = None
 
     async def async_load(self) -> None:
         stored = await self._store.async_load() or {}
@@ -741,6 +744,12 @@ class Enforcement:
                     },
                 )
                 self.note(key, held=sorted(hold), let_go=sorted(let_go), outcomes=outcomes)
+                if self.activity is not None:
+                    why = self._why.get(key, {})
+                    for reason in sorted({why.get(i, "limit") for i in hold}):
+                        self.activity.hold(True, person, [i for i in hold if why.get(i, "limit") == reason], reason, kind)
+                    if let_go:
+                        self.activity.hold(False, person, let_go, None, kind)
             except Exception as err:  # noqa: BLE001 - one parental control failing mustn't stop the others
                 _LOGGER.warning("Hearth couldn't %s for %s through %s: %s", "hold" if hold else "let go", person, kind, err)
                 held.error, held.failed_at = str(err)[:200], now
@@ -780,7 +789,7 @@ class Enforcement:
         if not self.hass.services.has_service("homeassistant", "update_entity"):
             return
         try:
-            await self.hass.services.async_call(
+            await call_service(self.hass,
                 "homeassistant", "update_entity", {"entity_id": entity_id}, blocking=True
             )
         except Exception as err:  # noqa: BLE001 - only a refresh: the integration's own polling still comes
@@ -813,7 +822,7 @@ class Enforcement:
             packages = items - {DEVICES}
             if packages:
                 service = "pause_app" if hold else "resume_app"
-                response = await self.hass.services.async_call(
+                response = await call_service(self.hass,
                     "familylink",
                     service,
                     {"entity_id": entity_id, "packages": sorted(packages)},
@@ -848,7 +857,7 @@ class Enforcement:
             # Nothing to resume with: what it held can't have been paused by it
             return
         target = {"entity_id": entity_id} if "." in entity_id else {"account_id": entity_id}
-        await self.hass.services.async_call(
+        await call_service(self.hass,
             FS_DOMAIN, "pause_app" if hold else "resume_app", {**target, "apps": sorted(apps)}, blocking=True
         )
 
@@ -905,7 +914,7 @@ class Enforcement:
     async def _fs_call(self, service: str, data: dict[str, Any]) -> Any:
         """A Family Safety call, with its answer when the service gives one (an older one doesn't)."""
         responds = self.hass.services.supports_response(FS_DOMAIN, service) != SupportsResponse.NONE
-        return await self.hass.services.async_call(
+        return await call_service(self.hass,
             FS_DOMAIN, service, data, blocking=True, return_response=responds
         )
 
@@ -1023,8 +1032,8 @@ class Enforcement:
             switch = fl.daily_limit_switch(self.hass, held.restore["lock_child"])
             switch_state = self.hass.states.get(switch) if switch else None
             if switch_state is not None and switch_state.state == "off":
-                await self.hass.services.async_call("switch", "turn_on", {"entity_id": switch}, blocking=True)
-        await self.hass.services.async_call(
+                await call_service(self.hass, "switch", "turn_on", {"entity_id": switch}, blocking=True)
+        await call_service(self.hass,
             "familylink",
             "set_daily_limit",
             {"child_id": held.restore["lock_child"], "daily_minutes": 0, "day": held.restore["lock_weekday"]},
@@ -1075,7 +1084,7 @@ class Enforcement:
                 )
                 outcome = KEPT_CURRENT
             else:
-                await self.hass.services.async_call(
+                await call_service(self.hass,
                     "familylink",
                     "set_daily_limit",
                     {
@@ -1091,7 +1100,7 @@ class Enforcement:
                     switch = fl.daily_limit_switch(self.hass, str(restore["lock_child"]))
                     switch_state = self.hass.states.get(switch) if switch else None
                     if switch_state is not None and switch_state.state == "on":
-                        await self.hass.services.async_call(
+                        await call_service(self.hass,
                             "switch", "turn_off", {"entity_id": switch}, blocking=True
                         )
         held.restore = {k: v for k, v in restore.items() if not k.startswith("lock_")}
@@ -1119,8 +1128,8 @@ class Enforcement:
             self._save()
         suspend = held.restore.get("suspend")
         if suspend and held.restore.get("suspend_was") != "on":
-            await self.hass.services.async_call("switch", "turn_on", {"entity_id": suspend}, blocking=True)
-        await self.hass.services.async_call(
+            await call_service(self.hass, "switch", "turn_on", {"entity_id": suspend}, blocking=True)
+        await call_service(self.hass,
             "number", "set_value", {"entity_id": entity_id, "value": 0}, blocking=True
         )
 
@@ -1185,7 +1194,7 @@ class Enforcement:
                 "Nintendo app)", entity_id, limit, restore.get("day")
             )
             return
-        await self.hass.services.async_call(NINTENDO_DOMAIN, "update_daily_restrictions", data, blocking=True)
+        await call_service(self.hass, NINTENDO_DOMAIN, "update_daily_restrictions", data, blocking=True)
 
     async def _let_go_switch(self, entity_id: str, held: Held) -> str | None:
         """The limit and Suspend software back as they were, only while the limit still reads what Hearth set (0): a
@@ -1210,12 +1219,12 @@ class Enforcement:
         elif limit is None:
             _LOGGER.warning("Hearth had no limit kept for %s: left as it is (check it in the Nintendo app)", entity_id)
         else:
-            await self.hass.services.async_call(
+            await call_service(self.hass,
                 "number", "set_value", {"entity_id": entity_id, "value": limit}, blocking=True
             )
         suspend = restore.get("suspend")
         if suspend and restore.get("suspend_was") == "off":
-            await self.hass.services.async_call("switch", "turn_off", {"entity_id": suspend}, blocking=True)
+            await call_service(self.hass, "switch", "turn_off", {"entity_id": suspend}, blocking=True)
         held.restore = {}
         return RESTORED
 

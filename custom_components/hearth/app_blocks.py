@@ -53,6 +53,7 @@ from homeassistant.util import dt as dt_util
 from .const import CONF_ROLES, SIGNAL_PEOPLE
 from .entry_tasks import entry_task
 from . import family_link as fl
+from .activity import call_service
 
 if TYPE_CHECKING:
     from .household import Household
@@ -413,6 +414,7 @@ class AppBlocks:
                 self._tries.pop((person, package), None)
                 if not record.get("confirmed") or record.get("gone"):
                     record["confirmed"] = True
+                    _LOGGER.debug("block %s for %s: Family Link lists it blocked", package, person)
                     record.pop("gone", None)
                     self.hass.bus.async_fire("hearth_app_blocked", {"person": person, "app": package})
                     changed = True
@@ -454,8 +456,9 @@ class AppBlocks:
             self._called[key] = dt_util.utcnow()
             service = "block_app" if block else "unblock_app"
             try:
-                await self.hass.services.async_call(
-                    FL_DOMAIN, service, {"entity_id": entity_id, "package_name": package}, blocking=True
+                await call_service(self.hass,
+                    FL_DOMAIN, service, {"entity_id": entity_id, "package_name": package}, blocking=True,
+                    person=person, why=",".join(sorted(self.why_blocked(person, package))) or "unblock",
                 )
             except Exception as err:  # noqa: BLE001 - one app failing mustn't stop the others
                 _LOGGER.warning("Hearth couldn't %s %s for %s: %s", service.replace("_app", ""), package, person, err)
@@ -469,6 +472,7 @@ class AppBlocks:
                 }
                 # hearth_app_blocked fires once, when Family Link lists it blocked (_confirm)
                 tries = self._tries[key] = self._tries.get(key, 0) + 1
+                _LOGGER.debug("block %s for %s: try %s of %s, waiting for Family Link to list it", package, person, tries, MAX_TRIES)
                 if tries >= MAX_TRIES:
                     # Shown on the card until Family Link lists it, or an adult blocks it again
                     self._errors[key] = (f"Family Link didn't block {self.name_of(package, person)}", dt_util.utcnow())

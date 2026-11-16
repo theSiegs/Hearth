@@ -41,6 +41,7 @@ from .counting import ALL
 from .enforce import FAMILY_LINK
 from .entry_tasks import entry_task
 from .time_model import BACKSTOP_MARGIN, backstop_minutes
+from .activity import call_service
 
 if TYPE_CHECKING:
     from .household import Household
@@ -161,6 +162,7 @@ class Backstop:
             if child is None:
                 continue
             if self.holds(person):
+                _LOGGER.debug("backstop %s: Hearth's whole-device hold is on, nothing written", person)
                 # What letting go puts back is the weekday's limit: written again after it
                 self._held.add(person)
                 continue
@@ -168,11 +170,16 @@ class Backstop:
                 self._held.discard(person)
                 self.written.pop(person, None)
             minutes = self.wanted(person)
+            _LOGGER.debug(
+                "backstop %s: device minutes %.0f, wanted %s, margin %s", person, self.device_minutes(person, child),
+                minutes, self.margin(),
+            )
             if minutes is None:
                 continue
             record = self.written.get(person) or {}
             last = record.get("minutes") if record.get("day") == today else None
             if last is not None and last - HYSTERESIS <= minutes <= last:
+                _LOGGER.debug("backstop %s: %s wanted, %s written: within the hysteresis, not written", person, minutes, last)
                 continue
             failed = self._failed.get(person)
             if failed is not None and now - failed < RETRY:
@@ -185,13 +192,15 @@ class Backstop:
         for person, (child, minutes) in plans.items():
             # Again right before the write: a hold may have started, or daily time run out, since the plan
             if self.holds(person) or self._out(person):
+                _LOGGER.debug("backstop %s: skipped at the write (a hold started or daily time ran out)", person)
                 continue
             # Never below what a device already used today
             minutes = min(1440, max(minutes, int(math.ceil(self.device_minutes(person, child))) + FLOOR))
             try:
                 # The child's id as a string, from its entity's attributes: never a template
-                await self.hass.services.async_call(
-                    FL_DOMAIN, "set_daily_limit", {"child_id": child, "daily_minutes": minutes}, blocking=True
+                await call_service(self.hass,
+                    FL_DOMAIN, "set_daily_limit", {"child_id": child, "daily_minutes": minutes}, blocking=True,
+                    person=person, why="backstop",
                 )
             except Exception as err:  # noqa: BLE001 - one kid's failure mustn't stop the others; tried again later
                 _LOGGER.warning("Hearth couldn't set Family Link's daily limit for %s to %s: %s", person, minutes, err)

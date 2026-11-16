@@ -32,6 +32,7 @@ from homeassistant.helpers.event import async_call_later
 
 from .const import CONF_ROLES
 from .phones import person_phones
+from .activity import call_service
 
 if TYPE_CHECKING:
     from .hub import HearthHub
@@ -149,7 +150,7 @@ class SwitchApprovals:
         sent = 0
         for service in services:
             try:
-                await self.hass.services.async_call(
+                await call_service(self.hass,
                     "notify",
                     service,
                     {
@@ -246,7 +247,7 @@ class SwitchApprovals:
         """Off every phone asked, and Home Assistant's own list."""
         for service in request.services:
             try:
-                await self.hass.services.async_call(
+                await call_service(self.hass,
                     "notify",
                     service,
                     {"message": "clear_notification", "data": {"tag": TAG_PREFIX + request.id}},

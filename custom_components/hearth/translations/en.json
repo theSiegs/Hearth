@@ -1158,6 +1158,32 @@
           "description": "Several people."
         }
       }
+    },
+    "get_activity": {
+      "name": "Get activity",
+      "description": "What Hearth did, newest first (kept 14 days): its calls to Family Link, Family Safety, Nintendo and others with their result, the holds it started and ended, TV commands and Glint inbox writes. People and devices by their ids, never a name.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "Only this person's."
+        },
+        "kind": {
+          "name": "Kind",
+          "description": "call, hold_start, hold_end, tv_command or glint_inbox."
+        },
+        "since": {
+          "name": "Since",
+          "description": "From this time."
+        },
+        "until": {
+          "name": "Until",
+          "description": "Up to this time."
+        },
+        "limit": {
+          "name": "Limit",
+          "description": "At most this many (200 by default)."
+        }
+      }
     }
   },
   "issues": {

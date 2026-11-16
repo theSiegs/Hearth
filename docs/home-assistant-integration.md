@@ -2173,6 +2173,39 @@ never names or notes. Suggestions are sized from it: the most common bonus for a
 once there are at least 3. Minutes per kid and group are already recorded by Home Assistant's statistics (each
 group's Today sensor is `total_increasing`).
 
+#### Activity
+
+Hearth keeps a durable log of what it did (activity.py), 14 days and at most 5,000 records, with Home Assistant's
+storage helper:
+
+- **Calls** to other integrations: every `familylink.*` (pauses and resumes, the backstop's `set_daily_limit`, blocks
+  and unblocks, bonus time, bedtime and School time), `microsoft_family_safety.*`, `nintendo_parental_controls.*`,
+  and the others Hearth makes (switches, buttons, notifications): `{at, kind: call, person, target (entity or device
+  ids), service, args, why, result: ok | failed, error, duration_ms}`. Every call goes through one helper
+  (`activity.call_service`; a test fails if a module calls `hass.services.async_call` itself). `args` keeps ids,
+  minutes, times and packages only: never a message, a PIN or a token, and a notification's text not at all. The
+  person is found from the entity or Family Link child the call names when the caller doesn't say.
+- **Holds**: `{kind: hold_start | hold_end, person, target (a group, app or package ids), reason (daily_time, limit,
+  budget, pause, school_time, blocked_app, time_given, parent_grant...), by (hearth, a parental control, or the adult's
+  person entity)}`: Hearth's own (daily time or a limit used up, and given back), Pause screens, each parental
+  control's hold and let go, and a parent's change in their own app that lifted one.
+- **TV commands** (`tv_command`: the TV and profile) and **Glint inbox writes** (`glint_inbox`: the phone, the action
+  and its request id).
+
+People and devices appear by their entity or device ids, never a name. Read it with `hearth.get_activity` {`person`,
+`kind`, `since`, `until`, `limit` (200)} (response only; adults, as every Hearth service), the WebSocket
+`hearth/activity` (same fields), or the page's Activity view (filter by kid; failures stand out).
+
+**Debug logging.** Settings > Devices & services > Hearth > Enable debug logging turns on `custom_components.hearth`'s
+debug lines (no manifest `loggers` entry is needed: that is for third-party libraries): what each source counted per
+device, the time model's numbers per kid when they change, every call with its result and time, each hold started or
+ended and why, the backstop's inputs, value and why it skipped a write, block tries and confirmations, and changes a
+parent made in their own app. Lines name people by entity id, never a name or a token.
+
+**Diagnostics** (Download diagnostics on Hearth's entry): the options, each kid's time, enforcement and backstop state
+now, and the last 200 activity records. Tokens, PINs, names, Family Link child ids, emails, Wi-Fi names and places are
+redacted, and each person's entity id (and any entity named after them) becomes person_1, person_2...
+
 ### Play on a TV
 
 **Proposed for the TV; built in Home Assistant.** `hearth.play_on_tv` starts something on a paired Hearth TV, from an

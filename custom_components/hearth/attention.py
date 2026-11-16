@@ -32,6 +32,7 @@ from homeassistant.util import dt as dt_util
 from . import phones
 from .const import DOMAIN, SIGNAL_NOTICES
 from .delivery import bell, companion
+from .activity import call_service
 
 if TYPE_CHECKING:
     from .hub import HearthHub
@@ -337,7 +338,7 @@ class Attention:
             return False
         domain, service = action.service.split(".", 1)
         try:
-            await self.hass.services.async_call(
+            await call_service(self.hass,
                 domain, service, dict(action.data), blocking=True, context=Context(user_id=user_id)
             )
         except Exception as err:  # noqa: BLE001 - a button has nobody to raise to

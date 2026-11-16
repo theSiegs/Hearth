@@ -778,12 +778,14 @@ class Limits:
         self._save()
         return True
 
-    def clear_reached(self, person: str, group: str) -> None:
-        """A bonus reopened the group: reaching 0 again fires again."""
+    def clear_reached(self, person: str, group: str) -> bool:
+        """A bonus reopened the group: reaching 0 again fires again. Says whether it was marked."""
         marks = self.data.reached.get(person, [])
         if group in marks:
             marks.remove(group)
             self._save()
+            return True
+        return False
 
     def state(self, person: str, group: str, counted_min: float, kind: str, budget: Any = ...) -> GroupState:
         """The group's state today, with the budget for [kind] of day (SCHOOL_DAY or OTHER_DAY), or [budget] (today's

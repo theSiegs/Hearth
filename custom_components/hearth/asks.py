@@ -38,6 +38,7 @@ from homeassistant.util import dt as dt_util
 from .entry_tasks import entry_task
 from .attention import ADULTS, NOTICE, Action, Item
 from .const import DOMAIN, SIGNAL_PAIRINGS
+from .activity import call_service
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -411,7 +412,7 @@ class Asks:
         try:
             if not self.hass.services.has_service(FS_DOMAIN, service):
                 raise ValueError(f"{FS_DOMAIN}.{service} isn't there")
-            await self.hass.services.async_call(FS_DOMAIN, service, data, blocking=True)
+            await call_service(self.hass, FS_DOMAIN, service, data, blocking=True)
         except Exception as err:  # noqa: BLE001 - told to the adults instead
             _LOGGER.warning("Hearth couldn't answer the Family Safety request %s: %s", ask.external_id, err)
             who = self.hub.household.person_name(ask.person)

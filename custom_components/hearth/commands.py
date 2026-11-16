@@ -22,6 +22,7 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN, SIGNAL_COMMANDS
 from .status import text
 from .watch import video_id_of
+from .activity import TV_COMMAND, _log_of
 
 EVENT_COMMAND_DONE = "hearth_command_done"
 
@@ -116,6 +117,9 @@ class Commands:
             expires=now + COMMAND_EXPIRES,
         )
         waiting.append(command)
+        # The action log: a TV command (its device and profile, never what's played)
+        if (log := _log_of(self.hass)) is not None:
+            log.add(TV_COMMAND, target=[device_id], service="play", args={"profile": profile_id}, result="queued")
         # The TV holding a wait hears it in seconds, not at its next post
         async_dispatcher_send(self.hass, SIGNAL_COMMANDS)
         return command

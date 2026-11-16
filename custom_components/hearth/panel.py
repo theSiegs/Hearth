@@ -74,6 +74,7 @@ from .suggest_push import CONF_SUGGEST_PUSH, pairs as suggest_pairs
 from .profiles import OPTION_KEY
 from . import fs_capabilities, nintendo, parent_pin, phones
 from .push import clean_server
+from .activity import call_service
 
 URL_PATH = "hearth"
 STATIC_URL = "/hearth_static"
@@ -671,7 +672,7 @@ def _switch_or_error(hass: HomeAssistant, connection, msg: dict[str, Any], servi
 
 async def _call_nintendo(hass: HomeAssistant, service: str, data: dict[str, Any]) -> dict[str, Any] | None:
     responds = hass.services.supports_response(NINTENDO_DOMAIN, service) != SupportsResponse.NONE
-    return await hass.services.async_call(NINTENDO_DOMAIN, service, data, blocking=True, return_response=responds)
+    return await call_service(hass, NINTENDO_DOMAIN, service, data, blocking=True, return_response=responds)
 
 
 @websocket_api.require_admin

@@ -130,6 +130,15 @@ PAUSE_SCHEMA = vol.All(
     ),
     cv.has_at_least_one_key("minutes", "until", "ends_on"),
 )
+GET_ACTIVITY_SCHEMA = vol.Schema(
+    {
+        vol.Optional("person"): cv.entity_id,
+        vol.Optional("kind"): vol.In(("call", "hold_start", "hold_end", "tv_command", "glint_inbox")),
+        vol.Optional("since"): cv.datetime,
+        vol.Optional("until"): cv.datetime,
+        vol.Optional("limit", default=200): vol.All(vol.Coerce(int), vol.Range(min=1, max=2000)),
+    }
+)
 PAUSE_END_SCHEMA = vol.Schema(
     {
         vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id]),
@@ -282,6 +291,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             if call.data.get("ends_on"):
                 raise ServiceValidationError("A pause of one app or group ends at a time, not at a place")
             set_app_pause(hass, people, until, call.data.get("reason"), app, group)
+            for person in people:
+                household.activity.hold(True, person, app or group, "pause", household.person_of_user(call.context.user_id))
             household.recompute()
             return
         ends_on = _place_ends_on(household, people, call.data.get("ends_on"))
@@ -294,6 +305,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                 f" · {call.data['reason']}" if call.data.get("reason") else ""
             )
             household.note_origin(person, "pause", detail, "hearth", by)
+            household.activity.hold(True, person, "all", "pause", household.person_of_user(call.context.user_id))
         household.recompute()
 
     @callback
@@ -305,8 +317,25 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             end_pause(hass, call.data.get("people"))
         else:
             end_app_pause(hass, call.data.get("people"), app, group)
+        for person in call.data.get("people") or household.people():
+            household.activity.hold(False, person, app or group or "all", "pause", household.person_of_user(call.context.user_id))
         household.recompute()
 
+    @callback
+    def get_activity(call: ServiceCall) -> ServiceResponse:
+        """The action log (activity.py), newest first: Hearth's calls to other integrations, holds, TV commands and
+        Glint inbox writes."""
+        household = loaded_household()
+        since, until = call.data.get("since"), call.data.get("until")
+        records = household.activity.query(
+            call.data.get("person"), call.data.get("kind"),
+            dt_util.as_local(since) if since else None, dt_util.as_local(until) if until else None, call.data["limit"],
+        )
+        return {"records": records}
+
+    register_service(
+        hass, DOMAIN, "get_activity", get_activity, schema=GET_ACTIVITY_SCHEMA, supports_response=SupportsResponse.ONLY
+    )
     register_service(hass, DOMAIN, "pause", pause, schema=PAUSE_SCHEMA)
     register_service(hass, DOMAIN, "pause_end", pause_end, schema=PAUSE_END_SCHEMA)
     _register_app_blocks(hass, loaded_household)

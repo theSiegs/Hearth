@@ -35,6 +35,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import CONF_ROLES, SIGNAL_PEOPLE
 from .counting import ALL
+from .activity import call_service
 
 if TYPE_CHECKING:
     from .household import Household
@@ -796,7 +797,7 @@ class ChoreBook:
                 self.imports.remove(row)
                 continue
             try:
-                response = await self.hass.services.async_call(
+                response = await call_service(self.hass,
                     "todo", "get_items", {"status": "needs_action"}, target={"entity_id": todo}, blocking=True,
                     return_response=True,
                 )

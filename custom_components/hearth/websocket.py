@@ -414,6 +414,32 @@ def ws_household(hass: HomeAssistant, connection: websocket_api.ActiveConnection
     connection.send_result(msg["id"], _for_reader(summary(hub), connection.user))
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hearth/activity",
+        vol.Optional("person"): str,
+        vol.Optional("kind"): str,
+        vol.Optional("since"): str,
+        vol.Optional("until"): str,
+        vol.Optional("limit", default=200): vol.All(int, vol.Range(min=1, max=2000)),
+    }
+)
+@callback
+def ws_activity(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """The action log (activity.py), newest first: adults only, as the household summary."""
+    hub = _hub(hass)
+    if hub is not None and not _may_read(hass, hub, connection.user):
+        connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Unauthorized")
+        return
+    if hub is None:
+        connection.send_error(msg["id"], "not_set_up", "Hearth isn't set up")
+        return
+    since = dt_util.parse_datetime(msg["since"]) if msg.get("since") else None
+    until = dt_util.parse_datetime(msg["until"]) if msg.get("until") else None
+    records = hub.household.activity.query(msg.get("person"), msg.get("kind"), since, until, msg["limit"])
+    connection.send_result(msg["id"], {"records": records})
+
+
 @websocket_api.websocket_command({vol.Required("type"): "hearth/household/subscribe"})
 @callback
 def ws_household_subscribe(
@@ -631,6 +657,7 @@ def ws_ask(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg:
 @callback
 def async_register_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_household)
+    websocket_api.async_register_command(hass, ws_activity)
     websocket_api.async_register_command(hass, ws_household_subscribe)
     websocket_api.async_register_command(hass, ws_answer)
     websocket_api.async_register_command(hass, ws_me)

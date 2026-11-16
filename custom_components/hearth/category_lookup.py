@@ -29,6 +29,7 @@ from homeassistant.core import HomeAssistant
 
 from .categories import DETAILS, clean_answer, namespace
 from .const import APP_CATEGORIES
+from .activity import call_service
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -340,7 +341,7 @@ async def async_ask_ai(hass: HomeAssistant, entity_id: str, key: str, name: str 
     if not hass.services.has_service("ai_task", "generate_data"):
         return None
     try:
-        response = await hass.services.async_call(
+        response = await call_service(hass,
             "ai_task", "generate_data", ai_request(entity_id, key, name, about), blocking=True, return_response=True
         )
     except Exception as err:  # noqa: BLE001 - the entity's own errors (offline model, quota): asked again tomorrow

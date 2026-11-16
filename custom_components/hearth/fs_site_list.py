@@ -40,6 +40,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.storage import Store
 
 from .enforce import FS_DOMAIN
+from .activity import call_service
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -193,7 +194,7 @@ class FsSiteList:
         if not sites:
             return [], {}
         try:
-            await self.hass.services.async_call(FS_DOMAIN, service, {**target, "website": list(sites)}, blocking=True)
+            await call_service(self.hass, FS_DOMAIN, service, {**target, "website": list(sites)}, blocking=True)
         except Exception as err:  # noqa: BLE001 - per site, as upstream answers
             return split_failure(err, sites)
         return list(sites), {}
@@ -205,7 +206,7 @@ class FsSiteList:
             raise SiteListError(f"The website list {url} has no usable domains, so nothing was changed.")
         if len(domains) > MAX_DOMAINS:
             raise SiteListError(f"The website list has {len(domains)} domains, more than {MAX_DOMAINS}.")
-        response = await self.hass.services.async_call(
+        response = await call_service(self.hass,
             FS_DOMAIN, "get_sites", dict(target), blocking=True, return_response=True
         )
         if not isinstance(response, dict) or not isinstance(response.get("blocked"), list):

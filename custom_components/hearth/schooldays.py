@@ -26,6 +26,7 @@ from typing import Any
 from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
+from .activity import call_service
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -222,7 +223,7 @@ class SchoolDays:
         config = self.config
         start = dt_util.as_local(datetime.combine(today, time.min, tzinfo=dt_util.get_default_time_zone()))
         try:
-            response = await self.hass.services.async_call(
+            response = await call_service(self.hass,
                 "calendar",
                 "get_events",
                 {"start_date_time": start.isoformat(), "end_date_time": (start + timedelta(days=1)).isoformat()},

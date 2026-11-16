@@ -38,6 +38,7 @@ from homeassistant.util import dt as dt_util
 
 from . import family_link as fl
 from .entry_tasks import entry_task
+from .activity import call_service
 
 if TYPE_CHECKING:
     from .household import Household
@@ -255,7 +256,7 @@ class BedtimeLifts:
             self.sync()
 
     async def _set_bedtime(self, child: str, start: str, end: str, weekday: int) -> None:
-        await self.hass.services.async_call(
+        await call_service(self.hass,
             FL_DOMAIN,
             "set_bedtime",
             {"child_id": child, "start_time": start, "end_time": end, "day": weekday, "scope": "today"},

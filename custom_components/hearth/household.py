@@ -9,6 +9,8 @@ from here.
 
 from __future__ import annotations
 
+import logging
+
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
 import hashlib
@@ -89,6 +91,7 @@ from .device_extra import ALLOW as EXTRA_ALLOW, BONUS as EXTRA_BONUS, DeviceExtr
 from .native_sync import NativeSync
 from .backstop import Backstop
 from .unlimited import Unlimited
+from .activity import ActivityLog
 from .bedtime_lift import BedtimeLifts, in_family_link_bedtime, lift_minutes
 from . import family_link as fl
 from .todos import ChoreBook
@@ -117,6 +120,8 @@ from .sources import (
     titles_from_options,
     totals_reading,
 )
+
+_LOGGER = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from .hub import HearthHub
@@ -222,6 +227,9 @@ class Household:
         self.enforcement.backstop_values = self.backstop.written_minutes
         # Unlimited windows: time used then isn't counted (unlimited.py)
         self.unlimited = Unlimited(hass, self, hub.entry.entry_id)
+        # The action log: every outbound call, hold, TV command and Glint inbox write (activity.py)
+        self.activity = ActivityLog(hass, self, hub.entry.entry_id)
+        self.enforcement.activity = self.activity
         # An adult's extra time at bedtime lifts it while it lasts (bedtime_lift.py)
         self.bedtime_lift = BedtimeLifts(hass, self, hub.entry.entry_id)
         self.scheduler = Scheduler(hass, self, hub.entry.entry_id)
@@ -238,6 +246,8 @@ class Household:
         self.limits.chore_minutes = self.todos.minutes_today
         self.places = Places(hass, self)
         self.days: dict[str, PersonDay] = {}
+        # What the time model said last per person (debug logs only a change)
+        self._model_logged: dict[str, tuple] = {}
         # The day [days] is of
         self.today: date | None = None
         # Each totals source's last reading today, which counts while its sensor has no number (unavailable)
@@ -269,6 +279,7 @@ class Household:
         await self.sync.async_load()
         await self.backstop.async_load()
         await self.unlimited.async_load()
+        await self.activity.async_load()
         await self.bedtime_lift.async_load()
         await self.scheduler.async_load()
         await self.week.async_load()
@@ -288,6 +299,7 @@ class Household:
         await self.sync.async_flush()
         await self.backstop.async_flush()
         await self.unlimited.async_flush()
+        await self.activity.async_flush()
         await self.bedtime_lift.async_flush()
         await self.scheduler.async_flush()
         await self.week.async_flush()
@@ -1053,6 +1065,11 @@ class Household:
             self.schedule_now[person] = self.week.now(person, now)
             day_limits = self.week.limits_on(person, today, day_type)
             devices = {device: merge(r) for device, r in readings.get(person, {}).items()}
+            if _LOGGER.isEnabledFor(logging.DEBUG):
+                _LOGGER.debug(
+                    "counting %s: %s", person,
+                    {d: (int(u.total_s), len(u.items)) for d, u in devices.items()},
+                )
             raw = group_seconds(devices, membership, self.outside_all())
             # Minutes used while unlimited aren't counted (unlimited.py)
             seconds = self.unlimited.exclude(person, raw, now)
@@ -1071,8 +1088,11 @@ class Household:
                         self.hass.bus.async_fire(
                             EVENT_BUDGET_REACHED, {"person": person, "group": group.id, "group_name": group.name}
                         )
+                        # Hearth's own hold of the group's apps (its devices, and the parental controls after)
+                        self.activity.hold(True, person, group.id, "daily_time" if group.id == ALL else "limit", "hearth")
                 elif state.minutes_left is not None:
-                    self.limits.clear_reached(person, group.id)
+                    if self.limits.clear_reached(person, group.id):
+                        self.activity.hold(False, person, group.id, "time_given", "hearth")
             all_state = day.limits.get(ALL)
             # Extra time at bedtime: over once its time is up or All screen time runs out again
             self.bedtime_lift.check(person, all_state.minutes_left if all_state else None, now)
@@ -2195,6 +2215,15 @@ class Household:
             cap = held.cap(state.budget_min) if held is not None else state.budget_min
             caps[gid] = (cap, state.counted_min)
         result = account(base, bonus, all_state.counted_min, caps)
+        # Debug, only when it changed for the person (each recompute would repeat it)
+        summary = (base, bonus, int(all_state.counted_min), result.bonus_used, result.today_left,
+                   tuple(sorted((g, c, result.cap_left[g]) for g, (c, _) in caps.items() if c is not None)))
+        if self._model_logged.get(person) != summary:
+            self._model_logged[person] = summary
+            _LOGGER.debug(
+                "time model %s: base %s, bonus %s, used %s, bonus used %s, today left %s, limits (cap, held left) %s",
+                person, *summary,
+            )
         all_state.budget_min, all_state.bonus_min, all_state.bonus_chores = base, bonus, chores
         all_state.modeled = True
         all_state.held_left = all_state.usable = result.today_left
@@ -2297,6 +2326,14 @@ class Household:
                 }
             )
         return out
+
+    def person_of_user(self, user_id: str | None) -> str | None:
+        """The person entity whose Home Assistant user this is (the action log's "by": an id, never a name)."""
+        if not user_id:
+            return None
+        return next(
+            (s.entity_id for s in self.hass.states.async_all("person") if s.attributes.get("user_id") == user_id), None
+        )
 
     def name_of_user(self, user_id: str | None) -> str | None:
         """The name of the person whose Home Assistant user this is (an adult's, for an origin's "by")."""

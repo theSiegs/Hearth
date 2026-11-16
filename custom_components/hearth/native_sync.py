@@ -43,6 +43,7 @@ from .enforce import (
     fs_hold_state,
 )
 from .exceptions import end_of_day
+from .activity import call_service
 
 if TYPE_CHECKING:
     from .grants import Grant
@@ -159,6 +160,7 @@ class NativeSync:
         changed = False
         own = self.own_bonus()
         for spec in self.household.enforcement.parent_changes(own, watch):
+            _LOGGER.debug("outside change for %s through %s: %s %s", spec["person"], spec["via"], spec["kind"], spec["value"])
             grant, new = self.household.grants.add(
                 spec["person"],
                 spec["via"],
@@ -176,6 +178,8 @@ class NativeSync:
                     f"{spec['via']}|{spec['person']}", parent_grant=grant.id, reason=spec["reason"]
                 )
                 self.hass.bus.async_fire(EVENT_PARENT_GRANT, grant.view())
+                # A parent's change in their own app lifted one of Hearth's holds
+                self.household.activity.hold(False, spec["person"], str(spec["value"]), "parent_grant", spec["via"])
         for grant in list(self.household.grants.grants.values()):
             if grant.ends_with != g.WHILE_BONUS:
                 continue
@@ -348,7 +352,7 @@ class NativeSync:
         from . import family_link as fl
 
         if self.hass.services.has_service(FL_DOMAIN, "reset_bonus"):
-            await self.hass.services.async_call(
+            await call_service(self.hass,
                 FL_DOMAIN, "reset_bonus", {"entity_id": device.entity_id}, blocking=True
             )
             self.household.enforcement.refresh_soon(device.entity_id)
@@ -356,7 +360,7 @@ class NativeSync:
         button = fl.reset_bonus_button(self.hass, child, str(device.attributes.get("device_id")), device.entity_id)
         if button is None:
             raise ValueError(f"Family Link can't reset the bonus of {device.entity_id} (update it)")
-        await self.hass.services.async_call("button", "press", {"entity_id": button}, blocking=True)
+        await call_service(self.hass, "button", "press", {"entity_id": button}, blocking=True)
         self.household.enforcement.refresh_soon(device.entity_id)
 
     # Hearth -> the first-party apps: an adult's "all screen time" opens Google's and Microsoft's own limits too
@@ -479,7 +483,7 @@ class NativeSync:
                 continue
             bonus = max(1, min(1440, minutes - max(0, left)))
             try:
-                await self.hass.services.async_call(
+                await call_service(self.hass,
                     FL_DOMAIN, "add_time_bonus", {"entity_id": device.entity_id, "bonus_minutes": bonus}, blocking=True
                 )
             except Exception as err:  # noqa: BLE001 - shown on Hearth's page; Hearth's own holds are let go anyway
@@ -538,7 +542,7 @@ class NativeSync:
                 _LOGGER.debug("Family Safety gives no extra time on %s; skipped for %s", platform, person)
                 continue
             try:
-                response = await self.hass.services.async_call(
+                response = await call_service(self.hass,
                     FS_DOMAIN,
                     "add_time_bonus",
                     data,
@@ -627,7 +631,7 @@ class NativeSync:
         if weekday is not None:
             key, was = await self._window_begin(person, entity_id, platform, weekday, before, begin, wanted)
         try:
-            await self.hass.services.async_call(FS_DOMAIN, SET_INTERVALS, data, blocking=True)
+            await call_service(self.hass, FS_DOMAIN, SET_INTERVALS, data, blocking=True)
         except Exception:
             if was is not None:
                 # The earlier move is still what's there: its record stands (a first move's stays unwritten:
@@ -686,7 +690,7 @@ class NativeSync:
                 continue
             weekday = cut.get("weekday")
             try:
-                await self.hass.services.async_call(
+                await call_service(self.hass,
                     FS_DOMAIN,
                     SET_INTERVALS,
                     _fs_window_data(entity_id, platform, cut["begin"], cut["end"], weekday),
@@ -757,7 +761,7 @@ class NativeSync:
             data = _fs_window_data(record["entity_id"], record["platform"], record["begin"], record["end"], record["weekday"])
             note_key = f"{FAMILY_SAFETY}|{record['person']}"
             try:
-                await self.hass.services.async_call(FS_DOMAIN, SET_INTERVALS, data, blocking=True)
+                await call_service(self.hass, FS_DOMAIN, SET_INTERVALS, data, blocking=True)
             except (HomeAssistantError, vol.Invalid) as err:
                 _LOGGER.info("Family Safety's allowed hours on %s not put back yet: %s", record["platform"], err)
                 record["failed_at"] = dt_util.utcnow().isoformat()
@@ -869,7 +873,7 @@ class NativeSync:
             raise ValueError("Family Safety can't cancel extra time (update it)")
         if not fs_accepts(self.hass, "cancel_time_bonus", data):
             raise ValueError(f"Family Safety can't cancel extra time on {platform} (update it)")
-        await self.hass.services.async_call(FS_DOMAIN, "cancel_time_bonus", data, blocking=True)
+        await call_service(self.hass, FS_DOMAIN, "cancel_time_bonus", data, blocking=True)
         self.household.enforcement.refresh_soon(entity_id)
 
     # What the first-party apps say now (Hearth's page, the household summary, explain)

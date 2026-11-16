@@ -21,6 +21,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.util import slugify
 
 from .const import CONF_ROLES
+from .activity import call_service
 
 # Options: adults (person entity ids) whose phones don't get requests, and adults whose Android phones open the deep link
 CONF_ASK_NOTIFY_OFF = "ask_notify_off"
@@ -146,7 +147,7 @@ def send(
         extra = {**(data or {}), **(phone.click(ask_id) if ask_id else {})}
         if extra:
             payload["data"] = extra
-        hass.async_create_task(hass.services.async_call(phone.domain, phone.service, payload, blocking=False))
+        hass.async_create_task(call_service(hass, phone.domain, phone.service, payload, blocking=False))
         told.append(phone.service)
     return told
 

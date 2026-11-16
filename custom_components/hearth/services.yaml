@@ -777,3 +777,32 @@ unlimited_end:
         entity:
           domain: person
           multiple: true
+
+get_activity:
+  fields:
+    person:
+      selector:
+        entity:
+          domain: person
+    kind:
+      selector:
+        select:
+          options:
+            - call
+            - hold_start
+            - hold_end
+            - tv_command
+            - glint_inbox
+    since:
+      selector:
+        datetime:
+    until:
+      selector:
+        datetime:
+    limit:
+      default: 200
+      selector:
+        number:
+          min: 1
+          max: 2000
+          mode: box
