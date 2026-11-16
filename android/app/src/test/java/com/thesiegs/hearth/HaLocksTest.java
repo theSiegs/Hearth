@@ -75,6 +75,19 @@ public class HaLocksTest {
     }
 
     @Test
+    public void theCardGetsTodaysTimeLeft() throws Exception {
+        JSONObject profiles = HaAllowance.profilesFromDocument(new JSONObject("{\"profiles\": {\"user:10\": {\"groups\": ["
+                + "{\"id\": \"all\", \"name\": \"All screen time\", \"minutes_left\": 40, \"apps\": []},"
+                + "{\"id\": \"games\", \"name\": \"Games\", \"minutes_left\": 0, \"apps\": [\"com.example.game\"]}]},"
+                + " \"user:11\": {\"groups\": [{\"id\": \"games\", \"name\": \"Games\", \"minutes_left\": 0}]}}}"));
+        JSONObject kept = new JSONObject(profiles.toString());
+        assertEquals(40, HaLocks.forFlutter(kept.optJSONObject("user:10"), true, true, 1L).get("dayLeft"));
+        // No All screen time in the document: not known
+        assertNull(HaLocks.forFlutter(kept.optJSONObject("user:11"), true, true, 1L).get("dayLeft"));
+        assertNull(HaLocks.forFlutter(null, false, true, 1L).get("dayLeft"));
+    }
+
+    @Test
     public void aPauseOrNextLockThatsOverIsLeftOut() throws Exception {
         long until = HaLocks.parseTime("2026-10-26T19:00:00-05:00");
         JSONObject stored = entry("{\"locks\": {\"pause\": {\"until\": \"2026-10-26T19:00:00-05:00\", \"reason\": \"Dinner\"},"

@@ -68,19 +68,19 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets("time up: asks for the held group's minutes and says it's waiting for an adult", (tester) async {
+  testWidgets("time up: asks for bonus time (no category) and says it's waiting for an adult", (tester) async {
     await pump(tester, heldGroup: "Games");
     expect(find.text("Time's up for Games today"), findsOneWidget);
-    expect(find.text("Ask an adult for more time"), findsOneWidget);
+    expect(find.text("Ask for bonus time"), findsOneWidget);
     for (final minutes in [15, 30, 45, 60]) {
       expect(find.text("$minutes min"), findsOneWidget);
     }
     await tester.tap(find.text("30 min"));
     await tester.pumpAndSettle();
     expect(asks, [
-      {"minutes": 30, "group": "games"}
+      {"minutes": 30, "group": "all"}
     ]);
-    expect(find.text("Asked for 30 min; waiting for an adult"), findsOneWidget);
+    expect(find.text("Asked for 30 min bonus; waiting for an adult"), findsOneWidget);
     // Waiting: the buttons don't ask again
     await tester.tap(find.text("15 min"));
     await tester.pumpAndSettle();
@@ -93,7 +93,7 @@ void main() {
   testWidgets("the answer shows once Home Assistant's state carries it", (tester) async {
     state["request"] = {"id": "r1", "status": "approved", "minutes": 45, "askedMinutes": 30, "answered": ms(now)};
     await pump(tester);
-    expect(find.text("An adult added 45 min"), findsOneWidget);
+    expect(find.text("An adult gave you 45 min bonus"), findsOneWidget);
     state["request"] = {"id": "r1", "status": "expired", "minutes": 30, "askedMinutes": 30, "answered": ms(now)};
     FLauncherChannel.haStateVersion.value++;
     await tester.pumpAndSettle();
@@ -134,15 +134,15 @@ void main() {
     state = {"paired": false, "kids": true, "timeUp": []};
     await pump(tester, fallback: "Nothing to watch right now");
     expect(find.text("Nothing to watch right now"), findsOneWidget);
-    expect(find.text("Ask an adult for more time"), findsNothing);
+    expect(find.text("Ask for bonus time"), findsNothing);
   });
 
   testWidgets("a pause says why and until when, with no asking", (tester) async {
     state["pause"] = {"reason": "Dinner", "until": ms(DateTime(2026, 10, 26, 19))};
     await pump(tester, heldGroup: "Games");
-    expect(find.text("Paused: Dinner"), findsOneWidget);
+    expect(find.text("Screens paused: Dinner"), findsOneWidget);
     expect(find.text("Until 7:00 PM"), findsOneWidget);
-    expect(find.text("Ask an adult for more time"), findsNothing);
+    expect(find.text("Ask for bonus time"), findsNothing);
   });
 
   testWidgets("an adult's pause of the held group says so, with no asking", (tester) async {
@@ -159,10 +159,29 @@ void main() {
     };
     await pump(tester, heldGroup: "YouTube (paused: Homework)");
     expect(find.text("YouTube is paused: Homework"), findsOneWidget);
-    expect(find.text("Ask an adult for more time"), findsNothing);
+    expect(find.text("Ask for bonus time"), findsNothing);
   });
 
-  testWidgets("another group out of time can still be asked for beside a pause", (tester) async {
+  testWidgets("a category at its limit says how much of today's time is left for other things", (tester) async {
+    state["dayLeft"] = 40;
+    await pump(tester, heldGroup: "Games");
+    expect(find.text("Games are done for today · 40 min left for other things"), findsOneWidget);
+    expect(find.text("Ask for bonus time"), findsOneWidget);
+  });
+
+  testWidgets("hours read as h and min", (tester) async {
+    state["dayLeft"] = 70;
+    await pump(tester, heldGroup: "Games");
+    expect(find.text("Games are done for today · 1 h 10 min left for other things"), findsOneWidget);
+  });
+
+  testWidgets("today's time out too: time's up, not a category", (tester) async {
+    state["dayLeft"] = 0;
+    await pump(tester, heldGroup: "Games");
+    expect(find.text("Time's up for Games today"), findsOneWidget);
+  });
+
+  testWidgets("bonus time can still be asked for beside a pause of another group", (tester) async {
     state["timeUp"] = <Object>[
       {"id": "games", "name": "Games"},
       {
@@ -172,10 +191,10 @@ void main() {
       },
     ];
     await pump(tester, heldGroup: "Games");
-    expect(find.text("Ask an adult for more time"), findsOneWidget);
+    expect(find.text("Ask for bonus time"), findsOneWidget);
     await tester.tap(find.text("15 min"));
     await tester.pumpAndSettle();
-    expect(asks.single["group"], "games");
+    expect(asks.single["group"], "all");
   });
 
   testWidgets("bedtime says so, with no asking", (tester) async {
@@ -183,6 +202,6 @@ void main() {
     await pump(tester);
     expect(find.text("It's bedtime"), findsOneWidget);
     expect(find.text("Until 7:00 AM"), findsOneWidget);
-    expect(find.text("Ask an adult for more time"), findsNothing);
+    expect(find.text("Ask for bonus time"), findsNothing);
   });
 }

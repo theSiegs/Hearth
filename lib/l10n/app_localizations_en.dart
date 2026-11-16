@@ -3764,17 +3764,37 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String timeUpCategoryDone(String group, String left) {
+    return '$group are done for today · $left left for other things';
+  }
+
+  @override
+  String timeUpMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String timeUpHours(int hours) {
+    return '$hours h';
+  }
+
+  @override
+  String timeUpHoursMinutes(int hours, int minutes) {
+    return '$hours h $minutes min';
+  }
+
+  @override
   String timeUpForGroup(String group) {
     return 'Time\'s up for $group today';
   }
 
   @override
   String timeUpPaused(String reason) {
-    return 'Paused: $reason';
+    return 'Screens paused: $reason';
   }
 
   @override
-  String get timeUpPausedNoReason => 'Paused for now';
+  String get timeUpPausedNoReason => 'Screens paused for now';
 
   @override
   String get timeUpBedtime => 'It\'s bedtime';
@@ -3791,7 +3811,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get askForMoreTime => 'Ask an adult for more time';
+  String get askForMoreTime => 'Ask for bonus time';
 
   @override
   String askMinutes(int minutes) {
@@ -3800,12 +3820,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String askWaiting(int minutes) {
-    return 'Asked for $minutes min; waiting for an adult';
+    return 'Asked for $minutes min bonus; waiting for an adult';
   }
 
   @override
   String askApproved(int minutes) {
-    return 'An adult added $minutes min';
+    return 'An adult gave you $minutes min bonus';
   }
 
   @override
@@ -3902,7 +3922,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'For this kid on every TV in your household. Time in any app counts, except Hearth itself.';
 
   @override
-  String get screenTimeAll => 'All screen time';
+  String get screenTimeAll => 'Daily time';
 
   @override
   String get screenTimeGames => 'Games';

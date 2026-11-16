@@ -169,6 +169,13 @@ class _TimeUpCardState extends State<TimeUpCard> {
     });
   }
 
+  /// "40 min", "1 h", "1 h 10 min".
+  static String _length(AppLocalizations l10n, int minutes) {
+    final hours = minutes ~/ 60, rest = minutes % 60;
+    if (hours == 0) return l10n.timeUpMinutes(rest);
+    return rest == 0 ? l10n.timeUpHours(hours) : l10n.timeUpHoursMinutes(hours, rest);
+  }
+
   String _time(BuildContext context, DateTime at) => MaterialLocalizations.of(context).formatTimeOfDay(
       TimeOfDay.fromDateTime(at),
       alwaysUse24HourFormat: MediaQuery.maybeAlwaysUse24HourFormatOf(context) ?? false);
@@ -202,6 +209,10 @@ class _TimeUpCardState extends State<TimeUpCard> {
           ? l10n.timeUpGroupPausedReason(name, heldPause.pauseReason!)
           : l10n.timeUpGroupPaused(name);
       until = heldPause.pauseUntil;
+    } else if (state.categoryDone(widget.heldGroup)) {
+      // A category's cap, with today's time left for other apps
+      icon = Icons.hourglass_bottom;
+      title = l10n.timeUpCategoryDone(widget.heldGroup!, _length(l10n, state.dayLeft!));
     } else if (widget.heldGroup != null) {
       icon = Icons.hourglass_bottom;
       title = l10n.timeUpForGroup(widget.heldGroup!);

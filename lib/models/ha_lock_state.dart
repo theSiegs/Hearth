@@ -119,6 +119,9 @@ class HaLockState {
   final HaRequest? request;
   final List<HaTimeUpGroup> timeUp;
 
+  /// Minutes left of today's time (All screen time's) as the integration last said; null when not known.
+  final int? dayLeft;
+
   const HaLockState({
     this.paired = false,
     this.kids = false,
@@ -131,6 +134,7 @@ class HaLockState {
     this.nextLockAt,
     this.request,
     this.timeUp = const [],
+    this.dayLeft,
   });
 
   static const none = HaLockState();
@@ -154,6 +158,7 @@ class HaLockState {
       nextLockKind: next is Map ? _kindOf(next["kind"]) : null,
       nextLockAt: next is Map ? _time(next["at"]) : null,
       request: request is Map ? HaRequest.fromMap(request) : null,
+      dayLeft: _int(map["dayLeft"]),
       timeUp: [
         if (timeUp is List)
           for (final group in timeUp)
@@ -182,15 +187,17 @@ class HaLockState {
     return null;
   }
 
-  /// The group to ask more of: the held one when it's known by name, else the first out of time (All screen time
-  /// first, as it holds everything); "all" when no id is known.
-  String askGroupFor(String? heldName) {
-    final held = timeUp.where((g) => g.name == heldName && g.id != null && !g.paused);
-    if (held.isNotEmpty) return held.first.id!;
-    final all = timeUp.where((g) => g.id == "all");
-    if (all.isNotEmpty) return "all";
-    final withId = timeUp.where((g) => g.id != null && !g.paused);
-    return withId.isNotEmpty ? withId.first.id! : "all";
+  /// The group an ask names: always "all". A kid asks for bonus time, which adds to today's time and may be spent on
+  /// anything (past a category's cap too), so an ask never names a category (docs/contracts/time-model.md).
+  /// [heldName] is kept for callers; it no longer changes the answer.
+  String askGroupFor(String? heldName) => "all";
+
+  /// Whether [heldName] is a category (Games, say) that reached its cap while today's time still has minutes left:
+  /// "Games are done for today · 40 min left for other things".
+  bool categoryDone(String? heldName) {
+    if (heldName == null || (dayLeft ?? 0) <= 0) return false;
+    if (timeUp.any((g) => g.id == "all")) return false;
+    return timeUp.any((g) => g.name == heldName && g.id != null && g.id != "all" && !g.paused);
   }
 
   /// How long until the kid may ask again after an adult's "not now" (null: they may ask).

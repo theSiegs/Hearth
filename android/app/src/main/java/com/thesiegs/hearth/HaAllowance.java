@@ -51,6 +51,8 @@ final class HaAllowance {
 
     /** The integration's group of every app: its time up holds every app (but these). */
     static final String ALL_GROUP = "all";
+    /** The entry's minutes left of today's time (All screen time's), when the document had it. */
+    static final String DAY_LEFT_KEY = "day_left";
     /**
      * Never held for a group's time: Hearth, HearthTube (it holds YouTube time itself), Settings, the store, the
      * assistant and Google TV's own homes and screens.
@@ -199,7 +201,8 @@ final class HaAllowance {
      * The allowance map from the integration's state document, {"profiles": {"user:10": {"groups": [{"id",
      * "minutes_left", "apps": [...]}]}}}: per profile, the fewest minutes left in a group holding HearthTube (none:
      * no limit), and the apps of the groups with none left ("out_of_time": package -> group name; "all_out_of_time":
-     * All screen time's name when it has none left). Null when it isn't such a document.
+     * All screen time's name when it has none left; "day_left": All screen time's minutes left, today's time, when the
+     * document has it). Null when it isn't such a document.
      */
     static JSONObject profilesFromDocument(JSONObject state) {
         JSONObject documents = state != null ? state.optJSONObject("profiles") : null;
@@ -216,6 +219,7 @@ final class HaAllowance {
                 JSONArray timeUpGroups = new JSONArray();
                 String allOutOfTime = null;
                 JSONArray allExcept = null;
+                Integer dayLeft = null;
                 JSONArray limits = new JSONArray();
                 for (int i = 0; groups != null && i < groups.length(); i++) {
                     JSONObject group = groups.optJSONObject(i);
@@ -223,6 +227,7 @@ final class HaAllowance {
                     int left = Math.max(0, group.optInt("minutes_left", 0));
                     JSONArray apps = group.optJSONArray("apps");
                     limits.put(limit(group, left));
+                    if (ALL_GROUP.equals(group.optString("id"))) dayLeft = left;
                     if (left == 0) {
                         String name = group.optString("name", "");
                         if (name.trim().isEmpty()) name = group.optString("id", "");
@@ -252,6 +257,8 @@ final class HaAllowance {
                 if (timeUpGroups.length() > 0) entry.put(TIME_UP_GROUPS_KEY, timeUpGroups);
                 if (limits.length() > 0) entry.put(GROUPS_KEY, limits);
                 if (allOutOfTime != null) entry.put("all_out_of_time", allOutOfTime);
+                // Today's time left (All screen time's): "Games are done for today · 40 min left for other things"
+                if (dayLeft != null) entry.put(DAY_LEFT_KEY, dayLeft);
                 if (allOutOfTime != null && allExcept != null) entry.put("all_except", allExcept);
                 entry.put("schedule_locked", person != null && person.optBoolean("locked", false));
                 JSONObject locks = new JSONObject();

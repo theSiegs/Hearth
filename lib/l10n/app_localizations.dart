@@ -6285,6 +6285,30 @@ abstract class AppLocalizations {
   /// **'{group} is paused: {reason}'**
   String timeUpGroupPausedReason(String group, String reason);
 
+  /// Time's up card: a category (such as Games) reached its cap for today but today's time isn't used up; {group} is the category's name, {left} the time left for other apps (timeUpMinutes, timeUpHours or timeUpHoursMinutes)
+  ///
+  /// In en, this message translates to:
+  /// **'{group} are done for today · {left} left for other things'**
+  String timeUpCategoryDone(String group, String left);
+
+  /// Time's up card: a length of time under an hour, such as 40 min
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min'**
+  String timeUpMinutes(int minutes);
+
+  /// Time's up card: a whole number of hours, such as 1 h
+  ///
+  /// In en, this message translates to:
+  /// **'{hours} h'**
+  String timeUpHours(int hours);
+
+  /// Time's up card: hours and minutes, such as 1 h 10 min
+  ///
+  /// In en, this message translates to:
+  /// **'{hours} h {minutes} min'**
+  String timeUpHoursMinutes(int hours, int minutes);
+
   /// Time's up card (a kids profile, Home Assistant's Hearth integration): an app's group has no time left today; {group} is the group's name, such as Games
   ///
   /// In en, this message translates to:
@@ -6294,13 +6318,13 @@ abstract class AppLocalizations {
   /// Time's up card: a family pause from Home Assistant holds the apps; {reason} is the reason an adult gave, such as Dinner
   ///
   /// In en, this message translates to:
-  /// **'Paused: {reason}'**
+  /// **'Screens paused: {reason}'**
   String timeUpPaused(String reason);
 
   /// Time's up card: a family pause from Home Assistant, with no reason given
   ///
   /// In en, this message translates to:
-  /// **'Paused for now'**
+  /// **'Screens paused for now'**
   String get timeUpPausedNoReason;
 
   /// Time's up card: the kid's bedtime lock is on
@@ -6327,10 +6351,10 @@ abstract class AppLocalizations {
   /// **'Until {time}'**
   String timeUpUntil(String time);
 
-  /// Time's up card: above the buttons a kid picks an amount of more time with
+  /// Time's up card: above the buttons a kid picks an amount of bonus time with (bonus time adds to today's time, for any app)
   ///
   /// In en, this message translates to:
-  /// **'Ask an adult for more time'**
+  /// **'Ask for bonus time'**
   String get askForMoreTime;
 
   /// Time's up card: a button asking for this many more minutes
@@ -6342,13 +6366,13 @@ abstract class AppLocalizations {
   /// Time's up card: the request for more time was sent and no adult has answered yet
   ///
   /// In en, this message translates to:
-  /// **'Asked for {minutes} min; waiting for an adult'**
+  /// **'Asked for {minutes} min bonus; waiting for an adult'**
   String askWaiting(int minutes);
 
   /// Time's up card: an adult said yes to the request for more time
   ///
   /// In en, this message translates to:
-  /// **'An adult added {minutes} min'**
+  /// **'An adult gave you {minutes} min bonus'**
   String askApproved(int minutes);
 
   /// Time's up card: an adult said no to the request for more time
@@ -6507,10 +6531,10 @@ abstract class AppLocalizations {
   /// **'For this kid on every TV in your household. Time in any app counts, except Hearth itself.'**
   String get screenTimeHint;
 
-  /// Screen time: the group of every app
+  /// Screen time: the daily total, time in every app
   ///
   /// In en, this message translates to:
-  /// **'All screen time'**
+  /// **'Daily time'**
   String get screenTimeAll;
 
   /// Screen time: the group of games

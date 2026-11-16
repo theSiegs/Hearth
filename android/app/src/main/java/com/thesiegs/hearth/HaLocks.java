@@ -46,7 +46,8 @@ final class HaLocks {
     /**
      * What Flutter's time's up card shows for the profile at [now]: {paired, kids, pause: {reason, until}, lock:
      * {kind, until}, nextLock: {kind, at}, request: {id, status, minutes, askedMinutes, group, expires, answered},
-     * timeUp: [{id, name} of the groups out of time today]}; times are epoch ms (null: not known). A pause or next lock that's
+     * timeUp: [{id, name} of the groups out of time today], dayLeft: minutes left of today's time (All screen time's;
+     * null: not known)}; times are epoch ms (null: not known). A pause or next lock that's
      * over is left out.
      */
     static Map<String, Object> forFlutter(JSONObject entry, boolean paired, boolean kids, long now) {
@@ -82,6 +83,8 @@ final class HaLocks {
         JSONObject request = locks.optJSONObject("request");
         if (request != null) out.put("request", requestForFlutter(request));
         out.put("timeUp", timeUpGroups(entry));
+        out.put("dayLeft", entry != null && entry.has(HaAllowance.DAY_LEFT_KEY) && !entry.isNull(HaAllowance.DAY_LEFT_KEY)
+                ? Integer.valueOf(entry.optInt(HaAllowance.DAY_LEFT_KEY)) : null);
         return out;
     }
 

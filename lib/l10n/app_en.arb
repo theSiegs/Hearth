@@ -4665,6 +4665,26 @@
     "description": "Time's up card: an adult paused this app or group, with the reason they gave.",
     "placeholders": {"group": {"type": "String"}, "reason": {"type": "String"}}
   },
+  "timeUpCategoryDone": "{group} are done for today · {left} left for other things",
+  "@timeUpCategoryDone": {
+    "description": "Time's up card: a category (such as Games) reached its cap for today but today's time isn't used up; {group} is the category's name, {left} the time left for other apps (timeUpMinutes, timeUpHours or timeUpHoursMinutes)",
+    "placeholders": {"group": {"type": "String"}, "left": {"type": "String"}}
+  },
+  "timeUpMinutes": "{minutes} min",
+  "@timeUpMinutes": {
+    "description": "Time's up card: a length of time under an hour, such as 40 min",
+    "placeholders": {"minutes": {"type": "int"}}
+  },
+  "timeUpHours": "{hours} h",
+  "@timeUpHours": {
+    "description": "Time's up card: a whole number of hours, such as 1 h",
+    "placeholders": {"hours": {"type": "int"}}
+  },
+  "timeUpHoursMinutes": "{hours} h {minutes} min",
+  "@timeUpHoursMinutes": {
+    "description": "Time's up card: hours and minutes, such as 1 h 10 min",
+    "placeholders": {"hours": {"type": "int"}, "minutes": {"type": "int"}}
+  },
   "timeUpForGroup": "Time's up for {group} today",
     "@timeUpForGroup": {
         "description": "Time's up card (a kids profile, Home Assistant's Hearth integration): an app's group has no time left today; {group} is the group's name, such as Games",
@@ -4672,14 +4692,14 @@
             "group": {"type": "String"}
         }
     },
-    "timeUpPaused": "Paused: {reason}",
+    "timeUpPaused": "Screens paused: {reason}",
     "@timeUpPaused": {
         "description": "Time's up card: a family pause from Home Assistant holds the apps; {reason} is the reason an adult gave, such as Dinner",
         "placeholders": {
             "reason": {"type": "String"}
         }
     },
-    "timeUpPausedNoReason": "Paused for now",
+    "timeUpPausedNoReason": "Screens paused for now",
     "@timeUpPausedNoReason": {
         "description": "Time's up card: a family pause from Home Assistant, with no reason given"
     },
@@ -4702,9 +4722,9 @@
             "time": {"type": "String"}
         }
     },
-    "askForMoreTime": "Ask an adult for more time",
+    "askForMoreTime": "Ask for bonus time",
     "@askForMoreTime": {
-        "description": "Time's up card: above the buttons a kid picks an amount of more time with"
+        "description": "Time's up card: above the buttons a kid picks an amount of bonus time with (bonus time adds to today's time, for any app)"
     },
     "askMinutes": "{minutes} min",
     "@askMinutes": {
@@ -4713,14 +4733,14 @@
             "minutes": {"type": "int"}
         }
     },
-    "askWaiting": "Asked for {minutes} min; waiting for an adult",
+    "askWaiting": "Asked for {minutes} min bonus; waiting for an adult",
     "@askWaiting": {
         "description": "Time's up card: the request for more time was sent and no adult has answered yet",
         "placeholders": {
             "minutes": {"type": "int"}
         }
     },
-    "askApproved": "An adult added {minutes} min",
+    "askApproved": "An adult gave you {minutes} min bonus",
     "@askApproved": {
         "description": "Time's up card: an adult said yes to the request for more time",
         "placeholders": {
@@ -4834,9 +4854,9 @@
     "@screenTimeHint": {
         "description": "Screen time page: what the limits cover"
     },
-    "screenTimeAll": "All screen time",
+    "screenTimeAll": "Daily time",
     "@screenTimeAll": {
-        "description": "Screen time: the group of every app"
+        "description": "Screen time: the daily total, time in every app"
     },
     "screenTimeGames": "Games",
     "@screenTimeGames": {

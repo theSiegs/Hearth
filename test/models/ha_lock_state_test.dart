@@ -47,12 +47,25 @@ void main() {
     expect(const HaLockState(paired: true, kids: true, lockKind: HaLockKind.bedtime, timeUp: timeUp).canAsk, isFalse);
   });
 
-  test("asks for more of the held group, else All screen time, else the first", () {
+  test("asks are for bonus time, never a category", () {
     const state = HaLockState(timeUp: [HaTimeUpGroup("games", "Games"), HaTimeUpGroup("all", "All screen time")]);
-    expect(state.askGroupFor("Games"), "games");
+    expect(state.askGroupFor("Games"), "all");
     expect(state.askGroupFor(null), "all");
-    expect(const HaLockState(timeUp: [HaTimeUpGroup("games", "Games")]).askGroupFor("Other"), "games");
+    expect(const HaLockState(timeUp: [HaTimeUpGroup("games", "Games")]).askGroupFor("Other"), "all");
     expect(const HaLockState(timeUp: [HaTimeUpGroup(null, "Games")]).askGroupFor("Games"), "all");
+  });
+
+  test("a category is done while today's time is left", () {
+    expect(HaLockState.fromMap({"dayLeft": 40}).dayLeft, 40);
+    expect(HaLockState.fromMap({"dayLeft": null}).dayLeft, isNull);
+    const games = [HaTimeUpGroup("games", "Games")];
+    expect(const HaLockState(timeUp: games, dayLeft: 40).categoryDone("Games"), isTrue);
+    expect(const HaLockState(timeUp: games, dayLeft: 0).categoryDone("Games"), isFalse);
+    expect(const HaLockState(timeUp: games).categoryDone("Games"), isFalse);
+    expect(const HaLockState(timeUp: games, dayLeft: 40).categoryDone(null), isFalse);
+    // Today's time out too: time's up, not a category
+    expect(const HaLockState(timeUp: [...games, HaTimeUpGroup("all", "All screen time")], dayLeft: 40)
+        .categoryDone("Games"), isFalse);
   });
 
   test("not now starts a ten-minute wait from the answer", () {
