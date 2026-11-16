@@ -8,12 +8,14 @@
 ### Home Assistant integration
 
 - **A TV knows each adult's phones.** A TV's state document now has `adult_phones`: for each of its profiles mapped to an adult on Hearth's page, the notify services of that person's companion apps (the same phones that get requests). Hearth TV's phone approval asks them when no phone was chosen on the TV.
+- **Phone approval through the integration.** A paired TV asks the integration (`POST /api/hearth/device/<id>/switch_approval`, then reads or withdraws the request), which sends the adult's phones Allow and Deny, hears the first answer, takes the notification off every phone and tells the TV. Only the paired TV may ask, only for a profile mapped to an adult, and each request's id is random and used once. Anyone with the companion app may answer; the log and the new `hearth_switch_approval` event say who.
 
 ### Hearth TV
 
 - **Phone approval no longer stops itself.** The OK that picked a profile on the chooser (its repeat, or a laggy remote's second press) withdrew the phone's request as soon as Google TV's PIN screen came up, so the phone never showed it. Now a digit withdraws it at once, but an arrow, OK, Back or Delete only once the PIN screen has been up for two seconds, and never a press that began before it came up.
 - **Phone approval on every TV.** An adult's phone approval switch and chosen phone follow them to the household's other TVs, like their saved PINs (the Google TV PIN already did); the newest change wins, and the entries are signed like the Parent PIN's. A kids profile's are never shared.
-- **No phone to pick with the Hearth integration.** When no phone was chosen, a TV paired with the integration asks the phones Home Assistant has for the profile's person ("Alex Phone (from Home Assistant)"); a phone chosen on any TV wins, and **My phones in Home Assistant** goes back to them. The Parent PIN's phone approval asks the same phones. Sending the request still needs the TV's Home Assistant address and token.
+- **No phone to pick with the Hearth integration.** When no phone was chosen, a TV paired with the integration asks the phones Home Assistant has for the profile's person ("Alex Phone (from Home Assistant)"); a phone chosen on any TV wins, and **My phones in Home Assistant** goes back to them. The Parent PIN's phone approval asks the same phones.
+- **Phone approval without a token.** A TV paired with the Hearth integration has the integration ask the phone and reads the answer from it, so it no longer needs a Home Assistant token of its own for this. It falls back to its own token with an older or unreachable integration. Choosing from Home Assistant's full list of phones and the test notification still need the token; the Parent PIN's phone approval still uses it too.
 
 ## 2026.11.18
 

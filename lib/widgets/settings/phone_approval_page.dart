@@ -255,7 +255,8 @@ class _PhoneApprovalPageState extends State<PhoneApprovalPage> {
             trailing: Text(profilePinStatus(l, state["pin"] as Map?), style: textTheme.bodySmall),
             onPressed: _editPin,
           ),
-          if (notify != null || haPhones.isNotEmpty)
+          // The test goes through the TV's own Home Assistant token (not through the Hearth integration)
+          if ((notify != null || haPhones.isNotEmpty) && state["canTest"] != false)
             FocusableSettingsTile(
               leading: const Icon(Icons.notifications_active_outlined),
               title: Text(l.approvalTest, style: textTheme.bodyMedium),

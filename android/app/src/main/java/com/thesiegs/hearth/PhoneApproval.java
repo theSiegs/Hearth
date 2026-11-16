@@ -32,6 +32,10 @@ import java.util.concurrent.Executors;
  * kind "approval", signed); the PIN does too, as a saved PIN. With no phone chosen, a TV paired with the Hearth
  * integration asks the companion apps of the person Home Assistant maps the profile to (the state document's
  * {@code adult_phones}); a phone chosen on any TV wins over those.
+ *
+ * Paired with the Hearth integration, the integration does the asking (switch_approval.py: it sends, hears the first
+ * answer and clears the phones) and this TV reads the outcome, so no Home Assistant token is needed here; otherwise
+ * the TV asks with its own token and listens on Home Assistant's WebSocket.
  */
 final class PhoneApproval {
     private static final String TAG = "HearthApproval";
@@ -54,8 +58,8 @@ final class PhoneApproval {
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
 
-    /** The request waiting for an answer, if any (main thread). */
-    private static Request sPending;
+    /** The request waiting for an answer, if any (set on the main thread; the integration's wait reads it). */
+    private static volatile Request sPending;
 
     static final class Request {
         final String key;
@@ -66,8 +70,12 @@ final class PhoneApproval {
         /** When Google TV's PIN screen came up, in uptime (as key events' times). */
         final long pinShownAt;
         final long at = SystemClock.elapsedRealtime();
-        /** Its wait for the phone's answer (main thread). */
+        /** Its wait for the phone's answer (main thread), on the TV's own token's path. */
         HaEventSession.Waiter waiter;
+        /** Asked through the Hearth integration (it sends, hears and clears), not with the TV's own token. */
+        volatile boolean viaIntegration;
+        /** The integration's id for it, once it took it. */
+        volatile String remoteId;
 
         Request(String key, String name, String nonce, List<String> services, long pinShownAt) {
             this.key = key;
@@ -194,10 +202,17 @@ final class PhoneApproval {
         return PinVault.has(context, key, LauncherAccessibilityService.GOOGLE_TV_PACKAGE, GooglePinRecipe.VAULT_NAME);
     }
 
-    /** Everything this profile needs for an approval: Home Assistant, the switch, a phone and the PIN. */
+    /**
+     * Everything this profile needs for an approval: a way to Home Assistant (the Hearth integration, or the TV's own
+     * address and token), the switch, a phone and the PIN.
+     */
     static boolean isReady(Context context, String key) {
-        return HaConfig.isConfigured(context) && isOn(context, key) && !phones(context, key).isEmpty()
-                && hasPin(context, key);
+        return canAsk(context) && isOn(context, key) && !phones(context, key).isEmpty() && hasPin(context, key);
+    }
+
+    /** A way to ask a phone: paired with the Hearth integration, or the TV's own Home Assistant token. */
+    static boolean canAsk(Context context) {
+        return HaIntegration.isPaired(context) || HaConfig.isConfigured(context);
     }
 
     /** The companion apps' notify services Home Assistant has ({service, name}), for Settings; empty when unreachable. */
@@ -241,7 +256,7 @@ final class PhoneApproval {
      */
     static void onPinScreen(LauncherAccessibilityService service, long shownAt) {
         Context context = service.getApplicationContext();
-        if (!HaConfig.isConfigured(context)) return;
+        if (!canAsk(context)) return;
         AccessibilityNodeInfo root = service.getRootInActiveWindow();
         if (root == null) return;
         WORKER.execute(() -> {
@@ -290,8 +305,88 @@ final class PhoneApproval {
         Request request = new Request(key, name, AgentAuth.hex(bytes), services, shownAt);
         sPending = request;
         Toast.makeText(context, context.getString(R.string.approval_asked, name), Toast.LENGTH_LONG).show();
+        request.viaIntegration = HaIntegration.isPaired(context);
         Log.i(TAG, "Asking " + LogNames.key(key) + "'s phone to allow the switch"
-                + (notifyService(context, key) == null ? " (Home Assistant's phones for their person)" : ""));
+                + (notifyService(context, key) == null ? " (Home Assistant's phones for their person)" : "")
+                + (request.viaIntegration ? ", through the Hearth integration" : ""));
+        if (request.viaIntegration) {
+            askThroughIntegration(context, request);
+        } else {
+            askDirectly(context, request);
+        }
+    }
+
+    /**
+     * The Hearth integration sends the request, hears the answer and clears the phones (its switch_approval.py); this
+     * TV only reads the outcome. An integration from before it, or one out of reach, falls back to the TV's own token
+     * when it has one.
+     */
+    private static void askThroughIntegration(Context context, Request request) {
+        WORKER.execute(() -> {
+            HaIntegration.SwitchAnswer start = HaIntegration.startSwitchApproval(context, request.key,
+                    notifyService(context, request.key));
+            if (start.id == null) {
+                Log.i(TAG, "The Hearth integration didn't take the request: " + start.error);
+                boolean fallBack = ("unsupported".equals(start.error) || "unreachable".equals(start.error))
+                        && HaConfig.isConfigured(context);
+                MAIN.post(() -> {
+                    if (sPending != request) return;
+                    if (fallBack) {
+                        request.viaIntegration = false;
+                        askDirectly(context, request);
+                    } else {
+                        sPending = null;
+                    }
+                });
+                return;
+            }
+            request.remoteId = start.id;
+            Log.i(TAG, "The Hearth integration took the request");
+            // Withdrawn while it was being sent (the remote was used): off the phones
+            if (sPending != request) {
+                HaIntegration.withdrawSwitchApproval(context, start.id);
+                return;
+            }
+            String outcome = waitForIntegration(context, request, start.id);
+            if (HaIntegration.SWITCH_ALLOWED.equals(outcome) || HaIntegration.SWITCH_DENIED.equals(outcome)) {
+                boolean allowed = HaIntegration.SWITCH_ALLOWED.equals(outcome);
+                MAIN.post(() -> onAnswer(context, request, allowed));
+                return;
+            }
+            Log.i(TAG, "The phone's request ended without an answer (" + outcome + ")");
+            MAIN.post(() -> {
+                if (sPending == request) sPending = null;
+            });
+        });
+    }
+
+    /** Reads the integration's request until it's answered, ends, or this TV stops waiting (a worker thread). */
+    private static String waitForIntegration(Context context, Request request, String id) {
+        long until = SystemClock.elapsedRealtime() + ANSWER_MS + 15_000;
+        int failures = 0;
+        while (sPending == request && SystemClock.elapsedRealtime() < until) {
+            HaIntegration.SwitchAnswer read = HaIntegration.readSwitchApproval(context, id, 25);
+            if (read.status == null) {
+                if ("gone".equals(read.error) || "not_paired".equals(read.error) || ++failures > 10) {
+                    return read.error;
+                }
+                // Out of reach for a moment (Home Assistant restarting): try again shortly
+                try {
+                    Thread.sleep(2_000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return "interrupted";
+                }
+                continue;
+            }
+            failures = 0;
+            if (!HaIntegration.SWITCH_PENDING.equals(read.status)) return read.status;
+        }
+        return sPending == request ? "timeout" : "stopped";
+    }
+
+    /** With the TV's own token: sends the request once its answer can be heard, then waits for it (main thread). */
+    private static void askDirectly(Context context, Request request) {
         request.waiter = HaBridgeService.events(context).await(ANSWER_MS, new HaEventSession.Listener() {
             @Override
             public void onOpen(HaEventSession.Waiter waiter) {
@@ -438,8 +533,16 @@ final class PhoneApproval {
         }
     }
 
-    /** The notification goes from the phones, and from Home Assistant's own list, once the request is over. */
+    /**
+     * The notification goes from the phones, and from Home Assistant's own list, once the request is over. Through
+     * the integration: it clears them itself on an answer; a withdrawal tells it (harmless once it's over).
+     */
     private static void clearOnPhone(Context context, Request request) {
+        if (request.viaIntegration) {
+            String id = request.remoteId;
+            if (id != null) WORKER.execute(() -> HaIntegration.withdrawSwitchApproval(context, id));
+            return;
+        }
         HaApi.EXECUTOR.execute(() -> {
             try {
                 for (String service : request.services) {
@@ -458,7 +561,8 @@ final class PhoneApproval {
         if (sPending != request) return;
         sPending = null;
         if (request.waiter != null) request.waiter.close();
-        clearOnPhone(context, request);
+        // The integration took it off the phones itself when it heard the answer
+        if (!request.viaIntegration) clearOnPhone(context, request);
         if (!allowed) {
             Log.i(TAG, LogNames.key(request.key) + " didn't allow the switch");
             Toast.makeText(context, context.getString(R.string.approval_denied, request.name), Toast.LENGTH_LONG).show();

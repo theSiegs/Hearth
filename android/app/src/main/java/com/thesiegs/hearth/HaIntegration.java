@@ -431,6 +431,82 @@ final class HaIntegration {
         return result;
     }
 
+    /**
+     * A phone approval the integration asks for this TV (its switch_approval.py): the request's id and status
+     * (pending, allowed, denied, expired, withdrawn), or why there's none: unsupported (an integration without it),
+     * gone (no such request any more), not_paired, unreachable, or the integration's own error (no_person, not_adult,
+     * no_phone, not_sent, too_often, ...).
+     */
+    static final String SWITCH_PENDING = "pending";
+    static final String SWITCH_ALLOWED = "allowed";
+    static final String SWITCH_DENIED = "denied";
+
+    static final class SwitchAnswer {
+        final String id;
+        final String status;
+        final String error;
+
+        SwitchAnswer(String id, String status, String error) {
+            this.id = id;
+            this.status = status;
+            this.error = error;
+        }
+    }
+
+    /**
+     * Has the integration ask the adult of TV profile {@code profileKey} on their phones (blocking): the chosen phone
+     * {@code phone} when there is one and Home Assistant has it, else their person's companion apps.
+     */
+    static SwitchAnswer startSwitchApproval(Context context, String profileKey, String phone) {
+        String base = HaConfig.baseUrl(context);
+        String secret = secret(context);
+        if (base == null || secret == null || profileKey == null) return new SwitchAnswer(null, null, "not_paired");
+        try {
+            JSONObject body = new JSONObject().put("profile_id", profileKey);
+            if (phone != null) body.put("phone", phone);
+            Answer answer = request(base + "/api/hearth/device/" + deviceId(context) + "/switch_approval", "POST",
+                    body, null, secret, 3_000, 15_000);
+            return switchAnswer(answer.code, answer.body);
+        } catch (JSONException e) {
+            return new SwitchAnswer(null, null, "failed");
+        }
+    }
+
+    /** The request's status, once it isn't pending or after {@code timeoutS} seconds (blocking). */
+    static SwitchAnswer readSwitchApproval(Context context, String id, int timeoutS) {
+        String base = HaConfig.baseUrl(context);
+        String secret = secret(context);
+        if (base == null || secret == null || id == null) return new SwitchAnswer(null, null, "not_paired");
+        Answer answer = request(base + "/api/hearth/device/" + deviceId(context) + "/switch_approval/" + id
+                + "?timeout=" + timeoutS, "GET", null, null, secret, 3_000, (timeoutS + 10) * 1_000);
+        return switchAnswer(answer.code, answer.body);
+    }
+
+    /** Withdraws the request: the integration takes it off the phones (blocking). */
+    static void withdrawSwitchApproval(Context context, String id) {
+        String base = HaConfig.baseUrl(context);
+        String secret = secret(context);
+        if (base == null || secret == null || id == null) return;
+        request(base + "/api/hearth/device/" + deviceId(context) + "/switch_approval/" + id, "DELETE", null, null,
+                secret, 3_000, 5_000);
+    }
+
+    static SwitchAnswer switchAnswer(int code, JSONObject body) {
+        JSONObject request = body != null ? body.optJSONObject("request") : null;
+        if (code == 200 && request != null) {
+            String id = request.optString("id", "");
+            String status = request.optString("status", "");
+            if (id.matches("[0-9a-f]{32}") && !status.isEmpty()) return new SwitchAnswer(id, status, null);
+            return new SwitchAnswer(null, null, "failed");
+        }
+        String error = body != null ? body.optString("error", "") : "";
+        if (code == 0) return new SwitchAnswer(null, null, "unreachable");
+        if (code == 401) return new SwitchAnswer(null, null, "not_paired");
+        // Home Assistant's own 404 (no JSON error): an integration from before switch_approval
+        if (code == 404 && error.isEmpty()) return new SwitchAnswer(null, null, "unsupported");
+        return new SwitchAnswer(null, null, error.isEmpty() ? "failed" : error);
+    }
+
     /** The amounts of more time a kid can ask for, in minutes (the integration's asks.AMOUNTS). */
     static final int[] ASK_MINUTES = {15, 30, 45, 60};
 

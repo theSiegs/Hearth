@@ -9,10 +9,12 @@ class _Channel extends FLauncherChannel {
   bool haConfigured = false;
   String? notify;
   List<String> haPhones = const [];
+  bool canTest = true;
 
   @override
   Future<Map<dynamic, dynamic>> getPhoneApproval() async => {
         "haConfigured": haConfigured,
+        "canTest": canTest,
         "on": false,
         "notify": notify,
         "haPhones": haPhones,
@@ -64,6 +66,16 @@ void main() {
       ..haPhones = ["mobile_app_alex_phone", "mobile_app_alex_tablet"]);
     expect(find.text("Alex Phone, Alex Tablet (from Home Assistant)"), findsOneWidget);
     expect(find.text("Send a test notification"), findsOneWidget);
+  });
+
+  testWidgets("paired with the Hearth integration only: no test notification (it needs the TV's own token)",
+      (tester) async {
+    await pumpPage(tester, _Channel()
+      ..haConfigured = true
+      ..canTest = false
+      ..haPhones = ["mobile_app_alex_phone"]);
+    expect(find.text("Alex Phone (from Home Assistant)"), findsOneWidget);
+    expect(find.text("Send a test notification"), findsNothing);
   });
 
   testWidgets("a chosen phone wins over Home Assistant's", (tester) async {

@@ -337,7 +337,10 @@ public class MainActivity extends FlutterActivity {
             case "getPhoneApproval" -> {
                 String key = LauncherAccessibilityService.getActiveProfileKey(this);
                 Map<String, Object> state = new HashMap<>();
-                state.put("haConfigured", HaConfig.isConfigured(this));
+                // Home Assistant to ask through: the Hearth integration, or the TV's own address and token
+                state.put("haConfigured", PhoneApproval.canAsk(this));
+                // Choosing a phone and the test notification need the TV's own token
+                state.put("canTest", HaConfig.isConfigured(this));
                 state.put("on", PhoneApproval.isOn(this, key));
                 state.put("notify", PhoneApproval.notifyService(this, key));
                 // With none chosen, the phones Home Assistant has for the profile's person (the Hearth integration)

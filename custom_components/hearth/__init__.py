@@ -938,6 +938,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     entry.async_on_unload(hub.push.stop)
     hub.waits.start()
     entry.async_on_unload(hub.waits.stop)
+    # A paired TV's phone approvals: the phones' answers (any Home Assistant user's) end them
+    hub.switch_approvals.start()
+    entry.async_on_unload(hub.switch_approvals.stop)
     # Glint phones' agent results: the waiting tool calls hear them, the inbox is pruned (glint_agent.py)
     hub.glint_agent.start()
     entry.async_on_unload(hub.glint_agent.stop)

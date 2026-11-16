@@ -160,8 +160,16 @@ in the same list goes back to them. The first answer from any of the phones aske
 
 **On every TV.** In a household (Settings > Family > Household sync) the switch, the chosen phone and the Google TV PIN
 follow the adult to the household's other TVs; the newest change wins (see
-[household-sync.md](household-sync.md#what-syncs)). Each TV still needs Home Assistant's address and token to send the
-request.
+[household-sync.md](household-sync.md#what-syncs)).
+
+**Through the Hearth integration.** A TV paired with the integration needs no token for this: the integration sends
+the request to the phones, hears the answer and tells the TV (see
+[home-assistant-integration.md](home-assistant-integration.md#the-devices-side-of-the-api), Phone approval of a
+switch). Paired, the TV always asks through the integration; with an integration from before this, or one out of
+reach, it falls back to its own token when it has one. Choosing a phone from Home Assistant's full list and **Send a
+test notification** still need the token; without it the page offers the person's phones from Home Assistant. Anyone
+with the companion app may answer; Home Assistant's log and the `hearth_switch_approval` event say who did. Without
+the integration, the steps below are the TV's own, with its token.
 
 When Google TV's PIN screen comes up for that profile, Hearth TV:
 
