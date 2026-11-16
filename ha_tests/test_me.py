@@ -100,7 +100,8 @@ async def test_a_kid_asks_for_more_time_as_their_device_would(
     assert answer["success"], answer
     request = answer["result"]["request"]
     assert answer["result"]["ok"] and request["status"] == "pending" and request["asked_minutes"] == 30
-    assert request["group"] == "video"
+    # Bonus time has no category: an ask names none (an older device's group is taken as all)
+    assert request["group"] == "all"
     await hass.async_block_till_done()
     # Shown as asked from their Home Assistant user, not a device
     assert asked[0].data["person"] == "person.sam" and asked[0].data["via"] == "home_assistant"

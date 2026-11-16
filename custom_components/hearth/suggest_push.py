@@ -4,7 +4,7 @@ The household picks, per kid and group (or one device of theirs), which suggesti
 the adults' phones, and how much each offers (option suggest_push: [{person, group | device, minutes?}], off for
 everything by default, set in the Kids tab of Hearth's page). Once the household changes (debounced), each chosen
 suggestion that's there now is pushed once a day (history PUSHED, so a restart doesn't push it again), with its own
-buttons: two amounts (hearth.add_bonus) and "not today" (hearth.dismiss_suggestion), run as the adult who pressed one.
+buttons: two amounts of bonus time (hearth.add_time) and "not today" (hearth.dismiss_suggestion), run as the adult who pressed one.
 When the suggestion goes (more time given, put off, the group no longer out, a new day, the pair no longer chosen),
 it comes off every phone. At most MAX_PER_HOUR are pushed an hour (every adult gets each one, so that's per adult);
 one past that isn't pushed, and is still in the household summary. Each pushed one also shows on the TVs that show
@@ -96,6 +96,11 @@ def migrated(options: Mapping[str, Any]) -> dict[str, Any] | None:
 def chosen_minutes(options: Mapping[str, Any], person: str) -> dict[str, int]:
     """The amounts the household chose for a person's suggestions, by group or device id (glance's hints)."""
     return {_target(p): p["minutes"] for p in pairs(options) if p["person"] == person and p.get("minutes")}
+
+
+def _bonus(minutes: int) -> str:
+    """"30 min of bonus time", "1 h 30 of bonus time"."""
+    return f"{minutes} min of bonus time" if minutes < 60 else f"{duration(minutes)} of bonus time"
 
 
 def _more(minutes: int) -> str:
@@ -220,12 +225,12 @@ class SuggestPush:
         else:
             group = suggestion.get("group")
             name = (
-                "screen time"
+                "daily time"
                 if group == ALL
                 else next((g["name"] for g in person.get("groups") or [] if g["id"] == group), group)
             )
             title = f"{who}'s {name} ran out"
-            text = f"Give {_more(minutes)} today?"
+            text = f"Give {_bonus(minutes)} today?"
         actions = tuple(
             Action(
                 a["id"],

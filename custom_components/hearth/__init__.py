@@ -58,6 +58,7 @@ from .asks import EVENT_MORE_TIME_ANSWERED, EVENT_MORE_TIME_REQUESTED, AskError
 from .const import EVENT_BUDGET_REACHED
 from .counting import ALL
 from .exceptions import END_OF_DAY, SCHOOL_TIME_END, at_time, end_of_day
+from .time_model import say_clock
 from . import family_link as fl
 from .enforce import FAMILY_SAFETY, enforcers_from_options, fs_account_of
 from .sites import BLOCKED, BOTH, FROM_CHOICES, LIST_CHOICES, CopySites
@@ -216,7 +217,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             )
             # Its id, so an undo ends just this one (hearth.allow_end {id})
             return {"id": extra.id, "until": dt_util.as_local(extra.until).isoformat()}
-        target.add_bonus(call.data["person"], group, call.data["minutes"])
+        target.add_bonus(call.data["person"], group, call.data["minutes"], by=target.name_of_user(call.context.user_id))
         return {}
 
     @callback
@@ -285,6 +286,14 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             return
         ends_on = _place_ends_on(household, people, call.data.get("ends_on"))
         set_pause(hass, people, until, call.data.get("reason"), ends_on)
+        # Where it came from, for the "?" on the status line
+        by = household.name_of_user(call.context.user_id)
+        for person in people:
+            local = dt_util.as_local(until)
+            detail = f"Pause screens until {say_clock(local.hour, local.minute)}" + (
+                f" · {call.data['reason']}" if call.data.get("reason") else ""
+            )
+            household.note_origin(person, "pause", detail, "hearth", by)
         household.recompute()
 
     @callback
@@ -488,6 +497,65 @@ EXPLAIN_SCHEMA = vol.All(
     ),
     cv.has_at_least_one_key("app", "group"),
 )
+_WHO = {
+    vol.Exclusive("person", "who"): cv.entity_id,
+    vol.Exclusive("people", "who"): vol.All(cv.ensure_list, [cv.entity_id], vol.Length(min=1)),
+}
+_UNTIL = vol.Any(vol.In((END_OF_DAY, SCHOOL_TIME_END)), cv.time, cv.datetime)
+ADD_TIME_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            **_WHO,
+            vol.Required("minutes"): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+            vol.Optional("reason"): vol.All(cv.string, vol.Length(max=120)),
+        }
+    ),
+    cv.has_at_least_one_key("person", "people"),
+)
+REMOVE_TIME_SCHEMA = vol.All(
+    vol.Schema({**_WHO, vol.Required("minutes"): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440))}),
+    cv.has_at_least_one_key("person", "people"),
+)
+RAISE_CAP_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            **_WHO,
+            vol.Exclusive("category", "category"): cv.string,
+            vol.Exclusive("group", "category"): cv.string,
+            vol.Exclusive("minutes", "how"): vol.All(vol.Coerce(int), vol.Range(min=-1440, max=1440)),
+            vol.Exclusive("to", "how"): vol.All(vol.Coerce(int), vol.Range(min=0, max=1440)),
+            vol.Exclusive("no_cap", "how"): vol.All(cv.boolean, True),
+            vol.Optional("until", default=END_OF_DAY): _UNTIL,
+        }
+    ),
+    cv.has_at_least_one_key("person", "people"),
+    cv.has_at_least_one_key("category", "group"),
+    cv.has_at_least_one_key("minutes", "to", "no_cap"),
+)
+RAISE_CAP_END_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            **_WHO,
+            vol.Exclusive("category", "category"): cv.string,
+            vol.Exclusive("group", "category"): cv.string,
+        }
+    ),
+    cv.has_at_least_one_key("person", "people"),
+)
+# hearth.unlimited's "until I turn it off" (midnight at the latest)
+TURNED_OFF = "turned_off"
+UNLIMITED_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            **_WHO,
+            vol.Optional("until", default=END_OF_DAY): vol.Any(vol.In((TURNED_OFF,)), _UNTIL),
+            vol.Optional("include_bedtime", default=False): cv.boolean,
+            vol.Optional("reason"): vol.All(cv.string, vol.Length(max=120)),
+        }
+    ),
+    cv.has_at_least_one_key("person", "people"),
+)
+UNLIMITED_END_SCHEMA = vol.Schema(_WHO)
 SCHOOL_TIME_OFF_SCHEMA = vol.Schema(
     {
         vol.Required("people"): vol.All(cv.ensure_list, [cv.entity_id], vol.Length(min=1)),
@@ -628,6 +696,104 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         changed = household.scheduler.cancel(people, call.data.get("date"))
         entry_task(hass, household.hub.entry.entry_id, household.scheduler.async_tick(), "hearth school time back")
         return {"ids": changed}
+
+    # Today's time (time_model.py): bonus time, a raised limit, limits paused
+
+    def who(household, data) -> list[str]:
+        given = data.get("people") or ([data["person"]] if data.get("person") else [])
+        if not given:
+            raise ServiceValidationError("Give a person or people")
+        return people_of(household, given)
+
+    def category_of(household, data) -> str:
+        given = (data.get("category") or data.get("group") or "").strip()
+        found = group_id(household, given)
+        if not given or found == ALL or household.group(found) is None:
+            raise ServiceValidationError(f"No category {given} (daily time is raised with bonus time)")
+        return found
+
+    @callback
+    def add_time(call: ServiceCall) -> ServiceResponse:
+        """Bonus time today: no category, spent anywhere (minutes past a category's limit come out of it too)."""
+        household = loaded_household()
+        people = who(household, call.data)
+        for person in people:
+            household.add_time(
+                person, call.data["minutes"], call.data.get("reason"), by=household.name_of_user(call.context.user_id)
+            )
+        return {p: household.time_view(p) for p in people}
+
+    @callback
+    def remove_time(call: ServiceCall) -> ServiceResponse:
+        """Takes back bonus time an adult gave today (never more than was given)."""
+        household = loaded_household()
+        return {"removed": {p: household.remove_time(p, call.data["minutes"]) for p in who(household, call.data)}}
+
+    @callback
+    def raise_cap(call: ServiceCall) -> ServiceResponse:
+        """A category's limit raised today (by minutes, to minutes, or no limit) until a time. Daily time is
+        unchanged."""
+        household = loaded_household()
+        people = who(household, call.data)
+        category = category_of(household, call.data)
+        now = dt_util.now()
+        given = call.data.get("until", END_OF_DAY)
+        out = {}
+        for person in people:
+            until = None if given == END_OF_DAY else until_for(household, person, given, now)
+            held = household.raise_cap(
+                person, category, call.data.get("minutes"), call.data.get("to"), bool(call.data.get("no_cap")), until,
+                by=household.name_of_user(call.context.user_id),
+            )
+            out[person] = {"category": category, **held.view()}
+        return out
+
+    @callback
+    def raise_cap_end(call: ServiceCall) -> ServiceResponse:
+        household = loaded_household()
+        category = category_of(household, call.data) if (call.data.get("category") or call.data.get("group")) else None
+        return {p: household.raise_cap_end(p, category) for p in who(household, call.data)}
+
+    @callback
+    def unlimited(call: ServiceCall) -> ServiceResponse:
+        """Unlimited until a time ("turned_off": until an adult ends it; the end of the day by default; midnight at
+        the latest): no daily time or category limit holds the people, and the time they use isn't counted. Bedtime,
+        School time and Pause screens still apply, bedtime not with include_bedtime."""
+        household = loaded_household()
+        people = who(household, call.data)
+        now = dt_util.now()
+        given = call.data["until"]
+        open_ended = given == TURNED_OFF
+        until = {
+            p: min(end_of_day(now), until_for(household, p, END_OF_DAY if open_ended else given, now)) for p in people
+        }
+        allowed = household.start_unlimited(
+            people, until, call.data["include_bedtime"], open_ended, call.data.get("reason"),
+            by=household.name_of_user(call.context.user_id),
+        )
+        return {
+            "id": allowed.id,
+            "until": {p: dt_util.as_local(u).isoformat() for p, u in until.items()},
+            "text": {p: household.time_view(p)["text"] for p in people},
+        }
+
+    @callback
+    def unlimited_end(call: ServiceCall) -> ServiceResponse:
+        """Unlimited ends now: limits are back on where they were when it started."""
+        household = loaded_household()
+        people = who(household, call.data) if (call.data.get("people") or call.data.get("person")) else None
+        ended = household.end_unlimited(people)
+        return {"ended": ended, "text": {p: household.unlimited.back_on_text(p) for p in ended}}
+
+    for name, handler, schema in (
+        ("add_time", add_time, ADD_TIME_SCHEMA),
+        ("remove_time", remove_time, REMOVE_TIME_SCHEMA),
+        ("raise_cap", raise_cap, RAISE_CAP_SCHEMA),
+        ("raise_cap_end", raise_cap_end, RAISE_CAP_END_SCHEMA),
+        ("unlimited", unlimited, UNLIMITED_SCHEMA),
+        ("unlimited_end", unlimited_end, UNLIMITED_END_SCHEMA),
+    ):
+        register_service(hass, DOMAIN, name, handler, schema=schema, supports_response=SupportsResponse.OPTIONAL)
 
     register_service(
         hass, DOMAIN, "allow", allow, schema=ALLOW_SCHEMA, supports_response=SupportsResponse.OPTIONAL

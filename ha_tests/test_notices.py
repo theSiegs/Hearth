@@ -45,7 +45,7 @@ NOTICE = {
     "key": KEY,
     "tag": TAG,
     "title": "Sam's Video ran out",
-    "message": "Give 30 more minutes today?",
+    "message": "Give 30 min of bonus time today?",
     "urgency": "notice",
     "actions": [{"id": "0", "title": "+30 min"}, {"id": "1", "title": "+15 min"}, {"id": "2", "title": "Not today"}],
 }
@@ -138,7 +138,8 @@ async def test_a_cleared_notice_goes_from_the_tv(
 
 PIN = "4826"
 WRONG = "1111"
-BONUS = "number.hearth_sam_video_bonus_today"
+# A suggestion gives bonus time (no category): daily time's bonus number (its entity id as an older Hearth named it)
+BONUS = "number.hearth_sam_all_screen_time_bonus_today"
 
 
 def _notice(client, secret: str | None, body: dict, device_id: str = TV_ID):

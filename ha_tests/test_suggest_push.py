@@ -58,7 +58,7 @@ async def test_a_chosen_suggestion_is_pushed_once_a_day(
 
     [push] = _pushes(sent)
     assert push.data["title"] == "Sam's Video ran out"
-    assert push.data["message"] == "Give 30 more minutes today?"
+    assert push.data["message"] == "Give 30 min of bonus time today?"
     assert push.data["data"]["actions"] == [
         {"action": f"HEARTH_ACT|{KEY}|0", "title": "+30 min"},
         {"action": f"HEARTH_ACT|{KEY}|1", "title": "+15 min"},
@@ -128,15 +128,15 @@ async def test_answered_or_no_longer_out_comes_off_the_phones(
     await _check(hass)
     assert len(_pushes(sent)) == 1
 
-    # +30 from Alex's phone: the bonus is given as Alex, and the push goes
+    # +30 from Alex's phone: bonus time is given as Alex (no category), and the push goes
     _press(hass, f"HEARTH_ACT|{KEY}|0", users["alex"])
     await hass.async_block_till_done()
-    assert hass.states.get("number.hearth_sam_video_bonus_today").state == "30"
+    assert hass.states.get("number.hearth_sam_all_screen_time_bonus_today").state == "30"
     await _check(hass)
     assert _clears(sent)
     assert _hub(hass).attention.item(KEY) is None
     # Out again the same day: not pushed a second time
-    await hass.services.async_call(DOMAIN, "add_bonus", {"person": "person.sam", "group": "video", "minutes": -30}, blocking=True)
+    await hass.services.async_call(DOMAIN, "remove_time", {"person": "person.sam", "minutes": 30}, blocking=True)
     await _check(hass)
     assert len(_pushes(sent)) == 1
 
@@ -167,7 +167,7 @@ async def test_offer_more_moves_over_and_doesn_t_notify_twice(
     # No offered request, one notification, the amount kept
     assert _hub(hass).asks.pending() == []
     [push] = _pushes(sent)
-    assert push.data["message"] == "Give 45 more minutes today?"
+    assert push.data["message"] == "Give 45 min of bonus time today?"
     assert not [c for c in sent["alex_phone"] if c.data["data"]["tag"].startswith("hearth_more_")]
 
 

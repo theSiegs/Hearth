@@ -68,12 +68,18 @@ def summary(hub) -> dict[str, Any]:
                     "id": group.id,
                     "name": group.name,
                     "used_minutes": _minutes(used),
-                    "minutes_left": state.minutes_left if state else None,
-                    # Today's budget (null: no limit) and the extra time given today, apart
+                    # What can actually be used (time_model.py: a category's is never more than daily time left)
+                    "minutes_left": state.shown_left if state else None,
+                    # What holds it (0: held): a category's may be more than daily time left
+                    "held_left": state.minutes_left if state else None,
+                    # Daily time: today's base time and bonus time. A category: its limit as set and what a raised
+                    # limit adds today (null budget: no limit)
                     "budget": state.budget_min if state else None,
                     "bonus": state.bonus_min if state else 0,
                     # Of the bonus, what chores earned today (todos.py)
                     "bonus_chores": state.bonus_chores if state else 0,
+                    "bonus_left": state.bonus_left if state else 0,
+                    "raised": state.raised.view() if state and state.raised is not None else None,
                 }
             )
         limited = any(g["minutes_left"] is not None for g in groups)
@@ -85,9 +91,12 @@ def summary(hub) -> dict[str, Any]:
                 "kind": roles.get(person) or ("kid" if limited else "person"),
                 "kind_set": person in roles,
                 "tv_profiles": sorted(p for p, who in profiles.items() if who == person),
-                # The shared pool: All screen time across every device and source
+                # Daily time: the one total across every device and source
                 "all": next((g for g in groups if g["id"] == ALL), None),
                 "groups": groups,
+                # Today's time as people are shown it: daily time left, bonus time, category limits, Unlimited
+                # (docs/contracts/time-model.md)
+                "time": household.time_view(person),
                 "locked": bool(day and day.locked),
                 "locked_by": list(day.locked_by) if day else [],
                 # TVs where Google TV's own Kids daily limit holds them (Hearth can't lift it)

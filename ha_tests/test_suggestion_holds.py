@@ -28,7 +28,7 @@ from custom_components.hearth.glance import (
     person_glance,
     suggestions,
 )
-from custom_components.hearth.history import BONUS
+from custom_components.hearth.history import BONUS, RAISE
 from custom_components.hearth.sources import Source, totals_reading
 from custom_components.hearth.suggest_push import DEBOUNCE
 from custom_components.hearth.targets import display_name
@@ -114,7 +114,7 @@ def test_the_glance_and_the_household_carry_the_held_ones() -> None:
     sam.update(person_glance(sam, [], [], [], _at(16)))
     assert alex["suggestions"] == [] and [s["key"] for s in alex["suggestions_held"]] == ["more:games", "device:fs:xbox"]
     assert sam["suggestions"][0]["sentence"] == "Sam's Youtube time is up"
-    assert sam["suggestions"][0]["detail"] == "Used 30 min of 1 h · 40 min of screen time left"
+    assert sam["suggestions"][0]["detail"] == "Used 30 min of 1 h · 40 min of daily time left"
     house = household_glance([alex, sam], [])
     assert [(s["person"], s["key"]) for s in house["suggestions"]] == [("person.sam", "more:youtube")]
     assert [(s["person_name"], s["held"]) for s in house["suggestions_held"]] == [("Alex", "lock"), ("Alex", "lock")]
@@ -227,7 +227,8 @@ async def test_remove_bonus_takes_back_only_what_was_given(
         DOMAIN, "remove_bonus", {"person": "person.sam", "group": "video", "minutes": 30}, blocking=True, return_response=True
     )
     assert response == {"removed": 0}
-    logged = [(e["minutes"], e.get("undo")) for e in household.history.of("person.sam", kinds=(BONUS,))]
+    # A category's add_bonus raises its limit (time model): logged as raises
+    logged = [(e["minutes"], e.get("undo")) for e in household.history.of("person.sam", kinds=(RAISE,))]
     assert logged == [(20, None), (-15, True), (-5, True)]
     # Adults only
     from homeassistant.core import Context

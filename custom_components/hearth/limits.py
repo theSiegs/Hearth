@@ -24,6 +24,7 @@ from homeassistant.helpers.storage import Store
 
 from .const import CONF_GROUP_APPS, CONF_GROUPS
 from .counting import ALL
+from .time_model import Raise
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -186,7 +187,8 @@ class Group:
 
 
 BUILTIN_GROUPS = (
-    Group(ALL, "All screen time", builtin=True),
+    # Daily time: the one total (its id stays "all"; an older Hearth called it All screen time)
+    Group(ALL, "Daily time", builtin=True),
     Group(GAMES, "Games", frozenset(), "game", builtin=True),
     Group(SOCIAL, "Social", STARTER_SOCIAL_APPS, "social", builtin=True),
     Group(MESSAGING, "Messaging", STARTER_MESSAGING_APPS, "messaging", builtin=True),
@@ -511,17 +513,34 @@ def day_type(day: date) -> str:
 @dataclass
 class GroupState:
     counted_min: float
+    # All screen time: today's base time. A category: its configured cap (None: none, or raised to no cap)
     budget_min: int | None
-    # Today's bonus: an adult's (set_bonus) and chores' together
+    # All screen time: today's bonus (an adult's and chores' together). A category: what a raised cap adds to it
     bonus_min: int
-    # Of which chores earned today (todos.py)
+    # Of which chores earned today (todos.py; All screen time only under the time model)
     bonus_chores: int = 0
+    # Set by the time model (household.recompute, time_model.account): what holds the group (0: held), what a person
+    # is shown (a category's is never more than today's time left), the bonus left today, a category's raised cap
+    modeled: bool = False
+    held_left: int | None = None
+    usable: int | None = None
+    bonus_left: int = 0
+    raised: Raise | None = None
+    # A category's max as an adult set it for today (before any raise)
+    configured: int | None = None
 
     @property
     def minutes_left(self) -> int | None:
+        if self.modeled:
+            return self.held_left
         if self.budget_min is None:
             return None
         return max(0, int(self.budget_min + self.bonus_min - self.counted_min))
+
+    @property
+    def shown_left(self) -> int | None:
+        """The minutes a person can actually use (a category's never more than today's time left)."""
+        return self.usable if self.modeled else self.minutes_left
 
 
 MAX_BONUS = 24 * 60
@@ -537,7 +556,19 @@ class LimitsData:
     reached: dict[str, list[str]] = field(default_factory=dict)
     # A TV's own rules taken (or passed over) once per "device_id:profile_id" (Household.import_local_rules)
     imported: list[str] = field(default_factory=list)
+    # Today's raised caps: person -> group -> Raise.view() (time_model.py)
+    raises: dict[str, dict[str, dict[str, Any]]] = field(default_factory=dict)
+    # TIME_MODEL once today's per-category bonuses were made raised caps
+    model: int = 1
+    # Where today's changes came from, per person: [{kind, source, by, at, detail, ...}] (household.note_origin)
+    origins: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
 
+
+MAX_ORIGINS = 50
+
+
+# The stored data's version under the time model: per-category bonuses are raised caps
+TIME_MODEL = 2
 
 # A TV's own rules name their groups all, games and youtube (ScreenTimeRules on the TV)
 TV_GROUP_ALIASES: dict[str, tuple[str, ...]] = {"youtube": ("youtube", "video")}
@@ -563,30 +594,52 @@ class Limits:
             bonus=stored.get("bonus", {}),
             reached=stored.get("reached", {}),
             imported=stored.get("imported", []),
+            raises=stored.get("raises", {}),
+            # A store with no version is an older Hearth's (or a new household's: nothing to move)
+            model=stored.get("model", 1),
+            origins=stored.get("origins", {}),
         )
+        if self.migrate_bonuses():
+            self._save()
+
+    def _stored(self) -> dict[str, Any]:
+        return {
+            "budgets": self.data.budgets,
+            "day": self.data.day,
+            "bonus": self.data.bonus,
+            "reached": self.data.reached,
+            "imported": self.data.imported,
+            "raises": self.data.raises,
+            "model": self.data.model,
+            "origins": self.data.origins,
+        }
 
     def _save(self) -> None:
-        self._store.async_delay_save(
-            lambda: {
-                "budgets": self.data.budgets,
-                "day": self.data.day,
-                "bonus": self.data.bonus,
-                "reached": self.data.reached,
-                "imported": self.data.imported,
-            },
-            5,
-        )
+        self._store.async_delay_save(self._stored, 5)
 
     async def async_flush(self) -> None:
-        await self._store.async_save(
-            {
-                "budgets": self.data.budgets,
-                "day": self.data.day,
-                "bonus": self.data.bonus,
-                "reached": self.data.reached,
-                "imported": self.data.imported,
-            }
-        )
+        await self._store.async_save(self._stored())
+
+    def migrate_bonuses(self) -> bool:
+        """Once: today's per-category bonuses (an older Hearth's "+30 games") become raised caps by as many minutes.
+        All screen time's bonus stays today's bonus time. Nothing counts twice: a category's minutes leave the bonus
+        as they go to its raise, and the version is saved with them. Says whether it ran."""
+        if self.data.model >= TIME_MODEL:
+            return False
+        moved = 0
+        for person, groups in self.data.bonus.items():
+            for group in [g for g in groups if g != ALL]:
+                minutes = int(groups.pop(group) or 0)
+                if minutes:
+                    held = Raise.of(self.data.raises.get(person, {}).get(group)) or Raise()
+                    self.data.raises.setdefault(person, {})[group] = Raise(
+                        held.add + minutes, held.to, held.no_cap, held.until
+                    ).view()
+                    moved += 1
+        self.data.model = TIME_MODEL
+        if moved:
+            _LOGGER.info("Hearth: %d of today's category bonuses are raised caps now (the time model)", moved)
+        return True
 
     def new_day(self, today: date) -> bool:
         """Starts today's bonus and marks afresh when the day changed; says whether it did."""
@@ -595,8 +648,17 @@ class Limits:
         self.data.day = today.isoformat()
         self.data.bonus = {}
         self.data.reached = {}
+        self.data.raises = {}
+        self.data.origins = {}
         self._save()
         return True
+
+    def add_origin(self, person: str, record: dict[str, Any]) -> None:
+        """Where one of today's changes came from (household.note_origin); the latest MAX_ORIGINS a person."""
+        kept = self.data.origins.setdefault(person, [])
+        kept.append(record)
+        del kept[:-MAX_ORIGINS]
+        self._save()
 
     def budget(self, person: str, group: str, kind: str) -> int | None:
         if self.week is not None and self.week.is_set(person):
@@ -634,12 +696,61 @@ class Limits:
         return taken
 
     def bonus(self, person: str, group: str) -> int:
+        """All screen time: the bonus time an adult gave today (chores' aside). A category: what its raised cap adds
+        (an older Hearth's per-category bonus)."""
+        if group != ALL:
+            held = self.raise_of(person, group)
+            return held.add if held else 0
         return self.data.bonus.get(person, {}).get(group, 0)
 
     def set_bonus(self, person: str, group: str, minutes: int) -> None:
         # Negative takes time away today (down to none left; minutes_left never goes below 0)
-        self.data.bonus.setdefault(person, {})[group] = max(-MAX_BONUS, min(MAX_BONUS, minutes))
+        minutes = max(-MAX_BONUS, min(MAX_BONUS, minutes))
+        if group != ALL:
+            held = self.raise_of(person, group) or Raise()
+            self.set_raise(person, group, Raise(minutes, held.to, held.no_cap, held.until))
+            return
+        self.data.bonus.setdefault(person, {})[group] = minutes
         self._save()
+
+    def raise_of(self, person: str, group: str, now: Any = None) -> Raise | None:
+        """The category's raised cap today, while it lasts ([now]: an aware datetime; None: its end isn't checked)."""
+        held = Raise.of(self.data.raises.get(person, {}).get(group))
+        if held is None:
+            return None
+        if now is not None and held.until is not None:
+            from homeassistant.util import dt as dt_util
+
+            until = dt_util.parse_datetime(held.until)
+            if until is not None and until <= now:
+                return None
+        return held
+
+    def set_raise(self, person: str, group: str, held: Raise | None) -> None:
+        """Today's raised cap of the category. None, or one that changes nothing: back to the configured cap."""
+        if held is None or (not held.add and held.to is None and not held.no_cap):
+            self.data.raises.get(person, {}).pop(group, None)
+        else:
+            self.data.raises.setdefault(person, {})[group] = held.view()
+        self._save()
+
+    def prune_raises(self, now: Any) -> bool:
+        """Raised caps whose time is up go; says whether any did."""
+        gone = False
+        for person, groups in self.data.raises.items():
+            for group in list(groups):
+                if self.raise_of(person, group, now) is None:
+                    del groups[group]
+                    gone = True
+        if gone:
+            self._save()
+        return gone
+
+    def chores_today(self, person: str, groups: list[str]) -> int:
+        """Every chore minute the person earned today, whatever group its reward names: chores give bonus time."""
+        if not self.chore_minutes:
+            return 0
+        return sum(max(0, self.chore_minutes(person, g)) for g in groups)
 
     def mark_reached(self, person: str, group: str) -> bool:
         """Notes that the person's group reached 0 today; False if it was noted already."""

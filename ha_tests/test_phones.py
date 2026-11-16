@@ -58,7 +58,7 @@ async def test_every_adult_s_phone_gets_the_request_and_loses_it_once_answered(
     assert len(alex) == 1 and len(jordan) == 1
     tag = f"hearth_more_{request['id']}"
     for call in (alex[0], jordan[0]):
-        assert call.data["title"] == "More time?"
+        assert call.data["title"] == "Bonus time?"
         assert call.data["data"]["tag"] == tag
         assert [a["title"] for a in call.data["data"]["actions"]] == ["+30 min", "+45 min", "Not now"]
     # Android's tap and iOS's open Hearth's page at the request

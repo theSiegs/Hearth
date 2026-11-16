@@ -165,13 +165,23 @@ class BedtimeLifts:
         }
 
     @callback
-    def give(self, person: str, minutes: int, now: datetime | None = None) -> datetime:
-        """Extra time given in bedtime: the lift lasts [minutes] more (from now, or from when it would end)."""
+    def give(
+        self, person: str, minutes: int, now: datetime | None = None, until: datetime | None = None
+    ) -> datetime:
+        """Extra time given in bedtime: the lift lasts [minutes] more (from now, or from when it would end). With
+        [until] (hearth.no_limits with include_bedtime): until then, whatever today's time says."""
         now = now or dt_util.now()
         running = self.until(person, now)
-        since = self.lifts[person].get("since") if running is not None else None
-        until = (running or now) + timedelta(minutes=minutes)
+        record = self.lifts.get(person) if running is not None else None
+        since = record.get("since") if record else None
+        no_limits = until is not None or bool(record and record.get("no_limits"))
+        if until is None:
+            until = (running or now) + timedelta(minutes=minutes)
+        elif running is not None and running > until:
+            until = running
         self.lifts[person] = {"since": since or now.isoformat(), "until": until.isoformat()}
+        if no_limits:
+            self.lifts[person]["no_limits"] = True
         _LOGGER.info("%s: bedtime lifted until %s for extra time", person, dt_util.as_local(until).strftime("%H:%M"))
         self._save()
         self.hass.bus.async_fire(EVENT_LIFTED, {"person": person, "until": dt_util.as_local(until).isoformat()})
@@ -208,7 +218,8 @@ class BedtimeLifts:
         now = now or dt_util.now()
         if person not in self.lifts:
             return False
-        if self.until(person, now) is None or all_left == 0:
+        # A no-limits lift (hearth.no_limits) lasts its time whatever today's time says
+        if self.until(person, now) is None or (all_left == 0 and not self.lifts[person].get("no_limits")):
             self.end(person)
             return False
         return True

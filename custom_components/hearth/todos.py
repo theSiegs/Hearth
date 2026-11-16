@@ -11,8 +11,9 @@ an automation) may check an item off, but nothing is granted. The adults are tol
 
 Every grant is one ledger entry keyed "<occurrence>#<n>": untick reverses it, a tick again makes the next n, so an
 occurrence never has two live grants. Minutes aren't added to the day's bonus: Limits folds today's live chore minutes
-into the bonus (bonus_chores), so a restart or a repeated event has nothing to add twice, and an undo takes them back at
-once. All screen time minutes reach Family Link and Family Safety as hearth.add_bonus's do. Money is a balance per kid:
+into today's bonus time (bonus_chores), so a restart or a repeated event has nothing to add twice, and an undo takes them
+back at once. A reward's minutes are bonus time whatever group it names (time_model.py: bonus time has no category), and
+reach Family Link and Family Safety as hearth.add_time's do. Money is a balance per kid:
 earned, paid and adjust entries; Hearth moves no money (a later integration could read earned and write paid, with its
 own id in "ext").
 """
@@ -588,8 +589,14 @@ class ChoreBook:
         had_none = entry.pop("had_none", False)
         if minutes:
             self.household.history.log(BONUS, person, group=pool, minutes=minutes, via="chore")
-            if pool == ALL:
-                self.household.sync.mirror_bonus(person, had_none)
+            # Chore minutes are bonus time, whatever group the reward names (time_model.py): every grant reaches
+            # Google's and Microsoft's own limits
+            self.household.sync.mirror_bonus(person, had_none)
+            # Where it came from, for the "?" on the status line
+            self.household.note_origin(
+                person, "bonus", f"Bonus +{minutes} · {entry['title']}", "chore",
+                self.household.name_of_user(entry.get("by")), chore=entry["key"],
+            )
         self.hass.bus.async_fire(
             EVENT_CHORE_DONE,
             {
@@ -614,9 +621,9 @@ class ChoreBook:
         else:
             group = self.household.group(entry["pool"])
             name = group.name if group else entry["pool"]
-            what = f"+{entry['minutes']} min of {name} today"
+            what = f"+{entry['minutes']} min bonus earned"
             if entry["minutes"] < entry["asked"]:
-                what += f" (today's cap for {name} is reached)"
+                what += f" (the most chores give for {name} today is reached)"
         return Item(
             f"hearth_chore_{entry['occurrence']}",
             f"{entry['title']}: {what}",
@@ -645,8 +652,11 @@ class ChoreBook:
         minutes = entry.get("minutes") or 0
         if minutes and entry["day"] == today:
             day = self.household.days.get(entry["person"])
-            state = day.limits.get(entry["pool"]) if day else None
-            if state is not None and state.minutes_left is not None:
+            # Bonus time spent already (time_model.py: a chore's minutes are bonus time, shared by every category)
+            state = day.limits.get(ALL) if day else None
+            if state is not None and state.modeled:
+                entry["spent"] = max(0, minutes - state.bonus_left)
+            elif state is not None and state.minutes_left is not None:
                 entry["spent"] = max(0, minutes - state.minutes_left)
         entry.update({"reversed_at": dt_util.now().isoformat(), "reversed_by": user_id, "reversed_why": why})
         mark = self.done.get(entry["occurrence"])

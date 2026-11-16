@@ -73,7 +73,7 @@ VOICE = "voice"
 REFUSED = "refused"
 
 # What the history keeps of an action that logs nothing of its own: never a reason or a note
-_AUDIT_FIELDS = ("app", "group", "minutes", "device", "until", "date", "from", "id", "deny", "request_id")
+_AUDIT_FIELDS = ("app", "group", "category", "minutes", "to", "device", "until", "date", "from", "id", "deny", "request_id")
 
 T = TypeVar("T")
 
@@ -494,7 +494,7 @@ class SuggestionsTool(HearthTool):
     name = "hearth_get_suggestions"
     description = (
         "Hearth's suggestions for the adults now (a group or a device ran out, a request): each with its key, text, "
-        "reason, the minutes it suggests and the amounts offered. Accept one with hearth_add_bonus, put it off for "
+        "reason, the minutes it suggests and the amounts offered. Accept one with hearth_add_time, put it off for "
         "today with hearth_dismiss_suggestion (its key)."
     )
     parameters = vol.Schema({vol.Optional("person", description="Only this person's"): str})
@@ -664,22 +664,35 @@ def _state_of(household: Household, person: str, group: str) -> dict[str, Any]:
     state = day.limits.get(group) if day else None
     if state is None:
         return {"minutes_left_now": None}
-    return {"minutes_left_now": state.minutes_left, "budget_today": state.budget_min, "bonus_today": state.bonus_min}
+    return {"minutes_left_now": state.shown_left, "budget_today": state.budget_min, "bonus_today": state.bonus_min}
 
 
-class AddBonusTool(ActionTool):
-    name = "hearth_add_bonus"
+def _time_now(household: Household, person: str) -> dict[str, Any]:
+    """Today's time after an action: the person's line, daily time and bonus time left, raised limits, Unlimited."""
+    view = household.time_view(person)
+    return {
+        "today": view["adult_text"],
+        "today_left": view["today_left"],
+        "bonus_left": view["bonus_left"],
+        "raised_limits": [c["limit_text"] for c in view["categories"] if c["raised"]],
+        "unlimited": (view["unlimited"] or {}).get("text"),
+    }
+
+
+class AddTimeTool(ActionTool):
+    name = "hearth_add_time"
     description = (
-        "Give a person more minutes today, in the shared pool (All screen time, the default) or one group; with a "
-        "device, minutes on that device only. A negative number takes minutes back (to correct a bonus). Today only."
+        "Give a person bonus time today: minutes added to their daily time, with no category. They may spend it "
+        "anywhere, minutes past a category's limit included (one bonus shared by every category). A negative number "
+        "takes bonus time back (to correct one). With a device, minutes on that device only. Today only."
     )
     parameters = vol.Schema(
         {
             _PERSON: str,
-            vol.Required("minutes", description="Minutes to add today (negative takes back), -240 to 240"): vol.All(
+            vol.Required("minutes", description="Minutes of bonus time (negative takes back), -240 to 240"): vol.All(
                 vol.Coerce(int), vol.Range(min=-240, max=240)
             ),
-            vol.Optional("group", description="A group's name or id; 'all' (default) is All screen time"): str,
+            vol.Optional("reason"): str,
             vol.Optional("device", description="Only on this device of theirs (its name or id, hearth_get_person)"): str,
         }
     )
@@ -690,40 +703,155 @@ class AddBonusTool(ActionTool):
         minutes = args["minutes"]
         if minutes == 0:
             raise HomeAssistantError("Give a number of minutes other than 0")
-        group = find_group(household, args.get("group") or ALL)
-        data: dict[str, Any] = {"person": person, "minutes": minutes, "group": group}
-        what = group_name(household, group)
         device = None
         if args.get("device"):
             if minutes < 0:
                 raise HomeAssistantError("Extra time on one device can't be taken back by minutes: end it with hearth_allow_end")
             device = find_target(household, person, args["device"])
-            data["device"] = device["id"]
-        if minutes > 0:
-            text = f"give {who} {minutes} more minutes of {what} today" + (f" on {device['name']}" if device else "")
+            service, data = "add_bonus", {"person": person, "minutes": minutes, "group": ALL, "device": device["id"]}
+        elif minutes > 0:
+            service, data = "add_time", {"person": person, "minutes": minutes}
+            if args.get("reason"):
+                data["reason"] = args["reason"]
         else:
-            text = f"take {-minutes} minutes of {what} back from {who} today"
+            service, data = "remove_time", {"person": person, "minutes": -minutes}
+        if minutes > 0:
+            text = f"give {who} {minutes} min of bonus time today" + (f" on {device['name']}" if device else "")
+        else:
+            text = f"take {-minutes} min of bonus time back from {who}"
 
         def after(response: Any) -> dict[str, Any]:
-            out = {"person": who, "group": what, "minutes": minutes}
+            out: dict[str, Any] = {"person": who, "minutes": minutes}
             if device is not None:
                 out["device"] = device["name"]
                 out.update({k: v for k, v in (response or {}).items() if k in ("id", "until")})
-            out.update(_state_of(household.hub.household, person, group))
+            if service == "remove_time":
+                out["removed"] = ((response or {}).get("removed") or {}).get(person)
+            out.update(_time_now(household.hub.household, person))
             return out
 
         return Plan(
-            "add_bonus",
+            service,
             data,
             text,
             f"+{minutes} min" if minutes > 0 else f"{minutes} min",
             person,
             [person],
             after,
-            undo=(
-                "hearth_allow_end with the id" if device else f"hearth_add_bonus with minutes {-minutes} (same group)"
-            ),
+            undo=("hearth_allow_end with the id" if device else f"hearth_add_time with minutes {-minutes}"),
         )
+
+
+class RaiseLimitTool(ActionTool):
+    name = "hearth_raise_limit"
+    description = (
+        "Raise one category's limit today (Games, YouTube...): by some minutes, to some minutes, or no limit, until a "
+        "time (the end of the day by default). Daily time is unchanged: this only lets the category use more of it. "
+        "end: true ends a raised limit."
+    )
+    parameters = vol.Schema(
+        {
+            _PERSON: str,
+            vol.Required("category", description="A category's name or id"): str,
+            vol.Exclusive("minutes", "how", description="Raise by this many minutes (negative lowers)"): vol.All(
+                vol.Coerce(int), vol.Range(min=-240, max=240)
+            ),
+            vol.Exclusive("to", "how", description="The limit today, in minutes"): vol.All(
+                vol.Coerce(int), vol.Range(min=0, max=1440)
+            ),
+            vol.Exclusive("no_limit", "how", description="No limit for the category today"): bool,
+            vol.Exclusive("end", "how", description="End the raised limit"): bool,
+            vol.Optional("until", description=_UNTIL_HELP): str,
+        }
+    )
+
+    def plan(self, household, args):
+        person = find_person(household, args["person"])
+        who = household.person_name(person)
+        category = find_group(household, args["category"])
+        if category == ALL:
+            raise HomeAssistantError("Daily time isn't raised: give bonus time with hearth_add_time")
+        what = group_name(household, category)
+        if args.get("end"):
+            service, data = "raise_cap_end", {"person": person, "category": category}
+            text, label = f"end {who}'s raised {what} limit", "End"
+        else:
+            data: dict[str, Any] = {"person": person, "category": category}
+            if args.get("no_limit"):
+                data["no_cap"] = True
+                text = f"no {what} limit for {who} today"
+            elif args.get("to") is not None:
+                data["to"] = args["to"]
+                text = f"raise {who}'s {what} limit to {args['to']} min today"
+            elif args.get("minutes"):
+                data["minutes"] = args["minutes"]
+                text = f"raise {who}'s {what} limit by {args['minutes']} min today"
+            else:
+                raise HomeAssistantError("Say by how many minutes, to how many, or no_limit")
+            if args.get("until"):
+                data["until"] = _until(args["until"])
+                text += f" until {_until_word(data['until'])}"
+            service, label = "raise_cap", "Raise"
+
+        def after(response: Any) -> dict[str, Any]:
+            out = {"person": who, "category": what}
+            out.update(_time_now(household.hub.household, person))
+            return out
+
+        return Plan(service, data, text, label, person, [person], after, undo="hearth_raise_limit with end: true")
+
+
+class UnlimitedTool(ActionTool):
+    name = "hearth_unlimited"
+    description = (
+        "Unlimited for one person until a time (the end of the day by default, 'turned_off' until an adult ends it; "
+        "always over at midnight): no daily time or category limit holds them, and the time used isn't counted, so "
+        "everything picks up where it was. Bedtime, School time and Pause screens still apply unless include_bedtime."
+    )
+    parameters = vol.Schema(
+        {
+            _PERSON: str,
+            vol.Optional("until", description=_UNTIL_HELP + ", or 'turned_off'"): str,
+            vol.Optional("include_bedtime", description="Bedtime doesn't lock them meanwhile either"): bool,
+            vol.Optional("reason"): str,
+        }
+    )
+
+    def plan(self, household, args):
+        person = find_person(household, args["person"])
+        who = household.person_name(person)
+        given = str(args.get("until") or "").strip().lower().replace(" ", "_")
+        until = "turned_off" if given in ("turned_off", "off", "until_turned_off") else _until(args.get("until"))
+        data: dict[str, Any] = {"people": [person], "until": until, "include_bedtime": bool(args.get("include_bedtime"))}
+        if args.get("reason"):
+            data["reason"] = args["reason"]
+        text = f"make {who}'s time unlimited " + (
+            "until turned off" if until == "turned_off" else f"until {_until_word(until)}"
+        )
+
+        def after(response: Any) -> dict[str, Any]:
+            out = {"person": who, **{k: v for k, v in (response or {}).items() if k in ("id", "until")}}
+            out.update(_time_now(household.hub.household, person))
+            return out
+
+        return Plan("unlimited", data, text, "Unlimited", person, [person], after, undo="hearth_unlimited_end")
+
+
+class UnlimitedEndTool(ActionTool):
+    name = "hearth_unlimited_end"
+    description = "End a person's unlimited time now: limits are back on where they were when it started."
+    parameters = vol.Schema({_PERSON: str})
+
+    def plan(self, household, args):
+        person = find_person(household, args["person"])
+        who = household.person_name(person)
+
+        def after(response: Any) -> dict[str, Any]:
+            out = {"person": who, "ended": bool((response or {}).get("ended"))}
+            out.update(_time_now(household.hub.household, person))
+            return out
+
+        return Plan("unlimited_end", {"people": [person]}, f"end {who}'s unlimited time", "End", person, [person], after)
 
 
 def _what(household: Household, person: str | None, args: dict[str, Any]) -> tuple[dict[str, Any], str]:
@@ -1060,7 +1188,10 @@ class SchoolTimeOffCancelTool(ActionTool):
 
 READ_TOOLS: tuple[type[HearthTool], ...] = (HouseholdTool, PersonTool, ExplainTool, SuggestionsTool, RequestsTool)
 ACTION_TOOLS: tuple[type[ActionTool], ...] = (
-    AddBonusTool,
+    AddTimeTool,
+    RaiseLimitTool,
+    UnlimitedTool,
+    UnlimitedEndTool,
     PauseTool,
     PauseEndTool,
     AllowTool,
@@ -1072,12 +1203,14 @@ ACTION_TOOLS: tuple[type[ActionTool], ...] = (
 )
 
 PROMPT = (
-    "Hearth is this household's screen time: kids' minutes per day across TVs, phones, Xbox, Switch and PCs, pooled "
-    "as All screen time and groups. The data is about children and is for the adult asking. Use the hearth_get tools "
-    "and hearth_explain to answer. Make the narrowest change asked for (one person, one app or group, today). Each "
-    "action acts at once and returns exactly what changed (who, what, device or pool, minutes, until): tell the adult, "
-    "and offer to correct it (each result says how to undo). Budgets can't be changed here, and Hearth never unblocks "
-    "an app or game a parent blocked: say so instead of looking for another way."
+    "Hearth is this household's screen time: kids' minutes per day across TVs, phones, Xbox, Switch and PCs. Each kid "
+    "has one daily time (school days / other days); categories (Games, YouTube...) may have a limit inside it. To give "
+    "more there are three ways: bonus time (hearth_add_time, no category, spent anywhere), raise one category's limit "
+    "today (hearth_raise_limit, daily time unchanged), or Unlimited until a time (hearth_unlimited, time used then isn't "
+    "counted). The data is about children and is for the adult asking. Use the hearth_get tools and hearth_explain to "
+    "answer. Make the narrowest change asked for (one person, today). Each action acts at once and returns exactly what "
+    "changed: tell the adult, and offer to correct it (each result says how to undo). Daily time and limits can't be "
+    "set here, and Hearth never unblocks an app or game a parent blocked: say so instead of looking for another way."
 )
 VOICE_PROMPT = (
     " This is a voice assistant, and the speaker may be a child: an action doesn't run here, it's sent to the adults' "

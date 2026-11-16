@@ -383,13 +383,15 @@ class NativeSync:
                 )
 
     @callback
-    def mirror_bonus(self, person: str, had_none: bool) -> None:
-        """Extra time that gave All screen time back (it had none left): Google's and Microsoft's own limits get
-        as much, until midnight at most."""
+    def mirror_bonus(self, person: str, had_none: bool = True) -> None:
+        """Bonus time given (every grant: hearth.add_time, an approved ask, a chore, the day-off bonus): Google's and
+        Microsoft's own limits get as much as today's time now has left, until midnight at most, wherever they would
+        stop the kid sooner, so a phone never locks early (Hearth's own holds stay the real limit). [had_none] is
+        kept for older callers and no longer matters."""
         day = self.household.days.get(person)
         state = day.limits.get(ALL) if day else None
         left = state.minutes_left if state else None
-        if not had_none or left is None or left <= 0 or not self._mirrors(person):
+        if left is None or left <= 0 or not self._mirrors(person):
             return
         now = dt_util.now()
         key = (person, f"bonus:{now.isoformat()}")

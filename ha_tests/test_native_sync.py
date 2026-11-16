@@ -45,7 +45,7 @@ async def _sam_with_family_link(hass: HomeAssistant, hass_client_no_auth, limit:
     )
     hass.states.async_set(_weekday_limit(), limit, {"child_id": CHILD})
     await _option(hass, "add_source", {"entity_id": FAMILY_LINK, "person": "person.sam"})
-    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
     return limits
 
 
@@ -116,7 +116,7 @@ async def test_family_link_s_resume_answer_is_shown(
 
     hass.services.async_register("familylink", "resume_app", resume, supports_response=SupportsResponse.OPTIONAL)
     await _household_with_sam(hass, hass_client_no_auth)
-    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
     events = async_capture_events(hass, "hearth_enforced")
     await _budget(hass, "video", 10)
     await _bonus(hass, "video", 15)
@@ -312,7 +312,7 @@ async def test_an_app_a_parent_changed_in_family_link_is_a_grant(
     resumed = async_mock_service(hass, "familylink", "resume_app")
     await _household_with_sam(hass, hass_client_no_auth)
     hass.states.async_set(FAMILY_LINK, "0", {"unit_of_measurement": "min", "child_id": CHILD})
-    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
     grants = async_capture_events(hass, "hearth_parent_grant")
     await _budget(hass, "video", 10)
     assert "com.thesiegs.hearthtube" in paused[0].data["packages"]
@@ -366,7 +366,7 @@ async def test_only_apps_the_kid_has_are_paused(
     await _household_with_sam(hass, hass_client_no_auth)
     hass.states.async_set(FAMILY_LINK, "0", {"unit_of_measurement": "min", "child_id": CHILD})
     _installed(hass, ["com.thesiegs.hearthtube"])
-    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
     await _budget(hass, "video", 10)
     assert paused[0].data["packages"] == ["com.thesiegs.hearthtube"]
 
@@ -378,7 +378,7 @@ async def test_an_app_the_kid_doesn_t_have_is_never_a_parent_s_grant(
     resumed = async_mock_service(hass, "familylink", "resume_app")
     await _household_with_sam(hass, hass_client_no_auth)
     hass.states.async_set(FAMILY_LINK, "0", {"unit_of_measurement": "min", "child_id": CHILD})
-    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
     grants = async_capture_events(hass, "hearth_parent_grant")
     # Paused before the app lists were known: every app of the group
     await _budget(hass, "video", 10)

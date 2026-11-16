@@ -116,6 +116,7 @@ async def async_setup_entry(
         people.append(PersonPlaying(hub, person, "playing"))
         people.append(PersonTogetherToday(hub, person, "together_today"))
         people.append(PersonHeld(hub, person, "held"))
+        people.append(PersonBonusLeft(hub, person, "bonus_time_left"))
         for group in household.groups:
             if group.id != ALL:
                 people.append(PersonGroupToday(hub, person, "group_today", group))
@@ -232,28 +233,60 @@ class PersonGroupToday(_TodaySoFar):
 
 
 class PersonMinutesLeft(HearthPersonEntity, SensorEntity):
-    """What's left today of the person's budget for one group; unknown while it has no budget."""
+    """The minutes the person can still use today: daily time's (bonus time included), or a category's (its limit
+    plus the bonus time left, never more than daily time left: time_model.py); unknown without a limit."""
 
-    _attr_translation_key = "person_minutes_left"
     _attr_device_class = SensorDeviceClass.DURATION
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
+
+    def __init__(self, hub, person: str, key: str, group) -> None:
+        # Its entity id stays as an older Hearth named it ("All screen time minutes left")
+        legacy = "All screen time minutes left" if group.id == ALL else None
+        super().__init__(hub, person, key, group, legacy, "sensor" if legacy else None)
+        self._attr_translation_key = "daily_time_left" if group.id == ALL else "person_minutes_left"
 
     @property
     def native_value(self) -> int | None:
         state = self.day.limits.get(self.budget_group.id) if self.day else None
-        return state.minutes_left if state else None
+        return state.shown_left if state else None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         state = self.day.limits.get(self.budget_group.id) if self.day else None
         if state is None:
             return {}
-        return {
+        out = {
+            # Daily time: today's base time; a category: its limit as set (before a raise)
             "budget": state.budget_min,
             "bonus": state.bonus_min,
             "bonus_chores": state.bonus_chores,
             "counted": int(state.counted_min),
+            "bonus_left": state.bonus_left,
+            # What holds it (0: held); a category's may be more than daily time left
+            "held_left": state.minutes_left,
         }
+        if self.budget_group.id != ALL:
+            out["limit_today"] = None if state.budget_min is None else state.budget_min + state.bonus_min
+            out["raised"] = state.raised.view() if state.raised is not None else None
+        return out
+
+
+class PersonBonusLeft(HearthPersonEntity, SensorEntity):
+    """The bonus time the person has left today (no category: spent anywhere, minutes past a limit included)."""
+
+    _attr_translation_key = "bonus_time_left"
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_native_unit_of_measurement = UnitOfTime.MINUTES
+
+    @property
+    def native_value(self) -> int | None:
+        state = self.day.limits.get(ALL) if self.day else None
+        return state.bonus_left if state else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        state = self.day.limits.get(ALL) if self.day else None
+        return {} if state is None else {"bonus": state.bonus_min, "bonus_chores": state.bonus_chores}
 
 
 class PersonPlaying(HearthPersonEntity, SensorEntity):

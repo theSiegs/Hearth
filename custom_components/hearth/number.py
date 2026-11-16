@@ -15,7 +15,16 @@ from . import HearthConfigEntry
 from .auth import is_adult_user
 from .entity import HearthPersonEntity
 from .hub import HearthHub
+from .counting import ALL
 from .limits import DAY_TYPES, Group, never_held_group
+
+# What the entity names said before the time model's words: their entity ids stay as they were (entity.py)
+LEGACY_ALL = "All screen time"
+LEGACY_KIND = {"weekday": "school days", "weekend": "other days"}
+
+
+def _legacy(group: Group) -> str:
+    return LEGACY_ALL if group.id == ALL else group.name
 
 # -1 is "no limit" (as Nintendo's own does): a number entity can't be left empty
 NO_LIMIT = -1
@@ -62,9 +71,12 @@ class Budget(HearthPersonEntity, NumberEntity):
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
 
     def __init__(self, hub: HearthHub, person: str, group: Group, kind: str) -> None:
-        super().__init__(hub, person, f"budget_{kind}", group)
+        super().__init__(
+            hub, person, f"budget_{kind}", group, f"{_legacy(group)} budget on {LEGACY_KIND[kind]}", "number"
+        )
         self.kind = kind
-        self._attr_translation_key = f"budget_{kind}"
+        # "Daily time on school days"; "Games limit on school days"
+        self._attr_translation_key = f"daily_time_{kind}" if group.id == ALL else f"budget_{kind}"
 
     @property
     def native_value(self) -> float:
@@ -78,9 +90,9 @@ class Budget(HearthPersonEntity, NumberEntity):
 
 
 class Bonus(HearthPersonEntity, NumberEntity):
-    """Minutes added to a group's budget today (back to 0 at midnight)."""
+    """Daily time's: today's bonus time (no category). A category's: what its limit is raised by today. Back to 0 at
+    midnight."""
 
-    _attr_translation_key = "bonus_today"
     _attr_native_min_value = -MAX_MINUTES
     _attr_native_max_value = MAX_MINUTES
     _attr_native_step = 5
@@ -88,7 +100,8 @@ class Bonus(HearthPersonEntity, NumberEntity):
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
 
     def __init__(self, hub: HearthHub, person: str, group: Group) -> None:
-        super().__init__(hub, person, "bonus_today", group)
+        super().__init__(hub, person, "bonus_today", group, f"{_legacy(group)} bonus today", "number")
+        self._attr_translation_key = "bonus_time_today" if group.id == ALL else "bonus_today"
 
     @property
     def native_value(self) -> float:

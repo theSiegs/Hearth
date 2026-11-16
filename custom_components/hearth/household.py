@@ -72,10 +72,23 @@ from .limits import (
 from .enforce import FAMILY_LINK, FAMILY_SAFETY, NINTENDO, Enforcement, enforcers_from_options, fs_account_of, fs_app, fs_app_platform
 from .app_blocks import AppBlocks
 from .exceptions import Allows, Lifted, end_of_day
-from .history import BONUS, DEVICE_BONUS, History
+from .history import BONUS, DEVICE_BONUS, RAISE, History
+from .time_model import (
+    Raise,
+    account,
+    category_text,
+    limit_text,
+    origin_text,
+    say_clock,
+    say_minutes,
+    split_bonus,
+    today_text,
+)
 from .grants import Grants
 from .device_extra import ALLOW as EXTRA_ALLOW, BONUS as EXTRA_BONUS, DeviceExtra, DeviceExtras
 from .native_sync import NativeSync
+from .backstop import Backstop
+from .unlimited import Unlimited
 from .bedtime_lift import BedtimeLifts, in_family_link_bedtime, lift_minutes
 from . import family_link as fl
 from .todos import ChoreBook
@@ -172,6 +185,8 @@ class PersonDay:
     limits: dict[str, GroupState] = field(default_factory=dict)
     playing: list[Playing] = field(default_factory=list)
     together_s: float = 0.0
+    # Today's seconds per group before unlimited windows were left out (unlimited.py)
+    raw_groups: dict[str, float] = field(default_factory=dict)
     # A lock entity of theirs is on (Family Link's bedtime or school time, say)
     locked: bool = False
     locked_by: list[str] = field(default_factory=list)
@@ -202,6 +217,10 @@ class Household:
         self.device_extras = DeviceExtras(hass, hub.entry.entry_id)
         self.history = History(hass, hub.entry.entry_id)
         self.sync = NativeSync(hass, self, hub.entry.entry_id)
+        # Family Link's daily limit kept as a backstop above Hearth's own numbers (backstop.py)
+        self.backstop = Backstop(hass, self, hub.entry.entry_id)
+        # Unlimited windows: time used then isn't counted (unlimited.py)
+        self.unlimited = Unlimited(hass, self, hub.entry.entry_id)
         # An adult's extra time at bedtime lifts it while it lasts (bedtime_lift.py)
         self.bedtime_lift = BedtimeLifts(hass, self, hub.entry.entry_id)
         self.scheduler = Scheduler(hass, self, hub.entry.entry_id)
@@ -247,6 +266,8 @@ class Household:
         await self.device_extras.async_load()
         await self.history.async_load()
         await self.sync.async_load()
+        await self.backstop.async_load()
+        await self.unlimited.async_load()
         await self.bedtime_lift.async_load()
         await self.scheduler.async_load()
         await self.week.async_load()
@@ -264,6 +285,8 @@ class Household:
         await self.device_extras.async_flush()
         await self.history.async_flush()
         await self.sync.async_flush()
+        await self.backstop.async_flush()
+        await self.unlimited.async_flush()
         await self.bedtime_lift.async_flush()
         await self.scheduler.async_flush()
         await self.week.async_flush()
@@ -838,6 +861,7 @@ class Household:
         self.hub.commands.prune()
         today = now.date()
         new_day = self.limits.new_day(today)
+        self.limits.prune_raises(now)
         # Home Assistant was down at midnight: yesterday's minutes are still in the devices' last statuses and the live
         # timings (kept across the restart), so they're recorded from those on the first look after it starts
         yesterday = (today - timedelta(days=1)).isoformat()
@@ -1028,14 +1052,19 @@ class Household:
             self.schedule_now[person] = self.week.now(person, now)
             day_limits = self.week.limits_on(person, today, day_type)
             devices = {device: merge(r) for device, r in readings.get(person, {}).items()}
-            seconds = group_seconds(devices, membership, self.outside_all())
+            raw = group_seconds(devices, membership, self.outside_all())
+            # Minutes used while unlimited aren't counted (unlimited.py)
+            seconds = self.unlimited.exclude(person, raw, now)
             day = PersonDay(person, devices, seconds, playing=playing.get(person, []),
-                            together_s=self.live.together_s.get(person, 0.0))
+                            together_s=self.live.together_s.get(person, 0.0), raw_groups=raw)
             for group in self.groups:
-                state = self.limits.state(
+                day.limits[group.id] = self.limits.state(
                     person, group.id, seconds.get(group.id, 0.0) / 60, kind, day_limits.get(group.id)
                 )
-                day.limits[group.id] = state
+            # Today's time, caps and bonus time (time_model.py)
+            self.apply_time_model(person, day.limits, now)
+            for group in self.groups:
+                state = day.limits[group.id]
                 if state.minutes_left == 0:
                     if self.limits.mark_reached(person, group.id):
                         self.hass.bus.async_fire(
@@ -1050,6 +1079,8 @@ class Household:
             day.locked = bool(day.locked_by)
             days[person] = day
         self.days = days
+        # Unlimited windows that ended since: told once, with today's time as it is again (unlimited.py)
+        self.unlimited.tell_ended()
         self.today = today
         self._tell_modes()
         groups_by_id = {g.id: g for g in self.groups}
@@ -1089,6 +1120,8 @@ class Household:
         self.blocks.sync()
         # An adult's allow of All screen time opens Google's and Microsoft's own limits too
         self.sync.mirror_allows()
+        # Family Link's daily limit in step with today's time (backstop.py)
+        self.backstop.check()
         # Family Link's bedtime in step with the lifts (moved while one lasts, put back after)
         if self.bedtime_lift.lifts or self.bedtime_lift.moved:
             self.bedtime_lift.sync()
@@ -1627,6 +1660,8 @@ class Household:
         return {
             "person": person,
             "groups": groups,
+            # Today's time, bonus time and category limits as a person is shown them (docs/contracts/time-model.md)
+            "time": self.time_view(person),
             "locked": bool(day and day.locked),
             **self._locks_document(person, day),
             # The accessibility apps no group above holds, for a device that can spare them from a lock too
@@ -1977,10 +2012,25 @@ class Household:
             until = dt_util.as_local(min(a.until[person] for a in applying)).isoformat()
         else:
             until = None
+        # The app's category (its one group besides All screen time) and every group it counts in
+        pool = None
+        if app is not None:
+            pool = next((g for g in sorted(membership(app)) if g != ALL), None)
+        time_now = self.time_view(person)
+        cap = next((c for c in time_now["categories"] if c["id"] == (pool if app is not None else group)), None)
         return {
             "person": person,
             "app": app,
-            "group": group,
+            "group": pool if app is not None else group,
+            "pool": pool if app is not None else (group if group != ALL else None),
+            "groups": sorted(groups),
+            # Today's time (time_model.py): bonus time left, and the category's raised limit, if any
+            "today_left": time_now["today_left"],
+            "bonus_left": time_now["bonus_left"],
+            "unlimited": time_now["unlimited"],
+            "category_limit": cap,
+            "raised_limits": [c for c in time_now["categories"] if c["raised"]],
+            "origins": time_now["origins"],
             "allowed": not blocked,
             "until": until,
             "blocked_by": blocked,
@@ -2121,20 +2171,275 @@ class Household:
     def group(self, group_id: str) -> Group | None:
         return next((g for g in self.groups if g.id == group_id), None)
 
-    @callback
-    def add_bonus(self, person: str, group: str, minutes: int) -> None:
+    def apply_time_model(self, person: str, states: dict[str, GroupState], now: datetime) -> None:
+        """Today's time, caps and bonus time (time_model.py) over the groups' states as Limits.state gave them: All
+        screen time gets today's base and bonus time (an adult's, and every chore minute whatever group its reward
+        names), each category the cap in effect (raised or not) and what holds it."""
+        all_state = states.get(ALL)
+        if all_state is None:
+            return
+        chores = self.limits.chores_today(person, list(states))
+        base, bonus = split_bonus(all_state.budget_min, self.limits.bonus(person, ALL) + chores)
+        caps: dict[str, tuple[int | None, float]] = {}
+        configured: dict[str, int | None] = {}
+        raised: dict[str, Raise] = {}
+        for gid, state in states.items():
+            if gid == ALL:
+                continue
+            held = self.limits.raise_of(person, gid, now)
+            configured[gid] = state.budget_min
+            if held is not None:
+                raised[gid] = held
+            cap = held.cap(state.budget_min) if held is not None else state.budget_min
+            caps[gid] = (cap, state.counted_min)
+        result = account(base, bonus, all_state.counted_min, caps)
+        all_state.budget_min, all_state.bonus_min, all_state.bonus_chores = base, bonus, chores
+        all_state.modeled = True
+        all_state.held_left = all_state.usable = result.today_left
+        all_state.bonus_left = result.bonus_left
+        for gid, (cap, _) in caps.items():
+            state = states[gid]
+            base_cap = configured[gid]
+            state.modeled = True
+            state.configured = base_cap
+            state.raised = raised.get(gid)
+            state.bonus_left = result.bonus_left
+            if cap is None:
+                state.budget_min, state.bonus_min = None, 0
+            else:
+                state.budget_min = base_cap if base_cap is not None else cap
+                state.bonus_min = cap - state.budget_min
+            state.held_left = result.cap_left[gid]
+            state.usable = result.usable[gid]
+
+    def time_view(self, person: str) -> dict[str, Any]:
+        """Today's time as people are shown it, for screens and the device API (docs/contracts/time-model.md):
+        {today_left, today_minutes, base_minutes, bonus, bonus_left, used, unlimited {until, open, include_bedtime,
+        text} | None, unlimited_today [{start, end, minutes, text}], text (the kid's line), adult_text,
+        categories [{id, name, limit, limit_today, raised, until, left, used, text, limit_text}]} (time_model.py).
+        "left" is what can actually be used (a category's never more than today's time left)."""
         day = self.days.get(person)
-        had_none = bool(day and (state := day.limits.get(ALL)) and state.minutes_left == 0)
-        self.limits.set_bonus(person, group, self.limits.bonus(person, group) + minutes)
+        all_state = day.limits.get(ALL) if day else None
+        unlimited = self.unlimited.view(person)
+        active = unlimited["active"]
+        today_left = all_state.shown_left if all_state else None
+        bonus_left = all_state.bonus_left if all_state else 0
+        categories = []
+        for group in self.groups:
+            state = day.limits.get(group.id) if day else None
+            if group.id == ALL or state is None or not (state.budget_min is not None or state.raised is not None):
+                continue
+            limit_today = None if state.budget_min is None else state.budget_min + state.bonus_min
+            raised = state.raised is not None
+            categories.append(
+                {
+                    "id": group.id,
+                    "name": group.name,
+                    # The limit an adult set for today's kind of day (None: no limit), and today's (raised or not)
+                    "limit": state.configured,
+                    "limit_today": limit_today,
+                    "raised": raised,
+                    "until": state.raised.until if raised else None,
+                    "left": state.shown_left,
+                    "used": int(state.counted_min),
+                    "text": None if active else category_text(group.name, state.shown_left, today_left),
+                    "limit_text": limit_text(group.name, state.configured, limit_today, raised),
+                }
+            )
+        return {
+            "today_left": today_left,
+            "today_minutes": (
+                None if not all_state or all_state.budget_min is None else all_state.budget_min + all_state.bonus_min
+            ),
+            "base_minutes": all_state.budget_min if all_state else None,
+            "bonus": all_state.bonus_min if all_state else 0,
+            "bonus_left": bonus_left,
+            "used": int(all_state.counted_min) if all_state else 0,
+            "unlimited": active,
+            "unlimited_today": unlimited["today"],
+            "text": today_text(today_left, bonus_left, active["text"] if active else None),
+            "adult_text": today_text(today_left, bonus_left, active["text"] if active else None, adult=True),
+            "categories": categories,
+            # Where today's statuses came from (bonus time, raised limits, Unlimited, Pause screens), newest first
+            "origins": self.origins_of(person),
+        }
+
+    @callback
+    def note_origin(
+        self, person: str, kind: str, detail: str, source: str = "hearth", by: str | None = None, **about: Any
+    ) -> dict[str, Any]:
+        """Where one of today's changes came from (kind: bonus, raise, unlimited, pause, daily_time; source: hearth,
+        family_link, family_safety, nintendo, chore, ask; by: an adult's name when known), for the "?" on a status
+        line: {kind, source, by, at, detail, text}."""
+        now = dt_util.now()
+        record = {"kind": kind, "source": source, "by": by, "at": now.isoformat(), "detail": detail, **about}
+        self.limits.add_origin(person, record)
+        return record
+
+    def origins_of(self, person: str) -> list[dict[str, Any]]:
+        """Today's origins of the person's statuses, newest first, each with its text."""
+        out = []
+        for record in reversed(self.limits.data.origins.get(person, [])):
+            at = dt_util.parse_datetime(record.get("at") or "")
+            local = dt_util.as_local(at) if at else None
+            out.append(
+                {
+                    **record,
+                    "text": origin_text(
+                        record.get("detail") or "", record.get("source") or "hearth", record.get("by"),
+                        say_clock(local.hour, local.minute) if local else None,
+                    ),
+                }
+            )
+        return out
+
+    def name_of_user(self, user_id: str | None) -> str | None:
+        """The name of the person whose Home Assistant user this is (an adult's, for an origin's "by")."""
+        if not user_id:
+            return None
+        for state in self.hass.states.async_all("person"):
+            if state.attributes.get("user_id") == user_id:
+                return state.name
+        return None
+
+    def no_limits_until(self, person: str) -> datetime | None:
+        """When the person's unlimited time ends (unlimited.py), None while it isn't on."""
+        window = self.unlimited.active(person)
+        return dt_util.parse_datetime(window["until"]) if window else None
+
+    @callback
+    def add_time(
+        self, person: str, minutes: int, reason: str | None = None, via: str | None = None, by: str | None = None
+    ) -> None:
+        """Bonus time today (hearth.add_time; negative takes time away from today's time): no category, spent
+        anywhere. Google's and Microsoft's own limits get as much (each grant), and given in bedtime it lifts it.
+        [via]: ask, day_off or none (an adult); [by]: the adult's name, for its origin."""
+        self.limits.set_bonus(person, ALL, self.limits.bonus(person, ALL) + minutes)
         if minutes:
-            self.history.log(BONUS, person, group=group, minutes=minutes)
-        in_bedtime = group == ALL and minutes > 0 and self.in_bedtime(person)
+            fields = {k: v for k, v in (("reason", reason), ("via", via)) if v}
+            self.history.log(BONUS, person, group=ALL, minutes=minutes, **fields)
+            detail = f"Bonus {'+' if minutes > 0 else '−'}{abs(minutes)}"
+            if via == "day_off":
+                detail += " (day off)"
+            if reason:
+                detail += f" · {reason}"
+            self.note_origin(person, "bonus", detail, "ask" if via == "ask" else "hearth", by, minutes=minutes)
+        in_bedtime = minutes > 0 and self.in_bedtime(person)
         self.recompute()
-        if group == ALL and minutes > 0:
-            # All screen time back: Google's and Microsoft's own limits get as much
-            self.sync.mirror_bonus(person, had_none)
+        if minutes > 0:
+            self.sync.mirror_bonus(person)
             if in_bedtime:
                 self._lift_bedtime(person, minutes)
+
+    @callback
+    def remove_time(self, person: str, minutes: int) -> int:
+        """Takes back up to [minutes] of the bonus time an adult gave today (hearth.remove_time)."""
+        return self.remove_bonus(person, ALL, minutes)
+
+    @callback
+    def raise_cap(
+        self,
+        person: str,
+        group: str,
+        minutes: int | None = None,
+        to: int | None = None,
+        no_cap: bool = False,
+        until: datetime | None = None,
+        by: str | None = None,
+    ) -> Raise:
+        """A category's limit today, raised (hearth.raise_cap): by [minutes] (more on top of a raise already there),
+        to [to] minutes, or no limit at all, until [until] (None: the end of the day). Daily time is unchanged."""
+        held = self.limits.raise_of(person, group, dt_util.now()) or Raise()
+        stamp = dt_util.as_local(until).isoformat() if until is not None else held.until
+        if no_cap:
+            new = Raise(0, None, True, stamp)
+        elif to is not None:
+            new = Raise(0, int(to), False, stamp)
+        else:
+            new = Raise(held.add + int(minutes or 0), held.to, held.no_cap, stamp)
+        self.limits.set_raise(person, group, new)
+        self.history.log(
+            RAISE, person, group=group,
+            **{k: v for k, v in (("minutes", minutes), ("to", to), ("no_cap", no_cap or None), ("until", stamp)) if v is not None},
+        )
+        name = self.group(group).name if self.group(group) else group
+        what = "no limit" if no_cap else f"limit {say_minutes(to)}" if to is not None else f"limit +{minutes or 0}"
+        self.note_origin(person, "raise", f"{name}: {what} today", "hearth", by, group=group)
+        self.recompute()
+        return new
+
+    @callback
+    def raise_cap_end(self, person: str, group: str | None = None) -> list[str]:
+        """The person's raised limit of [group] (every raised one: None) ends now; the groups it ended for."""
+        ended = [g for g in list(self.limits.data.raises.get(person, {})) if group is None or g == group]
+        for gid in ended:
+            self.limits.set_raise(person, gid, None)
+            self.history.log(RAISE, person, group=gid, ended=True)
+        if ended:
+            self.recompute()
+        return ended
+
+    @callback
+    def start_unlimited(
+        self,
+        people: list[str],
+        until: dict[str, datetime],
+        include_bedtime: bool = False,
+        open_ended: bool = False,
+        reason: str | None = None,
+        by: str | None = None,
+    ):
+        """Unlimited (hearth.unlimited): until [until] (at midnight at the latest) nothing Hearth holds for daily
+        time or a category's limit holds the people, and the time they use isn't counted (unlimited.py). Bedtime,
+        School time and Pause screens still lock, but bedtime not with [include_bedtime]. The allow it is."""
+        allowed = self.allows.add(until, None, ALL, reason or "Unlimited")
+        for person in people:
+            # A new one replaces the one running (its own allow ends with it)
+            if (running := self.unlimited.active(person)) is not None:
+                self.allows.end_for(running["allow"], person)
+            self.unlimited.start(person, allowed.id, until[person], open_ended, include_bedtime)
+            if include_bedtime:
+                self.bedtime_lift.give(person, 0, until=until[person])
+            local = dt_util.as_local(until[person])
+            detail = "Unlimited" + ("" if open_ended else f" until {say_clock(local.hour, local.minute)}")
+            if reason:
+                detail += f" · {reason}"
+            self.note_origin(person, "unlimited", detail, "hearth", by)
+        self.recompute()
+        return allowed
+
+    @callback
+    def end_unlimited(self, people: list[str] | None) -> list[str]:
+        """The people's unlimited time ends now (hearth.unlimited_end): limits are back on where they were when it
+        started. The people it ended for."""
+        ended: list[str] = []
+        for person in people or self.people():
+            window = self.unlimited.end(person)
+            if window is None:
+                continue
+            ended.append(person)
+            self.allows.end_for(window["allow"], person)
+            if (self.bedtime_lift.lifts.get(person) or {}).get("no_limits"):
+                self.bedtime_lift.end(person)
+        if ended:
+            self.recompute()
+            self.sync.allow_ended()
+        return ended
+
+    @callback
+    def add_bonus(self, person: str, group: str, minutes: int, by: str | None = None) -> None:
+        """hearth.add_bonus, kept: daily time's (or none) is bonus time; a category's raises its limit by as many
+        minutes today (negative lowers it)."""
+        if group == ALL:
+            self.add_time(person, minutes, by=by)
+            return
+        held = self.limits.raise_of(person, group, dt_util.now()) or Raise()
+        self.limits.set_raise(person, group, Raise(held.add + minutes, held.to, held.no_cap, held.until))
+        if minutes:
+            self.history.log(RAISE, person, group=group, minutes=minutes)
+            name = self.group(group).name if self.group(group) else group
+            self.note_origin(person, "raise", f"{name}: limit {minutes:+d} today", "hearth", by, group=group)
+        self.recompute()
 
     def _lift_bedtime(self, person: str, minutes: int) -> None:
         """Extra time given in bedtime lifts it while it lasts, when the kid then has All screen time to use."""
@@ -2158,7 +2463,8 @@ class Household:
         if not taken:
             return 0
         self.limits.set_bonus(person, group, given - taken)
-        self.history.log(BONUS, person, group=group, minutes=-taken, undo=True)
+        # A category's: its raised max is that much lower again (hearth.add_bonus with a group raised it)
+        self.history.log(BONUS if group == ALL else RAISE, person, group=group, minutes=-taken, undo=True)
         if group == ALL:
             # Its bedtime lift is that much shorter too
             self.bedtime_lift.take(person, taken)

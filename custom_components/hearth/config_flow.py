@@ -67,6 +67,8 @@ from .enforce import (
 from .notifications import clear_pairing
 from .schooldays import CALENDAR_OFF, CALENDAR_SCHOOL, CONF_SCHOOL_DAYS, SCHOOL_BUDGET
 from .schedule import CONF_SCHEDULE, CONF_SITE_LIST
+from .backstop import CONF_FL_BACKSTOP, CONF_FL_BACKSTOP_MARGIN
+from .time_model import BACKSTOP_MARGIN
 from .asks import AMOUNTS, CONF_OFFER_MORE
 from .suggest_push import CONF_SUGGEST_PUSH, pairs as suggest_pairs
 from .sources import CONF_SOURCES, CONF_TITLES, is_phone_app
@@ -586,11 +588,22 @@ class HearthOptionsFlow(OptionsFlow):
                         **({"playing": list(user_input["nintendo_playing"])} if user_input.get("nintendo_playing") else {}),
                     }
                 )
-            return self.async_create_entry(data={**options, CONF_ENFORCE: kept})
+            # Family Link's daily limit as a backstop (backstop.py): the household's, whoever was chosen
+            backstop = {
+                CONF_FL_BACKSTOP: bool(user_input.get(CONF_FL_BACKSTOP, options.get(CONF_FL_BACKSTOP, True))),
+                CONF_FL_BACKSTOP_MARGIN: int(
+                    user_input.get(CONF_FL_BACKSTOP_MARGIN, options.get(CONF_FL_BACKSTOP_MARGIN, BACKSTOP_MARGIN))
+                ),
+            }
+            return self.async_create_entry(data={**options, CONF_ENFORCE: kept, **backstop})
         groups = [SelectOptionDict(value=g.id, label=g.name) for g in self._household().groups]
         schema = vol.Schema(
             {
                 vol.Required(CONF_PERSON): PERSON_SELECTOR,
+                vol.Optional(CONF_FL_BACKSTOP, default=bool(options.get(CONF_FL_BACKSTOP, True))): BooleanSelector(),
+                vol.Optional(
+                    CONF_FL_BACKSTOP_MARGIN, default=int(options.get(CONF_FL_BACKSTOP_MARGIN, BACKSTOP_MARGIN))
+                ): NumberSelector(NumberSelectorConfig(min=0, max=240, step=5, mode=NumberSelectorMode.BOX)),
                 vol.Optional("family_link"): EntitySelector(EntitySelectorConfig(integration="familylink")),
                 vol.Optional("school_time_apps", default=list(DEFAULT_SCHOOL_TIME_APPS)): self._app_selector(
                     list(DEFAULT_SCHOOL_TIME_APPS)

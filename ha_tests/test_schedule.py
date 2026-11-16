@@ -67,7 +67,7 @@ async def _set_up(hass: HomeAssistant, hass_client_no_auth, freezer, now: dateti
     freezer.move_to(now)
     await _household_with_sam(hass, hass_client_no_auth)
     _family_link_entities(hass)
-    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "school_time_apps": []})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "school_time_apps": [], "fl_backstop": False})
     await _option(hass, "school_days", school)
     await _option(hass, "schedule", schedule)
     return hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
@@ -165,7 +165,7 @@ async def test_a_half_day_ends_school_time_early_with_extra_time(
         {"entity_id": SWITCH, "scope": "today", "start_time": "08:10", "end_time": "12:00"}
     ]
     assert limit[0].data == {"child_id": "42", "daily_minutes": 180}
-    assert hass.states.get("number.hearth_sam_video_bonus_today").state == "60"
+    assert hass.states.get("number.hearth_sam_all_screen_time_bonus_today").state == "60"
     await _tick(hass, household, freezer, _at(half, 0, 7))
     assert len(pin) == 1 and len(limit) == 1
 
@@ -271,7 +271,7 @@ async def test_the_website_list_syncs_family_safety_too_on_its_own(
     await _option(
         hass,
         "enforce",
-        {"person": "person.sam", "family_link": FAMILY_LINK, "family_safety": "sensor.sam_xbox_screen_time"},
+        {"person": "person.sam", "family_link": FAMILY_LINK, "family_safety": "sensor.sam_xbox_screen_time", "fl_backstop": False},
     )
     # Alex has Family Safety only, by a typed-in account id
     await _add_enforcer(hass, {"kind": "family_safety", "person": "person.alex", "entity_id": "123456"})
@@ -308,7 +308,7 @@ async def test_the_website_list_skips_an_older_family_safety_quietly(
     await _option(
         hass,
         "enforce",
-        {"person": "person.sam", "family_link": FAMILY_LINK, "family_safety": "sensor.sam_xbox_screen_time"},
+        {"person": "person.sam", "family_link": FAMILY_LINK, "family_safety": "sensor.sam_xbox_screen_time", "fl_backstop": False},
     )
     await _option(hass, "site_list", {"url": URL, "time": "07:30:00"})
     household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
@@ -357,8 +357,8 @@ async def test_the_adults_get_a_suggestion_when_a_chosen_group_runs_out(
     assert hub.asks.pending() == []
     assert hub.asks.latest_for("person.sam") is None
     item = hub.attention.item("suggest:person.sam:more:video")
-    assert item is not None and item.text == "Give 30 more minutes today?"
-    assert item.actions[0].service == "hearth.add_bonus" and item.actions[0].data["minutes"] == 30
+    assert item is not None and item.text == "Give 30 min of bonus time today?"
+    assert item.actions[0].service == "hearth.add_time" and item.actions[0].data["minutes"] == 30
 
 
 async def test_an_adult_s_app_is_offered_no_school_time_today_until_it_ends(
@@ -480,6 +480,7 @@ async def _with_family_safety(hass, hass_client_no_auth, freezer, now, school, s
         {
             "person": "person.sam",
             "family_link": FAMILY_LINK,
+            "fl_backstop": False,
             "school_time_apps": [],
             "family_safety": FAMILY_SAFETY,
             "platforms": platforms,
@@ -888,7 +889,7 @@ async def _with_switch(hass, hass_client_no_auth, freezer, now, school, schedule
     await _option(
         hass,
         "enforce",
-        {"person": "person.sam", "family_link": FAMILY_LINK, "school_time_apps": [], "nintendo": SW_LIMIT},
+        {"person": "person.sam", "family_link": FAMILY_LINK, "school_time_apps": [], "nintendo": SW_LIMIT, "fl_backstop": False},
     )
     household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
     return household, set_value, weekdays

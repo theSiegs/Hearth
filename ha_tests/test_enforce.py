@@ -61,7 +61,7 @@ async def test_family_link_pauses_the_group_s_apps_and_resumes_them(
 ) -> None:
     paused, resumed = _family_link(hass)
     await _household_with_sam(hass, hass_client_no_auth)
-    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
     events = async_capture_events(hass, "hearth_enforced")
 
     await _budget(hass, "video", 10)  # 10 watched: none left
@@ -92,7 +92,7 @@ async def test_what_s_held_shows_at_once_and_the_integration_is_read_again_soon(
     paused, resumed = _family_link(hass)
     refreshed = async_mock_service(hass, "homeassistant", "update_entity")
     await _household_with_sam(hass, hass_client_no_auth)
-    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
     hass.states.async_set(FAMILY_LINK, "0", {"unit_of_measurement": "min"})
     household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
     writes: list[str] = []
@@ -121,7 +121,7 @@ async def test_what_s_held_shows_at_once_and_the_integration_is_read_again_soon(
 async def test_a_negative_bonus_takes_time_away(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
     paused, _ = _family_link(hass)
     await _household_with_sam(hass, hass_client_no_auth)
-    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
     await _budget(hass, "video", 60)  # 10 watched: 50 left
     assert not paused
 
@@ -337,7 +337,7 @@ async def test_nothing_is_let_go_right_after_a_start(
 ) -> None:
     paused, resumed = _family_link(hass)
     await _household_with_sam(hass, hass_client_no_auth)
-    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
     await _budget(hass, "video", 10)
     assert len(paused) == 1
 
@@ -354,7 +354,7 @@ async def test_stopping_lets_go_of_what_was_held(
 ) -> None:
     paused, resumed = _family_link(hass)
     await _household_with_sam(hass, hass_client_no_auth)
-    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
     await _budget(hass, "video", 10)
     assert len(paused) == 1
 
@@ -376,7 +376,7 @@ async def test_a_failure_is_shown_and_tried_again(
     hass.services.async_register("familylink", "pause_app", failing)
     async_mock_service(hass, "familylink", "resume_app")
     await _household_with_sam(hass, hass_client_no_auth)
-    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
     await _budget(hass, "video", 10)
     assert len(calls) == 1
     held = hass.states.get("sensor.hearth_sam_held_by_parental_controls")
@@ -398,7 +398,7 @@ async def test_a_sync_error_clears_once_there_s_nothing_to_hold(
     hass.services.async_register("familylink", "pause_app", failing)
     async_mock_service(hass, "familylink", "resume_app")
     await _household_with_sam(hass, hass_client_no_auth)
-    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
     await _budget(hass, "video", 10)
     household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
     assert household.enforcement.status_of("person.sam")["family_link"]["last"]["error"] == "Google said no"
@@ -797,7 +797,7 @@ async def test_all_screen_time_out_locks_the_family_link_devices(
     hass.states.async_set(f"number.sam_family_link_{weekday}_limit", "120", {"child_id": "42"})
     hass.states.async_set(f"number.alex_family_link_{weekday}_limit", "60", {"child_id": "7"})
     await _option(hass, "add_source", {"entity_id": FAMILY_LINK, "person": "person.sam"})
-    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
 
     await _budget(hass, "all", 30)  # 15 on the TV, 20 on the phone
     # The devices are locked (apps with unlimited time still work), not every app paused
@@ -838,7 +838,7 @@ async def _family_link_lock_setup(hass: HomeAssistant, hass_client_no_auth, swit
     weekday = enforce.WEEKDAYS[dt_util.now().weekday()]
     hass.states.async_set(f"number.sam_family_link_{weekday}_limit", "120", {"child_id": "42"})
     await _option(hass, "add_source", {"entity_id": FAMILY_LINK, "person": "person.sam"})
-    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
     return limits, turned_on, turned_off, weekday
 
 
@@ -921,7 +921,7 @@ async def test_an_accessibility_app_is_never_paused(
 ) -> None:
     paused, _resumed = _family_link(hass)
     await _household_with_sam(hass, hass_client_no_auth)
-    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
     household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
     # An adult moves the TV's game to Accessibility (a kid's reading aid, say): it counts there, not in All
     assert household.sort_app("com.example.game", "accessibility")
@@ -968,7 +968,7 @@ async def test_family_link_never_pauses_an_app_with_unlimited_time(
         "1",
         {"child_id": "42", "apps": [{"name": "HearthTube", "package": "com.thesiegs.hearthtube"}]},
     )
-    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
 
     await _budget(hass, "video", 10)
     assert len(paused) == 1

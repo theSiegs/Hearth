@@ -49,7 +49,7 @@ def _item(text: str, level: str, kind: str, subject: Any = None) -> dict[str, st
 
 
 def _group_word(group_id: str, names: dict[str, str]) -> str:
-    return "screen time" if group_id == ALL else (names.get(group_id) or group_id).lower()
+    return "daily time" if group_id == ALL else (names.get(group_id) or group_id).lower()
 
 
 def duration(minutes: int | float) -> str:
@@ -113,7 +113,8 @@ def _ask_items(asks: list[dict[str, Any]], names: dict[str, str]) -> list[dict[s
             # Family Safety's requested time has no known unit: the adult picks the minutes
             text = f"asks for more time · {ask.get('platform') or 'family safety'}"
         else:
-            text = f"asks for {amount(ask['minutes'])} more · {what}"
+            # Bonus time has no category: "asks for 30 bonus" (an older ask that named a group says it too)
+            text = f"asks for {amount(ask['minutes'])} bonus" if ask["group"] == ALL else f"asks for {amount(ask['minutes'])} more · {what}"
         found.append(_item(text, URGENT, "ask", ask["id"]))
     return found
 
@@ -142,6 +143,9 @@ def _group_item(group: dict[str, Any], names: dict[str, str]) -> dict[str, str] 
         return None
     word = _group_word(group["id"], names)
     if left <= 0:
+        # A category at its limit while daily time remains: "games · done for today"
+        if group["id"] != ALL and group.get("held_left") == 0:
+            return _item(f"{word} · done for today", NOTICE, "out", group["id"])
         return _item(f"{word} · out", NOTICE, "out", group["id"])
     if left < LOW_MINUTES:
         return _item(f"{word} · {amount(left)} left", NOTICE, "low", group["id"])
@@ -320,12 +324,14 @@ def _amounts(first: int, over: int = 0) -> list[int]:
 def _suggestion(
     person: str, key: str, text: str, reason: str, minutes: int, data: dict[str, Any], over: int = 0, **about: Any
 ) -> dict[str, Any]:
+    # Bonus time has no category (time_model.py): a give is hearth.add_time; extra time on one device stays add_bonus
+    on_device = "device" in data
     actions = [
         _action(
             f"suggest:{key}:{given}",
             f"+{amount(given)}",
-            "hearth.add_bonus",
-            {"person": person, "minutes": given, **data},
+            "hearth.add_bonus" if on_device else "hearth.add_time",
+            {"person": person, "minutes": given, **data} if on_device else {"person": person, "minutes": given},
             primary=given == minutes,
         )
         for given in _amounts(minutes, over)
@@ -344,9 +350,9 @@ def device_word(target: dict[str, Any] | None) -> str:
     return str(target.get("display_name") or target.get("name") or "device")
 
 
-def _pool_word(group_id: str, names: dict[str, str]) -> str:
-    """A pool as a sentence names it: as named ("YouTube", "Games"), "screen time" for All."""
-    return "screen time" if group_id == ALL else str(names.get(group_id) or group_id)
+def _category_word(group_id: str, names: dict[str, str]) -> str:
+    """A category as a sentence names it: as named ("YouTube", "Games"), "daily time" for All."""
+    return "daily time" if group_id == ALL else str(names.get(group_id) or group_id)
 
 
 def _possessive(name: str) -> str:
@@ -390,9 +396,9 @@ def _sentence(person: dict[str, Any], reason: str, group: str, target: dict[str,
     if reason == "group_out":
         group_row = next((g for g in person.get("groups") or [] if g["id"] == group), {}) or {}
         if group == ALL:
-            title = f"{person.get('name') or 'They'} ran out of screen time"
+            title = f"{person.get('name') or 'They'} ran out of daily time"
         else:
-            title = f"{who} {_pool_word(group, names)} time is up"
+            title = f"{who} {_category_word(group, names)} time is up"
         given = max(0, group_row.get("bonus") or 0)
         if given:
             title = title.replace(" is up", " is still up").replace(" ran out of", " is still out of")
@@ -401,13 +407,13 @@ def _sentence(person: dict[str, Any], reason: str, group: str, target: dict[str,
         used = group_row.get("used_minutes") or 0
         parts = [f"Used {duration(used)} of {duration(cap)}" if cap is not None else f"Used {duration(used)}"]
         if given:
-            parts[0] += f" (with {duration(given)} extra)"
+            parts[0] += f" (with {duration(given)} bonus)" if group == ALL else f" (limit raised by {duration(given)})"
         over = _over(group_row)
         if over:
             parts.append(f"{duration(over)} over")
         if group != ALL:
             left = (whole or {}).get("minutes_left")
-            parts.append("no overall limit" if left is None else f"{duration(left)} of screen time left")
+            parts.append("no daily time set" if left is None else f"{duration(left)} of daily time left")
         return title, " · ".join(parts)
     company = {"family_link": "Google", "family_safety": "Microsoft", "nintendo": "Nintendo"}.get(via or "", "its own")
     title = f"{_whose_device(person, target)} is stopped by {company}'s limit"
@@ -748,8 +754,11 @@ def person_glance(
     if pause:
         reason = (pause.get("reason") or "").strip().lower()
         news.append(
-            _item(f"paused{' · ' + reason if reason else ''}{_till(pause.get('until'))}", URGENT, "pause", pause.get("until"))
+            _item(f"screens paused{' · ' + reason if reason else ''}{_till(pause.get('until'))}", URGENT, "pause", pause.get("until"))
         )
+    # Unlimited (hearth.unlimited): its line instead of daily time's
+    if unlimited := (person.get("time") or {}).get("unlimited"):
+        news.append(_item(str(unlimited.get("text") or "unlimited").lower(), NOTICE, "unlimited", unlimited.get("until")))
     if whole is not None and whole["minutes_left"] <= 0 and not allowed_all:
         news.append(_item("out of time", URGENT, "out", ALL))
     if lock and lock.get("kind") in ("bedtime", "school_time", "other") and not pause:
@@ -828,23 +837,26 @@ def person_glance(
 
     name = person.get("name") or entity
     actions = _ask_actions(asks)
-    for group in sorted(groups, key=lambda g: g["minutes_left"]):
+    # One way to give more: bonus time (no category; time_model.py)
+    if groups:
         actions.append(
             _action(
-                f"bonus:{group['id']}",
-                f"+{amount(BONUS_MINUTES)} {_group_word(group['id'], names)}",
-                "hearth.add_bonus",
-                {"person": entity, "minutes": BONUS_MINUTES, "group": group["id"]},
-                primary=group["minutes_left"] <= 0,
+                "bonus",
+                f"+{amount(BONUS_MINUTES)} bonus",
+                "hearth.add_time",
+                {"person": entity, "minutes": BONUS_MINUTES},
+                primary=any(g["minutes_left"] <= 0 for g in groups),
             )
         )
+    if (person.get("time") or {}).get("unlimited"):
+        actions.append(_action("unlimited_end", "end unlimited", "hearth.unlimited_end", {"people": [entity]}))
     if pause:
-        actions.append(_action("pause_end", "end the pause", "hearth.pause_end", {"people": [entity]}))
+        actions.append(_action("pause_end", "end pause screens", "hearth.pause_end", {"people": [entity]}))
     else:
         actions.append(
             _action(
                 "pause",
-                f"pause {duration(PAUSE_MINUTES)}",
+                f"pause screens {duration(PAUSE_MINUTES)}",
                 "hearth.pause",
                 {"people": [entity], "minutes": PAUSE_MINUTES},
                 confirm=f"pause {name.lower()} for {duration(PAUSE_MINUTES)}?",

@@ -85,7 +85,15 @@ class HearthPersonEntity(Entity):
     _attr_has_entity_name = True
     _attr_should_poll = False
 
-    def __init__(self, hub: HearthHub, person: str, key: str, group: Group | None = None) -> None:
+    def __init__(
+        self,
+        hub: HearthHub,
+        person: str,
+        key: str,
+        group: Group | None = None,
+        legacy_name: str | None = None,
+        id_domain: str | None = None,
+    ) -> None:
         self.hub = hub
         self.person = person
         # Not "group": Home Assistant's own entity attribute
@@ -94,6 +102,12 @@ class HearthPersonEntity(Entity):
         self._attr_unique_id = f"{hub.entry.entry_id}_{person}_{key}{suffix}"
         if group is not None:
             self._attr_translation_placeholders = {"group": group.name}
+        if legacy_name is not None and id_domain is not None:
+            # Its name changed (the time model's words: "Daily time", "Games limit on school days"), its entity id
+            # didn't: a new household gets the id an older Hearth gave (a registered one keeps its own anyway)
+            from homeassistant.util import slugify
+
+            self.entity_id = f"{id_domain}." + slugify(f"Hearth {hub.household.person_name(person)} {legacy_name}")
         self._attr_device_info = DeviceInfo(
             identifiers={person_identifier(person)},
             name=f"Hearth: {hub.household.person_name(person)}",

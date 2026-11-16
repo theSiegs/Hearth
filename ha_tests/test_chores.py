@@ -17,6 +17,7 @@ from custom_components.hearth.const import DOMAIN
 from custom_components.hearth.history import BONUS
 from custom_components.hearth.limits import MAX_BONUS, Limits
 from custom_components.hearth.todos import ADULT, Actor, ChoreError
+from custom_components.hearth.time_model import Raise
 from test_attention import _household, _press
 from test_phones import _options
 
@@ -114,7 +115,8 @@ async def test_the_kid_s_tick_grants_and_untick_takes_it_back(
 
     await _tick(hass, uid, users["sam"])
     games = _games(hass)
-    assert games.bonus_chores == 15 and games.bonus_min == 15 and games.minutes_left == before + 15
+    # Chore minutes are bonus time (no category): Games may use them past its limit
+    assert games.bonus_chores == 15 and games.bonus_left == 15 and games.minutes_left == before + 15
     assert [e["key"] for e in _live(hass)] == [f"{uid}#1"]
     assert done_events[-1].data["minutes"] == 15 and done_events[-1].data["key"] == f"{uid}#1"
     # The adults are told, with an Undo; the kid's phone isn't
@@ -126,7 +128,7 @@ async def test_the_kid_s_tick_grants_and_untick_takes_it_back(
     assert any(e["kind"] == BONUS and e.get("via") == "chore" and e["minutes"] == 15 for e in _hub(hass).household.history.events)
     # The summary shows it beside the bonus
     games_row = next(g for g in _summary_person(hass, "person.sam")["groups"] if g["id"] == "games")
-    assert games_row["bonus"] == 15 and games_row["bonus_chores"] == 15
+    assert games_row["bonus_left"] == 15 and games_row["bonus_chores"] == 15
 
     await _tick(hass, uid, users["sam"], done=False)
     assert _games(hass).bonus_chores == 0 and _games(hass).minutes_left == before
@@ -233,7 +235,7 @@ async def test_the_daily_cap_per_pool(hass: HomeAssistant, hass_client_no_auth: 
     granted = [(e["title"], e["asked"], e["minutes"]) for e in _live(hass)]
     assert granted == [("One", 15, 15), ("Two", 15, 5), ("Three", 15, 0)]
     assert _games(hass).bonus_chores == 20
-    assert "cap for Games is reached" in _hub(hass).attention.item(f"hearth_chore_{uids['Two']}").text
+    assert "the most chores give for Games today is reached" in _hub(hass).attention.item(f"hearth_chore_{uids['Two']}").text
     # Untick One: its 15 come back under the cap for the next tick
     await _tick(hass, uids["One"], users["sam"], done=False)
     assert _games(hass).bonus_chores == 5
@@ -249,16 +251,16 @@ async def test_an_adult_s_undo_takes_the_whole_reward_back(
     uid = (await _items(hass))[0]["uid"]
     await _tick(hass, uid, users["sam"])
     assert _games(hass).minutes_left == 20
-    # Sam plays 15 of them
-    _hub(hass).household.limits.set_bonus("person.sam", "games", -15)
+    # Games' limit goes to 0 for today: its 5 minutes used are past it, paid from the bonus (15 - 5 = 10 left)
+    _hub(hass).household.limits.set_raise("person.sam", "games", Raise(to=0))
     _hub(hass).household.recompute()
-    assert _games(hass).minutes_left == 5
+    assert _games(hass).minutes_left == 10
     # The Undo on Alex's phone runs hearth.chore_undo as Alex
     _press(hass, f"HEARTH_ACT|hearth_chore_{uid}|0", users["alex"])
     await hass.async_block_till_done()
     assert _games(hass).bonus_chores == 0 and _games(hass).minutes_left == 0
     entry = _book(hass).ledger[0]
-    assert entry["reversed_why"] == "undo" and entry["reversed_by"] == users["alex"].id and entry["spent"] == 10
+    assert entry["reversed_why"] == "undo" and entry["reversed_by"] == users["alex"].id and entry["spent"] == 5
     # The item stays done; Sam's tick is a no-op, an adult's Give grants it again (#2)
     assert (await _items(hass))[0]["status"] == "completed"
     await _tick(hass, uid, users["sam"])
@@ -420,9 +422,10 @@ async def test_all_screen_time_is_mirrored_as_add_bonus_is(
     uids = {i["summary"].split(" (")[0]: i["uid"] for i in await _items(hass)}
     await _tick(hass, uids["Feed the cat"], users["sam"])
     await _tick(hass, uids["Games one"], users["sam"])
-    # All screen time had run out (15 of 15 used): Google's and Microsoft's own limits get it; Games isn't mirrored
-    assert mirrored == [("person.sam", True)]
-    assert _hub(hass).household.days["person.sam"].limits["all"].minutes_left == 20
+    # Every chore's minutes are bonus time (a Games reward too): each grant reaches Google's and Microsoft's own limits
+    assert mirrored == [("person.sam", True), ("person.sam", False)]
+    # Daily time had run out (15 of 15 used): 20 + 15 of bonus time
+    assert _hub(hass).household.days["person.sam"].limits["all"].minutes_left == 35
 
 
 async def test_money_is_a_balance(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client: WebSocketGenerator) -> None:

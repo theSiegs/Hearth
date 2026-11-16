@@ -51,7 +51,11 @@ PLAYED_DAYS = 28
 # An action an assistant took (MCP or voice, llm_api.py) that logs nothing of its own (a pause, an allow, School time
 # off): the `tool`, and what it did (app, group, minutes, device, until, date)
 ASSIST = "assist"
-KINDS = (OUT, ASK, OFFER, ANSWER, BONUS, DEVICE_BONUS, DISMISS, PUSHED, NOTICE_ANSWER, DAY, PLAYED, ASSIST)
+# A raised max of a category today (hearth.raise_cap): {group, minutes | to | no_cap, until}
+RAISE = "raise"
+# An unlimited window (hearth.unlimited) once settled: {start, end, minutes (not counted), open}
+UNLIMITED = "unlimited"
+KINDS = (OUT, ASK, OFFER, ANSWER, BONUS, DEVICE_BONUS, DISMISS, PUSHED, NOTICE_ANSWER, DAY, PLAYED, ASSIST, RAISE, UNLIMITED)
 # Who is acting through an assistant (llm_api.run_audited): {"via": "mcp" | "voice", "user": Home Assistant user id},
 # added to every event logged meanwhile (a day's record aside)
 ACTOR: ContextVar[dict[str, Any] | None] = ContextVar("hearth_actor", default=None)

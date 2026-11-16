@@ -16,10 +16,14 @@ from test_asks import _ask
 from test_attention import _household, _hub, _press
 from test_phones import _options
 
-BONUS_ENTITY = "number.hearth_sam_video_bonus_today"
+# Bonus time (no category): daily time's bonus number, by the entity id an older Hearth gave it
+BONUS_ENTITY = "number.hearth_sam_all_screen_time_bonus_today"
 READ = {"hearth_get_household", "hearth_get_person", "hearth_explain", "hearth_get_suggestions", "hearth_get_requests"}
 ACTIONS = {
-    "hearth_add_bonus",
+    "hearth_add_time",
+    "hearth_raise_limit",
+    "hearth_unlimited",
+    "hearth_unlimited_end",
     "hearth_pause",
     "hearth_pause_end",
     "hearth_allow",
@@ -125,12 +129,12 @@ async def test_an_adult_s_action_runs_as_them_and_says_what_changed(
     await hass.services.async_call(DOMAIN, "set_budget", {"person": "person.sam", "group": "video", "minutes": 30}, blocking=True)
     api = await _api(hass, users["alex"])
 
-    result = await _call(api, "hearth_add_bonus", person="Sam", minutes=15, group="video")
+    result = await _call(api, "hearth_add_time", person="Sam", minutes=15)
     await hass.async_block_till_done()
     assert hass.states.get(BONUS_ENTITY).state == "15"
-    assert result["done"] == "give Sam 15 more minutes of Video today"
-    assert (result["person"], result["group"], result["minutes"]) == ("Sam", "Video", 15)
-    assert (result["minutes_left_now"], result["budget_today"], result["bonus_today"]) == (35, 30, 15)
+    assert result["done"] == "give Sam 15 min of bonus time today"
+    assert (result["person"], result["minutes"]) == ("Sam", 15)
+    assert result["bonus_left"] == 15
     assert "-15" in result["undo"]
     # The history says it was the MCP, and who
     [event] = result["logged"]
@@ -138,10 +142,10 @@ async def test_an_adult_s_action_runs_as_them_and_says_what_changed(
     assert _hub(hass).household.history.events[-1]["via"] == "mcp"
 
     # Corrected: taken back
-    result = await _call(api, "hearth_add_bonus", person="Sam", minutes=-15, group="video")
+    result = await _call(api, "hearth_add_time", person="Sam", minutes=-15)
     await hass.async_block_till_done()
     assert hass.states.get(BONUS_ENTITY).state == "0"
-    assert result["minutes_left_now"] == 20
+    assert result["bonus_left"] == 0 and result["removed"] == 15
 
     # A pause logs nothing of its own: an assist event says what was done
     result = await _call(api, "hearth_pause", people=["Sam"], minutes=20, reason="dinner")
@@ -203,13 +207,13 @@ async def test_a_voice_action_asks_the_adults_phones_and_runs_once_as_the_one_wh
     # Reads answer directly
     assert (await _call(api, "hearth_get_household"))["people"]
 
-    result = await _call(api, "hearth_add_bonus", person="Sam", minutes=30, group="video")
+    result = await _call(api, "hearth_add_time", person="Sam", minutes=30)
     await hass.async_block_till_done()
     assert result["message"] == SENT
     # Nothing ran yet
     assert hass.states.get(BONUS_ENTITY).state == "0"
     [push] = _sent_to(sent)
-    assert push.data["title"] == "Approve: give Sam 30 more minutes of Video today?"
+    assert push.data["title"] == "Approve: give Sam 30 min of bonus time today?"
     [run, dont] = push.data["data"]["actions"]
     assert (run["title"], dont["title"]) == ("+30 min", "Don't allow")
     assert run["action"].startswith("HEARTH_ACT|voice:")

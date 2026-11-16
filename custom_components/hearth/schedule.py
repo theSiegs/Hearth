@@ -503,13 +503,17 @@ class Scheduler:
             if await self._end_early(person, today, config.half_day_hours_early):
                 self._mark(person, "early")
         minutes = config.day_off_bonus if kind == DAY_OFF else config.half_day_bonus if kind == HALF_DAY else 0
-        if minutes and config.bonus_family_link and not self._marked(person, "bonus_fl"):
+        # With Hearth's Family Link backstop on (backstop.py), Family Link's limit follows Hearth's bonus time: the
+        # minutes go there instead of onto Family Link's limit directly
+        backstop = self.household.backstop.enabled()
+        if minutes and config.bonus_family_link and not backstop and not self._marked(person, "bonus_fl"):
             if await self._family_link_bonus(person, today, minutes):
                 self._mark(person, "bonus_fl")
-        if minutes and config.bonus_group and not self._marked(person, "bonus_hearth"):
-            if self.household.group(config.bonus_group) is not None:
-                self._mark(person, "bonus_hearth")
-                self.household.add_bonus(person, config.bonus_group, minutes)
+        wanted = config.bonus_group or (backstop and config.bonus_family_link)
+        if minutes and wanted and not self._marked(person, "bonus_hearth"):
+            self._mark(person, "bonus_hearth")
+            # Bonus time, whatever group the setting names (time_model.py: bonus time has no category)
+            self.household.add_time(person, minutes, via="day_off")
 
     def _did(self, key: str) -> None:
         self._done_at[key] = dt_util.utcnow()
@@ -1008,7 +1012,8 @@ class Scheduler:
             if override is not None and int(_number(override, -1)) != target:
                 problems.append(f"{self.household.person_name(person)}'s extra time didn't apply")
         minutes = config.day_off_bonus if kind == DAY_OFF else config.half_day_bonus if kind == HALF_DAY else 0
-        if minutes and config.bonus_family_link:
+        # With the backstop on, Family Link follows Hearth's bonus time (backstop.py): nothing of its own to check
+        if minutes and config.bonus_family_link and not self.household.backstop.enabled():
             for person in people:
                 if not self._marked(person, "bonus_fl"):
                     problems.append(f"{self.household.person_name(person)}'s extra time couldn't be set")

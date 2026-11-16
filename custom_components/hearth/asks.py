@@ -225,8 +225,10 @@ class Asks:
         user_id: str | None = None,
         app: str | None = None,
     ) -> Ask:
-        """A new request; one open per person, none during a cooldown after "not now"."""
-        if minutes not in AMOUNTS or self.hub.household.group(group) is None:
+        """A new request; one open per person, none during a cooldown after "not now". A kid asks for bonus time,
+        which has no category: an older device's group is taken as "all"."""
+        group = "all"
+        if minutes not in AMOUNTS:
             raise AskError("bad_request")
         self._tidy()
         open_one = next(
@@ -331,7 +333,8 @@ class Asks:
         else:
             ask.status = APPROVED
             ask.granted = int(minutes)
-            self.hub.household.add_bonus(ask.person, ask.group, ask.granted)
+            # Bonus time, whatever group an older device or an offer named (time_model.py)
+            self.hub.household.add_time(ask.person, ask.granted, via="ask", by=self.hub.household.name_of_user(by))
         if ask.source == FAMILY_SAFETY:
             entry_task(self.hass, self.hub.entry.entry_id, self._answer_family_safety(ask), "hearth family safety answer")
         self.hass.bus.async_fire(
@@ -430,21 +433,19 @@ class Asks:
     def _tell_adults(self, ask: Ask) -> None:
         who = self.hub.household.person_name(ask.person)
         group = self.hub.household.group(ask.group)
-        what = "" if ask.group == "all" or group is None else f" of {group.name}"
         if ask.offered:
-            name = "screen time" if ask.group == "all" or group is None else group.name
-            title = f"{who}'s {name} is used up"
-            message = f"Give {who} {ask.minutes} more minutes today?"
+            title = f"{who}'s daily time is used up" if ask.group == "all" or group is None else f"{who} reached the {group.name} limit"
+            message = f"Give {who} {ask.minutes} min of bonus time today?"
         elif ask.source == FAMILY_SAFETY:
             where = f" on {ask.platform}" if ask.platform else ""
             app = f" for {ask.app_name}" if ask.app_name else ""
             title = "More time?"
             message = f"{who} asks for more time{where}{app} (Family Safety)."
         else:
-            title = "More time?"
+            title = "Bonus time?"
             app = self.hub.household.known_apps().get(ask.app, ask.app) if ask.app else None
             message = (
-                f"{who} asks for {ask.minutes} more minutes{what}"
+                f"{who} asks for {ask.minutes} min of bonus time"
                 + (f" for {app}" if app else "")
                 + (" in the Home Assistant app" if ask.via else "")
                 + "."

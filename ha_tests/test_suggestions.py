@@ -30,7 +30,9 @@ def test_a_group_out_suggests_more_of_that_group() -> None:
     # Not really over: the panel's give menu has no "min over" line
     assert games["over"] == 0
     actions = {a["id"]: a for a in games["actions"]}
-    assert actions["suggest:more:games:15"]["data"] == {"person": "person.alex", "minutes": 15, "group": "games"}
+    # Bonus time, no category
+    assert actions["suggest:more:games:15"]["data"] == {"person": "person.alex", "minutes": 15}
+    assert actions["suggest:more:games:15"]["service"] == "hearth.add_time"
     assert actions["suggest:more:games:15"]["primary"] and "primary" not in actions["suggest:more:games:30"]
     assert actions["suggest_dismiss:more:games"] == {
         "id": "suggest_dismiss:more:games",
@@ -43,7 +45,7 @@ def test_a_group_out_suggests_more_of_that_group() -> None:
 def test_out_of_all_screen_time_suggests_all_only() -> None:
     found = suggestions(_person(all=0, games=0), [], [])
     assert _keys(found) == ["more:all"]
-    assert found[0]["minutes"] == 30 and found[0]["text"] == "screen time ran out · give 30?"
+    assert found[0]["minutes"] == 30 and found[0]["text"] == "daily time ran out · give 30?"
 
 
 def test_no_suggestion_while_an_ask_waits_an_allow_lifts_it_or_it_was_put_off() -> None:
@@ -145,8 +147,8 @@ async def test_the_summary_suggests_and_not_today_puts_it_off(
     await hass.services.async_call(
         DOMAIN, "add_bonus", {"person": "person.alex", "group": "video", "minutes": 15}, blocking=True
     )
-    assert history.of("person.alex", kinds=("bonus",))[-1] | {"at": None} == {
-        "at": None, "kind": "bonus", "person": "person.alex", "group": "video", "minutes": 15
+    assert history.of("person.alex", kinds=("raise",))[-1] | {"at": None} == {
+        "at": None, "kind": "raise", "person": "person.alex", "group": "video", "minutes": 15
     }
 
 
@@ -160,6 +162,6 @@ def test_a_group_already_over_offers_enough_to_catch_up() -> None:
     assert games["minutes"] == 25
     # How far over, for the panel's give menu ("10 min over: +15 leaves 5")
     assert games["over"] == 10
-    amounts = [a["data"]["minutes"] for a in games["actions"] if a["service"] == "hearth.add_bonus"]
+    amounts = [a["data"]["minutes"] for a in games["actions"] if a["service"] == "hearth.add_time"]
     assert amounts == [25, 40]
-    assert "still up" in games["sentence"] and "10 min over" in games["detail"] and "30 min extra" in games["detail"]
+    assert "still up" in games["sentence"] and "10 min over" in games["detail"] and "limit raised by 30 min" in games["detail"]

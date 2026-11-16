@@ -97,6 +97,12 @@
       },
       "person_bedtime": {
         "name": "Bedtime"
+      },
+      "daily_time_left": {
+        "name": "Daily time left"
+      },
+      "bonus_time_left": {
+        "name": "Bonus time left"
       }
     },
     "binary_sensor": {
@@ -120,14 +126,23 @@
       }
     },
     "number": {
+      "daily_time_weekday": {
+        "name": "Daily time on school days"
+      },
+      "daily_time_weekend": {
+        "name": "Daily time on other days"
+      },
       "budget_weekday": {
-        "name": "{group} budget on school days"
+        "name": "{group} limit on school days"
       },
       "budget_weekend": {
-        "name": "{group} budget on other days"
+        "name": "{group} limit on other days"
+      },
+      "bonus_time_today": {
+        "name": "Bonus time today"
       },
       "bonus_today": {
-        "name": "{group} bonus today"
+        "name": "{group} limit raised today"
       }
     }
   },
@@ -146,10 +161,10 @@
           "school_days": "School days",
           "sort_apps": "Sort new apps",
           "new_apps": "Watch for new apps",
-          "add_group": "Add a group",
+          "add_group": "Add a category",
           "group_apps": "Add apps to Games",
           "not_screen_time": "Not screen time",
-          "remove_group": "Remove a group",
+          "remove_group": "Remove a category",
           "share_app_data": "Sharing app data",
           "app_categories": "App categories",
           "voice_assistants": "Voice assistants",
@@ -170,8 +185,8 @@
         }
       },
       "add_group": {
-        "title": "Add a group",
-        "description": "A group's apps count together against one budget, on every device. For example YouTube: YouTube and HearthTube.",
+        "title": "Add a category",
+        "description": "A category's apps count together on every device, and it can have a limit within daily time. For example YouTube: YouTube and HearthTube.",
         "data": {
           "name": "Name",
           "apps": "Apps"
@@ -179,16 +194,16 @@
       },
       "group_apps": {
         "title": "Add apps to Games",
-        "description": "Apps Android marks as games are in Games already. Add the ones it misses. An app is in one pool: an app added here leaves any other.",
+        "description": "Apps Android marks as games are in Games already. Add the ones it misses. An app is in one category: an app added here leaves any other.",
         "data": {
           "games": "Games"
         }
       },
       "not_screen_time": {
         "title": "Not screen time",
-        "description": "Groups whose time doesn't count toward All screen time (music, say). Their apps aren't held when All screen time runs out; a budget of their own still applies.",
+        "description": "Categories whose time doesn't count toward daily time (music, say). Their apps aren't held when daily time runs out; a limit of their own still applies.",
         "data": {
-          "groups": "Groups"
+          "groups": "Categories"
         }
       },
       "parent_pin": {
@@ -231,10 +246,10 @@
         }
       },
       "remove_group": {
-        "title": "Remove a group",
-        "description": "Its budgets and bonuses go with it.",
+        "title": "Remove a category",
+        "description": "Its limits and raised limits go with it.",
         "data": {
-          "groups": "Groups"
+          "groups": "Categories"
         }
       },
       "add_source": {
@@ -292,11 +307,11 @@
       },
       "sort_apps": {
         "title": "Sort new apps",
-        "description": "The group each new app counts in. Other: only All screen time. Leave one empty to sort it later."
+        "description": "The category each new app counts in. Other: only daily time. Leave one empty to sort it later."
       },
       "school_days": {
         "title": "School days",
-        "description": "Which budget applies today: the school-day one or the other-day one. Give any mix of these; the first that answers decides: the dates below, then the entity, then the calendar, then Monday to Friday within the school year.",
+        "description": "Which daily time applies today: the school-day one or the other-day one. Give any mix of these; the first that answers decides: the dates below, then the entity, then the calendar, then Monday to Friday within the school year.",
         "data": {
           "entity": "An entity that says what today is",
           "school_states": "Its states that mean a school day",
@@ -325,7 +340,7 @@
       },
       "enforce": {
         "title": "Enforce",
-        "description": "When one of this person's groups is out of time, their Hearth TVs and phones stop its apps. Here, other parental controls can hold them too, until the group has time again (more time, a new day). Family Link pauses the group's Android apps (they stay installed; Google TV ignores this, Hearth holds the TV); for All screen time it locks the person's devices instead, and apps with unlimited time still work. Family Safety locks the platforms below while one of its groups below is out of time, until midnight. Nintendo suspends the Switch's game while one of its groups below is out of time (Max screentime today set to 0, with Suspend software on), and puts its limit and Suspend software back after. Choosing a person again replaces theirs; leaving them all empty stops it, and what was held is let go.",
+        "description": "When one of this person's categories is out of time, their Hearth TVs and phones stop its apps. Here, other parental controls can hold them too, until it has time again (more time, a new day). Family Link pauses the category's Android apps (they stay installed; Google TV ignores this, Hearth holds the TV); for daily time it locks the person's devices instead, and apps with unlimited time still work. Family Safety locks the platforms below while one of its categories below is out of time, until midnight. Nintendo suspends the Switch's game while one of its categories below is out of time (Max screentime today set to 0, with Suspend software on), and puts its limit and Suspend software back after. Choosing a person again replaces theirs; leaving them all empty stops it, and what was held is let go. Family Link backstop (on by default): each kid's Family Link daily limit today is kept at their daily time + bonus time left + a margin (rounded up to 5 minutes), and a whole day while Unlimited is on. Hearth's own holds stay the real limit; the backstop wins over a weekday limit changed in the Family Link app.",
         "data": {
           "person": "Person",
           "family_link": "Family Link: any of the person's Family Link entities",
@@ -335,7 +350,9 @@
           "nintendo": "Nintendo: the person's Switch (its Max screentime today)",
           "nintendo_groups": "Nintendo: suspend while one of these groups is out of time",
           "nintendo_playing": "A shared Switch: held only while this person is the one playing (their playing sensor)",
-          "school_time_apps": "Family Link: during School time, pause these apps"
+          "school_time_apps": "Family Link: during School time, pause these apps",
+          "fl_backstop": "Keep Family Link's daily limit as a backstop",
+          "fl_backstop_margin": "Backstop margin (minutes)"
         },
         "data_description": {
           "school_time_apps": "Paused while the person's Family Link School time is on (any of their devices), and resumed when it ends. Google Messages by default: it stays installed and keeps incoming texts. Empty: nothing."
@@ -343,19 +360,20 @@
       },
       "schedule": {
         "title": "Schedule",
-        "description": "What each kind of day does to the kids' Family Link (the day type comes from School days). On a day off, School time can be switched off for the day; Hearth puts it back at the start of the next school day, inside each kid's own window. On a half day, School time can end some hours early. Both can give extra time: as Family Link's daily limit for today only (the weekday's limit plus the extra), on Family Safety's limits for the day (Windows, Xbox: the weekday's limit plus the extra; off unless chosen) and on each kid's Switch (its limit plus the extra; off unless chosen), both put back by Hearth just before midnight or when the day off is called off, and/or as Hearth bonus minutes on a group. At the watchdog time on a school day, the adults are told if anyone's School time is still off.",
+        "description": "What each kind of day does to the kids' Family Link (the day type comes from School days). On a day off, School time can be switched off for the day; Hearth puts it back at the start of the next school day, inside each kid's own window. On a half day, School time can end some hours early. Both can give extra time: as Family Link's daily limit for today only (the weekday's limit plus the extra), on Family Safety's limits for the day (Windows, Xbox: the weekday's limit plus the extra; off unless chosen) and on each kid's Switch (its limit plus the extra; off unless chosen), both put back by Hearth just before midnight or when the day off is called off, and/or as Hearth bonus time. At the watchdog time on a school day, the adults are told if anyone's School time is still off.",
         "data": {
           "day_off_school_time_off": "Day off: School time off",
           "day_off_bonus": "Day off: extra minutes",
           "half_day_hours_early": "Half day: School time ends this many hours early",
           "half_day_bonus": "Half day: extra minutes",
-          "bonus_family_link": "Extra minutes as Family Link's daily limit today",
+          "bonus_family_link": "Extra minutes as Family Link's daily limit today (with Hearth's Family Link backstop on, Hearth's bonus time sets it)",
           "bonus_family_safety": "Extra minutes as Family Safety's daily limits today (Windows, Xbox)",
           "bonus_nintendo": "Extra minutes on the Switch's limit today (put back at midnight)",
-          "bonus_group": "Extra minutes also as a Hearth bonus on this group",
+          "bonus_group": "Extra minutes also as Hearth bonus time",
           "people": "Who (empty: everyone with Family Link, Family Safety or a Switch in Enforce)",
           "notify": "Tell this phone (empty: the one that answers requests for more time)",
-          "watchdog": "Watchdog time on school days"
+          "watchdog": "Watchdog time on school days",
+          "half_day_budget": "A half day takes"
         }
       },
       "site_list": {
@@ -462,56 +480,56 @@
       }
     },
     "add_bonus": {
-      "name": "Add a bonus",
-      "description": "Adds minutes to a person's budget for today (a negative number takes them away).",
+      "name": "Add bonus time (older name)",
+      "description": "Kept for older automations: with no group (or all) it is bonus time today, as add_time; with a category's group it raises that category's limit today by the minutes, as raise_cap (negative lowers it). Use add_time or raise_cap.",
       "fields": {
         "person": {
           "name": "Person",
-          "description": "Whose budget."
+          "description": "Who."
         },
         "minutes": {
           "name": "Minutes",
-          "description": "How many minutes."
+          "description": "How many minutes (negative takes them away)."
         },
         "group": {
-          "name": "Group",
-          "description": "The group's id: all, video, games, or one of your own."
+          "name": "Group (deprecated)",
+          "description": "Deprecated: bonus time has no category. A category's id raises its limit instead."
         },
         "device": {
           "name": "Device",
-          "description": "Only on this device of theirs, today (a target id from the household summary: hearth:<id>, fl:<id>, fs:xbox, fs:windows, nintendo:<entity>): it may go past their shared time there. Only All screen time on a Family Link device, a Family Safety platform or a Switch."
+          "description": "Only on this device of theirs, today (a target id from the household summary: hearth:<id>, fl:<id>, fs:xbox, fs:windows, nintendo:<entity>): it may go past their daily time there."
         }
       }
     },
     "remove_bonus": {
-      "name": "Take back a bonus",
-      "description": "Takes back extra time given today (an undo): never more than was given today, so their own budget stays. What Family Link and Family Safety got for it goes too.",
+      "name": "Take back bonus time (older name)",
+      "description": "Kept for older automations: takes back bonus time given today (no group, or all; as remove_time), or lowers a category's raised limit again. Never more than was given.",
       "fields": {
         "person": {
           "name": "Person",
-          "description": "Whose extra time."
+          "description": "Who."
         },
         "minutes": {
           "name": "Minutes",
           "description": "How many minutes to take back."
         },
         "group": {
-          "name": "Group",
-          "description": "The group's id the extra time was given to: all, games, youtube, or one of your own."
+          "name": "Group (deprecated)",
+          "description": "Deprecated: all, or a category whose limit was raised."
         }
       }
     },
     "set_budget": {
-      "name": "Set a budget",
-      "description": "Sets a person's daily budget for a group, on school days, other days, or both. Leave minutes empty for no limit.",
+      "name": "Set daily time or a category's limit",
+      "description": "Sets a person's daily time (group all) or a category's limit, on school days, other days, or both. Leave minutes empty for no limit.",
       "fields": {
         "person": {
           "name": "Person",
-          "description": "Whose budget."
+          "description": "Who."
         },
         "group": {
-          "name": "Group",
-          "description": "The group's id: all, video, games, or one of your own."
+          "name": "Daily time or category",
+          "description": "all for daily time, or a category's id: games, youtube, or one of your own."
         },
         "minutes": {
           "name": "Minutes",
@@ -1002,6 +1020,138 @@
         "apps": {
           "name": "Apps",
           "description": "Several apps' package names."
+        }
+      }
+    },
+    "add_time": {
+      "name": "Give bonus time",
+      "description": "Bonus time today: adds minutes to daily time, with no category. The kid may spend it anywhere, minutes past a category's limit included (one bonus shared by every category). Ends at midnight. Family Link and Family Safety get as much where they would stop sooner.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "One person."
+        },
+        "people": {
+          "name": "People",
+          "description": "Several people."
+        },
+        "minutes": {
+          "name": "Minutes",
+          "description": "How many minutes."
+        },
+        "reason": {
+          "name": "Reason",
+          "description": "Why (shown in the history)."
+        }
+      }
+    },
+    "remove_time": {
+      "name": "Take back bonus time",
+      "description": "Takes back bonus time an adult gave today (an undo): never more than was given.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "One person."
+        },
+        "people": {
+          "name": "People",
+          "description": "Several people."
+        },
+        "minutes": {
+          "name": "Minutes",
+          "description": "How many minutes to take back."
+        }
+      }
+    },
+    "raise_cap": {
+      "name": "Raise limit",
+      "description": "Raises a category's limit today (by some minutes, to some minutes, or no limit) until a time, the end of the day by default. Daily time is unchanged.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "One person."
+        },
+        "people": {
+          "name": "People",
+          "description": "Several people."
+        },
+        "category": {
+          "name": "Category",
+          "description": "The category's id: games, youtube, or one of your own."
+        },
+        "minutes": {
+          "name": "By minutes",
+          "description": "Raise the limit by this many minutes (negative lowers it)."
+        },
+        "to": {
+          "name": "To minutes",
+          "description": "The limit today, in minutes."
+        },
+        "no_cap": {
+          "name": "No limit",
+          "description": "No limit for the category today."
+        },
+        "until": {
+          "name": "Until",
+          "description": "A time, or end_of_day (the default)."
+        }
+      }
+    },
+    "raise_cap_end": {
+      "name": "End a raised limit",
+      "description": "A category's raised limit ends now (every raised one when no category is given).",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "One person."
+        },
+        "people": {
+          "name": "People",
+          "description": "Several people."
+        },
+        "category": {
+          "name": "Category",
+          "description": "The category's id."
+        }
+      }
+    },
+    "unlimited": {
+      "name": "Unlimited",
+      "description": "Unlimited until a time (until 6 PM, until turned off, the end of the day by default; always over at midnight): no daily time or category limit holds them, and the time they use isn't counted, so daily time, limits and bonus time pick up where they were. Bedtime, School time and Pause screens still apply, unless include bedtime is on (bedtime only).",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "One person."
+        },
+        "people": {
+          "name": "People",
+          "description": "Several people."
+        },
+        "until": {
+          "name": "Until",
+          "description": "A time, end_of_day (the default), or turned_off (until an adult ends it)."
+        },
+        "include_bedtime": {
+          "name": "Include bedtime",
+          "description": "Bedtime doesn't lock them meanwhile either."
+        },
+        "reason": {
+          "name": "Reason",
+          "description": "Why (shown with it)."
+        }
+      }
+    },
+    "unlimited_end": {
+      "name": "End unlimited",
+      "description": "Unlimited ends now: limits are back on where they were when it started.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "One person."
+        },
+        "people": {
+          "name": "People",
+          "description": "Several people."
         }
       }
     }

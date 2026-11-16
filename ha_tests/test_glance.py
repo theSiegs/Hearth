@@ -67,7 +67,7 @@ def test_the_headline_follows_hearth_s_order() -> None:
     assert glance["headline"] == {"text": "asks for 30 more · youtube", "level": "urgent", "key": "ask:abc"}
     lines = [line["key"] for line in glance["lines"]]
     assert lines[:2] == [f"pause:{person['pause']['until']}", "low:youtube"]
-    assert glance["lines"][0]["text"] == "paused · dinner till 6:30"
+    assert glance["lines"][0]["text"] == "screens paused · dinner till 6:30"
     # The pause's key holds as time passes; with the ask answered, the pause leads
     later = _glance(person, now=NOW + timedelta(minutes=5))
     assert later["headline"]["key"] == f"pause:{person['pause']['until']}"
@@ -93,10 +93,12 @@ def test_actions_are_what_applies_now() -> None:
     assert actions["ask_yes:abc"]["data"] == {"request_id": "abc", "minutes": 30}
     assert actions["ask_yes:abc"]["service"] == "hearth.answer_request" and actions["ask_yes:abc"]["primary"]
     assert actions["ask_no:abc"]["data"] == {"request_id": "abc", "deny": True}
-    assert actions["bonus:youtube"]["data"] == {"person": "person.alex", "minutes": 15, "group": "youtube"}
-    assert actions["bonus:youtube"]["primary"] is True and "primary" not in actions["bonus:all"]
+    # One way to give more: bonus time, no category (primary while a category is out)
+    assert actions["bonus"]["data"] == {"person": "person.alex", "minutes": 15}
+    assert actions["bonus"]["service"] == "hearth.add_time"
+    assert actions["bonus"]["primary"] is True and "bonus:youtube" not in actions
     assert actions["pause"]["data"] == {"people": ["person.alex"], "minutes": 30}
-    assert actions["pause"]["confirm"] == "pause alex for 30 min?"
+    assert actions["pause"]["confirm"] == "pause alex for 30 min?" and actions["pause"]["label"] == "pause screens 30 min"
     assert "pause_end" not in actions
 
     paused = {**_person(), "pause": {"until": NOW.isoformat(), "reason": ""}}
@@ -181,10 +183,10 @@ async def test_a_summary_with_alex_waiting_paused_and_low_and_sam_calm(
     alex, sam = people["person.alex"], people["person.sam"]
     # Contract 1 stays as it was
     assert alex["groups"][1]["minutes_left"] == 5 and alex["pause"]["reason"] == "Dinner"
-    assert alex["headline"] == {"text": "asks for 30 more · video", "level": "urgent", "key": f"ask:{ask_id}"}
-    assert [line["text"] for line in alex["lines"]][:2] == ["paused · dinner till 6:30", "video · 5 left"]
+    assert alex["headline"] == {"text": "asks for 30 bonus", "level": "urgent", "key": f"ask:{ask_id}"}
+    assert [line["text"] for line in alex["lines"]][:2] == ["screens paused · dinner till 6:30", "video · 5 left"]
     assert {a["id"] for a in alex["actions"]} == {
-        f"ask_yes:{ask_id}", f"ask_no:{ask_id}", "bonus:video", "bonus:all", "pause_end"
+        f"ask_yes:{ask_id}", f"ask_no:{ask_id}", "bonus", "pause_end"
     }
     assert sam["headline"] == {"text": "video · 50 left", "level": "calm", "key": "left:video"}
     assert sam["lines"][-1]["text"] == "bedtime at 9:00"
@@ -450,7 +452,7 @@ def test_standing_grants_from_the_parent_s_app_are_not_the_headline() -> None:
 def test_midnight_and_noon_are_words() -> None:
     noon = _at(12, 0)
     paused = {**_person(all=90), "pause": {"until": noon.isoformat(), "reason": ""}}
-    assert _glance(paused, now=_at(11, 0))["headline"]["text"] == "paused till noon"
+    assert _glance(paused, now=_at(11, 0))["headline"]["text"] == "screens paused till noon"
     upcoming = {**_person(all=90), "next_lock": {"at": _midnight().isoformat(), "kind": "bedtime"}}
     assert _glance(upcoming)["lines"][-1]["text"] == "bedtime at midnight"
     allow = {"id": "a1", "app": None, "group": "games", "until": _at(12, 30).isoformat(), "reason": ""}

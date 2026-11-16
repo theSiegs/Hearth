@@ -625,3 +625,147 @@ get_schedule:
             - sun
             - day_off
             - half_day
+
+add_time:
+  fields:
+    person:
+      selector:
+        entity:
+          domain: person
+    people:
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    minutes:
+      required: true
+      example: 30
+      selector:
+        number:
+          min: 1
+          max: 1440
+          step: 5
+          unit_of_measurement: min
+          mode: box
+    reason:
+      example: Finished homework early
+      selector:
+        text:
+
+remove_time:
+  fields:
+    person:
+      selector:
+        entity:
+          domain: person
+    people:
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    minutes:
+      required: true
+      example: 15
+      selector:
+        number:
+          min: 1
+          max: 1440
+          step: 5
+          unit_of_measurement: min
+          mode: box
+
+raise_cap:
+  fields:
+    person:
+      selector:
+        entity:
+          domain: person
+    people:
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    category:
+      required: true
+      example: games
+      selector:
+        text:
+    minutes:
+      example: 30
+      selector:
+        number:
+          min: -1440
+          max: 1440
+          step: 5
+          unit_of_measurement: min
+          mode: box
+    to:
+      example: 180
+      selector:
+        number:
+          min: 0
+          max: 1440
+          step: 5
+          unit_of_measurement: min
+          mode: box
+    no_cap:
+      selector:
+        boolean:
+    until:
+      default: end_of_day
+      example: "18:00"
+      selector:
+        text:
+
+raise_cap_end:
+  fields:
+    person:
+      selector:
+        entity:
+          domain: person
+    people:
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    category:
+      example: games
+      selector:
+        text:
+
+unlimited:
+  fields:
+    person:
+      selector:
+        entity:
+          domain: person
+    people:
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    until:
+      default: end_of_day
+      example: "18:00"
+      selector:
+        text:
+    include_bedtime:
+      default: false
+      selector:
+        boolean:
+    reason:
+      example: Play date
+      selector:
+        text:
+
+unlimited_end:
+  fields:
+    person:
+      selector:
+        entity:
+          domain: person
+    people:
+      selector:
+        entity:
+          domain: person
+          multiple: true

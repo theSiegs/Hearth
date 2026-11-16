@@ -25,6 +25,8 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 
 from .app_blocks import CONF_BLOCK_UNSUPPORTED_BROWSERS
+from .backstop import CONF_FL_BACKSTOP, CONF_FL_BACKSTOP_MARGIN
+from .time_model import BACKSTOP_MARGIN
 from .apps import CONF_APP_WATCH, CONF_ASK_NOTIFY
 from .asks import AMOUNTS, CONF_OFFER_MORE
 from .const import (
@@ -310,6 +312,11 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
         "titles": list(options.get(CONF_TITLES, [])),
         "locks": list(options.get(CONF_LOCKS, [])),
         "enforce": list(options.get(CONF_ENFORCE, [])),
+        # Family Link's daily limit as a backstop (backstop.py): on by default, its margin in minutes
+        "fl_backstop": bool(options.get(CONF_FL_BACKSTOP, True)),
+        "fl_backstop_margin": int(options.get(CONF_FL_BACKSTOP_MARGIN, BACKSTOP_MARGIN)),
+        # Where each of today's changes came from (bonus time, raised limits, Unlimited, Pause screens), by person
+        "origins": {p: household.origins_of(p) for p in household.people()},
         "platforms": list(PLATFORMS),
         "outside_all": list(options.get(CONF_OUTSIDE_ALL, [])),
         "inside_all": list(options.get(CONF_INSIDE_ALL, [])),
@@ -419,6 +426,9 @@ OPTION_SCHEMAS: dict[str, Any] = {
     CONF_CATEGORY_AI: vol.Any(AI_DEFAULT, AI_OFF, cv.entity_domain("ai_task")),
     CONF_VOICE_ASSISTANTS: bool,
     CONF_BLOCK_UNSUPPORTED_BROWSERS: bool,
+    # Family Link's daily limit as a backstop (backstop.py)
+    CONF_FL_BACKSTOP: bool,
+    CONF_FL_BACKSTOP_MARGIN: vol.All(vol.Coerce(int), vol.Range(min=0, max=240)),
     CONF_SOURCES: [
         vol.Schema(
             {
