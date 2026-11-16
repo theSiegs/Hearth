@@ -115,6 +115,9 @@ SWITCH = "Switch"
 # What a Family Link enforcer holds for All screen time: the child's devices, locked by a daily limit of 0 (never a
 # package name: those have dots)
 DEVICES = "Devices"
+# What wanted() asks for when daily time is out but a category stays open: every installed app but that category's
+# and the system's (Enforcement.update fills it in; never held as such)
+ALL_APPS = "@all_apps"
 WEEKDAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
 # A Switch's limit is put back this long before midnight: after it, "today" is another day's setting
 NINTENDO_LET_GO_BEFORE_MIDNIGHT = timedelta(minutes=2)
@@ -318,19 +321,26 @@ def wanted(
     if enforcer.kind == NINTENDO:
         return {SWITCH} if closed and not near_midnight(now) and playing is not False else set()
     packages: set[str] = set()
-    if enforcer.kind == FAMILY_LINK and ALL in closed and not (lifted is not None and lifted.groups):
+    if enforcer.kind == FAMILY_LINK and ALL in closed:
         # All screen time out of time: the devices are locked (apps with unlimited time still work); let go just
-        # before midnight, as the limit is the weekday's. While a category stays open (its own bonus, an allow of
-        # it), every other app is paused instead, below, so that category's apps still run
+        # before midnight, as the limit is the weekday's. While a category stays open (lifted.open: its own bonus
+        # or an allow, spendable, with an app of it installed), every installed app of the kid but that category's
+        # and the system's is paused instead (ALL_APPS: Enforcement.update fills it in from Family Link's lists)
         closed = [g for g in closed if g != ALL]
-        held = {DEVICES} if not near_midnight(now) else set()
+        if near_midnight(now):
+            held = set()
+        else:
+            held = {ALL_APPS} if lifted is not None and lifted.open else {DEVICES}
     else:
         held = set()
     for group_id in closed:
+        # essential() spares com.android.* here: a category's own apps are never Android's system packages but by
+        # a misfiled sort, and those mustn't be paused; the whole-device path below names its exceptions instead
         packages |= {p for p in apps_of(group_id, enforcer.person) if not essential(p) and not fs_app(p)}
     if lifted:
         packages = {p for p in packages if not lifted.app(p, groups_of_app(p) if groups_of_app else None)}
-    return held | set(sorted(packages)[:MAX_PACKAGES])
+    # No cap: Family Link's pause_app takes any number (Enforcement.update keeps the installed ones first)
+    return held | packages
 
 
 def near_midnight(now: datetime | None = None) -> bool:
@@ -583,6 +593,8 @@ class Enforcement:
             # run past daily time). Bedtime, School time and pauses aren't lifted by it
             budget_lifted = budget_lifted_of(e.person) if budget_lifted_of else lifted
             budget = wanted(e, days.get(e.person), apps_of, now, playing, budget_lifted, groups_of_app)
+            if ALL_APPS in budget:
+                budget = (budget - {ALL_APPS}) | self._all_apps_but(e, budget_lifted, apps_of, groups_of_app)
             # An app a parent gave unlimited time in Family Link is never paused for a budget: it stays usable, as on
             # a locked device. The School-time apps are the parent's own choice, so they are paused all the same.
             if e.kind == FAMILY_LINK:
@@ -956,6 +968,29 @@ class Enforcement:
                     if isinstance(package, str) and package:
                         found.add(package)
         return found
+
+    def _all_apps_but(self, enforcer: Enforcer, lifted: Lifted, apps_of, groups_of_app) -> set[str]:
+        """Daily time out while a category stays open: every app the child has installed (Family Link's lists) but
+        that category's and an explicit system list (ESSENTIAL and NEVER_PAUSED by name, never the com.android.*
+        prefix, so Chrome and any other launchable com.android app are paused; launchers, keyboards and accessibility
+        apps are spared later, household.never_held). The whole-device lock when the installed apps aren't known."""
+        child = fl.child_of(self.hass, enforcer.entity_id)
+        installed = fl.installed_apps(self.hass, child) if child else None
+        if not installed:
+            return {DEVICES}
+        open_apps: set[str] = set()
+        for group_id in lifted.open:
+            open_apps |= set(apps_of(group_id, enforcer.person))
+        return {
+            p
+            for p in installed
+            if p not in ESSENTIAL
+            and p not in NEVER_PAUSED
+            and p != "android"
+            and p not in open_apps
+            and not fs_app(p)
+            and not (groups_of_app is not None and groups_of_app(p) & lifted.open)
+        }
 
     def _installed_only(self, entity_id: str, items: set[str]) -> set[str]:
         """[items] without the packages not installed on the child's devices (all of them when that isn't known)."""

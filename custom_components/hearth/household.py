@@ -2365,9 +2365,43 @@ class Household:
         run past daily time and its limit). Never bedtime, School time or a pause."""
         lifted = self.allows.lifted(person)
         extra = self.bonus_groups(person)
-        if not extra:
-            return lifted
-        return Lifted(lifted.everything, set(lifted.groups) | extra, set(lifted.apps))
+        groups = set(lifted.groups) | extra
+        return Lifted(lifted.everything, groups, set(lifted.apps), self.open_groups(person, groups))
+
+    def open_groups(self, person: str, candidates: set[str] | None = None) -> set[str]:
+        """Of the categories open past daily time for the person (their own bonus left, an allow of them), the ones
+        that may keep Family Link's devices unlocked (every other app paused instead): spendable (in daily time, or
+        with a limit) and with an app of it installed on the kid's devices. Otherwise the whole-device lock stays."""
+        if candidates is None:
+            candidates = set(self.allows.lifted(person).groups) | self.bonus_groups(person)
+        candidates = {g for g in candidates if g != ALL}
+        if not candidates:
+            return set()
+        child = self.family_link_child(person)
+        installed = fl.installed_apps(self.hass, child) if child else None
+        if not installed:
+            return set()
+        day = self.days.get(person)
+        outside = self.outside_all()
+        membership = self.membership()
+        found = set()
+        for gid in candidates:
+            state = day.limits.get(gid) if day else None
+            spendable = gid not in outside or (state is not None and state.budget_min is not None)
+            if spendable and any(gid in membership(p) for p in installed):
+                found.add(gid)
+        return found
+
+    def open_left(self, person: str, group: str, now: datetime | None = None) -> int:
+        """The minutes an open category has left past daily time: its own bonus left, or an allow's minutes to its
+        end (the longer)."""
+        now = now or dt_util.now()
+        day = self.days.get(person)
+        state = day.limits.get(group) if day else None
+        own = state.cat_bonus_left if state else 0
+        ends = [a.until[person] for a in self.allows.of(person) if a.group == group and a.until.get(person, now) > now]
+        allow = int((max(ends) - now).total_seconds() // 60) if ends else 0
+        return max(own, allow)
 
     def person_of_user(self, user_id: str | None) -> str | None:
         """The person entity whose Home Assistant user this is (the action log's "by": an id, never a name)."""

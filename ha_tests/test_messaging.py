@@ -164,6 +164,130 @@ async def test_the_backstop_counts_a_category_bonus(
     assert all(c.data.get("daily_minutes") != 0 for c in calls["limit"])
 
 
+CHROME = "com.android.chrome"
+LATE = "zz.example.lastapp"
+DIALER = "com.google.android.dialer"
+GAME = "com.example.game"
+PHONE = "sensor.sam_phone_daily_screen_time"
+
+
+def _installed(hass, apps) -> None:
+    """Sam's Family Link app lists (child 42): every app installed, none limited."""
+    from test_app_blocks import _lists
+
+    hass.states.async_set("sensor.sam_blocked_apps", "0", {"child_id": "42", "apps": []})
+    _lists(hass, list(apps))
+    # _lists' child is test_app_blocks' (42 as well)
+
+
+def _phone(hass, minutes: int) -> None:
+    hass.states.async_set(PHONE, str(minutes), {"child_id": "42", "device_id": "p1", "capabilities": ["capabilityBedtime"]})
+
+
+async def _out_of_time(hass, hass_client_no_auth, backstop: bool = True, **options):
+    calls, household = await _sam_with_messages(hass, hass_client_no_auth, 40)
+    _installed(hass, [MESSAGES, CHROME, LATE, DIALER, GAME])
+    _phone(hass, 40)
+    if options:
+        entry = hass.config_entries.async_entries(DOMAIN)[0]
+        hass.config_entries.async_update_entry(entry, options={**entry.options, **options})
+        await hass.async_block_till_done()
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": backstop})
+    from custom_components.hearth.enforce import WEEKDAYS
+    from homeassistant.util import dt as dt_util
+
+    weekday = WEEKDAYS[dt_util.now().weekday()]
+    hass.states.async_set(f"number.sam_family_link_{weekday}_limit", "120", {"child_id": "42", "weekly_minutes": 120})
+    await _budget(hass, "all", 50)  # 55 used: out
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    return calls, household
+
+
+def _device_locked(calls) -> bool:
+    return any(c.data.get("daily_minutes") == 0 and c.data.get("day") for c in calls["limit"])
+
+
+def _paused(calls) -> set[str]:
+    return {p for c in calls["pause"] for p in c.data["packages"]}
+
+
+async def test_a_messaging_bonus_out_of_time_pauses_every_other_app(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """Daily time 0, "+15 min Messaging bonus": the phone isn't locked whole; every other installed app is paused,
+    Chrome and an app late in the alphabet included; the dialer stays; the backstop is bounded."""
+    calls, household = await _out_of_time(hass, hass_client_no_auth)
+    assert _device_locked(calls)
+    await hass.services.async_call(
+        DOMAIN, "add_time", {"person": "person.sam", "minutes": 15, "category": "messaging"}, blocking=True
+    )
+    await hass.async_block_till_done()
+    household.recompute()
+    await hass.async_block_till_done()
+    paused = _paused(calls)
+    assert {CHROME, LATE, GAME} <= paused and MESSAGES not in paused and DIALER not in paused
+    held = household.enforcement.held_for("person.sam")["family_link"]["held"]
+    assert "Devices" not in held
+    # The backstop: the phone's 40 when it opened + 10 left of the bonus (5 were already past daily time) + 30
+    limit = [c.data["daily_minutes"] for c in calls["limit"] if "day" not in c.data][-1]
+    assert limit == 80
+    # Uncounted use on the phone doesn't raise it
+    _phone(hass, 70)
+    household.recompute()
+    await hass.async_block_till_done()
+    assert [c.data["daily_minutes"] for c in calls["limit"] if "day" not in c.data][-1] == 80
+    # The bonus used up: straight back to the whole-device lock
+    _fl_total(hass, 50)
+    household.recompute()
+    await hass.async_block_till_done()
+    assert "Devices" in household.enforcement.held_for("person.sam")["family_link"]["held"]
+
+
+async def test_an_unspendable_category_bonus_keeps_the_device_lock(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """Messaging outside daily time with no limit: its bonus can't be spent, so it opens nothing."""
+    calls, household = await _out_of_time(hass, hass_client_no_auth, outside_all=["messaging"], messaging_counted=2)
+    # Outside daily time, Messaging's 40 don't count: 15 on the TV of 10
+    await _budget(hass, "all", 10)
+    assert household.days["person.sam"].limits["all"].minutes_left == 0
+    await hass.services.async_call(
+        DOMAIN, "add_time", {"person": "person.sam", "minutes": 15, "category": "messaging"}, blocking=True
+    )
+    household.recompute()
+    await hass.async_block_till_done()
+    assert household.open_groups("person.sam") == set()
+    assert "Devices" in household.enforcement.held_for("person.sam")["family_link"]["held"]
+    assert CHROME not in _paused(calls)
+
+
+async def test_an_allow_after_time_runs_out_isn_t_locked_mid_allow(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    from homeassistant.util import dt as dt_util
+
+    freezer.move_to(dt_util.now().replace(hour=15, minute=0, second=0, microsecond=0))
+    calls, household = await _out_of_time(hass, hass_client_no_auth)
+    await hass.services.async_call(
+        DOMAIN, "allow", {"people": ["person.sam"], "group": "messaging", "until": "16:00"}, blocking=True
+    )
+    await hass.async_block_till_done()
+    household.recompute()
+    await hass.async_block_till_done()
+    assert household.open_groups("person.sam") == {"messaging"}
+    assert "Devices" not in household.enforcement.held_for("person.sam")["family_link"]["held"]
+    assert {CHROME, GAME} <= _paused(calls) and MESSAGES not in _paused(calls)
+    # Family Link's limit: 40 when it opened + 60 + 30; 30 minutes in, 70 on the phone: unchanged, not locked
+    limit = [c.data["daily_minutes"] for c in calls["limit"] if "day" not in c.data][-1]
+    assert limit == 130
+    freezer.tick(timedelta(minutes=30))
+    _phone(hass, 70)
+    household.recompute()
+    await hass.async_block_till_done()
+    assert [c.data["daily_minutes"] for c in calls["limit"] if "day" not in c.data][-1] == 130
+    assert "Devices" not in household.enforcement.held_for("person.sam")["family_link"]["held"]
+
+
 async def test_messages_is_paused_when_its_limit_is_used_up(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:

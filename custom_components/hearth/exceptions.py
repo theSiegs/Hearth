@@ -214,6 +214,10 @@ class Lifted:
     everything: bool = False
     groups: set[str] = field(default_factory=set)
     apps: set[str] = field(default_factory=set)
+    # Of [groups], the ones that keep the kid's devices open past daily time for Family Link (household.open_groups:
+    # a category's own bonus left, or an allow of it, when it can be spent and the kid has an app of it installed):
+    # every other app is paused then instead of the whole-device lock
+    open: set[str] = field(default_factory=set)
 
     def group(self, group_id: str) -> bool:
         return self.everything or group_id in self.groups

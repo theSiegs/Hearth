@@ -138,3 +138,35 @@ async def test_diagnostics_redact_names_and_child_ids(
     text = json.dumps(body)
     assert body["activity"] and "kids" in body and "options" in body
     assert CHILD not in text and "Sam" not in text and "person.sam" not in text and "sam_" not in text
+
+
+async def test_diagnostics_redact_pin_hashes_errors_and_named_devices(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    from custom_components.hearth.diagnostics import async_get_config_entry_diagnostics
+
+    household = await _sam(hass, hass_client_no_auth)
+    hass.states.async_set("person.sam", "home", {"friendly_name": "Sam Rivera"})
+    pin_hash = "v2$100000$" + "a" * 32 + "$" + "b" * 64
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    hass.config_entries.async_update_entry(
+        entry,
+        options={
+            **entry.options,
+            "parent_pins": {"person.alex": pin_hash},
+            "push_server": "https://ntfy.example.org",
+            "ask_notify": "mobile_app_sams_phone",
+            "extra": [pin_hash],
+        },
+    )
+    await hass.async_block_till_done()
+    household = _household(hass)
+    async_mock_service(hass, "notify", "mobile_app_rivera_sam_tablet")
+    await call_service(hass, "notify", "mobile_app_rivera_sam_tablet", {"message": "x"}, blocking=True)
+    household.activity.add("call", person="person.sam", service="familylink.pause_app", result="failed",
+                           error="Sam's phone (Sam Rivera) didn't answer", target=["switch.sams_pixel"])
+    body = await async_get_config_entry_diagnostics(hass, entry)
+    text = json.dumps(body)
+    assert pin_hash not in text and "ntfy.example.org" not in text and "didn't answer" not in text
+    for name in ("Sam", "sam", "Rivera", "rivera"):
+        assert name not in text, name

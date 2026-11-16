@@ -71,6 +71,8 @@ class Backstop:
         self.written: dict[str, dict[str, Any]] = {}
         self._failed: dict[str, datetime] = {}
         self._held: set[str] = set()
+        # Daily time out while a category stays open: {"base", "allowance", "last"} per person (_open_limit)
+        self._opened: dict[str, dict[str, int]] = {}
         self._task = None
         self._again = False
         self._closed = False
@@ -114,8 +116,25 @@ class Backstop:
             state
             and state.minutes_left == 0
             and self.household.no_limits_until(person) is None
-            and not self.household.bonus_groups(person)
+            and not self.household.open_groups(person)
         )
+
+    def _open_limit(self, person: str, open_groups: set[str]) -> int:
+        """Daily time out while a category stays open (its own bonus, an allow): the device's minutes when it opened +
+        what was open then (more added since counts too) + margin. Never follows the device's minutes upward."""
+        left = sum(self.household.open_left(person, g) for g in open_groups)
+        record = self._opened.get(person)
+        if record is None:
+            record = self._opened[person] = {
+                "base": int(math.ceil(self.device_minutes(person))), "allowance": left, "last": left
+            }
+        elif left > record["last"]:
+            # More given since (a bigger bonus, a longer allow)
+            record["allowance"] += left - record["last"]
+        record["last"] = left
+        total = record["base"] + record["allowance"] + self.margin()
+        _LOGGER.debug("backstop %s: open past daily time (%s), %s", person, sorted(open_groups), record)
+        return min(1440, int(math.ceil(total / 5) * 5))
 
     def wanted(self, person: str) -> int | None:
         """The daily limit Family Link should have today for the person; None: leave it alone."""
@@ -124,8 +143,12 @@ class Backstop:
         if state is None or state.budget_min is None:
             return None
         if self._out(person):
+            self._opened.pop(person, None)
             return None
         unlimited = self.household.no_limits_until(person) is not None
+        if not unlimited and state.minutes_left == 0:
+            return self._open_limit(person, self.household.open_groups(person))
+        self._opened.pop(person, None)
         # Daily time left, and each category's own bonus left (usable there past daily time)
         left = (state.minutes_left or 0) + sum(s.cat_bonus_left for g, s in day.limits.items() if g != ALL)
         return backstop_minutes(
@@ -202,7 +225,9 @@ class Backstop:
                 _LOGGER.debug("backstop %s: skipped at the write (a hold started or daily time ran out)", person)
                 continue
             # Never below what a device already used today
-            minutes = min(1440, max(minutes, int(math.ceil(self.device_minutes(person, child))) + FLOOR))
+            if person not in self._opened:
+                # (Open past daily time it stays bounded: never the device's minutes upward)
+                minutes = min(1440, max(minutes, int(math.ceil(self.device_minutes(person, child))) + FLOOR))
             try:
                 # The child's id as a string, from its entity's attributes: never a template
                 await call_service(self.hass,
