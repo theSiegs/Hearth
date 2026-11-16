@@ -1006,9 +1006,77 @@
     "@searchHint": {
         "description": "Search box hint"
     },
-    "searchEntryHelp": "Type, use the mic, or type on your phone with the Google TV app.",
+    "searchEntryHelp": "Type, or press the mic and say it.",
     "@searchEntryHelp": {
         "description": "Search: help line under the search box"
+    },
+    "searchEntryPhoneHelp": "Your phone's remote is open: you can type there too.",
+    "@searchEntryPhoneHelp": {
+        "description": "Search: added to the help line only while a phone remote is known to be connected"
+    },
+    "searchMic": "Say what to find",
+    "@searchMic": {
+        "description": "Search: the mic button next to the search box (tooltip and screen reader label)"
+    },
+    "keyboardSpace": "Space",
+    "@keyboardSpace": {
+        "description": "Hearth's on-screen keyboard: the space bar"
+    },
+    "keyboardDelete": "Delete",
+    "@keyboardDelete": {
+        "description": "Hearth's on-screen keyboard: deletes the letter before the cursor (screen reader label)"
+    },
+    "keyboardShift": "Capital letter",
+    "@keyboardShift": {
+        "description": "Hearth's on-screen keyboard: makes the next letter a capital (screen reader label)"
+    },
+    "keyboardSymbols": "?123",
+    "@keyboardSymbols": {
+        "description": "Hearth's on-screen keyboard: switches to numbers and symbols"
+    },
+    "keyboardLetters": "ABC",
+    "@keyboardLetters": {
+        "description": "Hearth's on-screen keyboard: switches back to letters"
+    },
+    "keyboardMic": "Speak",
+    "@keyboardMic": {
+        "description": "Hearth's on-screen keyboard: the mic key (screen reader label)"
+    },
+    "keyboardPhone": "Type on your phone",
+    "@keyboardPhone": {
+        "description": "Hearth's on-screen keyboard: hands typing to the phone remote; shown only while one is connected"
+    },
+    "keyboardTvKeyboards": "TV keyboards",
+    "@keyboardTvKeyboards": {
+        "description": "Hearth's on-screen keyboard: opens Android's keyboard chooser (screen reader label)"
+    },
+    "keyboardSearch": "Search",
+    "@keyboardSearch": {
+        "description": "Hearth's on-screen keyboard: the action key in a search box"
+    },
+    "keyboardNext": "Next",
+    "@keyboardNext": {
+        "description": "Hearth's on-screen keyboard: the action key when another field follows"
+    },
+    "keyboardPhoneStuck": "The TV's keyboard is set to type on a phone, so this is Hearth's own.",
+    "@keyboardPhoneStuck": {
+        "description": "Hearth's on-screen keyboard: note when the TV's own keyboard is Google TV's phone keyboard"
+    },
+    "keyboardSetupHeading": "Typing",
+    "@keyboardSetupHeading": {
+        "description": "Settings > Set up Hearth: heading over the keyboard item"
+    },
+    "keyboardSetupTitle": "On-screen keyboard first",
+    "@keyboardSetupTitle": {
+        "description": "Settings > Set up Hearth: the item that lets Hearth put the TV's on-screen keyboard back"
+    },
+    "keyboardSetupWhy": "A phone with the Google TV app can leave the TV's keyboard set to the phone after it goes away, and then text boxes wait for a phone that isn't there. Hearth always shows an on-screen keyboard and the mic in its own boxes. With this, it also puts the TV's on-screen keyboard back when no phone is there, for every app.",
+    "@keyboardSetupWhy": {
+        "description": "Settings > Set up Hearth > On-screen keyboard first: why"
+    },
+    "keyboardSetupDone": "Hearth may put the TV's on-screen keyboard back.",
+    "@keyboardSetupDone": {
+        "description": "Settings > Set up Hearth > On-screen keyboard first: already allowed"
     },
     "searchTabWatchNow": "Watch now",
     "@searchTabWatchNow": {

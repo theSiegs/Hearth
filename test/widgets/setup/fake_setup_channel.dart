@@ -243,6 +243,13 @@ class FakeSetupChannel extends FLauncherChannel {
   @override
   Future<bool> isAdbEnabled() async => adb;
 
+  /// The TV's keyboard: [keyboardCanSwitch] once the keyboard fix ran.
+  bool keyboardCanSwitch = false;
+
+  @override
+  Future<Map<dynamic, dynamic>> getKeyboardStatus() async =>
+      {"kind": "onscreen", "phone": false, "canSwitch": keyboardCanSwitch, "onScreen": null};
+
   @override
   Future<bool> checkWatchNextPermission() async => watchNext;
 
@@ -314,6 +321,7 @@ class FakeSetupChannel extends FLauncherChannel {
     if (fixes.contains("watch_next")) watchNext = true;
     if (fixes.contains("profile_pairing")) pairing = true;
     if (fixes.contains("notification_access")) notifications = true;
+    if (fixes.contains("keyboard")) keyboardCanSwitch = true;
     return [];
   }
 }

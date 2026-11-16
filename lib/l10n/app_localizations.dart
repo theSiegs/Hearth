@@ -1798,8 +1798,110 @@ abstract class AppLocalizations {
   /// Search: help line under the search box
   ///
   /// In en, this message translates to:
-  /// **'Type, use the mic, or type on your phone with the Google TV app.'**
+  /// **'Type, or press the mic and say it.'**
   String get searchEntryHelp;
+
+  /// Search: added to the help line only while a phone remote is known to be connected
+  ///
+  /// In en, this message translates to:
+  /// **'Your phone\'s remote is open: you can type there too.'**
+  String get searchEntryPhoneHelp;
+
+  /// Search: the mic button next to the search box (tooltip and screen reader label)
+  ///
+  /// In en, this message translates to:
+  /// **'Say what to find'**
+  String get searchMic;
+
+  /// Hearth's on-screen keyboard: the space bar
+  ///
+  /// In en, this message translates to:
+  /// **'Space'**
+  String get keyboardSpace;
+
+  /// Hearth's on-screen keyboard: deletes the letter before the cursor (screen reader label)
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get keyboardDelete;
+
+  /// Hearth's on-screen keyboard: makes the next letter a capital (screen reader label)
+  ///
+  /// In en, this message translates to:
+  /// **'Capital letter'**
+  String get keyboardShift;
+
+  /// Hearth's on-screen keyboard: switches to numbers and symbols
+  ///
+  /// In en, this message translates to:
+  /// **'?123'**
+  String get keyboardSymbols;
+
+  /// Hearth's on-screen keyboard: switches back to letters
+  ///
+  /// In en, this message translates to:
+  /// **'ABC'**
+  String get keyboardLetters;
+
+  /// Hearth's on-screen keyboard: the mic key (screen reader label)
+  ///
+  /// In en, this message translates to:
+  /// **'Speak'**
+  String get keyboardMic;
+
+  /// Hearth's on-screen keyboard: hands typing to the phone remote; shown only while one is connected
+  ///
+  /// In en, this message translates to:
+  /// **'Type on your phone'**
+  String get keyboardPhone;
+
+  /// Hearth's on-screen keyboard: opens Android's keyboard chooser (screen reader label)
+  ///
+  /// In en, this message translates to:
+  /// **'TV keyboards'**
+  String get keyboardTvKeyboards;
+
+  /// Hearth's on-screen keyboard: the action key in a search box
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get keyboardSearch;
+
+  /// Hearth's on-screen keyboard: the action key when another field follows
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get keyboardNext;
+
+  /// Hearth's on-screen keyboard: note when the TV's own keyboard is Google TV's phone keyboard
+  ///
+  /// In en, this message translates to:
+  /// **'The TV\'s keyboard is set to type on a phone, so this is Hearth\'s own.'**
+  String get keyboardPhoneStuck;
+
+  /// Settings > Set up Hearth: heading over the keyboard item
+  ///
+  /// In en, this message translates to:
+  /// **'Typing'**
+  String get keyboardSetupHeading;
+
+  /// Settings > Set up Hearth: the item that lets Hearth put the TV's on-screen keyboard back
+  ///
+  /// In en, this message translates to:
+  /// **'On-screen keyboard first'**
+  String get keyboardSetupTitle;
+
+  /// Settings > Set up Hearth > On-screen keyboard first: why
+  ///
+  /// In en, this message translates to:
+  /// **'A phone with the Google TV app can leave the TV\'s keyboard set to the phone after it goes away, and then text boxes wait for a phone that isn\'t there. Hearth always shows an on-screen keyboard and the mic in its own boxes. With this, it also puts the TV\'s on-screen keyboard back when no phone is there, for every app.'**
+  String get keyboardSetupWhy;
+
+  /// Settings > Set up Hearth > On-screen keyboard first: already allowed
+  ///
+  /// In en, this message translates to:
+  /// **'Hearth may put the TV\'s on-screen keyboard back.'**
+  String get keyboardSetupDone;
 
   /// Search results page: pill for titles included in an app on this TV
   ///

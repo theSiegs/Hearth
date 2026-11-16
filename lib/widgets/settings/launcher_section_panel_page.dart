@@ -26,6 +26,7 @@ import 'package:provider/provider.dart';
 import 'package:flauncher/l10n/app_localizations.dart';
 
 import '../../models/category.dart';
+import 'remote_text_field.dart';
 import 'settings_page.dart';
 
 /// Name choices for a new section; the first two fill themselves (see _save). They're saved as the section's name,
@@ -436,7 +437,8 @@ class _CategorySettingsState extends State<_CategorySettings> {
                 Text(localizations.sectionsCustomName),
                 Padding(
                     padding: EdgeInsets.only(top: 4),
-                    child: TextFormField(
+                    // On-screen first: the TV's keyboard when it's on screen, else Hearth's own (a phone's stuck)
+                    child: RemoteTextField(
                       controller: _nameController,
                       focusNode: _textFieldFocusNode,
                       decoration: InputDecoration(

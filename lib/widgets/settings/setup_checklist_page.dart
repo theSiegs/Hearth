@@ -5,6 +5,7 @@ import 'package:flauncher/providers/settings_service.dart';
 import 'package:flauncher/providers/setup_flow_service.dart';
 import 'package:flauncher/widgets/setup/setup_flow_launcher.dart';
 import 'package:flauncher/widgets/setup/setup_snapshot.dart';
+import 'package:flauncher/widgets/keyboard/keyboard_choice.dart';
 import 'package:flauncher/widgets/rounded_switch_list_tile.dart';
 import 'package:flauncher/quiet_failure.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ import 'package:provider/provider.dart';
 
 import 'adb_command_dialog.dart';
 import 'focusable_settings_tile.dart';
+import 'message_dialog.dart';
 import 'settings_page.dart';
 
 /// The things the TV owner turns on in Android's Settings for Hearth. The setup flow and this checklist both work
@@ -192,6 +194,11 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
   /// Home Assistant runs screen time here (paired), and when Google TV's own limit was last seen.
   ({bool paired, DateTime? seenAt}) _limits = (paired: false, seenAt: null);
 
+  /// The TV's keyboard: whether Hearth may put the on-screen one back (the keyboard fix), and the debugging switch.
+  KeyboardStatus _keyboard = KeyboardStatus.unknown;
+  bool _adbEnabled = false;
+  String _packageName = kHearthAppId;
+
   @override
   void initState() {
     super.initState();
@@ -225,13 +232,57 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
       noteFailure('setup_checklist_page', err);
     }
     final limits = await SetupSnapshot.loadGoogleLimits(_channel);
+    KeyboardStatus keyboard = KeyboardStatus.unknown;
+    bool adbEnabled = false;
+    try {
+      keyboard = KeyboardStatus.fromMap(await _channel.getKeyboardStatus());
+      adbEnabled = await _channel.isAdbEnabled();
+    } catch (err) {
+      noteFailure('setup_checklist_page', err);
+    }
     if (mounted) {
       setState(() {
         _steps = steps;
         _googleTv = googleTv;
         _limits = limits;
+        _keyboard = keyboard;
+        _adbEnabled = adbEnabled;
+        _packageName = packageName;
       });
     }
+  }
+
+  /// On-screen keyboard first: Hearth always shows its own keyboard when the TV's is a phone's; with this one adb
+  /// grant it also puts the TV's on-screen keyboard back. Hearth runs the grant itself when debugging is on.
+  Future<void> _showKeyboardCard() async {
+    final l = AppLocalizations.of(context)!;
+    if (_keyboard.canSwitch) {
+      await showMessageDialog(context, title: l.keyboardSetupTitle, message: l.keyboardSetupDone);
+      return;
+    }
+    await showAdbCommandDialog(
+      context,
+      title: l.keyboardSetupTitle,
+      message: "${l.keyboardSetupWhy}\n\n"
+          "${_adbEnabled ? l.setupFlowFixConfirmApproval : l.setupFlowBlockedComputer}",
+      command: _adbEnabled
+          ? "pm grant $_packageName android.permission.WRITE_SECURE_SETTINGS"
+          : "adb shell pm grant $_packageName android.permission.WRITE_SECURE_SETTINGS",
+      actionLabel: _adbEnabled ? l.setupFlowLetHearthFix : null,
+      onAction: _runKeyboardFix,
+    );
+  }
+
+  Future<void> _runKeyboardFix() async {
+    final l = AppLocalizations.of(context)!;
+    try {
+      await _channel.runSetupFixes(const ["keyboard"]).timeout(const Duration(seconds: 60));
+    } catch (err) {
+      noteFailure('setup_checklist_page', err);
+    }
+    await _refresh();
+    if (!mounted || _keyboard.canSwitch) return;
+    await showMessageDialog(context, title: l.setupFlowFixFailedTitle, message: l.setupFlowFixFailedBody);
   }
 
   /// One of Google TV's own settings explained: no switch Hearth can read, so no check mark; Open Settings opens
@@ -411,6 +462,16 @@ class _SetupChecklistPageState extends State<SetupChecklistPage> with WidgetsBin
                         onPressed: () => _showCard(step),
                       ),
                   ],
+                  _heading(l.keyboardSetupHeading),
+                  FocusableSettingsTile(
+                    leading: Icon(Icons.keyboard_outlined, color: _keyboard.canSwitch ? Colors.green : null),
+                    title: Text(l.keyboardSetupTitle, style: textTheme.bodyMedium),
+                    trailing: Icon(
+                      _keyboard.canSwitch ? Icons.check_circle : Icons.chevron_right,
+                      color: _keyboard.canSwitch ? Colors.green : Colors.white54,
+                    ),
+                    onPressed: _showKeyboardCard,
+                  ),
                   if (_googleTv) ..._googleTvTiles(l, textTheme),
                   _heading(l.tvPowerTitle),
                   _startOnBootTile(context),

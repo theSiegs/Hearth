@@ -1045,8 +1045,62 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchHint => 'Search films and shows';
 
   @override
-  String get searchEntryHelp =>
-      'Type, use the mic, or type on your phone with the Google TV app.';
+  String get searchEntryHelp => 'Type, or press the mic and say it.';
+
+  @override
+  String get searchEntryPhoneHelp =>
+      'Your phone\'s remote is open: you can type there too.';
+
+  @override
+  String get searchMic => 'Say what to find';
+
+  @override
+  String get keyboardSpace => 'Space';
+
+  @override
+  String get keyboardDelete => 'Delete';
+
+  @override
+  String get keyboardShift => 'Capital letter';
+
+  @override
+  String get keyboardSymbols => '?123';
+
+  @override
+  String get keyboardLetters => 'ABC';
+
+  @override
+  String get keyboardMic => 'Speak';
+
+  @override
+  String get keyboardPhone => 'Type on your phone';
+
+  @override
+  String get keyboardTvKeyboards => 'TV keyboards';
+
+  @override
+  String get keyboardSearch => 'Search';
+
+  @override
+  String get keyboardNext => 'Next';
+
+  @override
+  String get keyboardPhoneStuck =>
+      'The TV\'s keyboard is set to type on a phone, so this is Hearth\'s own.';
+
+  @override
+  String get keyboardSetupHeading => 'Typing';
+
+  @override
+  String get keyboardSetupTitle => 'On-screen keyboard first';
+
+  @override
+  String get keyboardSetupWhy =>
+      'A phone with the Google TV app can leave the TV\'s keyboard set to the phone after it goes away, and then text boxes wait for a phone that isn\'t there. Hearth always shows an on-screen keyboard and the mic in its own boxes. With this, it also puts the TV\'s on-screen keyboard back when no phone is there, for every app.';
+
+  @override
+  String get keyboardSetupDone =>
+      'Hearth may put the TV\'s on-screen keyboard back.';
 
   @override
   String get searchTabWatchNow => 'Watch now';
