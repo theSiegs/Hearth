@@ -205,6 +205,9 @@ NEVER_PAUSED = TRANSITION_CLIENTS | frozenset(
     }
 )
 DEFAULT_SCHOOL_TIME_APPS = ("com.google.android.apps.messaging",)
+# The explicit system list: never paused, by name (calls, Settings, Play services, Family Link, the Play Store, Hearth
+# and Glint). The per-app path (Enforcement._all_apps_but) and the state document's never_paused both read it
+SYSTEM_NEVER_PAUSED = ESSENTIAL | NEVER_PAUSED | frozenset({"android"})
 
 # Family Safety's app ids that pause_app takes, by platform (a: is a phone app: not paused, Family Link has the phone)
 # First match wins: Microsoft Store apps are x:windowsplt:..., so that prefix comes before the Xbox's plain x:
@@ -984,9 +987,7 @@ class Enforcement:
         return {
             p
             for p in installed
-            if p not in ESSENTIAL
-            and p not in NEVER_PAUSED
-            and p != "android"
+            if p not in SYSTEM_NEVER_PAUSED
             and p not in open_apps
             and not fs_app(p)
             and not (groups_of_app is not None and groups_of_app(p) & lifted.open)

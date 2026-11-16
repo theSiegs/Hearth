@@ -986,6 +986,15 @@ the end of the day:
                                     own bonus left + margin,
                                     rounded up to 5 minutes (at most 24 hours)
 
+**Daily time out while a category stays open** (its own bonus left, or an allow of it): Family Link's devices stay
+unlocked only when that category can be spent (in daily time, or with a limit) and the kid has an app of it installed;
+then every installed app (Family Link's lists, no cap) is paused but that category's and the explicit system list
+(dialer, contacts, Settings, Play services, Family Link and its helper, the Play Store, Hearth and Glint, by name, not by
+the `com.android.` prefix, so Chrome is paused; launchers, keyboards and accessibility apps as always). The backstop is
+then the device's minutes when it opened + what was open then (more given since adds on) + margin, rounded up to 5,
+and never follows the device's minutes upward. When the bonus or allow ends or is used up, the whole-device lock is
+back. Otherwise (a category that can't be spent, or none of its apps installed) the whole-device lock stays.
+
 It's anchored on what Family Link itself counted, so it never sits below real use. Spending counted time (bonus
 included, past a category's limit or not) leaves it steady: the device's minutes grow as Hearth's time left shrinks.
 Time Hearth doesn't count (a category outside daily time, System screens, Unlimited) raises it. Example: 30 minutes

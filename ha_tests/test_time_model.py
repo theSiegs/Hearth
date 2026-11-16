@@ -613,6 +613,68 @@ async def test_a_hold_s_put_back_is_the_weekday_s_own_limit(
     assert put_back[-1] == {"child_id": CHILD, "daily_minutes": 120, "day": day}
 
 
+async def test_origins_have_ids_links_and_an_end(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    from custom_components.hearth.const import CONF_PERSON
+
+    from custom_components.hearth.enforce import SYSTEM_NEVER_PAUSED
+    from test_init import TV_ID
+    from test_parent_pin import _adults
+
+    client, _secret = await _household_with_sam(hass, hass_client_no_auth)
+    hass.states.async_set("person.alex", "home", {"friendly_name": "Alex"})
+    await _adults(hass, "person.alex")
+    await _set(hass, "all", 60)
+    await _set(hass, "video", 10)
+    household = _household(hass)
+    await _call(hass, "add_time", {"person": "person.sam", "minutes": 30})
+    await _call(hass, "add_time", {"person": "person.sam", "minutes": 15, "category": "games"})
+    await _call(hass, "raise_cap", {"person": "person.sam", "category": "video", "minutes": 15})
+    await _call(hass, "unlimited", {"person": "person.sam", "until": "turned_off"})
+    view = household.time_view("person.sam")
+    origins = {o["kind"] + (":" + o["group"] if o.get("group") else ""): o for o in view["origins"]}
+    assert all(o["id"] for o in view["origins"]) and len({o["id"] for o in view["origins"]}) == 4
+    # Each status line links to its origin
+    assert view["bonus_origin"] == origins["bonus"]["id"]
+    assert view["category_bonuses"][0]["origin"] == origins["bonus:games"]["id"]
+    assert next(c for c in view["categories"] if c["id"] == "video")["origin"] == origins["raise:video"]["id"]
+    assert view["unlimited"]["origin"] == origins["unlimited"]["id"]
+    # And says how it ends
+    assert origins["bonus"]["end"] == {"service": "hearth.remove_time", "data": {"person": "person.sam", "minutes": 30}}
+    assert origins["bonus:games"]["end"]["data"] == {"person": "person.sam", "minutes": 15, "category": "games"}
+    assert origins["raise:video"]["end"]["service"] == "hearth.raise_cap_end"
+    assert origins["unlimited"]["endable"] and origins["unlimited"]["end"]["service"] == "hearth.unlimited_end"
+    # The state document's never_paused: the system list enforce.py uses, and nothing like Messages
+    document = household._person_document("person.sam")
+    assert set(SYSTEM_NEVER_PAUSED) <= set(document["never_paused"])
+    assert "com.google.android.apps.messaging" not in document["never_paused"]
+    # An adult's phone ends one (the unused bonus taken back)
+    # (The paired device's person is an adult's: its own, as an adult's phone)
+    secret = _secret
+    hub = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
+    hub.devices[TV_ID][CONF_PERSON] = "person.alex"
+    household = _household(hass)
+    origin = next(o for o in household.time_view("person.sam")["origins"] if o["kind"] == "bonus" and not o.get("group"))
+    response = await client.post(
+        f"/api/hearth/device/{TV_ID}/end_grant", json={"origin_id": origin["id"]}, headers={"X-Hearth-Secret": secret}
+    )
+    assert response.status == 200, await response.text()
+    await hass.async_block_till_done()
+    assert household.days["person.sam"].limits["all"].bonus_min == 0
+    assert any(r.get("why") == f"end_grant:{origin['id']}" for r in household.activity.records)
+    # Nothing left of it: 404; a kid's phone: 403
+    again = await client.post(
+        f"/api/hearth/device/{TV_ID}/end_grant", json={"origin_id": origin["id"]}, headers={"X-Hearth-Secret": secret}
+    )
+    assert again.status == 404
+    hub.devices[TV_ID][CONF_PERSON] = "person.sam"
+    kid = await client.post(
+        f"/api/hearth/device/{TV_ID}/end_grant", json={"origin_id": origin["id"]}, headers={"X-Hearth-Secret": secret}
+    )
+    assert kid.status == 403
+
+
 async def test_origins_say_where_each_status_came_from(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:

@@ -55,13 +55,14 @@ New, under `time` (always present for a person; values may be `null`):
 | `time.base_minutes` | int \| null | Today's daily time without bonus (after any time an adult took away). |
 | `time.bonus` | int | Bonus time given today (adults, asks, chores, day-off). |
 | `time.bonus_left` | int | Bonus time not used yet. |
+| `time.bonus_origin` | string \| null | The id of the latest bonus origin today (its ⓘ). |
 | `time.used` | int | Minutes counted today (Unlimited minutes left out). |
-| `time.unlimited` | object \| null | While Unlimited is on: `{until, open, include_bedtime, text}`. `open`: "until turned off". |
+| `time.unlimited` | object \| null | While Unlimited is on: `{until, open, include_bedtime, text, origin}`. `open`: "until turned off"; `origin`: its origin's id. |
 | `time.unlimited_today` | list | Today's ended windows: `{start, end, minutes, settled, text}`. |
 | `time.text` | string \| null | The kid's line, ready to show (see Words). |
 | `time.adult_text` | string \| null | The adult's line ("... (includes 30 min bonus)"). |
 | `time.categories[]` | list | Each category with a limit (or a raised one): `{id, name, limit, limit_today, raised, until, left, used, text, limit_text}`. `limit`: as set for today's kind of day; `limit_today`: in force today (`null`: no limit); `left`: usable (never more than `today_left`); `text`: the kid's line; `limit_text`: the adult's hint. |
-| `time.category_bonuses[]` | list | Categories with their own bonus today: `{id, name, bonus, bonus_left, left, text}` ("Messaging: 15 min bonus left"). Each `time.categories[]` entry also has `bonus` and `bonus_left`. |
+| `time.category_bonuses[]` | list | Categories with their own bonus today: `{id, name, bonus, bonus_left, left, text}` ("Messaging: 15 min bonus left"). Each `time.categories[]` entry also has `bonus`, `bonus_left` and `origin` (the raised limit's origin id, when raised); each `time.category_bonuses[]` entry has `origin` (its bonus's). |
 | `time.origins[]` | list | Where today's statuses came from (see Origin), newest first. |
 
 Unchanged: `groups[]` with `{id, name, minutes_left, apps, except}`. A category's `groups[].minutes_left` is
@@ -112,7 +113,14 @@ Durations read `40 min`, `1 h`, `1 h 10 min`; clocks `6 PM`, `6:30 PM`. `time.te
 
 Never say pool, bucket, budget or max to a person; never "grown-up" (it's "adult").
 
-## Origin (coming)
+## Never paused
+
+The state document (phone and TV, per person) has `never_paused: [packages]`: what Hearth never pauses for any reason,
+the same list Family Link's per-app hold uses (calls: dialer and contacts; Settings, Play services, Family Link and its
+helper, the Play Store, Hearth's and Glint's apps, `android`) with the launchers, keyboards and accessibility apps. A
+client holds everything else when a group it holds is out of time or paused, Messaging included.
+
+## Origin
 
 Each bonus, raised limit, Unlimited window and Pause screens record carries where it came from:
 
@@ -124,11 +132,24 @@ Each bonus, raised limit, Unlimited window and Pause screens record carries wher
 | `at` | ISO time |
 | `detail` | Short text: `Bonus +30`, `Games: limit +30 today`, `Unlimited until 6 PM`, `Pause screens until 7 PM` |
 | `text` | Ready to show: `Bonus +30 · added by Alex in Hearth · 3:05 PM` |
+| `id` | Stable for the day: status lines link to it (`bonus_origin`, `origin` on categories, category bonuses and Unlimited) |
+| `endable` | Whether something of it can still be ended now (only the latest of each thing) |
+| `end` | `{service, data}`: the hearth service that ends it, or takes back its unused part (`hearth.remove_time` with the unused minutes, `hearth.raise_cap_end`, `hearth.unlimited_end`, `hearth.pause_end`, `hearth.chore_undo`), or `null` |
 
-They are in `time.origins[]`, `hearth.explain`'s `origins`, and `hearth/config`'s `origins` (by person). Today
+They are in `time.origins[]` (the state document and the household summary, `hearth/summary` and `GET /api/hearth/household`: each person's today's changes, newest first, for adult phones), `hearth.explain`'s `origins`, and `hearth/config`'s `origins` (by person). Today
 `hearth`, `chore` and `ask` are recorded; `family_link`, `family_safety` and `nintendo` (a parent's change in their own
 app) come with the next feature. **Pattern for every client:** a status line stays clean; a small "?" or info
 affordance beside it shows the origin text on a tap. The TV and Glint should follow it.
+
+**Ending one from an adult's phone:** `POST /api/hearth/device/{device_id}/end_grant` (header `X-Hearth-Secret`, a
+device whose person is an adult) with `{"origin_id"}` runs that origin's `end` as the adult's Home Assistant user, as
+every Hearth service (adults only; in the action log, `why: end_grant:<id>`). 200 `{ok, ended: {service, data}}`; 403
+`not_adult`; 404 `not_found` (no such origin, or nothing of it left to end); 400 `bad_request`.
+
+## Unchanged this release
+
+Extra time on one device (`hearth.add_bonus` or `hearth.allow` with `device`, device_extra.py, the summary's
+`device_extras`) is unchanged.
 
 ## Deprecated (kept for one release, until the release after the one that ships this)
 
@@ -151,5 +172,7 @@ affordance beside it shows the origin text on a tap. The TV and Glint should fol
 - `hearth.explain`: `group` is the app's category when called by app; `+ pool`, `+ groups`, `+ today_left`,
   `+ bonus_left`, `+ unlimited`, `+ category_limit`, `+ raised_limits`, `+ origins`.
 - `hearth/config`: `+ fl_backstop`, `+ fl_backstop_margin`, `+ origins`.
+- State document, per person: `+ never_paused`; `time.bonus_origin`, `origin` on raised categories, category bonuses and Unlimited; each origin `+ id`, `+ endable`, `+ end`.
+- New: `POST /api/hearth/device/{device_id}/end_grant` (adults' devices).
 - New services: `add_time`, `remove_time`, `raise_cap`, `raise_cap_end`, `unlimited`, `unlimited_end` (adults only).
 - New events: `hearth_unlimited_started {person, until, open}`, `hearth_unlimited_ended {person, id, text}`.

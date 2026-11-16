@@ -844,6 +844,58 @@ def _settings_error(err: SettingsError) -> web.Response:
     return web.json_response(body, status=_SETTINGS_ERRORS.get(err.code, HTTPStatus.BAD_REQUEST))
 
 
+class EndGrantView(HomeAssistantView):
+    """POST /api/hearth/device/{device_id}/end_grant (header X-Hearth-Secret, an adult's phone): {"origin_id": an
+    origin's id from a person's time.origins (the household summary)} -> {"ok": true, "ended": {service, data}}. Runs
+    the origin's end (taking back its unused minutes, ending a raised limit, Unlimited or Pause screens) as that adult's
+    Home Assistant user, through the same guard as every Hearth service, so it's in the action log. 403 not_adult (the
+    phone isn't an adult's), 404 not_found (no such origin, or nothing of it left to end), 400 bad_request."""
+
+    url = "/api/hearth/device/{device_id}/end_grant"
+    name = "api:hearth:device:end_grant"
+    requires_auth = False
+
+    async def post(self, request: web.Request, device_id: str) -> web.Response:
+        from homeassistant.core import Context
+
+        from .activity import call_service
+        from .const import CONF_ROLES
+
+        hass: HomeAssistant = request.app["hass"]
+        if not _local(request):
+            return _error(HTTPStatus.FORBIDDEN, "not_local")
+        hub = _hub(hass)
+        if hub is None:
+            return _error(HTTPStatus.SERVICE_UNAVAILABLE, "not_set_up")
+        if not hub.authorized(device_id, request.headers.get(HEADER_SECRET)):
+            return _error(HTTPStatus.UNAUTHORIZED, "not_paired")
+        if hub.too_many_events(device_id):
+            return _error(HTTPStatus.TOO_MANY_REQUESTS, "too_often")
+        adult = hub.household.device_person(device_id)
+        if not adult or hub.entry.options.get(CONF_ROLES, {}).get(adult) != "adult":
+            return _error(HTTPStatus.FORBIDDEN, "not_adult")
+        body = await _json_body(request)
+        origin_id = text(body.get("origin_id"), 64) if isinstance(body, dict) else None
+        if not origin_id:
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        household = hub.household
+        end = next(
+            (e for person in household.people() if (e := household.end_origin(person, origin_id)) is not None), None
+        )
+        if end is None:
+            return _error(HTTPStatus.NOT_FOUND, "not_found")
+        user_id = await notices.adult_user(hass, hub, adult)
+        domain, service = end["service"].split(".", 1)
+        try:
+            await call_service(
+                hass, domain, service, dict(end["data"]), blocking=True, context=Context(user_id=user_id),
+                why=f"end_grant:{origin_id}",
+            )
+        except Exception as err:  # noqa: BLE001 - said to the phone
+            return web.json_response({"error": "failed", "detail": str(err)[:200]}, status=HTTPStatus.BAD_REQUEST)
+        return web.json_response({"ok": True, "ended": end})
+
+
 def async_register_views(hass: HomeAssistant) -> None:
     for view in (
         PairStartView,
@@ -859,5 +911,6 @@ def async_register_views(hass: HomeAssistant) -> None:
         WaitView,
         TicketView,
         SettingsView,
+        EndGrantView,
     ):
         hass.http.register_view(view())

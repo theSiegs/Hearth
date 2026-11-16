@@ -14,6 +14,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
 import hashlib
+import secrets
 import json
 from typing import TYPE_CHECKING, Any
 
@@ -71,7 +72,17 @@ from .limits import (
     pool_map,
     without_app,
 )
-from .enforce import FAMILY_LINK, FAMILY_SAFETY, NINTENDO, Enforcement, enforcers_from_options, fs_account_of, fs_app, fs_app_platform
+from .enforce import (
+    FAMILY_LINK,
+    FAMILY_SAFETY,
+    NINTENDO,
+    SYSTEM_NEVER_PAUSED,
+    Enforcement,
+    enforcers_from_options,
+    fs_account_of,
+    fs_app,
+    fs_app_platform,
+)
 from .app_blocks import AppBlocks
 from .exceptions import Allows, Lifted, end_of_day
 from .history import BONUS, DEVICE_BONUS, RAISE, History
@@ -1689,6 +1700,10 @@ class Household:
             **self._locks_document(person, day),
             # The accessibility apps no group above holds, for a device that can spare them from a lock too
             **({"never_held": sorted(never)} if (never := self.never_held(membership)) else {}),
+            # Never paused by Hearth for any reason: the system list enforce.py uses (calls, Settings, Play services,
+            # Family Link, the Play Store, Hearth and Glint) with the launchers, keyboards and accessibility apps.
+            # A client holds everything else, Messaging included (docs/contracts/time-model.md)
+            "never_paused": sorted(SYSTEM_NEVER_PAUSED | never),
             # What they're playing now, anywhere (as the household summary's `playing`)
             "playing": [p.view() for p in (day.playing if day else [])],
             # The weekly schedule now: the mode, the next change, tonight's bedtime (weekly.py)
@@ -2293,6 +2308,7 @@ class Household:
                     "limit_text": limit_text(group.name, state.configured, limit_today, raised),
                     "bonus": state.cat_bonus,
                     "bonus_left": state.cat_bonus_left,
+                    "origin": self.latest_origin(person, "raise", group.id) if raised else None,
                 }
             )
         return {
@@ -2303,8 +2319,10 @@ class Household:
             "base_minutes": all_state.budget_min if all_state else None,
             "bonus": all_state.bonus_min if all_state else 0,
             "bonus_left": bonus_left,
+            # The latest bonus time given today (its origin, for the status line's link to "where it came from")
+            "bonus_origin": self.latest_origin(person, "bonus"),
             "used": int(all_state.counted_min) if all_state else 0,
-            "unlimited": active,
+            "unlimited": {**active, "origin": self.latest_origin(person, "unlimited")} if active else None,
             "unlimited_today": unlimited["today"],
             "text": today_text(today_left, bonus_left, active["text"] if active else None),
             "adult_text": today_text(today_left, bonus_left, active["text"] if active else None, adult=True),
@@ -2316,6 +2334,7 @@ class Household:
                     "name": g.name,
                     "bonus": s.cat_bonus,
                     "bonus_left": s.cat_bonus_left,
+                    "origin": self.latest_origin(person, "bonus", g.id),
                     "left": s.shown_left,
                     "text": f"{g.name}: {say_minutes(s.cat_bonus_left)} bonus left" if s.cat_bonus_left else f"{g.name}: bonus used",
                 }
@@ -2332,28 +2351,85 @@ class Household:
     ) -> dict[str, Any]:
         """Where one of today's changes came from (kind: bonus, raise, unlimited, pause, daily_time; source: hearth,
         family_link, family_safety, nintendo, chore, ask; by: an adult's name when known), for the "?" on a status
-        line: {kind, source, by, at, detail, text}."""
+        line: {id (stable), kind, source, by, at, detail, ...}; origins_of adds text, endable and end."""
         now = dt_util.now()
-        record = {"kind": kind, "source": source, "by": by, "at": now.isoformat(), "detail": detail, **about}
+        record = {
+            "id": secrets.token_hex(6), "kind": kind, "source": source, "by": by, "at": now.isoformat(), "detail": detail,
+            **about,
+        }
         self.limits.add_origin(person, record)
         return record
 
     def origins_of(self, person: str) -> list[dict[str, Any]]:
-        """Today's origins of the person's statuses, newest first, each with its text."""
+        """Today's origins of the person's statuses, newest first, each with its text, and whether and how it can be
+        ended: {endable, end: {service, data} | None} (the hearth service that ends it or takes back its unused part).
+        Only the latest of each thing (a category's bonus, a raised limit, Unlimited, Pause screens) is endable."""
         out = []
+        seen: set[tuple[str, str | None]] = set()
         for record in reversed(self.limits.data.origins.get(person, [])):
             at = dt_util.parse_datetime(record.get("at") or "")
             local = dt_util.as_local(at) if at else None
+            thing = (record.get("kind"), record.get("group"))
+            end = None if thing in seen else self._end_of(person, record)
+            seen.add(thing)
             out.append(
                 {
                     **record,
+                    "id": record.get("id") or f"{record.get('kind')}:{record.get('at')}",
                     "text": origin_text(
                         record.get("detail") or "", record.get("source") or "hearth", record.get("by"),
                         say_clock(local.hour, local.minute) if local else None,
                     ),
+                    "endable": end is not None,
+                    "end": end,
                 }
             )
         return out
+
+    def _end_of(self, person: str, record: dict[str, Any]) -> dict[str, Any] | None:
+        """The hearth service that ends an origin's change now, or takes back its unused part; None when nothing of
+        it is left to end."""
+        kind, group = record.get("kind"), record.get("group")
+        day = self.days.get(person)
+        if kind == "bonus":
+            if record.get("source") == "chore" and record.get("chore"):
+                return {"service": "hearth.chore_undo", "data": {"key": record["chore"]}}
+            minutes = int(record.get("minutes") or 0)
+            if group:
+                state = day.limits.get(group) if day else None
+                unused = min(minutes, state.cat_bonus_left if state else 0)
+                data = {"person": person, "minutes": unused, "category": group}
+            else:
+                state = day.limits.get(ALL) if day else None
+                given = max(0, self.limits.bonus(person, ALL))
+                unused = min(minutes, state.bonus_left if state else 0, given)
+                data = {"person": person, "minutes": unused}
+            return {"service": "hearth.remove_time", "data": data} if unused > 0 else None
+        if kind == "raise" and group:
+            if self.limits.raise_of(person, group, dt_util.now()) is None:
+                return None
+            return {"service": "hearth.raise_cap_end", "data": {"person": person, "category": group}}
+        if kind == "unlimited":
+            if self.unlimited.active(person) is None:
+                return None
+            return {"service": "hearth.unlimited_end", "data": {"people": [person]}}
+        if kind == "pause":
+            if pause_of(self.hass, person, dt_util.now()) is None:
+                return None
+            return {"service": "hearth.pause_end", "data": {"people": [person]}}
+        return None
+
+    def latest_origin(self, person: str, kind: str, group: str | None = None) -> str | None:
+        """The id of the latest origin of [kind] (and [group]) today, for a status line's link to its origin."""
+        for record in reversed(self.limits.data.origins.get(person, [])):
+            if record.get("kind") == kind and record.get("group") == group and record.get("id"):
+                return record["id"]
+        return None
+
+    def end_origin(self, person: str, origin_id: str) -> dict[str, Any] | None:
+        """The end {service, data} of one of the person's origins by its id (None: no such, or nothing to end)."""
+        found = next((o for o in self.origins_of(person) if o["id"] == origin_id), None)
+        return found["end"] if found else None
 
     def bonus_groups(self, person: str) -> set[str]:
         """The categories with their own bonus left today (hearth.add_time with a category)."""
