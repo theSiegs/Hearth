@@ -94,9 +94,12 @@ final class HouseholdMembers {
         }
     }
 
-    /** The kinds whose entries carry their writer's signature: the member list (removals too) and the Parent PIN. */
+    /**
+     * The kinds whose entries carry their writer's signature: the member list (removals too), the Parent PIN, and an
+     * adult's phone approval (which phone may let someone into their profile).
+     */
     static boolean signs(String kind) {
-        return KIND.equals(kind) || HouseholdBridge.PARENT_PIN.equals(kind);
+        return KIND.equals(kind) || HouseholdBridge.PARENT_PIN.equals(kind) || HouseholdBridge.APPROVAL.equals(kind);
     }
 
     /**

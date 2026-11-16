@@ -340,6 +340,8 @@ public class MainActivity extends FlutterActivity {
                 state.put("haConfigured", HaConfig.isConfigured(this));
                 state.put("on", PhoneApproval.isOn(this, key));
                 state.put("notify", PhoneApproval.notifyService(this, key));
+                // With none chosen, the phones Home Assistant has for the profile's person (the Hearth integration)
+                state.put("haPhones", PhoneApproval.haPhones(this, key));
                 state.put("pin", PinVault.status(this, key, LauncherAccessibilityService.GOOGLE_TV_PACKAGE,
                         GooglePinRecipe.VAULT_NAME));
                 result.success(state);

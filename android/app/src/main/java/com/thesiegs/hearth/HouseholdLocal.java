@@ -119,6 +119,19 @@ final class HouseholdLocal implements HouseholdBridge.Local {
         PinVault.save(context, key, pkg, appProfile, pin);
     }
 
+    @Override
+    public Map<String, String> approval(String key) {
+        // Phone approval is an adult's: a kids profile's is never shared, nor taken
+        if (key == null || ProfilePairing.isKids(context, key)) return new HashMap<>();
+        return PhoneApproval.synced(context, key);
+    }
+
+    @Override
+    public void setApproval(String key, String item, String value) {
+        if (key == null || ProfilePairing.isKids(context, key)) return;
+        PhoneApproval.putSynced(context, key, item, value);
+    }
+
     /** A kids profile's way into Google TV: never shared, nor taken. */
     static boolean isGoogleTvPin(String pkg) {
         return LauncherAccessibilityService.GOOGLE_TV_PACKAGE.equals(pkg);

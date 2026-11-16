@@ -152,6 +152,17 @@ PIN-locked Google TV profile (**Settings → Profiles → Unlock from my phone**
 is greyed out until Home Assistant is set up). They choose their phone, one of Home Assistant's `notify.mobile_app_…`
 services, and save their Google TV PIN.
 
+**Which phone.** The phone chosen on any TV of the household is asked. With none chosen, a TV paired with the Hearth
+integration asks every companion app of the person Home Assistant maps the profile to (Configure > People, with the
+person an adult on Hearth's page): the integration lists them in the TV's state document (`adult_phones`), and the
+page shows them as "Alex Phone (from Home Assistant)". Picking a phone replaces them; **My phones in Home Assistant**
+in the same list goes back to them. The first answer from any of the phones asked decides.
+
+**On every TV.** In a household (Settings > Family > Household sync) the switch, the chosen phone and the Google TV PIN
+follow the adult to the household's other TVs; the newest change wins (see
+[household-sync.md](household-sync.md#what-syncs)). Each TV still needs Home Assistant's address and token to send the
+request.
+
 When Google TV's PIN screen comes up for that profile, Hearth TV:
 
 1. listens on Home Assistant's WebSocket API for `mobile_app_notification_action` events, only while it waits (two
@@ -163,8 +174,10 @@ When Google TV's PIN screen comes up for that profile, Hearth TV:
 3. on Allow, enters the saved Google TV PIN on Google's keypad, if that profile's PIN screen is still up; on Deny or
    no answer, leaves the PIN screen as it is. Either way both notifications are cleared when the request ends.
 
-Typing the PIN with the remote always works: a digit, arrow, OK, Back or Delete pressed on the PIN screen withdraws the
-request (volume, power and media keys, and a key held down, don't; the log line names the key and where it came from). A PIN Google
+Typing the PIN with the remote always works: a digit pressed on the PIN screen withdraws the request, and so does an
+arrow, OK, Back or Delete pressed two seconds or more after the PIN screen came up (volume, power and media keys, a key
+held down, and the press that picked the profile on the chooser, even a laggy remote's second OK, don't; the log line
+names the key, where it came from and how long after the PIN screen it came). A PIN Google
 refuses isn't entered again until it's saved anew. **Send a test notification** checks the phone is reached.
 
 ### The Parent PIN, from a phone

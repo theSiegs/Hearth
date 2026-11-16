@@ -127,3 +127,26 @@ async def test_hearth_s_page_shows_each_adult_s_phones_and_sets_them(
 def test_the_links() -> None:
     assert page_link("abc") == "/hearth?ask=abc"
     assert deep_link("abc") == "hearth://ask/abc"
+
+
+async def test_a_tv_learns_each_adult_profile_s_phones_for_phone_approval(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    from test_init import _post
+    from test_people import _tv_status
+
+    client, secret, _, _ = await _two_adults(hass, hass_client_no_auth)
+    body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
+    # The adults' profiles aren't mapped yet: nothing to default to
+    assert "adult_phones" not in body["state"]
+
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    await _options(hass, profiles={**entry.options.get("profiles", {}), "name:owner": "person.alex"})
+    body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
+    # By the TV's own key, the adult's companion apps; the kid's profile gets none
+    assert body["state"]["adult_phones"] == {"user:0": ["mobile_app_alex_phone"]}
+
+    # Not an adult on Hearth's page: no phones
+    await _options(hass, roles={**entry.options.get("roles", {}), "person.alex": "kid"})
+    body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
+    assert "adult_phones" not in body["state"]

@@ -3,6 +3,18 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **A TV knows each adult's phones.** A TV's state document now has `adult_phones`: for each of its profiles mapped to an adult on Hearth's page, the notify services of that person's companion apps (the same phones that get requests). Hearth TV's phone approval asks them when no phone was chosen on the TV.
+
+### Hearth TV
+
+- **Phone approval no longer stops itself.** The OK that picked a profile on the chooser (its repeat, or a laggy remote's second press) withdrew the phone's request as soon as Google TV's PIN screen came up, so the phone never showed it. Now a digit withdraws it at once, but an arrow, OK, Back or Delete only once the PIN screen has been up for two seconds, and never a press that began before it came up.
+- **Phone approval on every TV.** An adult's phone approval switch and chosen phone follow them to the household's other TVs, like their saved PINs (the Google TV PIN already did); the newest change wins, and the entries are signed like the Parent PIN's. A kids profile's are never shared.
+- **No phone to pick with the Hearth integration.** When no phone was chosen, a TV paired with the integration asks the phones Home Assistant has for the profile's person ("Alex Phone (from Home Assistant)"); a phone chosen on any TV wins, and **My phones in Home Assistant** goes back to them. The Parent PIN's phone approval asks the same phones. Sending the request still needs the TV's Home Assistant address and token.
+
 ## 2026.11.18
 
 ### Home Assistant integration

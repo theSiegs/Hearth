@@ -35,7 +35,7 @@ webhook status and `sensor.hearth_allowance` are retired.
 |---|---|---|---|
 | TV status | the TV posts to a webhook; an automation writes seven helpers per TV | needs an administrator's token to create them; renames break them; one webhook ID per TV to guard | a device per TV with its own entities |
 | Dashboard panel | long-lived token of a non-admin user | a hand-made token with that user's full rights | (later) a dashboard endpoint, see [Open questions](#open-questions) |
-| Phone approval of a switch | Hearth calls `notify.mobile_app_*` and listens on the WebSocket | the token can call any service; the notify service is picked by hand | the integration asks the person's phone and answers the device |
+| Phone approval of a switch | Hearth calls `notify.mobile_app_*` and listens on the WebSocket | the token can call any service; the notify service is picked by hand | built: the integration tells the TV the person's phones (`adult_phones`), so none is picked by hand; later: the integration asks the person's phone and answers the device |
 | Pop-ups and buttons | `rest_command` posts to the TV on port 7676 | hand-written YAML per automation | `hearth.notify` to any device |
 | YouTube allowance, pooled | template sensors adding a pool, a bonus, Family Link minutes and Hearth's seconds; `sensor.hearth_allowance` read by the TV | hand-made per kid; one source per template; JSON in a state string | per-person screen time from every source, and budgets the devices read |
 | Household sync mailbox | nowhere yet | a plain sensor loses its value on restart | a small stored mailbox |
@@ -994,6 +994,7 @@ The answer to each status post carries the person's (or, on a TV, each profile's
   },
   "youtube_blocks": {"user:10": {"videos": [], "channels": [], "words": [], "labels": {}}},
   "people": {"user:10": "person.sam", "user:0:alex": "person.alex"},
+  "adult_phones": {"user:0:alex": ["mobile_app_alex_phone"]},
   "parent_pins_version": "…",
   "version": "3f9c1a0b2d4e5f60",
   "contract": 3
@@ -1008,7 +1009,10 @@ the accessibility apps, which no group's `apps` holds: a device may spare them f
 [Pause and locks](#pause-and-locks); an allow of theirs that ends on a place is in `allow_ends` [{id, app, group,
 until, text: "ends when you get home"}] (never where they are); a TV's also has every mapped profile's `youtube_blocks`, `people` (each mapped
 profile of that TV by its own key, with its person: a notification's `for` may name a person, and the TV finds their
-profile here) and the [parent PINs](#the-devices-side-of-the-api). Own-limit titles (`open_titles`) aren't built. A TV gets it in the answer to each post (at least every 2 minutes while it's
+profile here), `adult_phones` (only when there are any: each mapped profile whose person is an adult on Hearth's page,
+by the TV's own key, with the notify services of that person's companion apps, as for requests; the TV's phone
+approval asks them when no phone was chosen for the profile on any TV of the household) and the
+[parent PINs](#the-devices-side-of-the-api). Own-limit titles (`open_titles`) aren't built. A TV gets it in the answer to each post (at least every 2 minutes while it's
 on); `version`, a hash of the content, lets it skip an unchanged one. This replaces `sensor.hearth_allowance`:
 same meaning, from the integration instead of a template.
 

@@ -124,11 +124,15 @@ class _PhoneApprovalPageState extends State<PhoneApprovalPage> {
     _load();
   }
 
+  /// The phones Home Assistant has for this profile's person (the Hearth integration), asked when none is chosen.
+  List<String> get _haPhones => [for (final s in (_state?["haPhones"] as List?) ?? const []) s as String];
+
   Future<void> _pickPhone() async {
     final l = AppLocalizations.of(context)!;
     final services = await _channel.getHaNotifyServices();
     if (!mounted) return;
-    if (services.isEmpty) {
+    final haPhones = _haPhones;
+    if (services.isEmpty && haPhones.isEmpty) {
       await showMessageDialog(context, title: l.approvalPhone, message: l.approvalNoPhones);
       return;
     }
@@ -137,6 +141,15 @@ class _PhoneApprovalPageState extends State<PhoneApprovalPage> {
       builder: (context) => SimpleDialog(
         title: Text(l.approvalPhonePick),
         children: [
+          // Back to the person's phones in Home Assistant: no phone chosen ("")
+          if (haPhones.isNotEmpty)
+            SimpleDialogOption(
+              child: TextButton(
+                autofocus: _state?["notify"] == null,
+                onPressed: () => Navigator.of(context).pop(""),
+                child: Text(l.approvalPhoneUseHa(haPhones.map(phoneName).join(", "))),
+              ),
+            ),
           for (final service in services)
             SimpleDialogOption(
               child: TextButton(
@@ -149,7 +162,7 @@ class _PhoneApprovalPageState extends State<PhoneApprovalPage> {
       ),
     );
     if (picked == null) return;
-    await _channel.setPhoneApprovalNotify(picked);
+    await _channel.setPhoneApprovalNotify(picked.isEmpty ? null : picked);
     _load();
   }
 
@@ -208,6 +221,15 @@ class _PhoneApprovalPageState extends State<PhoneApprovalPage> {
     final small = textTheme.bodySmall?.copyWith(color: Colors.white54);
     final state = _state;
     final notify = state?["notify"] as String?;
+    final haPhones = _haPhones;
+    final String phoneText;
+    if (notify != null) {
+      phoneText = phoneName(notify);
+    } else if (haPhones.isNotEmpty) {
+      phoneText = l.approvalPhoneFromHa(haPhones.map(phoneName).join(", "));
+    } else {
+      phoneText = l.approvalPhoneNone;
+    }
     return SettingsPage(
       title: l.approvalTitle,
       children: [
@@ -224,7 +246,7 @@ class _PhoneApprovalPageState extends State<PhoneApprovalPage> {
           FocusableSettingsTile(
             leading: const Icon(Icons.smartphone),
             title: Text(l.approvalPhone, style: textTheme.bodyMedium),
-            trailing: Text(notify != null ? phoneName(notify) : l.approvalPhoneNone, style: textTheme.bodySmall),
+            trailing: Text(phoneText, style: textTheme.bodySmall),
             onPressed: _pickPhone,
           ),
           FocusableSettingsTile(
@@ -233,7 +255,7 @@ class _PhoneApprovalPageState extends State<PhoneApprovalPage> {
             trailing: Text(profilePinStatus(l, state["pin"] as Map?), style: textTheme.bodySmall),
             onPressed: _editPin,
           ),
-          if (notify != null)
+          if (notify != null || haPhones.isNotEmpty)
             FocusableSettingsTile(
               leading: const Icon(Icons.notifications_active_outlined),
               title: Text(l.approvalTest, style: textTheme.bodyMedium),

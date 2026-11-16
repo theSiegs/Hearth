@@ -4139,6 +4139,18 @@ abstract class AppLocalizations {
   /// **'Not chosen'**
   String get approvalPhoneNone;
 
+  /// Profiles: approving switches from a phone; no phone chosen, so the person's phones in Home Assistant are asked
+  ///
+  /// In en, this message translates to:
+  /// **'{phones} (from Home Assistant)'**
+  String approvalPhoneFromHa(String phones);
+
+  /// Profiles: approving switches from a phone; the choice that goes back to the person's phones in Home Assistant
+  ///
+  /// In en, this message translates to:
+  /// **'My phones in Home Assistant ({phones})'**
+  String approvalPhoneUseHa(String phones);
+
   /// Profiles: approving switches into a PIN-locked profile from a phone
   ///
   /// In en, this message translates to:
@@ -4184,7 +4196,7 @@ abstract class AppLocalizations {
   /// Profiles: approving switches into a PIN-locked profile from a phone
   ///
   /// In en, this message translates to:
-  /// **'When Google TV asks for your PIN to open your profile, your phone gets Allow and Deny. Allow, and Hearth enters the PIN; the PIN can always be typed with the remote too. Turn the Google TV PIN on for your profile first.'**
+  /// **'When Google TV asks for your PIN to open your profile, your phone gets Allow and Deny. Allow, and Hearth enters the PIN; the PIN can always be typed with the remote too. Turn the Google TV PIN on for your profile first. These choices follow you to the household’s other TVs.'**
   String get approvalFooter;
 
   /// Profile Pairing: streaming app profile PIN

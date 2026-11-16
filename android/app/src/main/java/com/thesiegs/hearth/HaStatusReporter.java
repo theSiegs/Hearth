@@ -622,6 +622,8 @@ final class HaStatusReporter {
             ParentBlocks.applyDocument(mContext, state);
             // The adults' parent PINs, which are this TV's while Home Assistant names them
             HaParentPins.applyDocument(mContext, state);
+            // The phones of the person each adult profile is, for phone approval when none was chosen
+            PhoneApproval.applyHaDocument(mContext, state);
             // The integration's notices for the adults, in the Bell (none in the document: none left)
             if (state != null) Household.onIntegrationNotices(mContext, HaNotices.fromDocument(state));
             mHandler.post(() -> {

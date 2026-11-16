@@ -323,6 +323,22 @@ final class Household {
         });
     }
 
+    /**
+     * An adult changed their phone approval here ({@code item}: HouseholdBridge.APPROVAL_ON or APPROVAL_NOTIFY): the
+     * household's other TVs take it. The value as saved travels with the call, so a round applying the household's
+     * older entry meanwhile can't put the old one back before it's published.
+     */
+    static void onApprovalChanged(Context context, String profileKey, String item) {
+        if (!mayBeInHousehold(context) || profileKey == null) return;
+        Context app = context.getApplicationContext();
+        String value = PhoneApproval.synced(app, profileKey).get(item);
+        EXEC.execute(() -> {
+            if (!member(app) || ProfilePairing.isKids(app, profileKey)) return;
+            PhoneApproval.putSynced(app, profileKey, item, value);
+            publish(app, HouseholdBridge.APPROVAL, profileKey, item, value);
+        });
+    }
+
     static void onPairingChanged(Context context, String pkg, String profileKey) {
         if (!mayBeInHousehold(context)) return;
         EXEC.execute(() -> {
