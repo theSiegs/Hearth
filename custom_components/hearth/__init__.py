@@ -838,9 +838,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     entry.async_create_background_task(hass, schedule_tick(), "hearth schedule")
 
     # Family Safety allowed hours Hearth moved on a weekday's setting (upstream's has no today-only change) are
-    # watched, and put back after midnight or after a start that missed it (native_sync.py): every minute
+    # watched, and put back after midnight or after a start that missed it; Family Safety extra time whose write
+    # failed is looked for, and adopted if Microsoft applied it anyway (native_sync.py): every minute
     async def fs_windows_tick(_now=None) -> None:
         await hub.household.sync.async_windows_tick()
+        await hub.household.sync.async_pending_tick()
 
     entry.async_on_unload(async_track_time_interval(hass, fs_windows_tick, timedelta(minutes=1)))
     # The kids' to-do lists (todos.py): today's grants' notices back after a restart; the old Chores earn time lists

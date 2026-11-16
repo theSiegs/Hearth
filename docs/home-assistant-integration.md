@@ -748,6 +748,17 @@ integration as "Works with less on this version"; empty when it has it all. It's
     extra time ended the lock), Hearth no longer holds it and doesn't let go of it again later; an answer with
     neither changes nothing. When Microsoft doesn't apply it,
     the person's status says Family Safety extra time is unavailable and it counts as not given; nothing fails.
+    **A write that failed may have been applied anyway** (an error or a timeout after Microsoft took it, and a read
+    back that couldn't tell): unless the service's schema refused it, Hearth keeps it as possibly given (person,
+    platform, the `until` it asked for, the error, when; kept across a restart) and looks each minute for 10 minutes.
+    Meanwhile extra time ending then counts as Hearth's, never a parent's grant. If Family Safety shows extra time on
+    that platform ending when Hearth asked (within 2 minutes; a fork's `hold: bonus_ours` agrees), Hearth adopts it
+    as its own extra time for its reason (so ending the allow cancels it through `cancel_time_bonus`, which checks
+    what's in force first) and logs a WARNING naming the platform, the `until` asked for, the error and when it
+    showed ("... was applied although its write failed ... A write Microsoft didn't confirm was applied anyway"),
+    with no names or account ids: evidence for the Family Safety maintainer. If its reason already ended, it's
+    cancelled that way at once. If nothing shows within the 10 minutes it's dropped (logged at INFO: not applied).
+    Hearth never sends a cancel for extra time it can't see.
   - Ending the allow early (`hearth.allow_end`) resets the Family Link bonus Hearth added (only where no parent's bonus
     came on top: `reset_bonus` ends every bonus of the day; without `reset_bonus` or the button it lapses at
     midnight) and cancels the Family Safety extra time Hearth gave (`cancel_time_bonus`, on each platform it gave it

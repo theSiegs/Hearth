@@ -7,6 +7,7 @@ from datetime import timedelta
 import voluptuous as vol
 
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
@@ -30,7 +31,7 @@ def _household(hass: HomeAssistant):
     return hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
 
 
-def _upstream(hass: HomeAssistant, answers: dict | None = None) -> dict[str, list[ServiceCall]]:
+def _upstream(hass: HomeAssistant, answers: dict | None = None, fail_bonus: bool = False) -> dict[str, list[ServiceCall]]:
     """Family Safety's services as the 2.3.0 release has them (their schemas, so Hearth's probes see what it takes):
     no today_only, day_of_week required, lock_platform by whole hours, extra time on the Xbox and Windows."""
     target = {
@@ -72,6 +73,8 @@ def _upstream(hass: HomeAssistant, answers: dict | None = None) -> dict[str, lis
 
         async def handle(call: ServiceCall, _service=service):
             calls[_service].append(call)
+            if _service == "add_time_bonus" and fail_bonus:
+                raise HomeAssistantError("Microsoft did not confirm the Xbox extra time (HTTP 500 for 1234567890)")
             if _service == "add_time_bonus":
                 return {"added": True, "until": call.data["until"].isoformat(), "replaced_lock": False}
             return (answers or {}).get(_service)
@@ -435,3 +438,124 @@ async def test_hold_attributes_still_win_where_family_safety_has_them(
     _xbox(hass, "off", hold="parent", override="blockUntil", override_until=enforce.next_midnight().isoformat())
     [row] = _household(hass).sync.first_party("person.sam")["family_safety"]
     assert (row["hold"], row["hold_from"], row["parent_lock"]) == ("parent", "attributes", True)
+
+
+# Extra time whose write failed, applied by Microsoft anyway
+
+
+async def _failed_extra_time(hass: HomeAssistant, hass_client_no_auth, freezer, install) -> tuple[dict, str, str]:
+    """Sam's Xbox about to run out (5 of 60 minutes left); an allow of All screen time until 13:00 whose Family Safety
+    extra time write fails. (calls, the allow's id, the until asked for as local ISO)."""
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+    calls = install(hass)
+    _xbox(hass, used_minutes=55)
+    await _sam_on_family_safety(hass, hass_client_no_auth)
+    until = dt_util.now().replace(hour=13)
+    response = await hass.services.async_call(
+        DOMAIN, "allow", {"people": ["person.sam"], "group": "all", "until": until.isoformat()},
+        blocking=True, return_response=True,
+    )
+    await hass.async_block_till_done()
+    assert len(calls["add_time_bonus"]) == 1
+    return calls, response["id"], until.isoformat()
+
+
+async def test_extra_time_applied_although_its_write_failed_is_hearth_s_own(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer, caplog
+) -> None:
+    grants = async_capture_events(hass, "hearth_parent_grant")
+    calls, allow_id, until = await _failed_extra_time(
+        hass, hass_client_no_auth, freezer, lambda h: _upstream(h, fail_bonus=True)
+    )
+    sync = _household(hass).sync
+    assert [e["platform"] for e in sync.possibly_given] == ["Xbox"]
+
+    # Two minutes later Family Safety shows extra time on the Xbox ending when Hearth asked
+    freezer.tick(timedelta(minutes=2))
+    _xbox(hass, "on", reason="extra_time", override="allowUntil", override_until=until)
+    await sync.async_pending_tick()
+    assert sync.possibly_given == []
+    [warning] = [r for r in caplog.records if r.levelname == "WARNING" and "write failed" in r.getMessage()]
+    text = warning.getMessage()
+    assert "Xbox" in text and "HTTP 500" in text and "didn't confirm was applied anyway" in text
+    assert "123456" not in text and "1234567890" not in text and "Sam" not in text
+
+    # Hearth's own: no parent's grant, and ending the allow cancels it
+    await _bonus(hass, "all", 0)
+    assert grants == []
+    [row] = _household(hass).sync.first_party("person.sam")["family_safety"]
+    assert row["hold"] == "bonus_ours"
+    await hass.services.async_call(DOMAIN, "allow_end", {"id": allow_id}, blocking=True)
+    await hass.async_block_till_done()
+    assert [c.data["platform"] for c in calls["cancel_time_bonus"]] == ["Xbox"]
+
+
+async def test_a_failed_write_that_never_shows_is_dropped(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer, caplog
+) -> None:
+    caplog.set_level("INFO")
+    calls, _, _ = await _failed_extra_time(hass, hass_client_no_auth, freezer, lambda h: _upstream(h, fail_bonus=True))
+    sync = _household(hass).sync
+    freezer.tick(timedelta(minutes=5))
+    await sync.async_pending_tick()
+    assert len(sync.possibly_given) == 1
+    freezer.tick(timedelta(minutes=6))
+    await sync.async_pending_tick()
+    assert sync.possibly_given == []
+    assert any("was not applied" in r.getMessage() for r in caplog.records if r.levelname == "INFO")
+    # Nothing is ever cancelled blind
+    assert calls["cancel_time_bonus"] == []
+
+
+async def test_a_failed_write_is_still_watched_after_a_restart(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer, caplog
+) -> None:
+    _, _, until = await _failed_extra_time(hass, hass_client_no_auth, freezer, lambda h: _upstream(h, fail_bonus=True))
+    household = _household(hass)
+    await household.async_flush()
+    household.sync.possibly_given = []
+    await household.sync.async_load()
+    assert len(household.sync.possibly_given) == 1
+    freezer.tick(timedelta(minutes=3))
+    _xbox(hass, "on", reason="extra_time", override="allowUntil", override_until=until)
+    await household.sync.async_pending_tick()
+    assert household.sync.possibly_given == []
+    assert any("write failed" in r.getMessage() for r in caplog.records if r.levelname == "WARNING")
+    assert household.sync.fs_bonus_until("person.sam", "Xbox") is not None
+
+
+async def test_applied_after_its_reason_ended_it_s_cancelled_as_hearth_s(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    calls, allow_id, until = await _failed_extra_time(
+        hass, hass_client_no_auth, freezer, lambda h: _upstream(h, fail_bonus=True)
+    )
+    await hass.services.async_call(DOMAIN, "allow_end", {"id": allow_id}, blocking=True)
+    await hass.async_block_till_done()
+    assert calls["cancel_time_bonus"] == []
+    _xbox(hass, "on", reason="extra_time", override="allowUntil", override_until=until)
+    await _household(hass).sync.async_pending_tick()
+    assert [c.data["platform"] for c in calls["cancel_time_bonus"]] == ["Xbox"]
+
+
+async def test_a_fork_s_hold_attributes_confirm_it(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer, caplog
+) -> None:
+    def fork_failing(h: HomeAssistant) -> dict:
+        calls = _fork(h)
+        given: list[ServiceCall] = []
+
+        async def add_time_bonus(call: ServiceCall):
+            given.append(call)
+            raise HomeAssistantError("timed out")
+
+        h.services.async_register(FS, "add_time_bonus", add_time_bonus, supports_response=SupportsResponse.OPTIONAL)
+        return {**calls, "add_time_bonus": given}
+
+    _, _, until = await _failed_extra_time(hass, hass_client_no_auth, freezer, fork_failing)
+    _xbox(hass, "on", hold="bonus_ours", override="allowUntil", allow_until=until, override_until=until)
+    await _household(hass).sync.async_pending_tick()
+    assert _household(hass).sync.possibly_given == []
+    [row] = _household(hass).sync.first_party("person.sam")["family_safety"]
+    assert (row["hold"], row["hold_from"]) == ("bonus_ours", "attributes")
+    assert any("write failed" in r.getMessage() for r in caplog.records if r.levelname == "WARNING")

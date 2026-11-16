@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Any
 import voluptuous as vol
 
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
@@ -28,6 +28,9 @@ from .counting import ALL
 from .enforce import (
     FAMILY_LINK,
     FAMILY_SAFETY,
+    FS_ALLOW_UNTIL,
+    FS_FROM_HEARTH,
+    FS_OWN_TOLERANCE,
     FS_HOLD_BONUS_OURS,
     FS_HOLD_OURS,
     FS_HOLD_PARENT,
@@ -52,6 +55,9 @@ FS_DOMAIN = "microsoft_family_safety"
 # The platforms Family Safety can give extra time on (Windows only where the installed one takes it: fs_accepts)
 FS_BONUS_PLATFORMS = ("Xbox", "Windows")
 MINUTES_A_DAY = 24 * 60
+# Family Safety extra time whose write failed is looked for this long (a few of its polls): one Microsoft applied
+# anyway shows by then
+POSSIBLY_GIVEN_WINDOW = timedelta(minutes=10)
 SET_INTERVALS = "set_screentime_intervals"
 # Family Safety's day_of_week: 0 is Sunday
 FS_WEEKDAYS = ("sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday")
@@ -80,6 +86,9 @@ class NativeSync:
         # itself after midnight: by <entity>|<platform>|<weekday> (async_windows_tick). Kept until put back or found
         # changed by a parent, over a restart and a missed midnight
         self.windows: dict[str, dict[str, Any]] = {}
+        # Family Safety extra time whose write failed but may have been applied: {person, why, platform, until (what
+        # Hearth asked for), error, at}; adopted as Hearth's own if it shows, dropped after POSSIBLY_GIVEN_WINDOW
+        self.possibly_given: list[dict[str, Any]] = []
 
     async def async_load(self) -> None:
         stored = await self._store.async_load() or {}
@@ -103,12 +112,19 @@ class NativeSync:
             and all(isinstance(record.get(f), str) for f in ("person", "entity_id", "platform", "day"))
             and record.get("weekday") in FS_WEEKDAYS
         }
+        self.possibly_given = [
+            entry
+            for entry in stored.get("possibly_given") or []
+            if isinstance(entry, dict)
+            and all(isinstance(entry.get(f), str) for f in ("person", "why", "platform", "until", "at"))
+        ]
 
     def _data(self) -> dict[str, Any]:
         return {
             "fl_added": self.fl_added,
             "given": {f"{p}|{why}": r for (p, why), r in self._given.items()},
             "windows": self.windows,
+            "possibly_given": self.possibly_given,
         }
 
     def _save(self) -> None:
@@ -191,7 +207,105 @@ class NativeSync:
             if p == person and record.get("day") == today
             and (parsed := _when((record.get("until") or {}).get(platform))) is not None
         ]
+        # A failed write that may yet show is Hearth's too while it's watched: never a parent's grant meanwhile
+        ends += [
+            parsed
+            for entry in self.possibly_given
+            if entry["person"] == person and entry["platform"] == platform and (parsed := _when(entry["until"]))
+        ]
         return max(ends) if ends else None
+
+    @callback
+    def _possibly_given(self, person: str, why: str, platform: str, until, err: BaseException) -> None:
+        self.possibly_given = [
+            e for e in self.possibly_given if not (e["person"] == person and e["platform"] == platform)
+        ]
+        self.possibly_given.append(
+            {
+                "person": person,
+                "why": why,
+                "platform": platform,
+                "until": dt_util.as_utc(until).isoformat(),
+                "error": _scrub(str(err) or type(err).__name__)[:200],
+                "at": dt_util.utcnow().isoformat(),
+            }
+        )
+        self._save()
+
+    async def async_pending_tick(self) -> None:
+        """Each minute while a Family Safety extra time write failed (self.possibly_given): extra time Family Safety
+        now shows on that platform, ending when Hearth asked (within 2 minutes), was applied after all. It's adopted
+        as Hearth's own: given for its reason (so it's Hearth's, never a parent's grant, and Hearth's cancel applies),
+        and logged as a WARNING to hand the Family Safety maintainer. When its reason ended meanwhile, it's cancelled
+        through cancel_time_bonus (which checks what's in force first), as any of Hearth's own. Nothing shows within
+        POSSIBLY_GIVEN_WINDOW: dropped, the write wasn't applied. Hearth never sends a blind cancel."""
+        if not self.possibly_given:
+            return
+        now = dt_util.utcnow()
+        keep = []
+        looked = list(self.possibly_given)
+        for entry in looked:
+            enforcer = self._enforcer(entry["person"], FAMILY_SAFETY)
+            until = _when(entry["until"])
+            shown = None
+            if enforcer is not None and until is not None:
+                mine = self.household.enforcement.fs_mine(enforcer, entry["platform"])
+                mine["bonus_until"] = until
+                state = fs_hold_state(self.hass, enforcer.entity_id, entry["platform"], mine=mine) or {}
+                ends = _when(state.get("allow_until") or state.get("override_until"))
+                if state.get("override") == FS_ALLOW_UNTIL and ends is not None and abs(ends - until) <= FS_OWN_TOLERANCE:
+                    shown = (state, ends)
+            if shown is not None:
+                await self._adopt(entry, enforcer, *shown)
+                continue
+            at = _when(entry["at"])
+            if at is None or now - at >= POSSIBLY_GIVEN_WINDOW:
+                _LOGGER.info(
+                    "Family Safety extra time on %s: the write that failed at %s (asked until %s) was not applied "
+                    "(none shown within %d minutes)",
+                    entry["platform"], _local(entry["at"]), _local(entry["until"]),
+                    POSSIBLY_GIVEN_WINDOW.total_seconds() // 60,
+                )
+                continue
+            keep.append(entry)
+        if keep != looked:
+            # Kept with any that failed while this ran
+            self.possibly_given = keep + [e for e in self.possibly_given if e not in looked]
+            self._save()
+
+    async def _adopt(self, entry: dict[str, Any], enforcer, state: dict[str, Any], ends) -> None:
+        platform = entry["platform"]
+        _LOGGER.warning(
+            "Family Safety extra time on %s was applied although its write failed: add_time_bonus asked for extra "
+            "time until %s and failed at %s with \"%s\"; Microsoft showed extra time until %s at %s. A write Microsoft "
+            "didn't confirm was applied anyway. Hearth takes it as its own",
+            platform, _local(entry["until"]), _local(entry["at"]), entry["error"], dt_util.as_local(ends).isoformat(),
+            dt_util.now().isoformat(timespec="seconds"),
+        )
+        person = entry["person"]
+        key = f"{FAMILY_SAFETY}|{person}"
+        record = self._given.get((person, entry["why"]))
+        if record is not None:
+            if platform not in record["platforms"]:
+                record["platforms"].append(platform)
+            record.setdefault("until", {})[platform] = dt_util.as_utc(ends).isoformat()
+            if state.get("source") == FS_FROM_HEARTH:
+                # Upstream's extra time replaced any lock (one override per platform): Hearth no longer holds it
+                held = self.household.enforcement.held.get(key)
+                if held is not None:
+                    held.items.discard(platform)
+            self.household.enforcement.note(
+                key, extra_time={platform: dt_util.as_local(ends).isoformat()}, reason=entry["why"],
+                adopted="applied although its write failed",
+            )
+            self._save()
+            return
+        # Its reason ended meanwhile: ended as Hearth's own extra time is
+        try:
+            await self.cancel_family_safety_bonus(enforcer.entity_id, platform)
+            self.household.enforcement.note(key, extra_time_cancelled=[platform], adopted="applied although its write failed")
+        except Exception as err:  # noqa: BLE001 - it ends when it was set to
+            self.household.enforcement.note(key, error=f"Family Safety extra time left to end by itself: {err}"[:200])
 
     @callback
     def end_grant(self, grant: Grant) -> None:
@@ -429,9 +543,13 @@ class NativeSync:
                     blocking=True,
                     return_response=self.household.enforcement._responds(FS_DOMAIN, "add_time_bonus"),
                 )
-            except (HomeAssistantError, vol.Invalid) as err:
+            except (HomeAssistantError, vol.Invalid, TimeoutError) as err:
                 _LOGGER.info("Family Safety extra time on %s for %s unavailable: %s", platform, person, err)
                 error = f"Family Safety extra time unavailable: {err}"[:200]
+                if not isinstance(err, (vol.Invalid, ServiceValidationError)):
+                    # Refused by no schema: the write may have reached Microsoft all the same (an error or a timeout
+                    # after it was applied). Watched for a while (async_pending_tick), never cancelled blind
+                    self._possibly_given(person, why, platform, until, err)
                 continue
             self.household.enforcement.refresh_soon(enforcer.entity_id)
             given[platform] = (
@@ -995,6 +1113,18 @@ def fs_weekday_window(hass: HomeAssistant, entity_id: str, platform: str, weekda
     if end >= MINUTES_A_DAY - 1 or end <= begin:
         end = MINUTES_A_DAY  # 23:59 (how the integration shows midnight) or 00:00
     return begin, end
+
+
+def _local(value: Any) -> str:
+    when = _when(value)
+    return dt_util.as_local(when).isoformat(timespec="seconds") if when is not None else str(value)
+
+
+def _scrub(text: str) -> str:
+    """An error as logged: long numbers (account ids, xuids) left out."""
+    import re
+
+    return re.sub(r"\d{6,}", "<id>", text)
 
 
 def _just(written_at: Any) -> bool:
