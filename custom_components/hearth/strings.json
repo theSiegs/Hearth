@@ -360,7 +360,7 @@
       },
       "site_list": {
         "title": "Website block list",
-        "description": "Every day at this time, each person's Family Link blocked sites are brought in step with a published list (familylink.sync_site_list): new domains are added, and only what the list itself added before is taken out. A failure for one person is logged and the others go on.",
+        "description": "Every day at this time, each person's blocked sites in Family Link and Family Safety are brought in step with a published list: new domains are added, and only what the list itself added before is taken out. A failure for one person is logged and the others go on.",
         "data": {
           "url": "The list's address (https)",
           "time": "Every day at",
