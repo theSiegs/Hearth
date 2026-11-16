@@ -753,3 +753,42 @@ async def test_a_catalog_interface_app_s_time_counts_nowhere(
     day = household.days["person.sam"]
     assert day.groups["all"] == 600 and not day.groups.get("games")
     assert "com.example.game" in household.never_held(household.membership())
+
+
+async def test_a_file_that_arrives_in_pieces_is_read_whole(hass: HomeAssistant, monkeypatch) -> None:
+    """A large shard comes in several chunks; reading only what has arrived would cut it short."""
+
+    class Body:
+        def __init__(self, data: bytes) -> None:
+            self.data = data
+
+        async def read(self, n: int = -1) -> bytes:  # the old way: only what has arrived
+            return self.data[:1000]
+
+        async def iter_chunked(self, n: int):
+            for i in range(0, len(self.data), 1000):
+                yield self.data[i : i + 1000]
+
+    class Response:
+        status = 200
+        headers = {"ETag": '"x"'}
+
+        def __init__(self, data: bytes) -> None:
+            self.content = Body(data)
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc) -> None:
+            return None
+
+    data = b"x" * 5500
+
+    class Session:
+        def get(self, url, **kwargs):
+            return Response(data)
+
+    monkeypatch.setattr(cat, "async_get_clientsession", lambda hass: Session())
+    keeper = CatalogKeeper(hass, "test", {})
+    status, body, etag = await keeper._get("https://example.org/k/android.json")
+    assert (status, body, etag) == (200, data, '"x"')

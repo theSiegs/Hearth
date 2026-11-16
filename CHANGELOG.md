@@ -7,6 +7,7 @@
 
 ### Home Assistant integration
 
+- **App Facts files are read whole.** A large catalog file that arrived in pieces could be cut short and then fail its SHA-256 check, so Hearth kept an old copy. It now reads each file to the end.
 - **A TV knows each adult's phones.** A TV's state document now has `adult_phones`: for each of its profiles mapped to an adult on Hearth's page, the notify services of that person's companion apps (the same phones that get requests). Hearth TV's phone approval asks them when no phone was chosen on the TV.
 - **Phone approval through the integration.** A paired TV asks the integration (`POST /api/hearth/device/<id>/switch_approval`, then reads or withdraws the request), which sends the adult's phones Allow and Deny, hears the first answer, takes the notification off every phone and tells the TV. Only the paired TV may ask, only for a profile mapped to an adult, and each request's id is random and used once. Anyone with the companion app may answer; the log and the new `hearth_switch_approval` event say who.
 - **Works on the released Microsoft Family Safety (2.3.0).** Hearth no longer needs a Family Safety with today-only allowed hours or `hold` attributes; it uses them where the installed one has them:

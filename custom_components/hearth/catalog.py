@@ -577,10 +577,13 @@ class CatalogKeeper:
         ) as resp:
             if resp.status != 200:
                 return resp.status, b"", None
-            data = await resp.content.read(MAX_BYTES + 1)
-            if len(data) > MAX_BYTES:
-                raise CatalogError(f"{url} is too large")
-            return resp.status, data, resp.headers.get("ETag")
+            # read() hands back what has arrived so far, so read to the end (a short read fails the shard's SHA-256)
+            data = bytearray()
+            async for chunk in resp.content.iter_chunked(64 * 1024):
+                data += chunk
+                if len(data) > MAX_BYTES:
+                    raise CatalogError(f"{url} is too large")
+            return resp.status, bytes(data), resp.headers.get("ETag")
 
     async def async_fetch(self) -> bool:
         """Fetches and checks the catalog; True when a newer copy is now in use. Any failure keeps the copy."""
