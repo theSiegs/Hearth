@@ -243,6 +243,46 @@ async def test_a_messaging_bonus_out_of_time_pauses_every_other_app(
     assert "Devices" in household.enforcement.held_for("person.sam")["family_link"]["held"]
 
 
+async def test_a_failed_switch_to_per_app_pauses_keeps_the_device_lock(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    from homeassistant.exceptions import HomeAssistantError
+
+    calls, household = await _out_of_time(hass, hass_client_no_auth)
+    assert "Devices" in household.enforcement.held_for("person.sam")["family_link"]["held"]
+
+    async def fail(call):
+        raise HomeAssistantError("Google said no")
+
+    hass.services.async_register("familylink", "pause_app", fail)
+    unlocked = len([c for c in calls["limit"] if c.data.get("day")])
+    await hass.services.async_call(
+        DOMAIN, "add_time", {"person": "person.sam", "minutes": 15, "category": "messaging"}, blocking=True
+    )
+    await hass.async_block_till_done()
+    household.recompute()
+    await hass.async_block_till_done()
+    held = household.enforcement.held_for("person.sam")["family_link"]
+    # The pauses failed first: the device lock stays (never let go), tried again later
+    assert "Devices" in held["held"] and held["error"]
+    assert len([c for c in calls["limit"] if c.data.get("day")]) == unlocked
+
+
+async def test_keyboards_stay_open_in_the_per_app_path(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    calls, household = await _out_of_time(hass, hass_client_no_auth)
+    _installed(hass, [MESSAGES, CHROME, GAME, "com.touchtype.swiftkey", "com.grammarly.android.keyboard"])
+    await hass.services.async_call(
+        DOMAIN, "add_time", {"person": "person.sam", "minutes": 15, "category": "messaging"}, blocking=True
+    )
+    await hass.async_block_till_done()
+    household.recompute()
+    await hass.async_block_till_done()
+    paused = _paused(calls)
+    assert CHROME in paused and "com.touchtype.swiftkey" not in paused and "com.grammarly.android.keyboard" not in paused
+
+
 async def test_an_unspendable_category_bonus_keeps_the_device_lock(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:

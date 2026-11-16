@@ -137,8 +137,8 @@ their latest origin's id.
 Also, for the record:
 
 - `hearth.remove_time` takes back only what bonus grants still give, newest first; it never cuts daily time itself.
-- No new service takes time away. (The older `hearth.add_bonus` with negative minutes and the daily-time bonus number
-  entity, kept for one release, still lower today's time.)
+- Nothing takes time away from daily time itself. The older `hearth.add_bonus` with negative minutes and the
+  daily-time bonus number entity set lower take back bonus given (newest grant first), never more than the net bonus.
 - An ask answered twice: the second answer is refused with `not_open` (`hearth.answer_request` raises a validation
   error; the WebSocket answers `not_open`).
 
@@ -146,7 +146,7 @@ Also, for the record:
 
 The state document (phone and TV, per person) has `never_paused: [packages]`: what Hearth never pauses for any reason,
 the same list Family Link's per-app hold uses (calls: dialer and contacts; Settings, Play services, Family Link and its
-helper, the Play Store, Hearth's and Glint's apps, `android`) with the launchers, keyboards and accessibility apps. A
+helper, the Play Store, Hearth's and Glint's apps, `android`, and the keyboards and voice typing: Gboard, Samsung Keyboard, SwiftKey and its beta, Fleksy, Grammarly's keyboard, Google's speech services) with the launchers, keyboards Hearth's categories place in System screens, and accessibility apps. A
 client holds everything else when a group it holds is out of time or paused, Messaging included.
 
 ## Origin

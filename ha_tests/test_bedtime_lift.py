@@ -95,6 +95,22 @@ def _call(start: str, end: str = "07:00") -> dict:
     }
 
 
+async def test_ending_the_bonus_grant_given_at_bedtime_brings_bedtime_back(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """+30 during bedtime, then its grant is ended (hearth.end_grant): the lift goes, bedtime holds again."""
+    client, secret, _set_bedtime = await _sam(hass, hass_client_no_auth, freezer, 21, 45)
+    household = _household(hass)
+    await _bonus(hass, 30)
+    assert (await _sam_state(hass, client, secret))["locked"] is False
+    origin = next(o for o in household.time_view("person.sam")["origins"] if o["kind"] == "bonus")
+    await hass.services.async_call(DOMAIN, "end_grant", {"origin_id": origin["id"]}, blocking=True)
+    await hass.async_block_till_done()
+    assert household.bedtime_lift.until("person.sam") is None
+    sam = await _sam_state(hass, client, secret)
+    assert sam["locked"] is True and sam["lock"]["kind"] == "bedtime"
+
+
 async def test_extra_time_at_bedtime_lifts_it_and_bedtime_comes_back(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:

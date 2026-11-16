@@ -205,9 +205,26 @@ NEVER_PAUSED = TRANSITION_CLIENTS | frozenset(
     }
 )
 DEFAULT_SCHOOL_TIME_APPS = ("com.google.android.apps.messaging",)
+# Keyboards and voice typing: pausing one breaks typing in the apps left open (Messages during a Messaging bonus).
+# Gboard, Samsung Keyboard, SwiftKey (and its beta), Fleksy, Grammarly's keyboard, and Google's speech services (Gboard's
+# voice typing runs there). Not the Google app (googlequicksearchbox): it's a whole app with search and browsing, and
+# voice typing doesn't need it. Anything Hearth's categories confidently put in System screens is spared too
+# (household.never_held)
+KEYBOARDS = frozenset(
+    {
+        "com.google.android.inputmethod.latin",
+        "com.samsung.android.honeyboard",
+        "com.touchtype.swiftkey",
+        "com.touchtype.swiftkey.beta",
+        "com.syntellia.fleksy.keyboard",
+        "com.grammarly.android.keyboard",
+        "com.google.android.tts",
+    }
+)
 # The explicit system list: never paused, by name (calls, Settings, Play services, Family Link, the Play Store, Hearth
-# and Glint). The per-app path (Enforcement._all_apps_but) and the state document's never_paused both read it
-SYSTEM_NEVER_PAUSED = ESSENTIAL | NEVER_PAUSED | frozenset({"android"})
+# and Glint, the keyboards). The per-app path (Enforcement._all_apps_but) and the state document's never_paused both
+# read it
+SYSTEM_NEVER_PAUSED = ESSENTIAL | NEVER_PAUSED | KEYBOARDS | frozenset({"android"})
 
 # Family Safety's app ids that pause_app takes, by platform (a: is a phone app: not paused, Family Link has the phone)
 # First match wins: Microsoft Store apps are x:windowsplt:..., so that prefix comes before the Xbox's plain x:
@@ -744,11 +761,19 @@ class Enforcement:
             outcomes: dict[str, Any] = {}
             self._busy.add(key)
             try:
+                # Switching between the whole-device lock and pausing apps one by one (a category open past daily
+                # time): the new hold first, so a failure leaves the kid held too much rather than not at all (a
+                # failed pause_app keeps the device lock, and is tried again)
+                hold_first = DEVICES in hold or DEVICES in let_go
+                if hold and hold_first:
+                    held.entity_id = entity_id
+                    await self._call(kind, entity_id, hold, True, held)
+                    held.items |= hold
                 if let_go:
                     # Through what held it: a Switch changed meanwhile gets the hold, the old one its limit back
                     outcomes = await self._call(kind, held.entity_id or entity_id, let_go, False, held)
                     held.items -= let_go
-                if hold:
+                if hold and not hold_first:
                     held.entity_id = entity_id
                     await self._call(kind, entity_id, hold, True, held)
                     held.items |= hold

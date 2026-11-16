@@ -2273,6 +2273,11 @@ class Household:
             state.cat_bonus = cat_bonuses[gid][0] if gid in cat_bonuses else 0
             state.cat_bonus_left = result.cat_left.get(gid, 0)
 
+    @staticmethod
+    def used_minutes(day: PersonDay | None) -> int:
+        """Daily time used today in whole minutes, as every view shows it (time.used, the by-category split)."""
+        return int(round(day.groups.get(ALL, 0.0) / 60)) if day else 0
+
     def by_category(self, person: str) -> tuple[list[dict[str, Any]], int]:
         """Today's counted minutes split by category, each minute once ([{id, name, minutes}] in the household's
         order, then "other"; together daily time used), and the minutes not counted in daily time (categories
@@ -2280,24 +2285,36 @@ class Household:
         day = self.days.get(person)
         if day is None:
             return [], 0
-        used = int(round(day.groups.get(ALL, 0.0) / 60))
+        used = self.used_minutes(day)
         outside = self.outside_all()
         parts: list[dict[str, Any]] = []
         if used > 0:
-            parts = [
-                {"id": g.id, "name": g.name, "minutes": m}
+            # Largest remainders: each part's whole minutes, then the minutes the rounding of the whole leaves go to
+            # the parts with the largest fractions, so they add up to daily time used exactly
+            total_s = day.groups.get(ALL, 0.0)
+            seconds = [
+                (g.id, g.name, s)
                 for g in self.groups
-                if g.id != ALL and g.in_all and g.id not in outside
-                and (m := int(round(day.groups.get(g.id, 0.0) / 60))) > 0
+                if g.id != ALL and g.in_all and g.id not in outside and (s := day.groups.get(g.id, 0.0)) > 0
             ]
-            counted = sum(p["minutes"] for p in parts)
-            if counted > used:
-                # Rounding each part may pass the whole by a minute or two: the largest gives it back
-                biggest = max(parts, key=lambda p: p["minutes"])
-                biggest["minutes"] -= counted - used
-                counted = used
-            if used - counted > 0:
-                parts.append({"id": OTHER, "name": "Other", "minutes": used - counted})
+            other_s = max(0.0, total_s - sum(s for _, _, s in seconds))
+            if other_s > 0:
+                seconds.append((OTHER, "Other", other_s))
+            whole = [int(s // 60) for _, _, s in seconds]
+            spare = used - sum(whole)
+            order = sorted(range(len(seconds)), key=lambda i: seconds[i][2] / 60 - whole[i], reverse=True)
+            for i in order[: max(0, spare)]:
+                whole[i] += 1
+            for i in reversed(order):
+                # (the rounding of the whole down: the smallest fractions give a minute back)
+                if spare >= 0:
+                    break
+                if whole[i] > 0:
+                    whole[i] -= 1
+                    spare += 1
+            parts = [
+                {"id": gid, "name": name, "minutes": m} for (gid, name, _), m in zip(seconds, whole, strict=True) if m > 0
+            ]
         not_in_day = sum(
             day.groups.get(g.id, 0.0) for g in self.groups if g.id != ALL and (g.id in outside or not g.in_all)
         )
@@ -2355,7 +2372,8 @@ class Household:
             "bonus_left": bonus_left,
             # The latest bonus time given today (its origin, for the status line's link to "where it came from")
             "bonus_origin": self.latest_origin(person, "bonus"),
-            "used": int(all_state.counted_min) if all_state else 0,
+            # Whole minutes, rounded as by_category rounds them: the split adds up to it exactly
+            "used": self.used_minutes(day),
             "unlimited": {**active, "origin": self.latest_origin(person, "unlimited")} if active else None,
             "unlimited_today": unlimited["today"],
             "text": today_text(today_left, bonus_left, active["text"] if active else None),
@@ -2542,8 +2560,9 @@ class Household:
         if minutes > 0:
             grant = self.limits.add_grant(person, "bonus", None, minutes)
         elif minutes < 0:
-            grant = None
-            self.limits.set_bonus(person, ALL, self.limits.bonus(person, ALL) + minutes)
+            # hearth.add_bonus's older "take away": takes bonus given back, newest grant first; never daily time
+            self.remove_bonus(person, ALL, -minutes)
+            return
         else:
             self.recompute()
             return
@@ -2699,10 +2718,12 @@ class Household:
         grants = self.limits.grants(person, "bonus", group)
         others = total - sum(self.limits.given(g) for g in grants)
         spent -= min(spent, max(0, others))
+        # Never more than the net bonus given (an older lowered adjustment may have cut it): daily time stays
+        net = max(0, self.limits.cat_bonus(person, group) if group else self.limits.bonus(person, ALL))
         for g in grants:
             share = min(spent, self.limits.given(g))
             if g["id"] == grant["id"]:
-                return max(0, self.limits.given(g) - share)
+                return max(0, min(self.limits.given(g) - share, net))
             spent -= share
         return 0
 
@@ -2721,7 +2742,16 @@ class Household:
                     return None
                 self.limits.end_grant(person, origin_id, unused)
                 self.history.log(BONUS, person, group=grant.get("group") or ALL, minutes=-unused, undo=True)
+                if not grant.get("group"):
+                    # As remove_time: its bedtime lift is that much shorter, and Family Link and Family Safety lose
+                    # what Hearth gave for it once daily time is none again
+                    self.bedtime_lift.take(person, unused)
                 self.recompute()
+                if not grant.get("group"):
+                    day = self.days.get(person)
+                    state = day.limits.get(ALL) if day else None
+                    if state is not None and state.minutes_left == 0:
+                        self.sync.take_back_bonus(person)
                 return {"kind": "bonus", "taken": unused}
             if grant.get("ended") or (kind != "bonus" and grant not in self.limits.grants(person, kind, now=now)):
                 return None
@@ -2795,11 +2825,6 @@ class Household:
         gave for it in Family Link and Family Safety goes too. The minutes taken back."""
         if group == ALL:
             taken = self.limits.take_back(person, None, minutes)
-            adjust = max(0, self.limits.data.bonus.get(person, {}).get(ALL, 0))
-            if taken < minutes and adjust:
-                more = min(int(minutes) - taken, adjust)
-                self.limits.data.bonus[person][ALL] = adjust - more
-                taken += more
         else:
             given = max(0, self.limits.bonus(person, group))
             taken = max(0, min(int(minutes), given))

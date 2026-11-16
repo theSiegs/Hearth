@@ -748,6 +748,72 @@ async def test_ending_a_partly_spent_bonus_takes_back_only_the_unused_part(
     assert household.days["person.sam"].limits["all"].budget_min == 10
 
 
+async def test_a_negative_bonus_never_cuts_daily_time(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """+30 grant, then -30 (the older add_bonus): it takes the grant back. A remove_time or end_grant after that has
+    nothing left to take: daily time is untouched."""
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _set(hass, "all", 60)
+    household = _household(hass)
+    await _call(hass, "add_time", {"person": "person.sam", "minutes": 30})
+    origin = _origin(household, "bonus")
+    await hass.services.async_call(DOMAIN, "add_bonus", {"person": "person.sam", "minutes": -30}, blocking=True)
+    await hass.async_block_till_done()
+    state = household.days["person.sam"].limits["all"]
+    assert (state.budget_min, state.bonus_min, state.minutes_left) == (60, 0, 45)
+    assert household.limits.data.bonus.get("person.sam", {}).get("all", 0) >= 0
+    assert (await _call(hass, "remove_time", {"person": "person.sam", "minutes": 30}))["removed"] == {"person.sam": 0}
+    with pytest.raises(Exception):
+        await _end(hass, origin)
+    # The number entity lowered below the grants takes them back too, never below 0
+    await _call(hass, "add_time", {"person": "person.sam", "minutes": 20})
+    household.set_bonus("person.sam", "all", -40)
+    state = household.days["person.sam"].limits["all"]
+    assert (state.budget_min, state.bonus_min, state.minutes_left) == (60, 0, 45)
+
+
+def test_an_older_raise_to_migrates_to_the_same_limit() -> None:
+    from custom_components.hearth.limits import Limits
+
+    limits = Limits.__new__(Limits)
+    limits.data = LimitsData(day="2026-11-16", raises={"person.sam": {"games": Raise(add=30, to=120).view()}}, model=2)
+    limits._store = None
+    limits._save = lambda: None
+    # Older: to 120 plus 30 by = 150
+    limits.migrate_grants({}, lambda *a: None)
+    assert limits.raise_of("person.sam", "games").cap(60) == 150
+
+
+async def test_the_numbers_ignore_expired_raises_and_to_raises(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _set(hass, "video", 10)
+    household = _household(hass)
+    await _call(hass, "raise_cap", {"person": "person.sam", "category": "video", "minutes": 20, "until": "13:00"})
+    await _call(hass, "raise_cap", {"person": "person.sam", "category": "video", "to": 90})
+    assert household.limits.bonus("person.sam", "video") == 20
+    freezer.tick(timedelta(hours=1, minutes=1))
+    # The 20 expired: the number reads 0, and setting it to 15 gives "by" 15 beside the "to" 90 floor
+    assert household.limits.bonus("person.sam", "video") == 0
+    household.set_bonus("person.sam", "video", 15)
+    assert household.limits.bonus("person.sam", "video") == 15
+    assert household.limits.raise_of("person.sam", "video", dt_util.now()).cap(10) == 90
+
+
+async def test_by_category_matches_daily_time_used_exactly(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    # Odd seconds: 10 min 31 s of video, 4 min 59 s of games (15 min 30 s in all)
+    assert (await _post(client, secret, body=_tv_status(hearthtube_s=631, game_s=299))).status == 200
+    await hass.async_block_till_done()
+    view = _household(hass).time_view("person.sam")
+    assert sum(p["minutes"] for p in view["by_category"]) == view["used"]
+
+
 def test_today_s_raises_bonus_and_unlimited_become_grants_once() -> None:
     from custom_components.hearth.limits import GRANTS_MODEL, Limits
 

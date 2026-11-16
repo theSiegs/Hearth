@@ -808,9 +808,10 @@ class Limits:
         return record
 
     def take_back(self, person: str, group: str | None, minutes: int) -> int:
-        """hearth.remove_time: up to [minutes] of the bonus grants (general: [group] None, or one category's), newest
-        first; never more than they give, so never daily time itself. The minutes taken back."""
-        left = max(0, int(minutes))
+        """hearth.remove_time (and a lowered bonus): up to [minutes] of the bonus given (general: [group] None, or one
+        category's), the newest grant first, then an older adjustment of the number entity's; never more than the net
+        bonus given (chores' minutes stay, and daily time itself is never cut). The minutes taken back."""
+        left = max(0, min(int(minutes), self._net(person, group)))
         taken = 0
         for record in reversed(self.grants(person, "bonus", group)):
             take = min(left, self.given(record))
@@ -820,30 +821,52 @@ class Limits:
                 taken += take
             if not left:
                 break
-        if taken:
-            self._save()
+        store = self.data.bonus if group is None else self.data.cat_bonus
+        key = ALL if group is None else group
+        adjust = int(store.get(person, {}).get(key, 0))
+        if left and adjust > 0:
+            more = min(left, adjust)
+            store[person][key] = adjust - more
+            taken += more
+        # Always saved: a take-back from the adjustment is a change too
+        self._save()
         return taken
+
+    def _net(self, person: str, group: str | None) -> int:
+        """The net bonus given (grants and the adjustment; chores' aside), never below 0."""
+        return max(0, self.bonus(person, ALL) if group is None else self.cat_bonus(person, group))
 
     def bonus(self, person: str, group: str) -> int:
         """Daily time: the bonus time adults, asks and the day off gave today (its grants, and an older adjustment of
-        the number entity's); chores' aside. A category: what its raised limit adds (an older per-category bonus)."""
+        the number entity's); chores' aside. A category: what its raised limits add now (expired ones aside)."""
+        from homeassistant.util import dt as dt_util
+
         if group != ALL:
-            held = self.raise_of(person, group)
+            held = self.raise_of(person, group, dt_util.now())
             return held.add if held else 0
         return self.data.bonus.get(person, {}).get(group, 0) + sum(self.given(g) for g in self.grants(person, "bonus", None))
 
     def set_bonus(self, person: str, group: str, minutes: int) -> None:
-        """The number entities: today's bonus time to [minutes] (negative takes time away), or what a category's
-        raised limit adds; kept as an adjustment beside the grants."""
+        """The number entities. Daily time's: today's bonus to [minutes]: more is an adjustment beside the grants, less
+        takes the difference back from them, newest first (never a negative adjustment: it can't cut daily time).
+        A category's: what its raised limit adds, beside the active raise grants "by" ("to" raises aside)."""
+        from homeassistant.util import dt as dt_util
+
         minutes = max(-MAX_BONUS, min(MAX_BONUS, minutes))
         if group != ALL:
             held = Raise.of(self.data.raises.get(person, {}).get(group)) or Raise()
-            grants = sum(int(g.get("minutes") or 0) for g in self.grants(person, "raise", group))
+            grants = sum(
+                int(g.get("minutes") or 0) for g in self.grants(person, "raise", group, dt_util.now()) if g.get("to") is None
+            )
             self.set_raise(person, group, Raise(minutes - grants, held.to, held.no_cap, held.until))
             return
-        grants = sum(self.given(g) for g in self.grants(person, "bonus", None))
-        self.data.bonus.setdefault(person, {})[group] = minutes - grants
-        self._save()
+        current = self.bonus(person, ALL)
+        if minutes >= current:
+            store = self.data.bonus.setdefault(person, {})
+            store[ALL] = max(0, int(store.get(ALL, 0))) + (minutes - current)
+            self._save()
+        else:
+            self.take_back(person, None, current - minutes)
 
     def cat_bonus(self, person: str, group: str) -> int:
         """Today's bonus for one category (hearth.add_time with a category): usable only there."""
@@ -936,8 +959,10 @@ class Limits:
                 if held is None:
                     continue
                 del groups[group]
+                # An older raise "to" counted its "by" on top (to + add): kept as the same limit, a floor now
                 self.add_grant(
-                    person, "raise", group, held.add, held.to, held.no_cap, held.until,
+                    person, "raise", group, 0 if held.to is not None else held.add,
+                    None if held.to is None else held.to + held.add, held.no_cap, held.until,
                     grant_id=origin_of(person, "raise", group),
                 )
         for person, window in unlimited.items():
