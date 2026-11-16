@@ -968,6 +968,42 @@
           "description": "Or a day of the week, the Day off or the Half day."
         }
       }
+    },
+    "block_app": {
+      "name": "Block an app",
+      "description": "Blocks Android apps for kids through Family Link, kept by Hearth: blocked again when the app comes back, never paused or resumed by Hearth's holds, and an allow doesn't lift it.",
+      "fields": {
+        "people": {
+          "name": "Kids",
+          "description": "Who; every kid with Family Link when empty."
+        },
+        "app": {
+          "name": "App",
+          "description": "The app's Android package name."
+        },
+        "apps": {
+          "name": "Apps",
+          "description": "Several apps' package names."
+        }
+      }
+    },
+    "unblock_app": {
+      "name": "Unblock an app",
+      "description": "Ends Hearth's block of Android apps. Only a block Hearth made is lifted in Family Link: a parent's own block there stays.",
+      "fields": {
+        "people": {
+          "name": "Kids",
+          "description": "Who; every kid when empty."
+        },
+        "app": {
+          "name": "App",
+          "description": "The app's Android package name."
+        },
+        "apps": {
+          "name": "Apps",
+          "description": "Several apps' package names."
+        }
+      }
     }
   },
   "issues": {

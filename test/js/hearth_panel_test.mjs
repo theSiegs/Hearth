@@ -947,3 +947,79 @@ test("Parental controls: what Hearth does with less on the installed Family Safe
   const full = panel({ controls: [{ ...fs, reduced: [] }] });
   assert.doesNotMatch(full._parentalControlsCard(), /Works with less/);
 });
+
+const APP_BLOCKS = {
+  rule: true,
+  supported: [
+    { name: "Chrome", platform: "Android", package: "com.android.chrome", filtered_by: "Family Link" },
+    { name: "Microsoft Edge", platform: "Windows", package: null, filtered_by: "Family Safety" },
+    { name: "Microsoft Edge", platform: "Xbox", package: null, filtered_by: "Family Safety" },
+  ],
+  browsers: { "org.mozilla.firefox": "Firefox" },
+  app_stores: { "com.sec.android.app.samsungapps": "Galaxy Store" },
+  kids: [
+    {
+      person: "person.sam",
+      name: "Sam",
+      family_link: true,
+      blocks: [
+        { app: "org.mozilla.firefox", name: "Firefox", why: ["browser"], state: "blocked" },
+        { app: "com.example.chat", name: "Chat", why: ["adult"], state: "parent" },
+      ],
+      exempt: [],
+      web_filter: { entity_id: "switch.sam_web_filtering", on: true },
+    },
+    { person: "person.robin", name: "Robin", family_link: false, blocks: [], exempt: [], web_filter: { entity_id: "switch.robin_web_filtering", on: false } },
+  ],
+};
+
+test("Blocked by Hearth: the browser rule, where Hearth filters sites, each kid's blocks with Unblock, and Windows and Xbox", () => {
+  const p = panel();
+  p._config.app_blocks = APP_BLOCKS;
+  p._config.apps = [
+    { package: "org.mozilla.firefox", name: "Firefox", group: "other" },
+    { package: "com.example.game", name: "Game", group: "other" },
+    { package: "x:9NBLGGH4R315", name: "Xbox game", group: "other" },
+  ];
+  const html = p._appsTab();
+  assert.match(html, /Blocked by Hearth<\/h3>/);
+  assert.match(html, /data-change="block-browsers" checked> Block browsers Hearth doesn't support/);
+  assert.match(html, /Hearth filters sites in: Chrome on Android, Microsoft Edge on Windows, Microsoft Edge on Xbox/);
+  assert.match(html, /Galaxy Store/);
+  assert.match(html, /a browser Hearth doesn&#39;t support · blocked/);
+  assert.match(html, /by an adult · blocked by a parent in Family Link/);
+  assert.match(html, /data-action="app-unblock" data-app="org.mozilla.firefox" data-name="Firefox" data-person="person.sam">Unblock/);
+  assert.match(html, /covered by Family Safety web filtering: on/);
+  assert.match(html, /Family Safety web filtering is off/);
+  assert.match(html, /Robin[\s\S]*No Family Link set up/);
+  // Rows: blocked ones say so; others get Block, but not an Xbox app
+  assert.match(html, /Firefox <span class="chip small out">blocked<\/span>/);
+  assert.match(html, /data-action="app-block" data-app="com.example.game"/);
+  assert.doesNotMatch(html, /data-action="app-block" data-app="org.mozilla.firefox"/);
+  assert.doesNotMatch(html, /data-action="app-block" data-app="x:9NBLGGH4R315"/);
+});
+
+test("Block and Unblock go through hearth.block_app and hearth.unblock_app; the rule through the option", async () => {
+  const p = panel();
+  p._config.app_blocks = APP_BLOCKS;
+  const services = [];
+  const ws = [];
+  p._hass = { states: {}, callService: async (d, s, data) => { services.push([d, s, data]); }, callWS: async (m) => { ws.push(m); return null; } };
+  p._loadConfig = async () => {};
+  p._render = () => {};
+  p._notify = () => {};
+  const realTimeout = globalThis.setTimeout;
+  globalThis.setTimeout = (fn) => { fn(); return 0; };
+  try {
+    await p._act("app-block", { dataset: { app: "com.example.game", name: "Game" } });
+    await p._act("app-unblock", { dataset: { app: "org.mozilla.firefox", name: "Firefox", person: "person.sam" } });
+    await p._act("block-browsers", { checked: false, dataset: {} });
+  } finally {
+    globalThis.setTimeout = realTimeout;
+  }
+  assert.deepEqual(services, [
+    ["hearth", "block_app", { app: "com.example.game" }],
+    ["hearth", "unblock_app", { app: "org.mozilla.firefox", people: ["person.sam"] }],
+  ]);
+  assert.deepEqual(ws, [{ type: "hearth/config/set", key: "block_unsupported_browsers", value: false }]);
+});

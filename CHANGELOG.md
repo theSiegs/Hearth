@@ -3,6 +3,14 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **Block apps through Hearth.** `hearth.block_app` and `hearth.unblock_app` (Android package names; every kid with Family Link by default, or the kids you name) block an app through Family Link and keep the block: an app not installed yet is blocked when it shows up, and one that comes back unblocked is blocked again. Hearth only ever unblocks what it blocked, so a parent's own block in the Family Link app stays. A blocked app is never paused or resumed by Hearth's budgets, pauses, School time or schedule, `hearth.allow` doesn't lift it, and `hearth.explain` names it (`blocked_by` kind `blocked_app`). Adults only, like Hearth's other services.
+- **Block browsers Hearth doesn't support** (option `block_unsupported_browsers`, off by default). Hearth filters sites in Chrome on Android (Family Link's site filters) and in Microsoft Edge on Windows and Xbox (Family Safety's web filter). With the rule on, every other browser Hearth finds on a kid's Android devices (Samsung Internet, Firefox, Opera, Brave, DuckDuckGo, Vivaldi, Tor, Edge for Android and more, or an app Hearth's categories know as a browser) is blocked as soon as Family Link lists it, and so are app stores that skip Family Link's approval (the Galaxy Store and others). Edge on Android isn't supported: Family Safety filters it only while the kid is signed in to Edge, which nothing on Android enforces. A browser supported later, or everything when the rule goes off, is unblocked where Hearth blocked it.
+- **Apps > Blocked by Hearth** on Hearth's page: the rule, where Hearth filters sites, each kid's blocks with Unblock, and Windows and Xbox shown as covered by Family Safety's web filtering (a warning when a kid's web filtering is off). Every Android app's row has Block.
+
 ## 2026.11.21
 
 ### Home Assistant integration

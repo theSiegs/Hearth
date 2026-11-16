@@ -33,6 +33,9 @@ add, per person, the parental controls of other integrations (Configure > Enforc
   The schedule's extra minutes on a day off or half day (schedule.py, bonus_nintendo) go into the limit a hold puts
   back while it holds, and come out of it again when they're called off or the day ends.
 
+- Hearth's own app blocks (app_blocks.py): an app Hearth blocks is left out of every Family Link hold below; one held
+  when it was blocked stays as held (no resume) until it is unblocked.
+
 - School time (Family Link): the apps chosen per person ("During School time, pause these apps", Google Messages by
   default in the form) are paused while the child's School time is on (any of their devices says so), through the same
   hold: Family Link's pause_app keeps one saved setting per child and app, and any resume puts it back, so Hearth is the
@@ -147,6 +150,8 @@ WHY_BUDGET = "budget"
 WHY_SCHOOL = "school_time"
 WHY_PAUSE = "pause"
 WHY_SCHEDULE = "schedule"
+# A Family Link pause Hearth keeps as it was while the app is blocked (app_blocks.py): neither paused nor resumed
+WHY_BLOCKED = "blocked_app"
 # A change seen this soon after Hearth's own call is taken as Hearth's (the integration catching up), not a parent's
 QUIET_AFTER_CALL = timedelta(minutes=1)
 # After a write to Family Link, Family Safety or Nintendo, their entities are refreshed once this much later (their own
@@ -547,6 +552,7 @@ class Enforcement:
         closed_of=None,
         spared=frozenset(),
         exempt_of=None,
+        blocked_of=None,
     ) -> None:
         """[apps_of]: a group id's packages for a person (for All screen time, every app of theirs). [lifted_of]: what
         a person's allows lift (Lifted); [school_time_of]: whether an enforcer's child is in School time now;
@@ -556,7 +562,9 @@ class Enforcement:
         [paused_groups_of]: the groups an adult paused for a person, All screen time for a family pause (a Switch);
         [closed_of]: the groups the weekly schedule closes for a person now, All screen time in Sleep and School;
         [spared]: packages never paused, for any reason (the accessibility apps: household.never_held);
-        [exempt_of]: the packages Family Link never pauses for a person (their paired devices' clients)."""
+        [exempt_of]: the packages Family Link never pauses for a person (their paired devices' clients);
+        [blocked_of]: the packages Hearth's blocks hold for a person (app_blocks.py): never paused or resumed, so one
+        paused when it was blocked stays as held (Family Link's resume_app skips a blocked app anyway)."""
         self.enforcers = enforcers
         now = dt_util.now()
         wanted_now: dict[str, set[str]] = {}
@@ -607,9 +615,15 @@ class Enforcement:
                 # Only apps the child has: pausing one they don't would only cost a call (and read as a parent's
                 # change later, its pause never showing)
                 wanted_now[e.key] = self._installed_only(e.entity_id, wanted_now[e.key])
+            frozen: set[str] = set()
+            if e.kind == FAMILY_LINK and blocked_of and (blocked := blocked_of(e.person)):
+                frozen = (self.held.get(e.key) or Held()).items & blocked
+                wanted_now[e.key] = (wanted_now[e.key] - blocked) | frozen
             # School time first, then an adult's pause, then a budget: the reason a parent would name
             why_now[e.key] = {
-                item: WHY_SCHOOL
+                item: WHY_BLOCKED
+                if item in frozen
+                else WHY_SCHOOL
                 if item in school
                 else WHY_PAUSE
                 if item in paused

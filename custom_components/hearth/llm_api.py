@@ -222,15 +222,19 @@ def find_target(household: Household, person: str, given: Any) -> dict[str, Any]
 def parent_blocks(household: Household, person: str) -> list[dict[str, str]]:
     """The apps and games a parent blocked for the person in Family Link (its Blocked Apps sensor) or Family Safety (an
     app it reports blocked that Hearth's own pause_app didn't block): [{app, name, in}]. Hearth's allows never lift
-    these, and nothing here may ask to."""
+    these, and nothing here may ask to. Hearth's own blocks (hearth.block_app, the browser rule: app_blocks.py) are
+    in it too, as in Hearth: an allow doesn't lift them either."""
     hass = household.hass
     found: list[dict[str, str]] = []
+    ours = household.blocks.wanted(person)
+    for package in sorted(ours):
+        found.append({"app": package, "name": household.blocks.name_of(package, person), "in": "Hearth"})
     if (child := household.family_link_child(person)) is not None:
         for state in hass.states.async_all("sensor"):
             if not state.entity_id.endswith("_blocked_apps") or str(state.attributes.get("child_id")) != str(child):
                 continue
             for app in state.attributes.get("apps") or []:
-                if isinstance(app, dict) and app.get("package"):
+                if isinstance(app, dict) and app.get("package") and app["package"] not in ours:
                     found.append({"app": str(app["package"]), "name": str(app.get("name") or app["package"]),
                                   "in": "Family Link"})
     enforcers = [e for e in enforcers_from_options(household.options) if e.kind == FAMILY_SAFETY and e.person == person]
@@ -314,6 +318,11 @@ def _refuse_nintendo(block: dict[str, str], who: str) -> HomeAssistantError:
 
 
 def _refuse_blocked(block: dict[str, str], who: str) -> HomeAssistantError:
+    if block["in"] == "Hearth":
+        return HomeAssistantError(
+            f"An adult blocked {block['name']} for {who} in Hearth, and an allow doesn't lift a block. Only an adult "
+            "can unblock it, on Hearth's page or with hearth.unblock_app."
+        )
     return HomeAssistantError(
         f"A parent blocked {block['name']} for {who} in {block['in']}. Hearth won't unblock it: only a parent can, in "
         f"the {block['in']} app."
@@ -463,13 +472,13 @@ class ExplainTool(HearthTool):
         household = hub.household
         person = find_person(household, args["person"])
         if args.get("app"):
-            if block := parent_block_of(household, person, args["app"]):
+            if (block := parent_block_of(household, person, args["app"])) and block["in"] != "Hearth":
                 return {"person": person, "app": block["app"], "app_name": block["name"], "allowed": False,
                         "parent_block": block}
             package, name = find_app(household, person, args["app"])
             answer = household.explain(person, package, None)
             answer["app_name"] = name
-            if block := parent_block_of(household, person, package, name, args["app"]):
+            if (block := parent_block_of(household, person, package, name, args["app"])) and block["in"] != "Hearth":
                 answer["allowed"] = False
                 answer["parent_block"] = block
             return answer

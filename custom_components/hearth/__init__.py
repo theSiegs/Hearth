@@ -300,6 +300,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
     register_service(hass, DOMAIN, "pause", pause, schema=PAUSE_SCHEMA)
     register_service(hass, DOMAIN, "pause_end", pause_end, schema=PAUSE_END_SCHEMA)
+    _register_app_blocks(hass, loaded_household)
     _register_answer_request(hass)
     _register_dismiss_suggestion(hass)
     _register_exception_services(hass, loaded_household, group_id)
@@ -311,6 +312,76 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     # Glint agents through Hearth: the "glint" LLM API beside it (glint_api.py)
     glint_api.async_register(hass)
     return True
+
+
+BLOCK_APP_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            # The kids (all of them by default)
+            vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id]),
+            vol.Exclusive("app", "what"): cv.string,
+            vol.Exclusive("apps", "what"): vol.All(cv.ensure_list, [cv.string], vol.Length(min=1, max=50)),
+        }
+    ),
+    cv.has_at_least_one_key("app", "apps"),
+)
+
+
+def _register_app_blocks(hass: HomeAssistant, loaded_household) -> None:
+    """hearth.block_app and hearth.unblock_app: an adult's block of Android apps through Family Link, kept by Hearth
+    (app_blocks.py). Only apps Hearth blocked are ever unblocked."""
+    from .app_blocks import MAX_APPS, android_package, never_blocked
+
+    def checked(call: ServiceCall, block: bool) -> tuple:
+        household = loaded_household()
+        blocks = household.blocks
+        apps = [a.strip() for a in ([call.data["app"]] if "app" in call.data else call.data["apps"]) if a.strip()]
+        if not apps or len(apps) > MAX_APPS:
+            raise ServiceValidationError(f"Give one to {MAX_APPS} apps")
+        wrong = [a for a in apps if not android_package(a)]
+        if wrong:
+            raise ServiceValidationError(
+                f"Only Android apps (package names, like com.example.app) can be blocked for now: {', '.join(wrong)}"
+            )
+        if block and (kept := [a for a in apps if never_blocked(a)]):
+            raise ServiceValidationError(f"Hearth never blocks these (they hold the rest): {', '.join(kept)}")
+        kids = blocks.kids()
+        people = call.data.get("people") or kids
+        not_kids = [p for p in people if p not in kids]
+        if not_kids:
+            raise ServiceValidationError(f"Not one of the household's kids: {', '.join(not_kids)}")
+        if block:
+            without = [household.person_name(p) for p in people if blocks.target_of(p) is None]
+            if without and call.data.get("people"):
+                raise ServiceValidationError(
+                    f"No Family Link child set up for {', '.join(without)} (Configure > Enforce)"
+                )
+            # All kids: the ones with Family Link
+            people = [p for p in people if blocks.target_of(p) is not None]
+            if not people:
+                raise ServiceValidationError("No kid has Family Link set up in Hearth (Configure > Enforce)")
+        return household, people, sorted(set(apps))
+
+    @callback
+    def block_app(call: ServiceCall) -> ServiceResponse:
+        household, people, apps = checked(call, True)
+        done = household.blocks.block(people, apps)
+        household.recompute()
+        return {"blocked": done}
+
+    @callback
+    def unblock_app(call: ServiceCall) -> ServiceResponse:
+        household, people, apps = checked(call, False)
+        done = household.blocks.unblock(people, apps)
+        household.recompute()
+        return {"unblocked": done}
+
+    register_service(
+        hass, DOMAIN, "block_app", block_app, schema=BLOCK_APP_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    )
+    register_service(
+        hass, DOMAIN, "unblock_app", unblock_app, schema=BLOCK_APP_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    )
 
 
 ANSWER_REQUEST_SCHEMA = vol.All(

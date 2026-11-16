@@ -24,6 +24,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 
+from .app_blocks import CONF_BLOCK_UNSUPPORTED_BROWSERS
 from .apps import CONF_APP_WATCH, CONF_ASK_NOTIFY
 from .asks import AMOUNTS, CONF_OFFER_MORE
 from .const import (
@@ -333,6 +334,8 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
         },
         # Voice assistants may use Hearth (llm_api.py): off unless chosen
         "voice_assistants": bool(options.get(CONF_VOICE_ASSISTANTS)),
+        # Hearth's app blocks (app_blocks.py): the browser rule, the supported browsers, each kid's blocks and web filter
+        "app_blocks": household.blocks.page(),
         "push_server": options.get(CONF_PUSH_SERVER),
         "parent_pins": sorted(parent_pin.stored_pins(options)),
         "school_days": dict(options.get(CONF_SCHOOL_DAYS) or {}),
@@ -415,6 +418,7 @@ OPTION_SCHEMAS: dict[str, Any] = {
     CONF_CATEGORY_LOOKUP: bool,
     CONF_CATEGORY_AI: vol.Any(AI_DEFAULT, AI_OFF, cv.entity_domain("ai_task")),
     CONF_VOICE_ASSISTANTS: bool,
+    CONF_BLOCK_UNSUPPORTED_BROWSERS: bool,
     CONF_SOURCES: [
         vol.Schema(
             {

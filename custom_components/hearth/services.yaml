@@ -251,6 +251,38 @@ pause_end:
       selector:
         text:
 
+block_app:
+  fields:
+    people:
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    app:
+      example: org.mozilla.firefox
+      selector:
+        text:
+    apps:
+      example: '["org.mozilla.firefox", "com.sec.android.app.samsungapps"]'
+      selector:
+        object:
+
+unblock_app:
+  fields:
+    people:
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    app:
+      example: org.mozilla.firefox
+      selector:
+        text:
+    apps:
+      example: '["org.mozilla.firefox"]'
+      selector:
+        object:
+
 play_on_tv:
   fields:
     device_id:

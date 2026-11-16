@@ -234,6 +234,28 @@ def installed_apps(hass: HomeAssistant, child: str) -> set[str] | None:
     return found if seen == set(INSTALLED_LISTS) else None
 
 
+def app_lists(hass: HomeAssistant, child: str) -> tuple[set[str], set[str] | None]:
+    """(listed, blocked) of the child's Family Link app lists: every package any list names now (installed, as far as
+    the lists tell, even one cut short), and the packages of the Blocked apps list (None without that list, or when it
+    was cut short: whether an app is blocked can't be told then)."""
+    listed: set[str] = set()
+    blocked: set[str] | None = None
+    for state in hass.states.async_all("sensor"):
+        suffix = next((s for s in INSTALLED_LISTS if state.entity_id.endswith(s)), None)
+        if suffix is None or str(state.attributes.get("child_id")) != child:
+            continue
+        apps = state.attributes.get("apps")
+        packages = {
+            package
+            for app in (apps if isinstance(apps, list) else [])
+            if isinstance(package := (app.get("package") if isinstance(app, dict) else app), str) and package
+        }
+        listed |= packages
+        if suffix == "_blocked_apps" and isinstance(apps, list) and not state.attributes.get("truncated"):
+            blocked = (blocked or set()) | packages
+    return listed, blocked
+
+
 def app_minutes_today(hass: HomeAssistant, child: str, package: str) -> list[tuple[str, float]]:
     """An app's minutes today on each of the child's devices, from their Daily screen time sensors: (device, minutes)."""
     found: list[tuple[str, float]] = []

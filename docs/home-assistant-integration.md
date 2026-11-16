@@ -685,7 +685,9 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
   entity, until School time ends) or `google_tv_limit` (by the TV's device id, with its `device` name, until null; see
   below) or `app_limit` (a parent's own Family Link app limit used up on a device: by the Apps with time limits
   sensor, with `app`, `device`, `limit_minutes` and `used_minutes`, until midnight; Hearth's allows and bonuses don't
-  raise it, so an adult raises or removes it in Family Link; Hearth's own pauses aren't listed here). `place` is kept for place rules (none are built yet: a place only ends an exception so far). `until` is when it's allowed again (the latest of the blocks, null when one doesn't
+  raise it, so an adult raises or removes it in Family Link; Hearth's own pauses aren't listed here) or `blocked_app`
+  (Hearth's own block of the app, [Blocked apps](#blocked-apps): `by` is `hearth.block_app` or
+  `block_unsupported_browsers`, with `app` and `why`, until null; no allow lifts it). `place` is kept for place rules (none are built yet: a place only ends an exception so far). `until` is when it's allowed again (the latest of the blocks, null when one doesn't
   say), or, when allowed thanks to an exception, when that ends. `lifted` lists the holds an allow lifts now.
 - **Google TV's own Kids daily limit.** A kids profile can also have a daily limit set in Google TV itself (Family Link's
   or the TV's own Kids profile settings). When it runs out, Google TV shows its time up screen and blocks the whole
@@ -698,6 +700,47 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
   limit is on".
 - The person's **Screen time today** sensor has an `exceptions` attribute: `allows` (id, app or group, until, reason),
   `grants` (below) and `school_time_off` (what's taken off and when it's put back).
+
+### Blocked apps
+
+Every kid control goes through Hearth: block an app with `hearth.block_app`, never with `familylink.block_app` directly,
+so Hearth's pauses, its schedule and its blocks stay in step (`app_blocks.py`).
+
+- `hearth.block_app` and `hearth.unblock_app` (`app` or `apps`: Android package names; `people`: the kids, every kid
+  with Family Link by default), adults only like Hearth's other services. Hearth blocks the app through Family Link
+  (`familylink.block_app` with the kid's Family Link entity) and keeps its own record of what it blocked. Only Android
+  apps for now; Hearth's own apps, Family Link, Google Play, Settings, the phone and messages are never blocked.
+  The response names who each app was blocked or unblocked for.
+- **Hearth only undoes its own blocks.** An app a parent already blocked in the Family Link app stays the parent's
+  (Hearth's page shows "blocked by a parent in Family Link"); unblocking it in Hearth leaves it blocked there.
+- **A block stays.** An app that isn't installed waits ("not installed: blocked when it shows up") and is blocked as soon
+  as it appears in Family Link's app lists. An app Hearth blocked that shows up unblocked later (installed again, or
+  unblocked in the Family Link app) is blocked again: unblock in Hearth.
+- **Holds leave a blocked app alone.** A budget, a pause, School time's apps or the schedule never pause or resume an
+  app Hearth blocks: one Hearth had paused stays recorded as paused (its reason on Hearth's page is `blocked_app`) and Family
+  Link's `resume_app` skips a blocked app anyway; once unblocked, it is let go as usual. `hearth.allow` doesn't lift a
+  block, the MCP tools refuse to allow it, and `hearth.explain` lists it in `blocked_by` (`kind: blocked_app`).
+- **Block browsers Hearth doesn't support** (option `block_unsupported_browsers`, off by default; Hearth's page > Apps >
+  Blocked by Hearth). Hearth filters sites only in some browsers, one list kept in code (`SUPPORTED_BROWSERS`):
+  - Chrome on Android: Family Link's site filters, and the blocklist Hearth syncs into them, apply in Chrome only.
+  - Microsoft Edge on Windows and Xbox: Family Safety's web filter applies in Edge; with it on, Windows blocks every
+    other browser and the Xbox only has Edge, so nothing more is blocked there.
+  - Not Edge on Android: Family Safety's filter there works only while the kid is signed in to Edge with their
+    Microsoft family account, which nothing on Android enforces, and Family Link's filters don't reach Edge.
+
+  With the rule on, any other browser on a kid's Android devices is blocked as soon as Family Link lists it: a known
+  browser's package (Samsung Internet and its beta, Firefox, Focus, Klar and Nightly, Opera, Opera Mini and GX, Brave,
+  DuckDuckGo, Vivaldi, Tor Browser, Kiwi, UC Browser, Yandex, Puffin, Dolphin, Mi Browser, Ecosia, Silk, Aloha, Edge,
+  Chrome's beta, dev and canary builds), or an app Hearth's app categories know as none of the ten kinds with a
+  browser's name. The rule also blocks other app stores that install apps without Family Link's approval (the Galaxy
+  Store, Amazon Appstore, Aptoide, APKPure, F-Droid, AppGallery, Uptodown, GetApps). An app an adult unblocks stays
+  unblocked. A browser added to the supported list later, and everything when the rule is turned off, is unblocked,
+  only where Hearth was the one that blocked it.
+- **Hearth's page** (Apps > Blocked by Hearth): the rule, the browsers Hearth filters sites in, each kid's blocks (why,
+  where it stands, Unblock), and Windows and Xbox: "covered by Family Safety web filtering: on", or a warning when a
+  kid's Family Safety web filtering switch is off or not found. Every Android app's row in Every app has Block (every
+  kid with Family Link). `hearth/config`'s `app_blocks` carries it all.
+- Events: `hearth_app_blocked` and `hearth_app_unblocked` (`person`, `app`) after each Family Link call.
 
 ### Keeping the parents' apps in step
 

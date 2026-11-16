@@ -70,6 +70,7 @@ from .limits import (
     without_app,
 )
 from .enforce import FAMILY_LINK, FAMILY_SAFETY, NINTENDO, Enforcement, enforcers_from_options, fs_account_of, fs_app, fs_app_platform
+from .app_blocks import AppBlocks
 from .exceptions import Allows, Lifted, end_of_day
 from .history import BONUS, DEVICE_BONUS, History
 from .grants import Grants
@@ -193,6 +194,8 @@ class Household:
         self.school = SchoolDays(hass)
         self.school.configure(dict(hub.entry.options))
         self.enforcement = Enforcement(hass, hub.entry.entry_id)
+        # Hearth's own blocks of Android apps, through Family Link (app_blocks.py)
+        self.blocks = AppBlocks(hass, self, hub.entry.entry_id)
         self.watch = WatchLog(hass, hub.entry.entry_id)
         self.allows = Allows(hass, hub.entry.entry_id)
         self.grants = Grants(hass, hub.entry.entry_id)
@@ -237,6 +240,7 @@ class Household:
         await self.apps.async_load()
         await self.categories_book.async_load()
         await self.enforcement.async_load()
+        await self.blocks.async_load()
         await self.watch.async_load()
         await self.allows.async_load()
         await self.grants.async_load()
@@ -253,6 +257,7 @@ class Household:
         await self.categories_book.async_flush()
         await self.live.async_flush()
         await self.enforcement.async_flush()
+        await self.blocks.async_flush()
         await self.watch.async_flush()
         await self.allows.async_flush()
         await self.grants.async_flush()
@@ -1078,7 +1083,10 @@ class Household:
             paused_groups_of=lambda person: self.paused_groups(person, now),
             closed_of=self.schedule_holds,
             exempt_of=self.client_exempt(),
+            blocked_of=self.blocks.blocked_packages,
         )
+        # Hearth's app blocks in step with Family Link (an app that showed up, a block or unblock of an adult's)
+        self.blocks.sync()
         # An adult's allow of All screen time opens Google's and Microsoft's own limits too
         self.sync.mirror_allows()
         # Family Link's bedtime in step with the lifts (moved while one lasts, put back after)
@@ -1930,6 +1938,9 @@ class Household:
         else:
             packages = set()
         blocked += self.sync.app_limits_reached(person, packages, midnight)
+        # Hearth's own block of the app (hearth.block_app, or the browser rule): no allow lifts it
+        if app is not None:
+            blocked += self.blocks.explain(person, app)
         if app is not None:
             for enforcer in enforcers_from_options(self.options):
                 if (

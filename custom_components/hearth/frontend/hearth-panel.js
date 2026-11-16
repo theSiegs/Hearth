@@ -1126,6 +1126,22 @@ class HearthPanel extends HTMLElement {
         await this._setOption("app_groups", moved, `Kept in ${d.group === "other" ? "Other" : this._groupName(d.group)}`);
         return;
       }
+      case "block-browsers":
+        await this._setOption("block_unsupported_browsers", el.checked, el.checked ? "Browsers Hearth doesn't support get blocked" : "Browser rule off: Hearth unblocks what it blocked for it");
+        return;
+      case "app-block": {
+        // Every kid with Family Link (the service's default); Hearth keeps the block and puts it back when the app returns
+        const name = d.name || d.app;
+        await this._service("block_app", { app: d.app }, `${name} blocked for every kid`);
+        await this._loadConfig();
+        return;
+      }
+      case "app-unblock": {
+        const name = d.name || d.app;
+        await this._service("unblock_app", { app: d.app, people: [d.person] }, `${name} unblocked for ${this._personName(d.person)}`);
+        await this._loadConfig();
+        return;
+      }
       case "category-lookup":
         await this._setOption("category_lookup", el.checked, el.checked ? "New apps are looked up in their store" : "No store lookups");
         return;
@@ -3370,8 +3386,75 @@ class HearthPanel extends HTMLElement {
     const says = a.category_says ? ` · Hearth now knows it as ${esc(this._categoryLabel(a.category_says))}` : "";
     const kind = a.source ? ` · ${esc(a.category ? this._categoryLabel(a.category, a.detail) : a.source === "unknown" ? "kind not known" : "none of Hearth's kinds")} (${esc(this._sourceLabel(a))})` : "";
     const sub = `${extra}${kind}${says}`.replace(/^ · /, "");
-    return `<li><div class="grow"><div title="${esc(a.package)}">${esc(this._appName(a))}${a.moved ? ` <span class="chip small">moved by you</span>` : ""}${a.source === "ai" ? ` <span class="chip small warn">AI guess</span>` : ""}</div>
-      ${sub ? `<div class="muted small">${sub}</div>` : ""}</div>${a.source ? this._categorySelect(a) : ""}${this._groupSelect(a.package, a.group)}</li>`;
+    return `<li><div class="grow"><div title="${esc(a.package)}">${esc(this._appName(a))}${a.moved ? ` <span class="chip small">moved by you</span>` : ""}${a.source === "ai" ? ` <span class="chip small warn">AI guess</span>` : ""}${this._blockChip(a.package)}</div>
+      ${sub ? `<div class="muted small">${sub}</div>` : ""}</div>${a.source ? this._categorySelect(a) : ""}${this._groupSelect(a.package, a.group)}${this._blockButton(a)}</li>`;
+  }
+
+  // Hearth's app blocks (app_blocks.py): the kids with Family Link, and who has [pkg] blocked
+  _blockKids() {
+    return (this._config?.app_blocks?.kids || []).filter((k) => k.family_link);
+  }
+
+  _blockedFor(pkg) {
+    return this._blockKids().filter((k) => (k.blocks || []).some((b) => b.app === pkg));
+  }
+
+  _androidPackage(pkg) {
+    return /^[A-Za-z][\w]*(\.[A-Za-z_][\w]*)+$/.test(String(pkg || ""));
+  }
+
+  _blockChip(pkg) {
+    const kids = this._blockedFor(pkg);
+    if (!kids.length) return "";
+    const all = kids.length === this._blockKids().length;
+    return ` <span class="chip small out">${all ? "blocked" : `blocked for ${esc(kids.map((k) => k.name).join(", "))}`}</span>`;
+  }
+
+  // A block action on an Android app's row: every kid with Family Link
+  _blockButton(a) {
+    const kids = this._blockKids();
+    if (!kids.length || !this._androidPackage(a.package) || this._blockedFor(a.package).length === kids.length) return "";
+    return `<button class="btn" data-action="app-block" data-app="${esc(a.package)}" data-name="${esc(this._appName(a))}" title="Block it for every kid through Family Link">Block</button>`;
+  }
+
+  _blockStateLabel(b) {
+    if (b.error) return `couldn't block: ${b.error}`;
+    return { blocked: "blocked", parent: "blocked by a parent in Family Link", not_installed: "not installed: blocked when it shows up", pending: "blocking…" }[b.state] || b.state;
+  }
+
+  _blockWhyLabel(why) {
+    return (why || []).map((w) => ({ adult: "by an adult", browser: "a browser Hearth doesn't support", app_store: "another app store" }[w] || w)).join(", ");
+  }
+
+  // Blocked by Hearth: the browser rule, the browsers Hearth filters sites in, each kid's blocks (Unblock), and Windows
+  // and Xbox, covered by Family Safety's web filter
+  _blocksCard() {
+    const b = this._config.app_blocks;
+    if (!b) return "";
+    const supported = (b.supported || []).map((s) => `${s.name} on ${s.platform}`).join(", ");
+    const kids = b.kids || [];
+    const filter = (k) => {
+      const w = k.web_filter;
+      if (!w) return `<span class="muted small">Windows and Xbox: no Family Safety set up</span>`;
+      if (w.on === true) return `<span class="chip small">Windows and Xbox: covered by Family Safety web filtering: on</span>`;
+      if (w.on === false) return `<span class="chip small warn">Windows and Xbox: Family Safety web filtering is off, so other browsers aren't blocked</span>`;
+      return `<span class="chip small warn">Windows and Xbox: Family Safety's web filtering switch wasn't found</span>`;
+    };
+    return `<section class="card">
+      <h3><ha-icon icon="mdi:web-cancel"></ha-icon>Blocked by Hearth</h3>
+      <p class="muted">Apps Hearth blocks through Family Link. Hearth blocks them again when they come back, never pauses or resumes them, and an allow doesn't lift a block. Unblock here: Hearth only ever unblocks what it blocked, so a parent's own block in Family Link stays.</p>
+      <label class="check"><input type="checkbox" data-change="block-browsers" ${b.rule ? "checked" : ""}> Block browsers Hearth doesn't support</label>
+      <div class="muted small">Hearth filters sites in: ${esc(supported)}. With this on, any other browser on a kid's Android devices is blocked as soon as Family Link lists it, and so are other app stores that skip Family Link's approval (${esc(Object.values(b.app_stores || {}).filter((v, i, all) => all.indexOf(v) === i).join(", "))}).</div>
+      ${kids.length ? `<ul class="list compact">${kids
+        .map((k) => `<li><div class="grow"><div>${esc(k.name)}</div>
+          ${k.family_link ? "" : `<div class="muted small">No Family Link set up (Kids tab, parental controls): nothing to block on Android</div>`}
+          ${(k.blocks || []).length ? `<ul class="list compact">${k.blocks
+            .map((x) => `<li><div class="grow"><div title="${esc(x.app)}">${esc(x.name || x.app)}</div><div class="muted small">${esc(this._blockWhyLabel(x.why))} · ${esc(this._blockStateLabel(x))}</div></div>
+              <button class="btn" data-action="app-unblock" data-app="${esc(x.app)}" data-name="${esc(x.name || x.app)}" data-person="${esc(k.person)}">Unblock</button></li>`)
+            .join("")}</ul>` : k.family_link ? `<div class="muted small">Nothing blocked</div>` : ""}
+          <div>${filter(k)}</div></div></li>`)
+        .join("")}</ul>` : `<p class="muted small">No kids yet.</p>`}
+    </section>`;
   }
 
   // An app's name, never its package: a guess from the package when nothing better is known
@@ -3451,6 +3534,7 @@ class HearthPanel extends HTMLElement {
       .filter((a) => !source || a.source === source);
     const recent = (cfg.recent || []).filter((a) => !this._testBuild(a.package));
     const appsCards = `${this._checkTheseCard()}
+      ${this._blocksCard()}
       <section class="card">
         <h3><ha-icon icon="mdi:new-box"></ha-icon>Sorted lately</h3>
         <p class="muted">New apps go to a group on their own: one that lists them, else what they are (games, video, social…; Messaging and Accessibility only from Hearth's list or your choice, never a guess), else Other. Accessibility apps are never paused. System screens (the home screen, lock screen, keyboards) never count and are never paused; only Hearth's list or your choice puts an app there. If one landed wrong, move it or say what it is; your choice always wins.</p>
