@@ -135,10 +135,11 @@ def backstop_minutes(
     """Family Link's daily limit Hearth keeps as a backstop: today's time + the bonus left + raised caps that count on
     the device but not in today's time + a margin, rounded up to 5 minutes (at most a day). No limits today: a whole
     day. None: no daily total, Family Link is left alone."""
-    if no_limits:
-        return DAY_MINUTES
+    # No daily time: Family Link is Hearth's to leave alone, Unlimited or not (nothing would put it back after)
     if base is None:
         return None
+    if no_limits:
+        return DAY_MINUTES
     total = max(0, base) + max(0, bonus_left) + max(0, raises_outside) + max(0, margin)
     return min(DAY_MINUTES, int(math.ceil(total / 5) * 5))
 

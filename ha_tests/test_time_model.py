@@ -136,9 +136,9 @@ def test_the_backstop_math() -> None:
     assert backstop_minutes(181, 0, 0, 30) == 215
     # Raised limits of categories outside daily time count on the device too
     assert backstop_minutes(180, 0, 45, 30) == 255
-    # Unlimited: a whole day; no daily time: left alone
+    # Unlimited: a whole day; no daily time: left alone (Unlimited or not)
     assert backstop_minutes(180, 0, 0, 30, no_limits=True) == 1440
-    assert backstop_minutes(None, 30, 0, 30) is None
+    assert backstop_minutes(None, 30, 0, 30) is None and backstop_minutes(None, 0, 0, 30, no_limits=True) is None
     assert backstop_minutes(1430, 30, 0, 30) == 1440
 
 
