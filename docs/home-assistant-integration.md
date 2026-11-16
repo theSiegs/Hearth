@@ -542,10 +542,17 @@ until the group has time again (a bonus, a higher budget, a new day):
   - **Microsoft Family Safety** locks the chosen platforms (Xbox by default) until midnight while one of the chosen
     groups (Games and All screen time by default) is out of time (`lock_platform`), and unlocks them when none is.
     The child is named by the chosen entity (`entity_id`: any of the child's Family Safety entities, or a typed-in
-    account id as `account_id`), and the lock runs `until` the next local midnight. An older Family Safety that takes
-    neither gets the account sensor's `user_id` and `duration_hours`, as before. An unlock answered with
-    `hold_expired`, `left_parent_override` (a parent's own lock stays) or `not_locked` is fine: nothing of Hearth's is
-    left. **Xbox and Windows apps in a group:** a group may list Family Safety's app ids (`x:...` Xbox, `appx:...` or
+    account id as `account_id`), and the lock runs `until` the next local midnight. A Family Safety that takes
+    neither (the released one, upstream's 2.3.0) gets the account sensor's `user_id` and `duration_hours`: whole hours,
+    so the lock would run up to an hour past midnight. Hearth then unlocks it itself at midnight (`unlock_platform`;
+    the time is kept with what's held, checked every minute, so a midnight missed while Home Assistant was off is
+    caught up at the first check after the start), only while the lock still reads Hearth's (see below): a parent's
+    change since (their own lock, an unlock, extra time) drops the plan and stays. A lock that's gone, unreadable or
+    under Hearth's own extra time at midnight is waited for, in case it comes back, until its own end, then dropped.
+    Letting go, or a Family Safety that takes `until`, needs none of this. On 2.3.0 `unlock_platform` cancels any
+    platform lock in force; from the release with its #94 it puts back the lock or extra time it replaced. An unlock
+    answered with `hold_expired`, `left_parent_override` (a parent's own lock stays) or `not_locked` is fine: nothing
+    of Hearth's is left. **Xbox and Windows apps in a group:** a group may list Family Safety's app ids (`x:...` Xbox, `appx:...` or
     `win32:...` Windows; the app pickers offer those of the kids with Family Safety, from its sensors' `apps`). While
     any group with such apps is out of time, those on the chosen platforms are paused (`pause_app`, a block that keeps
     whether the app was blocked before; an app a parent blocked is left alone) and resumed (`resume_app`) when it has
@@ -680,10 +687,13 @@ it has from its services' schemas and its entities' attributes and uses what's t
 has it as `capabilities.family_safety`: `installed`, `today_only` (set_screentime_intervals changes today only),
 `weekday_hours` (it takes `day_of_week`), `hold_attributes` (Allowed Now and lock switches say whose a lock is),
 `allowed_now` (Allowed Now sensors with the override in force), `lock_until` (lock_platform takes an end),
-`xbox_extra_time`, `windows_extra_time`, `cancel_extra_time` and `pause_apps`. Family Safety's row under
-`parental_controls` adds `reduced`: one line per thing Hearth does with less on this version (allowed hours put back
-by Hearth, a parent's lock told from Hearth's own record, locks by whole hours, ...), shown on the page under the
-integration as "Works with less on this version"; empty when it has it all. It's not a problem to fix.
+`xbox_extra_time`, `windows_extra_time`, `cancel_extra_time`, `pause_apps`, `request_events`, `pending_requests`,
+`site_list_sync` (it keeps the website block list itself: `sync_site_list`) and `website_lists` (it has `get_sites`,
+`block_website` and `remove_website`, so Hearth keeps the list). Family Safety's row under `parental_controls` adds
+`reduced`: one line per thing Hearth does with less on this version (allowed hours put back by Hearth, a parent's
+lock told from Hearth's own record, locks by whole hours that Hearth ends at midnight, requests read from the
+sensors, ...), shown on the page under the integration as "Works with less on this version"; empty when it has it
+all. It's not a problem to fix.
 
 - **Compare and restore.** Letting go of a Family Link device lock puts the weekday's daily limit back only while that
   limit still reads 0 (what Hearth set); a Switch's Max screentime and Suspend software, only while the limit still
@@ -779,10 +789,13 @@ integration as "Works with less on this version"; empty when it has it all. It's
   `microsoft_family_safety_request` nor `_request_resolved`; it has each child's **Pending Requests** sensor (unique
   id `<entry>_<account>_pending_requests`: the count, and Microsoft's requests in `requests`). Hearth reads it for each
   child with a Family Safety enforcer, on every change and every minute, and tells requests apart by `id`: a new one
-  becomes an ask exactly as the event makes it (platform, app name, requested time); one gone from the list for 5
-  minutes while the sensor reads is resolved as "handled outside Hearth" (one Hearth answered itself is already
-  closed). An unavailable or unknown sensor, or one without `requests`, changes nothing; an id back in the list isn't
-  resolved. The first reading of a child's sensor learns what's pending without announcing it; the ids known (and
+  becomes an ask exactly as the event makes it (platform, app name, requested time). One gone from the list is
+  resolved once two fresh readings in a row lack it (the sensor written again by a Family Safety poll, so about two
+  of its update intervals; a minute's check without a new poll doesn't count), as "handled outside Hearth"; sooner,
+  and as approved in the Family Safety app, when extra time newly shows on the request's platform for that kid within
+  3 minutes of it leaving (the Allowed Now sensor's `allowUntil`, not extra time Hearth gave itself), with the minutes
+  to that extra time's end. One Hearth answered itself is already closed. An unavailable or unknown sensor, or one
+  without `requests`, changes nothing and isn't a reading; an id back in the list isn't resolved. The first reading of a child's sensor learns what's pending without announcing it; the ids known (and
   those resolved lately) are kept with Home Assistant's storage helper, so a restart announces nothing again and a
   request that came or went meanwhile is found. Where the fork's events fire too, each request is handled once,
   whichever comes first: an event marks its id known (or resolved), and an ask is made once per request id.
@@ -1004,10 +1017,27 @@ restarts.
 **Website block list** (Configure > Website block list): an https address, a time (07:30 by default) and the people
 (everyone with Family Link or Family Safety by default). Every day at that time, Hearth calls `familylink.sync_site_list`
 (entity: the person's Family Link entity, url) and `microsoft_family_safety.sync_site_list` (the person's Family Safety
-entity or account id, url; skipped quietly while Family Safety has no such service) for each, one after another; each
-side is on its own: a failure for one is logged, fires `site_list_failed` (with `via`) and is tried again 5 minutes
-later, and the other side and the other people go on. Those services add the list's new domains and remove only what
-the list itself added before. For example `https://example.com/blocklist.txt`.
+entity or account id, url) for each, one after another; each side is on its own: a failure for one is logged, fires
+`site_list_failed` (with `via`) and is tried again 5 minutes later, and the other side and the other people go on.
+Those services add the list's new domains and remove only what the list itself added before. For example
+`https://example.com/blocklist.txt`.
+
+**A Family Safety without `sync_site_list`** (the released one, upstream's 2.3.0) is kept in step by Hearth itself,
+with its `get_sites`, `block_website` and `remove_website`. The list is downloaded once per run (https only, redirects
+not followed, at most 1 MiB and 2000 domains) and read as plain text, one domain per line, `#` comments allowed (a
+hosts-file line such as `0.0.0.0 example.com` gives its last word); anything that isn't a plain domain is ignored.
+For each kid, the blocked and allowed sites are read with `get_sites`; listed domains not blocked yet are blocked with
+one `block_website` call (a domain that shares a site with an allowed one is left out); only domains Hearth itself
+blocked from that list for that kid, and that the list has since dropped, are unblocked with `remove_website` (not
+`allow_website`, which would put them on the allowed list). What Hearth added is kept with the schedule in Home
+Assistant's storage, so a restart keeps it; a site removed by hand meanwhile isn't Hearth's any more, and sites
+Hearth didn't add are never touched. A fork's own record of what its `sync_site_list` added is taken over the first
+time. Nothing changes when the download fails or has no usable domain, when Microsoft's answer has lost every site
+the list added, or when the list would take back more than half of what it added (at least 20): `site_list_failed`.
+Family Safety tries every site and names the ones that failed, with Microsoft's error: Hearth's `site_list` event
+then has `by: hearth`, `added`, `removed`, `kept`, `skipped_allowed` and `failed` (`[{site, error}]`), the failed ones
+are logged and tried again the next day; when every site failed it's a `site_list_failed`, tried again 5 minutes
+later. With neither service, Family Safety is skipped quietly.
 
 **Copy websites** (`hearth.copy_sites`): copies a kid's websites between Family Link and Family Safety. `people`
 (everyone with both in Configure > Enforce by default), `from` (`family_link`, `family_safety` or `both`, the

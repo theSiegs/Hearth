@@ -93,7 +93,8 @@ def _fork(hass: HomeAssistant) -> dict[str, list[ServiceCall]]:
         service: async_mock_service(hass, FS, service)
         for service in (
             "lock_platform", "unlock_platform", "add_time_bonus", "cancel_time_bonus", "set_screentime_limit",
-            "set_screentime_intervals", "pause_app", "resume_app",
+            "set_screentime_intervals", "pause_app", "resume_app", "sync_site_list", "get_sites", "block_website",
+            "remove_website",
         )
     }
 
@@ -151,6 +152,8 @@ async def test_upstream_s_capabilities_and_what_hearth_does_with_less(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client
 ) -> None:
     _upstream(hass)
+    for service in ("get_sites", "block_website", "remove_website"):
+        async_mock_service(hass, FS, service)
     await _sam_on_family_safety(hass, hass_client_no_auth)
     _xbox(hass)
     MockConfigEntry(domain=FS, title="Family Safety").add_to_hass(hass)
@@ -169,6 +172,8 @@ async def test_upstream_s_capabilities_and_what_hearth_does_with_less(
         "pause_apps": True,
         "request_events": False,
         "pending_requests": False,
+        "site_list_sync": False,
+        "website_lists": True,
     }
     _pending(hass, [])
     found["pending_requests"] = True
@@ -180,8 +185,13 @@ async def test_upstream_s_capabilities_and_what_hearth_does_with_less(
     assert len(row["reduced"]) == 4
     assert "puts them back after midnight" in row["reduced"][0]
     assert "by what Hearth asked for" in row["reduced"][1]
-    assert "whole hours" in row["reduced"][2]
-    assert "Pending Requests sensors" in row["reduced"][3]
+    assert "whole hours" in row["reduced"][2] and "unlocks them itself at midnight" in row["reduced"][2]
+    assert "Pending Requests sensors" in row["reduced"][3] and "two of its updates" in row["reduced"][3]
+    # Without get_sites, block_website and remove_website the website list doesn't reach it
+    hass.services.async_remove(FS, "remove_website")
+    assert fs_capabilities.reduced(fs_capabilities.capabilities(hass))[-1] == (
+        "The website block list doesn't reach Family Safety."
+    )
 
 
 async def test_a_family_safety_with_today_only_and_hold_attributes_has_it_all(hass: HomeAssistant) -> None:
