@@ -1,0 +1,29 @@
+{
+ "Products": [
+  {
+   "ProductId": "9WZDNCRFJ3TJ",
+   "ProductKind": "Application",
+   "AlternateIds": [
+    {
+     "IdType": "LegacyWindowsStoreProductId",
+     "Value": "d8d75bb2-c5cd-44f2-8c26-c1d1ae5b13fa"
+    },
+    {
+     "IdType": "XboxTitleId",
+     "Value": "327370029"
+    }
+   ],
+   "LocalizedProperties": [
+    {
+     "ProductTitle": "Netflix",
+     "ShortDescription": ""
+    }
+   ],
+   "Properties": {
+    "Category": "Entertainment",
+    "Categories": null,
+    "PackageFamilyName": "4DF9E0F8.Netflix_mcm4njqhnhss8"
+   }
+  }
+ ]
+}

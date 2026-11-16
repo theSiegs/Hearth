@@ -1,0 +1,37 @@
+{
+ "431960": {
+  "success": true,
+  "data": {
+   "type": "game",
+   "name": "Wallpaper Engine",
+   "steam_appid": 431960,
+   "short_description": "Use stunning live wallpapers on your desktop. Animate your own images to create new wallpapers or import videos/websites and share them on the Steam Workshop!",
+   "genres": [
+    {
+     "id": "4",
+     "description": "Casual"
+    },
+    {
+     "id": "23",
+     "description": "Indie"
+    },
+    {
+     "id": "51",
+     "description": "Animation & Modeling"
+    },
+    {
+     "id": "53",
+     "description": "Design & Illustration"
+    },
+    {
+     "id": "55",
+     "description": "Photo Editing"
+    },
+    {
+     "id": "57",
+     "description": "Utilities"
+    }
+   ]
+  }
+ }
+}

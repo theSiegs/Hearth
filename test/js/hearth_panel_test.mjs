@@ -1,5 +1,5 @@
 // Hearth's sidebar page, drawn without a browser: Today (the redesign: For you, a row per kid, the kid's sheet, Undo),
-// the Kids tab's Switch card and how it follows what the installed Nintendo integration can do, chores and the catalog.
+// the Kids tab's Switch card and how it follows what the installed Nintendo integration can do, chores and app categories.
 // Run: node --test test/js/hearth_panel_test.mjs
 
 import { test } from "node:test";
@@ -629,60 +629,144 @@ test("the Chores card says when the list couldn't be read", () => {
   assert.match(p._page(), /The to-do list couldn't be read/);
 });
 
-test("Check these: the shared catalog's guesses and disagreements, kept with Right or moved, with a tick to share", () => {
+const CATEGORIES = {
+  lookup: true, ai: "default", ai_entity: null, ai_default: null, starter: 400, waiting: 1,
+  sources: { override: 1, starter: 5, store: 2, ai: 1, unknown: 3 },
+  values: ["game", "youtube", "companion"], pools: { game: "games", companion: "other" }, own_pools: { companion: "games" },
+  labels: { game: "Games", video: "Video", youtube: "YouTube", productivity: "Productivity", companion: "Companion apps", interface: "System screens", messaging: "Messaging" },
+  category_choices: ["game", "video", "productivity", "messaging", "interface"],
+  detail_choices: { youtube: "video", companion: "productivity" },
+  ai_entities: ["ai_task.ollama"],
+};
+
+test("Check these: guesses (an AI's, a store's) and disagreements, kept with Right or moved", () => {
   const p = panel();
   p._config.groups.push({ id: "games", name: "Games", builtin: true, in_all: true, apps: [], added_apps: [] });
   p._config.check_these = [
-    { package: "com.example.maybe", name: "Maybe Game", group: "games", why: "shared catalog suggests game", suggested: true, shareable: true },
-    { package: "x:xboxplt:0123456789abcdef", name: "Hub", group: "other", why: "shared catalog says companion, the device says game", suggested: false, shareable: false },
+    { package: "com.example.maybe", name: "Maybe Game", group: "games", why: "an AI guessed game", suggested: true },
+    { package: "x:xboxplt:0123456789abcdef", name: "Hub", group: "other", why: "Hearth says companion, the device says game", suggested: false },
   ];
-  p._config.apps = [{ package: "com.example.moved", name: "Moved", group: "games", moved: true, catalog_says: "companion" }];
-  p._config.catalog = { fetch: true, share: true, asked: true, keys: 380, values: ["game", "youtube"], pools: { game: "games" }, own_pools: {}, waiting: { keys: 2, corrections: 1 } };
+  p._config.apps = [{ package: "com.example.moved", name: "Moved", group: "games", moved: true, category_says: "companion", source: "starter", category: "productivity", detail: "companion" }];
+  p._config.categories = CATEGORIES;
   const html = p._appsTab();
   assert.match(html, /<h3><ha-icon icon="mdi:help-circle-outline"><\/ha-icon>Check these<\/h3>/);
   assert.match(html, /data-action="app-confirm" data-app="com.example.maybe" data-group="games">Right/);
   assert.match(html, /data-change="app-group" data-app="com.example.maybe" data-idx="0"/);
-  assert.match(html, /id="catalog-suggest-0"/);
-  // A key the catalog can't take (Family Safety's own id) has no tick
-  assert.doesNotMatch(html, /id="catalog-suggest-1"/);
-  assert.match(html, /the shared catalog now says companion/);
+  assert.match(html, /an AI guessed game/);
+  // Nothing is shared anywhere: no tick
+  assert.doesNotMatch(html, /suggest|catalog/i);
+  assert.match(html, /Hearth now knows it as Companion apps/);
   // Nothing to check: no card
   p._config.check_these = [];
   assert.doesNotMatch(p._appsTab(), /Check these/);
 });
 
-test("the shared catalog's setting asks once before sharing, and maps kinds of apps to groups", () => {
+test("Every app shows what each app is and where that came from, and an adult can say what it is", () => {
   const p = panel();
   p._config.groups.push({ id: "games", name: "Games", builtin: true, in_all: true, apps: [], added_apps: [] });
-  p._config.catalog = {
-    fetch: true, share: false, asked: false, keys: 380, origin: "bundled", values: ["game", "companion"],
-    pools: { game: "games", companion: "other" }, own_pools: { companion: "games" },
-  };
-  let html = p._catalogCard();
-  assert.match(html, /data-change="catalog-fetch" checked/);
-  assert.match(html, /data-action="catalog-share-on">Turn on/);
-  assert.match(html, /never who uses them/);
-  assert.match(html, /the copy Hearth came with/);
-  assert.match(html, /Hearth's default \(Games\)/);
-  assert.match(html, /<option value="games" selected>Games<\/option>/);
-  p._config.catalog = { ...p._config.catalog, asked: true };
-  html = p._catalogCard();
-  assert.doesNotMatch(html, /catalog-share-on/);
-  assert.match(html, /data-change="catalog-share" >/);
+  p._config.categories = CATEGORIES;
+  p._config.apps = [
+    { package: "com.example.tube", name: "Tube", group: "other", source: "starter", category: "video", detail: "youtube", confirmed: true },
+    { package: "com.example.guess", name: "Guess", group: "games", source: "ai", category: "game", detail: null, confirmed: false },
+    { package: "com.example.new", name: "New", group: "other", source: "unknown", category: null, detail: null, waiting: true },
+    { package: "com.example.mine", name: "Mine", group: "games", source: "override", category: "game", detail: null, confirmed: true },
+    { package: "com.example.shop", name: "Shop", group: "other", source: "store", category: null, detail: null, genre: "SHOPPING" },
+    { package: "com.example.web", name: "Web", group: "other", source: "override", category: null, detail: null },
+  ];
+  let html = p._appsTab();
+  assert.match(html, /YouTube \(Hearth&#39;s list\)/);
+  assert.match(html, /Games \(AI guess\)/);
+  assert.match(html, /<span class="chip small warn">AI guess<\/span>/);
+  assert.match(html, /kind not known \(not known yet, looking it up\)/);
+  assert.match(html, /Games \(set by you\)/);
+  assert.match(html, /none of Hearth&#39;s kinds \(store: SHOPPING\)/);
+  // The select: Hearth's answer first, the adult's own choice selected when there is one
+  assert.match(html, /data-change="app-category" data-app="com.example.tube"[^>]*>\s*<option value="auto" selected>Hearth: YouTube<\/option>/);
+  assert.match(html, /<option value="video\/youtube" >Video: YouTube<\/option>/);
+  assert.match(html, /data-change="app-category" data-app="com.example.mine"[\s\S]*?<option value="game" selected>Games<\/option>/);
+  assert.match(html, /data-change="app-category" data-app="com.example.web"[\s\S]*?<option value="none" selected>None of these<\/option>/);
+  assert.match(html, /<option value="interface" >System screens<\/option>/);
+  // Review the guesses and the unknown ones
+  p._appSource = "ai";
+  html = p._appsTab();
+  assert.match(html, /title="com.example.guess"/);
+  assert.doesNotMatch(html, /title="com.example.tube"/);
+  assert.match(html, /<option value="ai" selected>AI guesses<\/option>/);
+  p._appSource = "unknown";
+  html = p._appsTab();
+  assert.match(html, /title="com.example.new"/);
+  assert.doesNotMatch(html, /title="com.example.guess"/);
 });
 
-test("App facts and Sharing app data say what they do without naming an app", () => {
+test("saying what an app is calls hearth/apps/category, and auto takes it back", async () => {
   const p = panel();
-  p._config.catalog = { fetch: true, share: false, asked: false, keys: 380, values: [], pools: {}, own_pools: {} };
+  p._config.categories = CATEGORIES;
+  const calls = [];
+  p._hass = { states: {}, callWS: async (m) => { calls.push(m); return null; } };
+  p._loadConfig = async () => {};
+  p._render = () => {};
+  const realTimeout = globalThis.setTimeout;
+  globalThis.setTimeout = (fn) => { fn(); return 0; };
+  try {
+    await p._act("app-category", { value: "video/youtube", dataset: { app: "com.example.tube" }, checked: false });
+    await p._act("app-category", { value: "none", dataset: { app: "com.example.web" }, checked: false });
+    await p._act("app-category", { value: "auto", dataset: { app: "com.example.web" }, checked: false });
+  } finally {
+    globalThis.setTimeout = realTimeout;
+  }
+  assert.deepEqual(calls, [
+    { type: "hearth/apps/category", app: "com.example.tube", category: "video", detail: "youtube" },
+    { type: "hearth/apps/category", app: "com.example.web", category: "none" },
+    { type: "hearth/apps/category", app: "com.example.web", category: "auto" },
+  ]);
+});
+
+test("the App categories card: counts by source, store lookups, the AI Task entity and the group map", () => {
+  const p = panel();
+  p._config.groups.push({ id: "games", name: "Games", builtin: true, in_all: true, apps: [], added_apps: [] });
+  p._config.categories = CATEGORIES;
+  let html = p._categoriesCard();
+  assert.match(html, /App categories<\/h3>/);
+  assert.match(html, /Hearth knows 400 apps from its own list/);
+  assert.match(html, /sends the app's public store id/);
+  assert.match(html, /1 set by you, 5 from Hearth&#39;s list, 2 from their store, 1 AI guesses, 3 not known · 1 waiting to be looked up/);
+  assert.match(html, /data-change="category-lookup" checked/);
+  // The default: Home Assistant's default AI Task, here none set
+  assert.match(html, /<option value="default" selected>Home Assistant's default AI Task \(none set\)<\/option>/);
+  assert.match(html, /<option value="off" >Off<\/option>/);
+  assert.match(html, /<option value="ai_task.ollama" >ai_task.ollama<\/option>/);
+  assert.match(html, /No default AI Task in Home Assistant/);
+  assert.match(html, /never puts an app in Messaging, Accessibility or System screens/);
+  assert.match(html, /Hearth's default \(Other\)/);
+  assert.match(html, /<option value="games" selected>Games<\/option>/);
+  assert.match(html, /<div class="grow">Companion apps<\/div>/);
+  // Home Assistant's default set: named as what AI guesses use
+  p._hass = { states: { "ai_task.ollama": { attributes: { friendly_name: "Ollama AI Task" } } } };
+  p._config.categories = { ...CATEGORIES, lookup: false, ai_entity: "ai_task.ollama", ai_default: "ai_task.ollama" };
+  html = p._categoriesCard();
+  assert.match(html, /data-change="category-lookup" >/);
+  assert.match(html, /Home Assistant's default AI Task \(Ollama AI Task\)/);
+  assert.match(html, /AI guesses use Ollama AI Task\./);
+  // A specific entity, and off
+  p._config.categories = { ...CATEGORIES, ai: "ai_task.ollama", ai_entity: "ai_task.ollama" };
+  assert.match(p._categoriesCard(), /<option value="ai_task.ollama" selected>Ollama AI Task<\/option>/);
+  p._config.categories = { ...CATEGORIES, ai: "off", ai_entity: null, ai_default: "ai_task.ollama" };
+  html = p._categoriesCard();
+  assert.match(html, /<option value="off" selected>Off<\/option>/);
+  assert.match(html, /No AI is asked\./);
+  // The card sits on the Apps tab, and nothing names the retired catalog
+  assert.match(p._appsTab(), /App categories<\/h3>/);
+  assert.doesNotMatch(html, /App facts|catalog|Glint|tile/i);
+});
+
+test("Sharing app data says what it does without naming an app", () => {
+  const p = panel();
   p._config.share_app_data = ["person.sam"];
-  const facts = p._catalogCard();
-  assert.match(facts, /App facts<\/h3>/);
-  assert.match(facts, /A public list of what apps are/);
   const sharing = p._sharingCard();
   assert.match(sharing, /Sharing app data<\/h3>/);
   assert.match(sharing, /Off here turns it off on their devices/);
   assert.match(sharing, /data-change="share-app-data" data-person="person.sam" checked/);
-  for (const html of [facts, sharing]) assert.doesNotMatch(html, /Glint|tile/i);
+  assert.doesNotMatch(sharing, /Glint|tile/i);
 });
 
 test("a paired device shows its app, its checks and what's kept for it; a pairing shows the app it brings", () => {

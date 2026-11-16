@@ -1,0 +1,60 @@
+{
+ "Products": [
+  {
+   "ProductId": "9MVXMVT8ZKWC",
+   "ProductKind": "Game",
+   "AlternateIds": [
+    {
+     "IdType": "LegacyWindowsStoreProductId",
+     "Value": "1be16d20-0ee1-4fcb-8d84-b7179c5989b8"
+    },
+    {
+     "IdType": "XboxTitleId",
+     "Value": "1828326430"
+    }
+   ],
+   "LocalizedProperties": [
+    {
+     "ProductTitle": "Minecraft",
+     "ShortDescription": "Explore randomly generated worlds and build amazing things from the simplest of homes to the grandest of castles. Play in creative mode with unlimited resources or mine deep into the world in survival"
+    }
+   ],
+   "Properties": {
+    "Category": "Action & adventure",
+    "Categories": [
+     "Action & adventure",
+     "Family & kids"
+    ],
+    "PackageFamilyName": "Microsoft.186805A1E9E_8wekyb3d8bbwe"
+   }
+  },
+  {
+   "ProductId": "9NBLGGH537BL",
+   "ProductKind": "Game",
+   "AlternateIds": [
+    {
+     "IdType": "LegacyWindowsStoreProductId",
+     "Value": "640f12b6-50fd-4506-b440-67b440f0ae04"
+    },
+    {
+     "IdType": "XboxTitleId",
+     "Value": "1828326430"
+    }
+   ],
+   "LocalizedProperties": [
+    {
+     "ProductTitle": "Minecraft",
+     "ShortDescription": "Explore randomly generated worlds and build amazing things from the simplest of homes to the grandest of castles. Play in creative mode with unlimited resources or mine deep into the world in survival"
+    }
+   ],
+   "Properties": {
+    "Category": "Action & adventure",
+    "Categories": [
+     "Action & adventure",
+     "Family & kids"
+    ],
+    "PackageFamilyName": "Microsoft.MinecraftUWPConsole_8wekyb3d8bbwe"
+   }
+  }
+ ]
+}

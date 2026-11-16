@@ -45,12 +45,12 @@ from .const import (
 )
 from .counting import ALL
 from .enforce import CONF_ENFORCE, FAMILY_LINK, FAMILY_SAFETY, FS_DOMAIN, NINTENDO, NINTENDO_DOMAIN, PLATFORMS
-from .catalog import CONF_CATALOG_ASKED, CONF_CATALOG_FETCH, CONF_CATALOG_RELAY, CONF_CATALOG_SHARE, CONF_CATALOG_URL
+from .categories import AI_DEFAULT, AI_OFF, BUILTIN_VALUES, CONF_CATEGORY_AI, CONF_CATEGORY_LOOKUP, DETAILS, KNOWN_CATEGORIES
 from .limits import (
     BUILTIN_GROUPS,
     CATEGORY_VALUES,
     CONF_APP_GROUPS,
-    CONF_CATALOG_POOLS,
+    CONF_CATEGORY_POOLS,
     DETAIL_VALUES,
     CONF_INSIDE_ALL,
     DEFAULT_OUTSIDE_ALL,
@@ -315,18 +315,21 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
         "default_outside_all": sorted(DEFAULT_OUTSIDE_ALL),
         "app_groups": dict(options.get(CONF_APP_GROUPS, {})),
         "media_players": dict(options.get(CONF_MEDIA_PLAYERS, {})),
-        **household.apps_overview(),
+        **(overview := household.apps_overview()),
         "share_app_data": list(options.get(CONF_SHARE_APP_DATA, [])),
         # What's kept for each client (client_settings.py): {client: {"count", "bytes"}}, never the contents
         "client_settings": hub.client_settings.summary(),
-        # The shared app catalog (catalog.py): the copy in use, Hearth's own setting for it (fetching on by
-        # default; sending asked once, off until turned on), and what each value goes to here
-        "catalog": {
-            **household.catalog.page(),
-            "asked": bool(options.get(CONF_CATALOG_ASKED)),
+        # App categories (categories.py): store lookups and the AI Task entity, how the apps are known (a count per
+        # source), the values an adult may pick, and what each value goes to here
+        "categories": {
+            **household.categories_book.page(a["package"] for a in overview["apps"]),
             "pools": household.pools(),
-            "own_pools": dict(options.get(CONF_CATALOG_POOLS) or {}),
+            "own_pools": dict(options.get(CONF_CATEGORY_POOLS) or {}),
             "values": [*DETAIL_VALUES, *CATEGORY_VALUES],
+            "labels": {value: props["label"] for value, props in BUILTIN_VALUES.items()},
+            "category_choices": list(KNOWN_CATEGORIES),
+            "detail_choices": {detail: parent for detail, parent in DETAILS.items()},
+            "ai_entities": sorted(s.entity_id for s in hass.states.async_all("ai_task")),
         },
         # Voice assistants may use Hearth (llm_api.py): off unless chosen
         "voice_assistants": bool(options.get(CONF_VOICE_ASSISTANTS)),
@@ -408,12 +411,9 @@ OPTION_SCHEMAS: dict[str, Any] = {
     CONF_GROUP_APPS: vol.Schema({_ID: [cv.string]}),
     CONF_OUTSIDE_ALL: [_ID],
     CONF_SHARE_APP_DATA: [_PERSON],
-    CONF_CATALOG_FETCH: bool,
-    CONF_CATALOG_SHARE: bool,
-    CONF_CATALOG_ASKED: bool,
-    CONF_CATALOG_POOLS: vol.Schema({vol.In((*DETAIL_VALUES, *CATEGORY_VALUES)): vol.Any(OTHER, _ID)}),
-    CONF_CATALOG_URL: vol.Any(None, vol.All(cv.url, vol.Match(r"^https://"))),
-    CONF_CATALOG_RELAY: vol.Any(None, vol.All(cv.url, vol.Match(r"^https://"))),
+    CONF_CATEGORY_POOLS: vol.Schema({vol.In((*DETAIL_VALUES, *CATEGORY_VALUES)): vol.Any(OTHER, _ID)}),
+    CONF_CATEGORY_LOOKUP: bool,
+    CONF_CATEGORY_AI: vol.Any(AI_DEFAULT, AI_OFF, cv.entity_domain("ai_task")),
     CONF_VOICE_ASSISTANTS: bool,
     CONF_SOURCES: [
         vol.Schema(
@@ -528,20 +528,27 @@ def ws_config_set(hass: HomeAssistant, connection: websocket_api.ActiveConnectio
 @websocket_api.require_admin
 @websocket_api.websocket_command(
     {
-        vol.Required("type"): "hearth/catalog/correct",
+        vol.Required("type"): "hearth/apps/category",
         vol.Required("app"): vol.All(cv.string, vol.Length(min=1, max=200)),
-        vol.Required("group"): vol.Any(OTHER, _ID),
+        # A category, "none" (none of Hearth's kinds) or "auto" (take the adult's answer back)
+        vol.Required("category"): vol.In((*KNOWN_CATEGORIES, "none", "auto")),
+        vol.Optional("detail"): vol.Any(None, vol.In(tuple(DETAILS))),
     }
 )
 @callback
-def ws_catalog_correct(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
-    """An adult's move, shared with the shared app catalog too (the catalog's key and value, never the pool): queued
-    for the weekly send while sending to the catalog is on."""
+def ws_app_category(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """An adult says what an app is (categories.py: their override wins over the starter list, a store and an AI),
+    or takes that back. The entry reloads with it, as after any setting."""
     hub = _hub(hass)
     if hub is None:
         connection.send_error(msg["id"], "not_set_up", "Hearth isn't set up")
         return
-    connection.send_result(msg["id"], {"queued": hub.household.correct_app(msg["app"], msg["group"])})
+    category = msg["category"]
+    if category == "auto":
+        hub.household.categorize_app(msg["app"], None, None, clear=True)
+    else:
+        hub.household.categorize_app(msg["app"], None if category == "none" else category, msg.get("detail"))
+    connection.send_result(msg["id"])
 
 
 @websocket_api.require_admin
@@ -776,7 +783,7 @@ def async_register_commands(hass: HomeAssistant) -> None:
     for command in (
         ws_config,
         ws_config_set,
-        ws_catalog_correct,
+        ws_app_category,
         ws_budget,
         ws_pairing,
         ws_parent_pin,

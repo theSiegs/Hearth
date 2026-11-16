@@ -35,6 +35,7 @@ from .pause import end_app_pause, end_pause, set_app_pause, set_pause
 from .places import ARRIVE, LEAVE
 from . import client_settings_ws, glint_api, llm_api, panel, suggest_push, todo_ws, weekly_ws
 from .todos import migrated_options
+from .categories import async_migrate_catalog
 from .apps import ACTION_PREFIX
 from .asks import ACTION_PREFIX as ASK_ACTION_PREFIX
 from .commands import is_profile_id, what_to_play
@@ -779,6 +780,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     _migrate_offer_more(hass, entry)
     _migrate_share_app_data(hass, entry)
     old_chores = _migrate_chores(hass, entry)
+    # The retired shared app catalog's options and copy go once; corrections an adult queued become overrides
+    await async_migrate_catalog(hass, entry)
     hub = HearthHub(hass, entry)
     await hub.async_load()
     if old_chores:
@@ -864,12 +867,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
 
     entry.async_on_unload(async_track_time_change(hass, todos_new_day, hour=0, minute=0, second=5))
 
-    # The shared app catalog (catalog.py): fetched once a day at a random time, and soon after starting when the copy
-    # is over a day old; a newer copy places apps again. Sending upward, when an adult turned it on, once a week
-    catalog = hub.household.catalog
-    catalog.on_change = hub.household.recompute
-    catalog.start(lambda job: entry_task(hass, entry.entry_id, job, "hearth app catalog"))
-    entry.async_on_unload(catalog.stop)
+    # App categories (categories.py): apps a kid uses that Hearth doesn't know yet are looked up one at a time (a
+    # store's genre, then maybe the owner's AI Task); a new answer places apps again
+    book = hub.household.categories_book
+    book.on_change = hub.household.recompute
+    book.start(lambda job: entry_task(hass, entry.entry_id, job, "hearth app categories"))
+    entry.async_on_unload(book.stop)
 
     # A group running out no longer makes an offered request: where the household chose it, its suggestion goes to
     # the adults' phones instead (suggest_push.py), so one run-out is one notification

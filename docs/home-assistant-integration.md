@@ -305,7 +305,8 @@ A budget is set on a **group**: a set of apps and titles whose minutes count tog
 - **Social** and **Messaging**: social and messaging apps (a starter list, plus any an adult adds; Social also takes
   Android's category). Messaging is Not screen time (below) unless an adult puts it in.
 - **Accessibility**: apps a kid may rely on (Voice Access, Lookout, Live Transcribe, Sound Amplifier, TalkBack: a
-  starter list, plus the shared catalog's confirmed `accessibility` and any an adult moves there). Not screen time
+  starter list, plus `accessibility` from Hearth's categories starter list or an adult, and any an adult moves
+  there). Not screen time
   unless an adult puts it in, and **never paused**: not All screen time (or any group) running out, an adult's pause
   of the app or a group, School time's apps, nor the weekly schedule. Family Link and Family Safety are never asked to
   pause them, and the state document lists them in All screen time's `except` and in the person's `never_held`, for
@@ -318,21 +319,20 @@ A budget is set on a **group**: a set of apps and titles whose minutes count tog
   common keyboards. **Counted nowhere**: its seconds are taken out of a device's reading before anything is counted,
   so they're in no group and not in All screen time (an adult can't put it in), and a phone or tablet that sends its
   own per-app seconds gets its total from the apps kept. **Never paused**, like Accessibility, and no budget or bonus.
-  Stricter than the loosening pools below: only Hearth's list, an adult's move or list, or the shared catalog's
-  confirmed `interface` puts an app there. `interface` is set only by the catalog owner's override (its values table
-  marks it `counted: false` and `overrides_only: true`; Hearth reads those marks, and knows `interface` so itself
-  before a table is read), so it's curated as Hearth's list is. Never a suggestion, any other catalog value, an
-  adult's map of a whole kind of app, nor a device's own category; an adult's move or list wins over the catalog.
+  Stricter than the loosening pools below: only Hearth's list, an adult's move or list, or `interface` from an
+  adult's answer of what the app is or Hearth's categories starter list (App categories, below) puts an app there.
+  Never a store's genre or an AI, any other value, an adult's map of a whole kind of app, nor a device's own
+  category; an adult's move or list wins over everything.
   Settings and Files are not System screens: time in them still counts. A client that says its home screen
   (the launcher it shows) was in front all night thus never empties a kid's All screen time.
 
 **Only a confirmed answer loosens a limit.** Messaging and Accessibility are outside All screen time (and
 Accessibility is never paused), so a guess never puts an app in them: only an adult's move or list, Hearth's starter
-lists, or the shared catalog's confirmed answer does. A device's own category (any app may declare one in its
-manifest, so a misfiled game would escape limits) and the catalog's suggestion pass over them: an app the catalog
-only suggests is messaging or accessibility (Proton Mail or Yahoo Mail, say) counts in Other and shows in Check
-these, unless a starter list or an adult already puts it somewhere (Snapchat is on Social's starter list, Discord on
-Messaging's).
+lists, or an answer of what the app is from an adult or Hearth's categories starter list does. A device's own
+category (any app may declare one in its manifest, so a misfiled game would escape limits), a store's genre and an
+AI's answer pass over them: an app a store or an AI calls messaging or accessibility counts in Other and shows in
+Check these, unless a starter list or an adult already puts it somewhere (Snapchat is on Social's starter list,
+Discord on Messaging's).
 
 An adult can add groups (pools): **YouTube** (YouTube and HearthTube, on every device) and **Streaming** (the
 streaming apps), say. **An app is in one pool at most**, besides All screen time, so the pools' minutes and "other"
@@ -341,12 +341,13 @@ streaming apps), say. **An app is in one pool at most**, besides All screen time
 1. where an adult moved it (Hearth's page, Sort new apps; "Right" in Check these is a move to where it is);
 2. a pool whose list an adult put it in;
 3. Hearth's curated starter lists;
-4. the shared app catalog's **confirmed** answer (below), by the household's map; a confirmed value the map sends to
-   no pool (a companion app, say) is Other, and nothing further down moves it;
+4. a **confirmed** answer of what the app is (App categories, below: an adult's, the starter list's, a store's sure
+   genre), by the household's map; a confirmed value the map sends to no pool (a companion app, say) is Other, and
+   nothing further down moves it;
 5. the device's own category (Android's, from a Hearth device; a device's `catalog_categories` is no longer read
-   since contract 3: Hearth fetches the shared app catalog itself);
-6. the shared catalog's **suggested** answer, only when it goes to a pool: a guess never takes an app out of one;
-   neither 5 nor 6 ever puts an app in Messaging or Accessibility (above);
+   since contract 3);
+6. an **unconfirmed** answer (a store's loose genre, an AI's guess), only when it goes to a pool: a guess never takes
+   an app out of one; neither 5 nor 6 ever puts an app in Messaging or Accessibility (above);
 7. where its time came from (a Switch's or an Xbox's titles are games);
 8. Other.
 
@@ -364,61 +365,80 @@ marks as video (its `category`, kept when Hearth's page saves the pools). Remove
 streaming have pools of their own. Otherwise Video goes, with the apps added to it; those count in All screen time
 only until put in a pool (the log names them). Configure > Add apps to Games replaces Add apps to Video or Games.
 
-#### Shared app catalog (App facts)
+#### App categories
 
-App facts, a public, signed dataset (published from the app-facts repository,
-[contracts/app-facts.md](contracts/app-facts.md)), says what an app **is**, on every platform; the household
-says which pool that goes to. Hearth fetches it itself (catalog.py), so it needs no other app.
+What an app **is** (one of ten categories: game, video, audio, image, social, messaging, news, maps, productivity,
+accessibility, or `interface` for System screens; and a finer `detail`: youtube, streaming, education, companion,
+system) is Hearth's own knowledge (categories.py); the household says which pool that goes to. It replaces the shared
+App Facts catalog, which is retired ([contracts/app-facts.md](contracts/app-facts.md)): Hearth fetches nothing and
+sends nothing upward. For any app it sees, the answer is the first of:
 
-- **What it reads.** The signed index at `https://thesiegs.github.io/app-facts/` (`catalog_url` in the options; one
-  still set to the old default, `https://thesiegs.github.io/glint-recipes/`, reads as the new one)
-  and its shards (`glint.catalog/1`, one per platform: android, msstore, xbox, pfn, steam, switch, web, name). Per key:
-  `category` (the ten Android categories), `detail` (youtube, streaming, education, companion, system; read first),
-  the app's slug `app` (the same app's keys on other platforms share it), `name` and `state` (`confirmed`, else
-  suggested). Unknown fields, values, shards and namespaces are ignored. The index may name the values table too
-  (`values`: `c/<hash>.json`, `glint.values/1`, checked by its SHA-256 like a shard and kept with the copy): a
-  category it marks `counted: false` and `overrides_only: true` (`interface`, System screens) is read, and a
-  confirmed answer of it puts the app in System screens.
-- **Keys.** An Android package (or Family Safety's `a:<package>`) is looked up as `android:<package>`, `appx:<pfn>` as
-  `pfn:<pfn lower case>`, `x:<platform>:<hex>` as `fs:<platform>:<hex>` (the catalog has none yet), a Nintendo
-  application id as `switch:<id>`, and a played title's name (Xbox's Now playing, a Switch's) as `name:xbox:`,
-  `name:switch:`, `name:msstore:` then `name:steam:` with the catalog's normalizer. `win32:` programs and a
-  household's own titles never are. A key's own confirmed answer comes first, then another key of the same app's.
-- **When.** Once a day at a random time, and a minute or ten after starting when the copy is over a day old; never
-  per app. The index is asked with its ETag, and a shard only when its SHA-256 changed. Nothing identifying is sent:
-  a generic user agent, no household or device id. A fetch that fails a check (a 404 or other error answer, a shard
-  whose SHA-256 isn't the index's, an index listing no shards) is tried again after 10-15 minutes, then 20-30, then
-  40-60, at most three times a day; a good fetch ends the retries, and unloading the integration cancels a pending
-  one. Offline (no answer, a timeout) isn't retried: the next daily time asks again.
-- **Checks**, any failure keeping the last good copy: the index's Ed25519 signature over its exact bytes with one of
-  the two pinned keys (`catalog_data/keys`, `exchange-1` and `exchange-2`), its format, its `seq`
-  (lower than the copy's is a rollback and refused), and each shard's SHA-256, format and platform. An index that
-  lists no catalog entry, no shards, or only shards Hearth doesn't read keeps the copy: it never empties it. A values
-  table whose bytes aren't the index's keeps the copy too.
-- **Kept** in Home Assistant's storage (`hearth.catalog.<entry>`) with no expiry: offline, the copy is used for good.
-  Before the first fetch, the snapshot bundled with the integration (`catalog_data/snapshot`) is checked the same
-  way and used. A newer copy places apps again at once.
-- **The household's map** (Hearth's page > Settings > Shared app catalog > Which group each kind of app goes to;
-  `catalog_pools`, value -> pool or `other`): by default a game goes to Games, social to Social, messaging to
-  Messaging and accessibility to Accessibility (those two on a confirmed answer only), a value a pool claims by its category (the kept Video pool) to it, YouTube to a pool of the household's
-  called YouTube, streaming to one called Streaming, TV or Shows, audio to Music, education to Homework or School (else
-  Other), and companion and system apps to Other, never Games. These are Hearth's policy; the catalog holds facts.
-- **Check these** (Hearth's page > Apps): apps placed only on the catalog's suggestion, then apps where the catalog's
-  confirmed answer and the device disagree on whether it's a game (Hearth goes by the catalog). **Right** keeps one
-  where it is; moving it is an adult's move. Either way it leaves the list, and a later catalog change never moves
-  it: Every app shows "the shared catalog now says X" instead.
+1. **An adult's answer** (Hearth's page > Apps > Every app, the "what it is" choice; `app_categories` in the options,
+   key -> `{category, detail?}`, category `null` meaning none of Hearth's kinds). It wins over everything below, may
+   say Messaging, Accessibility or System screens, and is the latest thing an adult did: saying what an app is takes
+   back a move or a pool list of it, so what it is decides its pool ("Hearth decides" takes the answer back). A move
+   or list made after it wins as before.
+2. **The starter list** shipped with the integration (`categories_data/starter.json`, `hearth.starter/1`): every
+   confirmed answer of the retired catalog (Android packages and the console and PC keys), its hand overrides
+   (an override that said "none of the ten", a browser or an airline, stays an explicit none, so no store
+   second-guesses it), the System screens set, and Hearth's additions (parental-control apps as `system`, big
+   games). `tool/categories_starter.py --catalog <app-facts checkout>` regenerates it.
+3. **A store's genre**, looked up when a kid first uses an app that 1 and 2 don't cover (an adult's move or list, or
+   Hearth's own pool lists, cover it too), kept with its date:
+   - Google Play (`android:<package>`): the app page's schema.org `applicationCategory`;
+   - Microsoft Store (`msstore:<id>`, `xbox:<title id>`, `pfn:<package family>`): the public displaycatalog
+     product's kind and category;
+   - Steam (`steam:<appid>`): appdetails' type and genres;
+   - Switch titles aren't looked up: every one is a game by the platform rule.
+   Only the old catalog classifier's sure mappings confirm a category: every Play `GAME_*` genre and Social, Dating,
+   Video players, Music and audio, News, Maps, Photography, Art and design, Productivity, Tools and Business; a
+   Microsoft Store or Steam game. Communication is messaging only for a clear messenger and never confirmed (it holds
+   browsers and hearing tools too); an application's store category and Steam software are unconfirmed; Entertainment,
+   Lifestyle, Education, Travel, Comics, Parenting and an unmapped store category are **unclear**; anything else
+   (Shopping, Finance) is none of the ten. A store never confirms a detail or a loose category.
+4. **An AI answer**, by default from **Home Assistant's default AI Task** (Settings > AI Task, its default for
+   generating data, read at each question, so a change there counts at once); an HA administrator can choose a
+   specific AI Task entity instead, or Off. With the default and none set in Home Assistant, nothing is asked. Only
+   for an app whose store genre is unclear or that its store doesn't have (or, with store lookups off, has no other
+   answer), at most 20 a day. Hearth calls `ai_task.generate_data` with structured output (a category from
+   the ten or unknown, and a detail or none), giving the app's name, its store id and the store's one-line
+   description, nothing else. The answer is **never confirmed**: it places an app only in a pool that doesn't loosen
+   a limit, never in Messaging, Accessibility or System screens, and shows in Check these. It's kept; an AI that
+   couldn't answer is asked again a day later, and a new store answer replaces an old AI one.
+5. Unknown: the device's own category and where its time came from answer instead (above).
 
-**Sending upward.** Fetching is on (it sends nothing); sending is off until an HA administrator turns it on, on
-Hearth's page (asked once, with what it sends) or Configure > App facts. While it's on, once a week at a random time,
-Hearth sends the relay (`catalog_relay`, by default the catalog's) a challenge and then `POST /propose`
-(`glint.catalog-propose/1`): at most 20
-public store ids the catalog lacks (today `pfn:` keys from Family Safety's Windows apps; never Android packages,
-`win32:`, `fs:`, names or titles) and at most 10 corrections an adult chose to share (the tick under a row in Check
-these: the catalog's key and value for the pool, never the pool). No household, person or device id, no per-install
-key, no usage, times or counts; keys sorted. A key seen only on kids who don't share app data (`share_app_data`,
-Hearth's page > Sharing app data) is never sent, and a messaging app never is. A key sent isn't sent again for 30
-days. A 404 or 410 (no such endpoint) changes nothing and the queue waits; a refusal (400, 403) drops the batch; busy (429) or offline waits a week. Turning
-sharing off drops anything waiting.
+- **What leaves the house.** A store lookup sends one public store id to that store (Google Play, Microsoft's
+  displaycatalog, Steam), with a fixed language and market, a generic user agent and no cookies kept; nothing about
+  the household, the kid or the device. An adult's apps aren't looked up. An AI question goes to the model behind
+  Home Assistant's default AI Task (or the AI Task entity an adult chose instead; none when it's Off): a local model
+  such as Ollama keeps it in the house, a cloud one gets the app's name, store id and store description.
+  Nothing else is sent anywhere.
+- **How often.** One lookup at a time, every 30 seconds while apps wait, at most 100 store lookups and 20 AI
+  questions a day. A store's answer is looked at again after 90 days, an app the store doesn't have after 30, a
+  lookup that failed (offline, an odd answer) the next day. Answers are kept in Home Assistant's storage
+  (`hearth.categories.<entry>`); a new answer places apps again at once.
+- **Settings** (Hearth's page > Apps > App categories, or Configure > App categories): `category_lookup` (store
+  lookups, on by default) and `category_ai_task`: `default` (Home Assistant's default AI Task; what an install
+  with no value uses), `off`, or an `ai_task.*` entity. Both places show which entity the AI guesses use now, or that
+  Home Assistant has no default AI Task.
+- **The household's map** (Hearth's page > Apps > App categories > Which group each kind of app goes to;
+  `catalog_pools`, value -> pool or `other`, a name kept from the catalog's days): by default a game goes to Games,
+  social to Social, messaging to Messaging and accessibility to Accessibility (those two on a confirmed answer only),
+  a value a pool claims by its category (the kept Video pool) to it, YouTube to a pool of the household's called
+  YouTube, streaming to one called Streaming, TV or Shows, audio to Music, education to Homework or School (else
+  Other), and companion and system apps to Other, never Games.
+- **Every app** (Hearth's page > Apps) shows each app's kind and where it came from (set by you, Hearth's list,
+  store with its genre, AI guess, not known, or "looking it up"), filters to AI guesses or apps not known yet, and
+  offers both choices: what it is, and its group. App categories counts the apps by where their answer came from.
+- **Check these** (Hearth's page > Apps): apps placed on an unconfirmed answer (an AI's guess, a store's loose
+  genre), then apps where a confirmed answer (not an adult's) and the device disagree on whether it's a game (Hearth
+  goes by the answer). **Right** keeps one where it is; moving it is an adult's move. Either way it leaves the list,
+  and a later answer never moves it: Every app shows "Hearth now knows it as X" instead.
+
+**The retired catalog's settings.** On its first start after the update Hearth removes `catalog_fetch`,
+`catalog_share`, `catalog_share_asked`, `catalog_url` and `catalog_relay` and the kept catalog copy
+(`hearth.catalog.<entry>`), once. Each correction an adult had queued to share becomes their answer of what the app
+is (an answer already there wins), and fetching turned off becomes store lookups off. `catalog_pools` stays.
 
 **Not screen time** (Configure > Not screen time): a group whose minutes don't count toward All screen time, music
 say. Its minutes still count in the group itself (and its own budget, if it has one, still applies), but not in All
