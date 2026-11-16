@@ -209,13 +209,22 @@ class HearthFamilyCard extends HTMLElement {
 
   _tile(p) {
     const all = p.all;
-    const total = limited(all) ? (all.budget !== null && all.budget !== undefined ? all.budget + (all.bonus || 0) : (all.used_minutes || 0) + all.minutes_left) : null;
-    const give = p.binding ? (p.actions || []).find((a) => a.id === `bonus:${p.binding.group}`) : null;
+    const t = p.time || {};
+    const total = limited(all) ? (t.today_minutes ?? (all.budget !== null && all.budget !== undefined ? all.budget + (all.bonus || 0) : (all.used_minutes || 0) + all.minutes_left)) : null;
+    // One give: bonus time (no category), when something stops them
+    const give = p.binding ? (p.actions || []).find((a) => a.id === "bonus") : null;
+    // Each category's limit as a marker on the daily time bar
+    const marks = total
+      ? (t.categories || [])
+          .filter((c) => c.limit_today !== null && c.limit_today !== undefined && c.limit_today <= total)
+          .map((c) => `<i class="mark" style="left:${((c.limit_today / total) * 100).toFixed(1)}%"></i>`)
+          .join("")
+      : "";
     const playing = (p.playing || [])[0];
     const line = p.day_line;
     return `<div class="tile role-${role(p.state)}">
       <div class="name"><span class="dot"></span>${esc(p.name)}</div>
-      ${total !== null ? `<div class="bar role-${role(all.state)}"><div style="width:${total ? Math.min(100, ((all.used_minutes || 0) / total) * 100) : 100}%"></div></div>` : ""}
+      ${total !== null ? `<div class="bar role-${role(all.state)}"><div style="width:${total ? Math.min(100, ((all.used_minutes || 0) / total) * 100) : 100}%"></div>${marks}</div>` : ""}
       ${line ? `<div class="line lvl-${esc(line.level)}">${esc(line.text)}</div>` : ""}
       ${playing ? `<div class="playing">${esc([playing.text || playing.title || playing.app, (playing.device || "").toLowerCase()].filter(Boolean).join(" · "))}</div>` : ""}
       ${this._week(p)}
@@ -223,7 +232,7 @@ class HearthFamilyCard extends HTMLElement {
     </div>`;
   }
 
-  // Seven bars of All screen time, oldest on the left, each against its day's budget, a dot under a day something ran
+  // Seven bars of daily time, oldest on the left, each against its day's daily time, a dot under a day something ran
   // out, a hatched day with no record; no axis labels at this distance
   _week(p) {
     const week = [...(p.week || [])].reverse();
@@ -243,24 +252,20 @@ class HearthFamilyCard extends HTMLElement {
       .join("")}</div>`;
   }
 
-  // Spec 2.5: each pool with a budget, every kid's state in it ("games: alex 10 left · sam out"), a short bar per kid
+  // Spec 2.5: each category with a limit, every kid's time left in it ("games: alex 10 left · sam done"): words only, the
+  // daily time bar on each tile is the one bar (each category's limit is a marker there)
   _pools() {
     const kids = (this._summary.people || []).filter((p) => p.kind === "kid");
     const rows = (this._summary.groups || [])
+      .filter((g) => g.id !== "all")
       .map((g) => ({ g, cells: kids.map((p) => ({ p, pool: (p.groups || []).find((x) => x.id === g.id) })).filter((c) => limited(c.pool)) }))
       .filter((r) => r.cells.length);
     if (!rows.length) return "";
-    const value = (pool) => ({ out: "out", allowed: "allowed", paused: "paused" })[pool.state] || `${amount(pool.minutes_left)} left`;
+    const value = (pool) => ({ out: "done", allowed: "allowed", paused: "paused" })[pool.state] || `${amount(pool.minutes_left)} left`;
     return `<section class="pools">${rows
       .map(
-        (r) => `<div class="pool"><div class="pool-name">${esc(r.g.id === "all" ? "screen time" : String(r.g.name || r.g.id).toLowerCase())}</div>
-          ${r.cells
-            .map(({ p, pool }) => {
-              const total = pool.budget !== null && pool.budget !== undefined ? pool.budget + (pool.bonus || 0) : (pool.used_minutes || 0) + pool.minutes_left;
-              return `<div class="cell role-${role(pool.state)}"><span>${esc(p.name)} ${esc(value(pool))}</span>
-                <div class="bar"><div style="width:${total ? Math.min(100, ((pool.used_minutes || 0) / total) * 100) : 100}%"></div></div></div>`;
-            })
-            .join("")}</div>`
+        (r) => `<div class="pool"><div class="pool-name">${esc(String(r.g.name || r.g.id).toLowerCase())}</div>
+          ${r.cells.map(({ p, pool }) => `<div class="cell role-${role(pool.state)}"><span>${esc(p.name)} ${esc(value(pool))}</span></div>`).join("")}</div>`
       )
       .join("")}</section>`;
   }
@@ -329,7 +334,8 @@ h1 { font-size: 28px; font-weight: 500; margin: 0 0 12px; }
   background: rgba(var(--rgb-primary-text-color, 128, 128, 128), .06); border-top: 6px solid var(--role); }
 .name { font-size: 28px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
 .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--role); flex: none; }
-.bar { height: 14px; border-radius: 7px; background: var(--divider-color, #555); overflow: hidden; }
+.bar { position: relative; height: 14px; border-radius: 7px; background: var(--divider-color, #555); overflow: hidden; }
+.bar .mark { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--primary-text-color, #fff); opacity: .7; }
 .bar > div { height: 100%; border-radius: 7px; background: var(--role); }
 .line { font-size: 22px; }
 .line.lvl-notice { font-weight: 600; }
@@ -357,6 +363,6 @@ if (!customElements.get("hearth-family-card")) {
     type: "hearth-family-card",
     name: "Hearth family",
     preview: false,
-    description: "The family at TV distance: requests, suggestions, each kid's day and the pools today, from Hearth.",
+    description: "The family at TV distance: requests, suggestions, each kid's day and daily time, from Hearth.",
   });
 }
