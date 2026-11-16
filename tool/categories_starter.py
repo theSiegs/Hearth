@@ -139,15 +139,19 @@ def dump(keys: dict, source: str) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("--catalog", required=True, help="a local checkout of the app-facts repository")
+    parser.add_argument("--catalog", required=True,
+                        help="a clean copy of the app-facts repository: a checkout, or `git archive origin/main` unpacked")
+    parser.add_argument("--commit", help="the commit the copy is of (else the checkout's HEAD)")
     parser.add_argument("--out", default=OUT)
     args = parser.parse_args()
     keys, counts = build(args.catalog)
-    try:
-        commit = subprocess.run(["git", "-C", args.catalog, "rev-parse", "--short", "HEAD"], capture_output=True,
-                                text=True, check=True).stdout.strip()
-    except (OSError, subprocess.CalledProcessError):
-        commit = "unknown"
+    commit = args.commit
+    if not commit:
+        try:
+            commit = subprocess.run(["git", "-C", args.catalog, "rev-parse", "--short", "HEAD"], capture_output=True,
+                                    text=True, check=True).stdout.strip()
+        except (OSError, subprocess.CalledProcessError):
+            commit = "unknown"
     with open(args.out, "w", encoding="utf-8", newline="\n") as f:
         f.write(dump(keys, f"app-facts {commit} and Hearth's additions"))
     for name in sorted(counts):
