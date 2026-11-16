@@ -7,6 +7,7 @@
 
 ### Home Assistant integration
 
+- **App Facts files are read whole.** A large catalog file that arrived in pieces could be cut short and then fail its SHA-256 check, so Hearth kept an old copy. It now reads each file to the end.
 - **A TV knows each adult's phones.** A TV's state document now has `adult_phones`: for each of its profiles mapped to an adult on Hearth's page, the notify services of that person's companion apps (the same phones that get requests). Hearth TV's phone approval asks them when no phone was chosen on the TV.
 - **Phone approval through the integration.** A paired TV asks the integration (`POST /api/hearth/device/<id>/switch_approval`, then reads or withdraws the request), which sends the adult's phones Allow and Deny, hears the first answer, takes the notification off every phone and tells the TV. Only the paired TV may ask, only for a profile mapped to an adult, and each request's id is random and used once. Anyone with the companion app may answer; the log and the new `hearth_switch_approval` event say who.
 - **Works on the released Microsoft Family Safety (2.3.0).** Hearth no longer needs a Family Safety with today-only allowed hours or `hold` attributes; it uses them where the installed one has them:
@@ -17,6 +18,8 @@
 - **Locks end at midnight on the released Family Safety.** Its `lock_platform` takes whole hours only, so Hearth unlocks its own lock itself at midnight (caught up after a restart that missed it), only while the lock is still Hearth's: a parent's change since stays. A Family Safety whose lock takes an end keeps using it. On 2.3.0 an unlock cancels any lock in force; from the release with its #94 it puts back what the lock replaced.
 - **Website block list on the released Family Safety.** It has no `sync_site_list`, so Hearth keeps the list itself: downloaded once a day (https only, size cap), each kid's sites read with `get_sites`, missing ones blocked with `block_website`, and only sites Hearth added that the list dropped unblocked with `remove_website`. What Hearth added is kept across restarts (a fork's own record is taken over once); sites it didn't add are never touched; sites that fail are reported one by one. A Family Safety with `sync_site_list` still does it alone.
 - **Hearth's page says what's reduced.** Under Parental controls, Microsoft Family Safety lists what Hearth does with less on the installed version ("Works with less on this version"), and `hearth/config` has `capabilities.family_safety` (today_only, hold_attributes, lock_until, Windows extra time, website lists, ...).
+- **App facts from its own address.** The shared app catalog is now read from `https://thesiegs.github.io/app-facts/` (the dataset's repository was renamed from glint-recipes). A `catalog_url` still set to the old default reads as the new one; any other URL is kept.
+- **App facts retries a failed check.** A fetch that fails a check (a 404 or other error answer, a shard whose SHA-256 isn't the index's, an index listing no shards) is tried again after 10-15 minutes, then 20-30, then 40-60, at most three times a day, instead of waiting for the next daily time. The copy in use stays meanwhile; offline is still left to the next daily time; unloading the integration cancels a pending retry.
 
 ### Hearth TV
 

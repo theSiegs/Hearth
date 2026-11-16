@@ -545,6 +545,108 @@ async def test_the_daily_fetch_runs_at_its_own_time(hass: HomeAssistant, aioclie
     keeper.stop()
 
 
+def test_the_old_default_url_reads_as_the_new_one() -> None:
+    """The dataset's repository was renamed (glint-recipes -> app-facts): an adult's catalog_url equal to the old default
+    reads as the new one; any other URL is kept."""
+    assert cat.DEFAULT_URL == "https://thesiegs.github.io/app-facts/"
+    assert cat.catalog_url({}) == cat.DEFAULT_URL
+    assert cat.catalog_url({"catalog_url": None}) == cat.DEFAULT_URL
+    assert cat.catalog_url({"catalog_url": "https://thesiegs.github.io/glint-recipes/"}) == cat.DEFAULT_URL
+    assert cat.catalog_url({"catalog_url": "https://thesiegs.github.io/glint-recipes"}) == cat.DEFAULT_URL
+    assert cat.catalog_url({"catalog_url": "https://TheSiegs.github.io/glint-recipes/"}) == cat.DEFAULT_URL
+    assert cat.catalog_url({"catalog_url": "https://mirror.example/facts"}) == "https://mirror.example/facts/"
+
+
+async def test_a_keeper_with_the_old_default_fetches_the_new_one(hass: HomeAssistant, aioclient_mock) -> None:
+    keeper = CatalogKeeper(hass, "test", {"catalog_url": "https://thesiegs.github.io/glint-recipes/"})
+    await keeper.async_load()
+    assert keeper.url == cat.DEFAULT_URL
+    aioclient_mock.get(cat.DEFAULT_URL + "index.json", status=304)
+    await keeper.async_fetch()
+    assert [str(u) for _m, u, _d, _h in aioclient_mock.mock_calls] == [cat.DEFAULT_URL + "index.json"]
+
+
+async def _started(hass: HomeAssistant, public: bytes) -> CatalogKeeper:
+    """A keeper started with a current copy and its daily timers taken off, so only retries fetch."""
+    keeper = await _keeper(hass, public)
+    keeper.fetched = dt_util.utcnow().isoformat()
+    keeper.start(lambda job: hass.async_create_task(job))
+    while keeper._unsubs:
+        keeper._unsubs.pop()()
+    return keeper
+
+
+async def _later(hass: HomeAssistant, freezer, minutes: int) -> None:
+    from pytest_homeassistant_custom_component.common import async_fire_time_changed
+
+    freezer.tick(timedelta(minutes=minutes))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+
+
+async def test_a_failed_check_is_tried_again_within_the_hour(hass: HomeAssistant, aioclient_mock, freezer) -> None:
+    """A 404 (a publish caught halfway) is tried again after 10-15, 20-30 and 40-60 minutes, then not until the next
+    daily time; a good fetch ends the retries."""
+    freezer.move_to("2026-11-16 20:00:00+00:00")
+    private, public = _key()
+    keeper = await _started(hass, public)
+    aioclient_mock.get(URL + "index.json", status=404)
+
+    assert await keeper.async_fetch() is False and "404" in keeper.error
+    assert keeper._retry_unsub is not None and aioclient_mock.call_count == 1
+    await _later(hass, freezer, 9)
+    assert aioclient_mock.call_count == 1
+    await _later(hass, freezer, 7)
+    assert aioclient_mock.call_count == 2 and keeper._retry_unsub is not None
+    await _later(hass, freezer, 31)
+    assert aioclient_mock.call_count == 3
+    await _later(hass, freezer, 61)
+    # Three retries today: no more until the next daily time
+    assert aioclient_mock.call_count == 4 and keeper._retry_unsub is None
+    await _later(hass, freezer, 120)
+    assert aioclient_mock.call_count == 4
+
+    # A new day may retry again, and a good fetch cancels a pending retry
+    freezer.move_to("2026-11-17 20:00:00+00:00")
+    assert await keeper.async_fetch() is False and keeper._retry_unsub is not None
+    index, sig, files = _site(private, keeper.seq + 10, {"xbox": _shard("xbox", XBOX)})
+    _serve(aioclient_mock, index, sig, files)
+    assert await keeper.async_fetch() is True and keeper._retry_unsub is None and keeper.error is None
+    await _later(hass, freezer, 70)
+    assert aioclient_mock.call_count == 3
+    keeper.stop()
+
+
+async def test_a_bad_shard_is_retried_and_offline_isn_t(hass: HomeAssistant, aioclient_mock, freezer) -> None:
+    freezer.move_to("2026-11-16 20:00:00+00:00")
+    private, public = _key()
+    keeper = await _started(hass, public)
+    # Offline: quiet, and left to the next daily time
+    aioclient_mock.get(URL + "index.json", exc=TimeoutError())
+    assert await keeper.async_fetch() is False and keeper._retry_unsub is None
+    # A shard whose bytes aren't the index's: retried, and it's fixed by then
+    index, sig, files = _site(private, keeper.seq + 10, {"android": _shard("android", ANDROID)})
+    _serve(aioclient_mock, index, sig, {path: data + b" " for path, data in files.items()})
+    assert await keeper.async_fetch() is False and "SHA-256" in keeper.error and keeper._retry_unsub is not None
+    _serve(aioclient_mock, index, sig, files)
+    await _later(hass, freezer, 16)
+    assert keeper.origin == "fetched" and keeper.data.lookup("com.example.tube") and keeper._retry_unsub is None
+    keeper.stop()
+
+
+async def test_stop_cancels_a_pending_retry(hass: HomeAssistant, aioclient_mock, freezer) -> None:
+    _private, public = _key()
+    keeper = await _started(hass, public)
+    aioclient_mock.get(URL + "index.json", status=404)
+    assert await keeper.async_fetch() is False and keeper._retry_unsub is not None
+    keeper.stop()
+    assert keeper._retry_unsub is None
+    await _later(hass, freezer, 120)
+    assert aioclient_mock.call_count == 1
+    # Stopped: a later failure schedules nothing
+    assert await keeper.async_fetch() is False and keeper._retry_unsub is None
+
+
 async def test_the_setting_in_configure(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
     await _household_with_sam(hass, hass_client_no_auth)
     await _option(hass, "app_catalog", {"fetch": False, "share": True})
@@ -651,3 +753,42 @@ async def test_a_catalog_interface_app_s_time_counts_nowhere(
     day = household.days["person.sam"]
     assert day.groups["all"] == 600 and not day.groups.get("games")
     assert "com.example.game" in household.never_held(household.membership())
+
+
+async def test_a_file_that_arrives_in_pieces_is_read_whole(hass: HomeAssistant, monkeypatch) -> None:
+    """A large shard comes in several chunks; reading only what has arrived would cut it short."""
+
+    class Body:
+        def __init__(self, data: bytes) -> None:
+            self.data = data
+
+        async def read(self, n: int = -1) -> bytes:  # the old way: only what has arrived
+            return self.data[:1000]
+
+        async def iter_chunked(self, n: int):
+            for i in range(0, len(self.data), 1000):
+                yield self.data[i : i + 1000]
+
+    class Response:
+        status = 200
+        headers = {"ETag": '"x"'}
+
+        def __init__(self, data: bytes) -> None:
+            self.content = Body(data)
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc) -> None:
+            return None
+
+    data = b"x" * 5500
+
+    class Session:
+        def get(self, url, **kwargs):
+            return Response(data)
+
+    monkeypatch.setattr(cat, "async_get_clientsession", lambda hass: Session())
+    keeper = CatalogKeeper(hass, "test", {})
+    status, body, etag = await keeper._get("https://example.org/k/android.json")
+    assert (status, body, etag) == (200, data, '"x"')

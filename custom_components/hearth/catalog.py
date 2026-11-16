@@ -1,7 +1,6 @@
 """The shared app catalog (App Facts): a public, signed dataset of app facts, which Hearth reads to put apps in pools.
 
-It is published, for now from the glint-recipes repository (its own repository comes later, docs/contracts/app-facts.md),
-at a stable URL: a signed index (`glint.exchange/1`) naming one shard per
+It is published from the app-facts repository (docs/contracts/app-facts.md) at a stable URL: a signed index (`glint.exchange/1`) naming one shard per
 platform (`glint.catalog/1`): for each key (android:<package>, pfn:<package family>, xbox:<title id>, name:switch:<name>
 and so on) what the app is (`category`, one of the ten Android categories, and the finer `detail`: youtube,
 streaming, education, companion, system), its app slug (`app`, shared by the same app's keys on every platform) and
@@ -15,6 +14,8 @@ Hearth's side, as the catalog's contract says (docs/home-assistant-integration.m
 
 - **Fetch**: once a day at a random minute, and at startup when the copy is over a day old; never per app. The index
   with If-None-Match (ETag), then only the shards whose SHA-256 changed. A generic user agent and nothing else.
+- **Retry** after a fetch that fails a check (a 404, a SHA-256 that isn't the index's, an index listing no shards):
+  again within about an hour, backing off with jitter, at most RETRY_PER_DAY times a day. Offline isn't retried.
 - **Verify**, in order, and any failure keeps the last good copy: the index's Ed25519 signature over its exact bytes
   with one of the two pinned keys (catalog_data/keys), its format, its `seq` (lower than the copy's is a rollback,
   refused), and each shard's SHA-256, format and platform. An index that lists no catalog, or no shards, keeps the
@@ -57,7 +58,9 @@ from .const import APP_CATEGORIES
 
 _LOGGER = logging.getLogger(__name__)
 
-DEFAULT_URL = "https://thesiegs.github.io/glint-recipes/"
+DEFAULT_URL = "https://thesiegs.github.io/app-facts/"
+# Earlier defaults (the dataset's repository was renamed): a catalog_url set to one of these reads as DEFAULT_URL
+OLD_DEFAULT_URLS = ("https://thesiegs.github.io/glint-recipes/",)
 DEFAULT_RELAY = "https://glint-relay.glint-tiles.workers.dev/"
 EXCHANGE_FORMAT = "glint.exchange/1"
 CATALOG_FORMAT = "glint.catalog/1"
@@ -87,6 +90,10 @@ USER_AGENT = "Hearth"
 MAX_BYTES = 8 * 1024 * 1024
 TIMEOUT_S = 30
 STALE = timedelta(hours=24)
+# After a fetch that fails a check: tries RETRY_FIRST, then twice as long each time, each stretched by up to half again
+# (10-15, 20-30, 40-60 minutes), at most RETRY_PER_DAY a day
+RETRY_FIRST = timedelta(minutes=10)
+RETRY_PER_DAY = 3
 SEND_EVERY = timedelta(days=7)
 MAX_KEYS = 20
 MAX_CORRECTIONS = 10
@@ -257,7 +264,7 @@ def read_bundled(folder: Path = DATA_DIR) -> tuple[list[bytes], dict[str, Any] |
 
 
 def normalize_name(name: str) -> str:
-    """The catalog's name normalizer (glint-recipes catalog/normalize-vectors.json pins it)."""
+    """The catalog's name normalizer (App Facts' catalog/normalize-vectors.json pins it)."""
     for mark in ("™", "®", "©"):
         name = name.replace(mark, "")
     name = "".join(c for c in unicodedata.normalize("NFKD", name) if not unicodedata.combining(c)).lower()
@@ -395,7 +402,7 @@ class CatalogKeeper:
         self._store: Store[dict[str, Any]] = Store(hass, 1, f"hearth.catalog.{entry_id}")
         self.fetch_on = options.get(CONF_CATALOG_FETCH, True) is not False
         self.share_on = bool(options.get(CONF_CATALOG_SHARE))
-        self.url = _base(options.get(CONF_CATALOG_URL) or DEFAULT_URL)
+        self.url = catalog_url(options)
         self.relay = _base(options.get(CONF_CATALOG_RELAY) or DEFAULT_RELAY)
         self.keys: list[bytes] = []
         self.data = CatalogData()
@@ -418,6 +425,12 @@ class CatalogKeeper:
         self.next_send: str | None = None
         self.on_change: Callable[[], None] | None = None
         self._unsubs: list[Callable[[], None]] = []
+        # Retrying a fetch that failed a check: the task runner while started, the pending retry, and how many were
+        # scheduled on which local day
+        self._run: Callable[[Any], Any] | None = None
+        self._retry_unsub: Callable[[], None] | None = None
+        self._retry_day: str | None = None
+        self._retries = 0
 
     # Store
 
@@ -496,6 +509,7 @@ class CatalogKeeper:
         """Fetches once a day at a random time (and soon, if the copy is over a day old) and maybe sends once a week,
         through [run] (the entry's task runner)."""
         rng = random.SystemRandom()
+        self._run = run
 
         @callback
         def daily(_now=None) -> None:
@@ -509,8 +523,40 @@ class CatalogKeeper:
 
     @callback
     def stop(self) -> None:
+        self._run = None
+        self._cancel_retry()
         while self._unsubs:
             self._unsubs.pop()()
+
+    @callback
+    def _cancel_retry(self) -> None:
+        if self._retry_unsub is not None:
+            self._retry_unsub()
+            self._retry_unsub = None
+
+    @callback
+    def _schedule_retry(self) -> None:
+        """After a fetch that failed a check, while started: one more try within about an hour (backing off with
+        jitter), at most RETRY_PER_DAY a day; one pending at a time."""
+        if self._run is None or self._retry_unsub is not None or not self.fetch_on:
+            return
+        today = dt_util.now().date().isoformat()
+        if self._retry_day != today:
+            self._retry_day, self._retries = today, 0
+        if self._retries >= RETRY_PER_DAY:
+            _LOGGER.debug("Hearth tries the shared app catalog again at its next daily time")
+            return
+        delay = RETRY_FIRST.total_seconds() * (2 ** self._retries) * random.SystemRandom().uniform(1.0, 1.5)
+        self._retries += 1
+        run = self._run
+
+        @callback
+        def retry(_now=None) -> None:
+            self._retry_unsub = None
+            if self._run is not None and self.fetch_on:
+                run(self.async_fetch())
+
+        self._retry_unsub = async_call_later(self.hass, delay, retry)
 
     def stale(self, now: datetime | None = None) -> bool:
         fetched = dt_util.parse_datetime(self.fetched) if self.fetched else None
@@ -531,10 +577,13 @@ class CatalogKeeper:
         ) as resp:
             if resp.status != 200:
                 return resp.status, b"", None
-            data = await resp.content.read(MAX_BYTES + 1)
-            if len(data) > MAX_BYTES:
-                raise CatalogError(f"{url} is too large")
-            return resp.status, data, resp.headers.get("ETag")
+            # read() hands back what has arrived so far, so read to the end (a short read fails the shard's SHA-256)
+            data = bytearray()
+            async for chunk in resp.content.iter_chunked(64 * 1024):
+                data += chunk
+                if len(data) > MAX_BYTES:
+                    raise CatalogError(f"{url} is too large")
+            return resp.status, bytes(data), resp.headers.get("ETag")
 
     async def async_fetch(self) -> bool:
         """Fetches and checks the catalog; True when a newer copy is now in use. Any failure keeps the copy."""
@@ -543,6 +592,7 @@ class CatalogKeeper:
             status, index_bytes, etag = await self._get(self.url + "index.json", headers)
             if status == 304:
                 self.fetched, self.error = dt_util.utcnow().isoformat(), None
+                self._cancel_retry()
                 self._save()
                 return False
             if status != 200:
@@ -579,14 +629,19 @@ class CatalogKeeper:
         except CatalogError as err:
             self.error = str(err)
             _LOGGER.warning("Hearth kept its copy of the shared app catalog: %s", err)
+            # A publish caught halfway (a shard not up yet, a stale cache) usually settles soon: try again within
+            # about an hour rather than tomorrow
+            self._schedule_retry()
             return False
         except Exception as err:  # noqa: BLE001 - offline, a timeout, a refused connection: the copy stays
+            # Quietly, and not retried: the next daily time asks again
             self.error = f"couldn't reach the catalog ({type(err).__name__})"
             _LOGGER.debug("Hearth couldn't fetch the shared app catalog: %s", err)
             return False
         changed = index["seq"] != self.seq or self.origin != "fetched"
         self._use(index, shards, {n: d for n, (_p, d) in listed.items()}, origin="fetched", values=values)
         self.etag, self.fetched, self.error = etag, dt_util.utcnow().isoformat(), None
+        self._cancel_retry()
         self._save()
         if changed and self.on_change is not None:
             self.on_change()
@@ -718,3 +773,10 @@ class CatalogKeeper:
 
 def _base(url: str) -> str:
     return url if url.endswith("/") else url + "/"
+
+
+def catalog_url(options: dict[str, Any]) -> str:
+    """The catalog's base URL: an adult's catalog_url, else DEFAULT_URL; one that is an earlier default (the
+    dataset's old repository) reads as DEFAULT_URL."""
+    url = _base(options.get(CONF_CATALOG_URL) or DEFAULT_URL)
+    return DEFAULT_URL if url.lower() in OLD_DEFAULT_URLS else url
