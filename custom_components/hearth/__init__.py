@@ -53,7 +53,7 @@ from .profiles import ISSUE_PROFILE_KEYS, legacy_keys
 from .push import new_topic
 from .hub import HearthHub
 from .attention import ACT_PREFIX
-from .limits import DAY_TYPES, retire_video
+from .limits import DAY_TYPES, count_messaging, retire_video
 from .asks import EVENT_MORE_TIME_ANSWERED, EVENT_MORE_TIME_REQUESTED, AskError
 from .const import EVENT_BUDGET_REACHED
 from .counting import ALL
@@ -1025,6 +1025,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
         hub.household.todos.queue_imports(old_chores)
     _give_push_topics(hass, entry, hub)
     _retire_video(hass, entry, hub)
+    # Messaging counts toward daily time (the time model), once
+    if (counted := count_messaging(dict(entry.options))) is not None:
+        hass.config_entries.async_update_entry(entry, options=counted)
     entry.runtime_data = hub
     await hub.household.school.async_refresh()
     hub.household.recompute()

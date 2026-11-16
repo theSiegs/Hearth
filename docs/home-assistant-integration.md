@@ -303,7 +303,11 @@ A budget is set on a **group**: a set of apps and titles whose minutes count tog
 - **All screen time**: everything not excluded by a rule.
 - **Games**: games (Android's game category, plus any an adult adds).
 - **Social** and **Messaging**: social and messaging apps (a starter list, plus any an adult adds; Social also takes
-  Android's category). Messaging is Not screen time (below) unless an adult puts it in.
+  Android's category). Messaging counts toward daily time and is paused like any app (daily time or its limit used
+  up, bedtime, Pause screens); an adult may take it out of daily time (Not screen time, below). Before the time
+  model it was outside daily time by default: on the first start after the upgrade, `messaging` leaves the
+  stored Not screen time list once (option `messaging_counted`), whether an adult put it there or the page saved the
+  old default (the two can't be told apart); put it back there if you meant it.
 - **Accessibility**: apps a kid may rely on (Voice Access, Lookout, Live Transcribe, Sound Amplifier, TalkBack: a
   starter list, plus `accessibility` from Hearth's categories starter list or an adult, and any an adult moves
   there). Not screen time
@@ -326,8 +330,9 @@ A budget is set on a **group**: a set of apps and titles whose minutes count tog
   Settings and Files are not System screens: time in them still counts. A client that says its home screen
   (the launcher it shows) was in front all night thus never empties a kid's All screen time.
 
-**Only a confirmed answer loosens a limit.** Messaging and Accessibility are outside All screen time (and
-Accessibility is never paused), so a guess never puts an app in them: only an adult's move or list, Hearth's starter
+**Only a confirmed answer puts an app in Messaging or Accessibility.** Accessibility is never paused, and Messaging
+is kept for real messaging apps (it counts and is paused like any category, but a household may give it its own limit,
+take it out of daily time, or allow it for a while), so a guess never puts an app in them: only an adult's move or list, Hearth's starter
 lists, or an answer of what the app is from an adult or Hearth's categories starter list does. A device's own
 category (any app may declare one in its manifest, so a misfiled game would escape limits), a store's genre and an
 AI's answer pass over them: an app a store or an AI calls messaging or accessibility counts in Other and shows in
@@ -790,7 +795,9 @@ so Hearth's pauses, its schedule and its blocks stay in step (`app_blocks.py`).
 - `hearth.block_app` and `hearth.unblock_app` (`app` or `apps`: Android package names; `people`: the kids, every kid
   with Family Link by default), adults only like Hearth's other services. Hearth blocks the app through Family Link
   (`familylink.block_app` with the kid's Family Link entity) and keeps its own record of what it blocked. Only Android
-  apps for now; Hearth's own apps, Family Link, Google Play, Settings, the phone and messages are never blocked.
+  apps for now; Hearth's own apps, Family Link, Google Play, Settings, the dialer and contacts are never blocked (an
+  emergency call always works). Messages apps can be blocked; blocking one (unlike pausing it) makes it miss incoming
+  texts, while a paused Messages still receives them.
   The response names who each app was blocked or unblocked for.
 - **Hearth only undoes its own blocks.** An app a parent already blocked in the Family Link app stays the parent's
   (Hearth's page shows "blocked by a parent in Family Link"); unblocking it in Hearth leaves it blocked there.

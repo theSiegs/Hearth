@@ -89,11 +89,12 @@ def resolve_ai_entity(hass: HomeAssistant, setting: str) -> str | None:
 DETAILS = {"youtube": "video", "streaming": "video", "education": "productivity", "companion": "productivity",
            "system": "productivity"}
 INTERFACE = "interface"
-# Categories that loosen limits (Messaging is outside All screen time, Accessibility is never paused): only an
+# Categories only a confirmed answer puts an app in (Accessibility is never paused; Messaging is kept for real messaging
+# apps, and counts toward daily time like any app since the time model): only an
 # override or the starter list confirms one, never a store's genre or an AI
 LOOSE = frozenset({"messaging", "accessibility"})
-# What each value is: its label, the pool Hearth sends it to by default (limits.pool_map is the code), whether it
-# loosens a limit, and System screens' counted nowhere and set only by a list (the old catalog's values table, now
+# What each value is: its label, the category Hearth sends it to by default (limits.pool_map is the code), whether only
+# a confirmed answer sets it (loose), and System screens' counted nowhere and set only by a list (the old catalog's values table, now
 # Hearth's own)
 BUILTIN_VALUES: dict[str, dict[str, Any]] = {
     "game": {"label": "Games", "pool": "games"},
@@ -105,7 +106,7 @@ BUILTIN_VALUES: dict[str, dict[str, Any]] = {
     "maps": {"label": "Maps", "pool": "other"},
     "productivity": {"label": "Productivity", "pool": "other"},
     "accessibility": {"label": "Accessibility", "pool": "accessibility", "loose": True},
-    "messaging": {"label": "Messaging", "pool": "messaging", "outside_all": True, "loose": True},
+    "messaging": {"label": "Messaging", "pool": "messaging", "loose": True},
     INTERFACE: {"label": "System screens", "counted": False, "overrides_only": True},
     "youtube": {"label": "YouTube", "parent": "video", "pool": "other", "pool_names": ["youtube"]},
     "streaming": {"label": "Streaming", "parent": "video", "pool": "other", "pool_names": ["streaming", "tv", "shows"]},

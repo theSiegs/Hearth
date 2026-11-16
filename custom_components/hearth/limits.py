@@ -38,15 +38,32 @@ ACCESSIBILITY = "accessibility"
 # System screens: the home screen, the lock and permission screens, keyboards, setup. Never screen time, counted in no
 # group, never paused: a phone that says its launcher was in front all night isn't a kid on their phone all night
 INTERFACE = "interface"
-# Built-in groups outside All screen time unless an adult puts them in (options "inside_all"): chatting isn't screen
-# time by default, nor is an accessibility app
-DEFAULT_OUTSIDE_ALL = frozenset({MESSAGING, ACCESSIBILITY})
-# Built-in groups outside All screen time whatever the options say
+# Built-in groups outside daily time unless an adult puts them in (options "inside_all"): an accessibility app. Messaging
+# counts toward daily time (and is paused like any app) since the time model; an adult may still take it out
+DEFAULT_OUTSIDE_ALL = frozenset({ACCESSIBILITY})
+# Built-in groups outside daily time whatever the options say
 ALWAYS_OUTSIDE_ALL = frozenset({INTERFACE})
-# The pools that loosen limits (outside All screen time by default; Accessibility is never paused): only a confirmed
-# answer puts an app in one (an adult's move, list or override of what it is, Hearth's starter lists), never a guess (a
-# device's own category, which any app declares for itself, a store's genre or an AI's answer: categories.py)
+# The categories only a confirmed answer puts an app in (an adult's move, list or override of what it is, Hearth's
+# starter lists), never a guess (a device's own category, which any app declares for itself, a store's genre or an
+# AI's answer: categories.py): Accessibility is never paused, and Messaging is kept for real messaging apps
 CONFIRMED_ONLY = frozenset({MESSAGING, ACCESSIBILITY})
+# Options: 2 once "messaging" left the stored outside_all (the time model: Messaging counts toward daily time)
+CONF_MESSAGING_COUNTED = "messaging_counted"
+
+
+def count_messaging(options: dict[str, Any]) -> dict[str, Any] | None:
+    """The options with Messaging counted toward daily time, once (None: done already). Messaging was outside daily
+    time by default; an adult's own "outside_all" can't be told from a page that saved the default with it, so
+    "messaging" leaves it either way (said in the changelog), and a stored inside_all for it is dropped as moot."""
+    if options.get(CONF_MESSAGING_COUNTED, 1) >= 2:
+        return None
+    out = {**options, CONF_MESSAGING_COUNTED: 2}
+    if MESSAGING in (options.get(CONF_OUTSIDE_ALL) or []):
+        out[CONF_OUTSIDE_ALL] = [g for g in options[CONF_OUTSIDE_ALL] if g != MESSAGING]
+        _LOGGER.info("Hearth: Messaging counts toward daily time now (it was outside it)")
+    if MESSAGING in (options.get(CONF_INSIDE_ALL) or []):
+        out[CONF_INSIDE_ALL] = [g for g in options[CONF_INSIDE_ALL] if g != MESSAGING]
+    return out
 # Stricter still: only Hearth's own list, an adult's move or list, or `interface` from an adult's override or the
 # categories starter list (categories.Hit.uncounted) puts an app in System screens. Never another value, an adult's map
 # of a whole kind of app, a suggestion, a device's category or a hint

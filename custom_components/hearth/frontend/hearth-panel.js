@@ -71,6 +71,9 @@ const clockAmPm = (date) => {
 // The words people see for today's time (docs/contracts/time-model.md): one table, so a rename is one edit. Daily time
 // is the one total (group id "all"), categories may have a limit inside it, and more time is only bonus time (no
 // category), a raised limit (one category, today) or Unlimited. Hearth's family pause is "Pause screens".
+// Messages apps: blocking one (unlike pausing it) makes it miss incoming texts, so the Block action asks first
+const MESSAGES_APPS = ["com.google.android.apps.messaging", "com.samsung.android.messaging"];
+
 const WORDS = {
   daily: "Daily time",
   dailyLower: "daily time",
@@ -1270,6 +1273,8 @@ class HearthPanel extends HTMLElement {
       case "app-block": {
         // Every kid with Family Link (the service's default); Hearth keeps the block and puts it back when the app returns
         const name = d.name || d.app;
+        // A messages app: blocking it (unlike pausing it) makes it miss incoming texts
+        if (MESSAGES_APPS.includes(d.app) && !window.confirm(`Blocking ${name} makes it miss incoming texts; pausing it keeps them. Block it anyway?`)) return;
         await this._service("block_app", { app: d.app }, `${name} blocked for every kid`);
         await this._loadConfig();
         return;

@@ -70,10 +70,11 @@ def test_a_group_outside_all_screen_time_counts_only_in_itself():
         "outside_all": ["music"],
     }
     groups = groups_from_options(options)
-    # Messaging and Accessibility are outside All screen time too, unless an adult puts them in; System screens always
-    assert [g.id for g in groups if not g.in_all] == ["messaging", "accessibility", "interface", "music"]
-    inside = groups_from_options({"inside_all": ["messaging"]})
-    assert [g.id for g in inside if not g.in_all] == ["accessibility", "interface"]
+    # Accessibility is outside daily time too unless an adult puts it in (Messaging counts since the time model); System
+    # screens always
+    assert [g.id for g in groups if not g.in_all] == ["accessibility", "interface", "music"]
+    inside = groups_from_options({"inside_all": ["accessibility"]})
+    assert [g.id for g in inside if not g.in_all] == ["interface"]
     devices = {
         "phone": merge([Reading("hearth", 1500, {"com.example.music": 600, "com.example.game": 600})]),
         "speaker": merge([Reading("tablet", 300, {}, rest_group="music")]),

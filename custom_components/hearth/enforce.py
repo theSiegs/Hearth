@@ -159,7 +159,9 @@ QUIET_AFTER_CALL = timedelta(minutes=1)
 REFRESH_AFTER_WRITE = timedelta(seconds=10)
 MAX_PACKAGES = 150
 
-# Never paused, whatever group they're in: calls, texts, the system, and the apps that hold the rest. A paired client's
+# Never paused, whatever category they're in: calls (the dialer and contacts, so an emergency call always works), the
+# system, and the apps that hold the rest. Messages apps are NOT here: daily time, a limit, bedtime
+# and Pause screens pause them like any app, and hearth.block_app may block them. A paired client's
 # own packages are kept out per person instead (Enforcement.update's exempt_of, from the client locked at pairing).
 # TRANSITION: the phone launcher's two packages stay listed until its phones have re-paired with contract 3 (then
 # they're exempt by their locked client id); remove them in the release after that.
@@ -170,12 +172,10 @@ ESSENTIAL = TRANSITION_CLIENTS | frozenset(
         "com.thesiegs.hearth.mobile",
         "com.thesiegs.hearthtube.mobile",
         "com.google.android.gms",
-        "com.google.android.apps.messaging",
         "com.google.android.dialer",
         "com.google.android.contacts",
         "com.google.android.apps.kids.familylink",
         "com.google.android.apps.kids.familylinkhelper",
-        "com.samsung.android.messaging",
         "com.samsung.android.dialer",
         "com.samsung.android.app.contacts",
         "com.android.settings",

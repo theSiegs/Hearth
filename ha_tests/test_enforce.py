@@ -420,7 +420,8 @@ def test_a_sync_error_older_than_a_day_isn_t_news() -> None:
 
 
 def test_essential_apps_are_never_held():
-    assert essential("com.google.android.apps.messaging")
+    # Messages is paused like any app (the time model); calls stay
+    assert not essential("com.google.android.apps.messaging")
     assert essential("com.android.phone")
     assert not essential("com.netflix.mediaclient")
 
@@ -911,7 +912,7 @@ async def test_a_group_outside_all_screen_time_isn_t_held_by_it(
     )
     await hass.async_block_till_done()
     household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
-    assert household.outside_all() == {"music", "messaging", "accessibility", "interface"}
+    assert household.outside_all() == {"music", "accessibility", "interface"}
     assert household.group_packages()["music"] == ["com.example.music"]
     assert "com.example.music" not in household._person_apps(household.days.get("person.sam"), household.membership())
 

@@ -24,6 +24,10 @@ those minutes, so the day could run out first. Now:
      counted**: daily time, limits and bonus time pick up exactly where they were. Bedtime, School time and Pause
      screens still apply unless `include_bedtime` (bedtime only).
 - Hearth's family pause is called **Pause screens**, so it never reads like a limit change.
+- **Messaging counts.** The Messaging category counts toward daily time, and Messages apps are paused like any app
+  (daily time or Messaging's limit used up, bedtime, Pause screens). Only calls stay open: the dialer, contacts,
+  Settings, Play services, Family Link, the Play Store and Hearth's and Glint's own apps are never paused. A client
+  that spared Messages from its own hold because it was outside daily time should hold it like any app now.
 
 ### The accounting
 
