@@ -8,10 +8,11 @@ enforcer and tells the requests apart by id:
 
 - An id not seen before is a new request: the same as the event (Asks.from_family_safety: the ask, the adults told).
 - An id gone from the list is resolved: the same as the event's "via app" (Asks.resolved_elsewhere; an ask Hearth
-  answered itself is already closed, so nothing more happens). Once it has been missing from GONE_READINGS fresh
-  readings in a row (the sensor written again by a Family Safety poll: its last_reported moved), about two polls; one
-  read that lost it is no answer, as the fork's own events wait some polls. It closes as handled, as Family Safety
-  doesn't say how it was answered.
+  answered itself is already closed, so nothing more happens). Once it is missing from a fresh reading (the sensor
+  written again by a Family Safety poll: its last_reported moved), so within one poll, and GONE_GRACE has passed: the
+  same poll writes the Allowed Now sensors too, maybe a moment after this one, and extra time showing there says how
+  it was answered (below). Otherwise it closes as handled, as Family Safety doesn't say. Back in the list before
+  that, it isn't resolved.
 - Sooner, and as approved, when extra time newly shows on the request's platform for that kid (the platform's Allowed
   Now sensor: an allowUntil override that wasn't there, and isn't Hearth's own extra time) within MATCH_WINDOW of the
   id leaving the list: a parent approved it in the Family Safety app. The minutes are those to the extra time's end.
@@ -29,7 +30,8 @@ from datetime import datetime, timedelta
 import logging
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
@@ -43,7 +45,9 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 # A request missing from this many fresh readings of the sensor in a row is resolved
-GONE_READINGS = 2
+GONE_READINGS = 1
+# ... once this long after it first went missing: the rest of that Family Safety poll (its Allowed Now sensors) lands
+GONE_GRACE = timedelta(seconds=5)
 # Extra time that newly shows this close to a request leaving the list is its approval
 MATCH_WINDOW = timedelta(minutes=3)
 # How many resolved request ids are remembered
@@ -112,6 +116,8 @@ class RequestTracker:
         # The extra time in force per account and platform (its end, or None), and when extra time newly showed
         self._extra: dict[str, dict[str, str | None]] = {}
         self._extra_at: dict[str, dict[str, tuple[Any, str]]] = {}
+        # The check waiting for a grace to pass (one at a time)
+        self._later: CALLBACK_TYPE | None = None
         # Request ids resolved lately (newest last)
         self.resolved: list[str] = []
 
@@ -139,6 +145,9 @@ class RequestTracker:
         self._store.async_delay_save(self._data, 2)
 
     async def async_flush(self) -> None:
+        if self._later is not None:
+            self._later()
+            self._later = None
         await self._store.async_save(self._data())
 
     # The fork's events: the same requests, handled once
@@ -230,6 +239,19 @@ class RequestTracker:
         return None
 
     @callback
+    def _check_later(self) -> None:
+        """Reads again once GONE_GRACE has passed (a request gone without extra time showing yet)."""
+        if self._later is not None:
+            return
+
+        @callback
+        def _due(_now: Any) -> None:
+            self._later = None
+            self.check()
+
+        self._later = async_call_later(self.hass, GONE_GRACE.total_seconds() + 0.1, _due)
+
+    @callback
     def check(self) -> None:
         """Reads each child's Pending Requests sensor: new ids are asks, ids gone from enough fresh readings in a row
         (or as extra time shows) are resolved."""
@@ -279,13 +301,19 @@ class RequestTracker:
                     continue
                 if gone is None:
                     gone = known[request_id] = {"since": now.isoformat(), "readings": 1}
+                    self._check_later()
                     changed = True
                 elif fresh:
                     gone["readings"] += 1
                     changed = True
                 minutes = self._approval(account, request_id, gone["since"])
-                if minutes is None and gone["readings"] < GONE_READINGS:
-                    continue
+                if minutes is None:
+                    since = dt_util.parse_datetime(gone["since"])
+                    if gone["readings"] < GONE_READINGS:
+                        continue
+                    if since is not None and now - since < GONE_GRACE:
+                        self._check_later()
+                        continue
                 del known[request_id]
                 self.platforms.pop(request_id, None)
                 self._resolved(request_id)

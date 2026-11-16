@@ -790,8 +790,9 @@ all. It's not a problem to fix.
   id `<entry>_<account>_pending_requests`: the count, and Microsoft's requests in `requests`). Hearth reads it for each
   child with a Family Safety enforcer, on every change and every minute, and tells requests apart by `id`: a new one
   becomes an ask exactly as the event makes it (platform, app name, requested time). One gone from the list is
-  resolved once two fresh readings in a row lack it (the sensor written again by a Family Safety poll, so about two
-  of its update intervals; a minute's check without a new poll doesn't count), as "handled outside Hearth"; sooner,
+  resolved once a fresh reading lacks it (the sensor written again by a Family Safety poll, so within one of its
+  update intervals, plus a few seconds for the rest of that poll to land; a minute's check without a new poll doesn't
+  count; back in the list before then, it isn't resolved), as "handled outside Hearth"; sooner,
   and as approved in the Family Safety app, when extra time newly shows on the request's platform for that kid within
   3 minutes of it leaving (the Allowed Now sensor's `allowUntil`, not extra time Hearth gave itself), with the minutes
   to that extra time's end. One Hearth answered itself is already closed. An unavailable or unknown sensor, or one

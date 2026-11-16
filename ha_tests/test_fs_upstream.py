@@ -11,7 +11,12 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_capture_events, async_mock_service
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    async_capture_events,
+    async_fire_time_changed,
+    async_mock_service,
+)
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
 from custom_components.hearth import enforce, fs_capabilities
@@ -624,15 +629,14 @@ async def test_a_new_request_on_the_sensor_is_an_ask_as_the_event_makes(
     assert (ask.person, ask.external_id, ask.platform, ask.app_name) == ("person.sam", "r1", "Windows", "A Game")
     assert len(asked) == 1
 
-    # Gone from the list: resolved at the second fresh reading without it (one read that lost it is no answer)
+    # Gone from the list: resolved at the first fresh reading without it, once the rest of that poll had a moment
+    # to land (extra time on Allowed Now would make it an approval)
     _pending(hass, [_request("old")])
     await hass.async_block_till_done()
     assert len(hub.asks.pending()) == 1
-    freezer.tick(timedelta(minutes=6))
-    hub.fs_requests.check()  # no new reading: no answer, however long
-    assert len(hub.asks.pending()) == 1
-    _pending(hass, [_request("old")])  # Family Safety's next poll
-    hub.fs_requests.check()
+    freezer.tick(timedelta(seconds=6))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
     assert hub.asks.pending() == []
     assert answers[-1].data["status"] == "handled" and answers[-1].data["answered_in"] == "family_safety"
 
@@ -645,10 +649,13 @@ async def test_a_request_back_in_the_list_isn_t_resolved(
     await hass.async_block_till_done()
     _pending(hass, [])
     await hass.async_block_till_done()
-    freezer.tick(timedelta(minutes=2))
+    # Back before it was resolved (within the grace): not resolved, also when the grace's check comes
+    freezer.tick(timedelta(seconds=2))
     _pending(hass, [_request("r1")])
     await hass.async_block_till_done()
     freezer.tick(timedelta(minutes=6))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
     hub.fs_requests.check()
     assert len(hub.asks.pending()) == 1
 
@@ -895,9 +902,15 @@ async def test_hearth_s_own_extra_time_isn_t_a_parent_s_approval(
     hub = await _gone_once(hass, hass_client_no_auth, freezer)
     until = (dt_util.now() + timedelta(minutes=60)).replace(microsecond=0)
     hub.household.enforcement.fs_bonus_until = lambda person, platform: until if platform == "Xbox" else None
+    answers = async_capture_events(hass, "hearth_more_time_answered")
     _xbox(hass, "on", reason="extra_time", override="allowUntil", override_until=until.isoformat())
     await hass.async_block_till_done()
     assert len(hub.asks.pending()) == 1
+    # Once the grace has passed: handled, not approved
+    freezer.tick(timedelta(seconds=6))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert hub.asks.pending() == [] and answers[-1].data["status"] == "handled"
 
 
 async def test_an_older_record_of_a_gone_request_reads_as_one_reading(
