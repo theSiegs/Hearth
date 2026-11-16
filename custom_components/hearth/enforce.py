@@ -455,6 +455,8 @@ class Enforcement:
         # When the extra time Hearth last gave on a Family Safety platform today ends: (person, platform) -> datetime
         # or None (native_sync.py sets it). With what Hearth locked, how Hearth tells its own from a parent's
         self.fs_bonus_until = None
+        # The values Hearth's Family Link backstop wrote today (backstop.py sets it): never put back as a weekday's limit
+        self.backstop_values = None
 
     async def async_load(self) -> None:
         stored = await self._store.async_load() or {}
@@ -982,13 +984,20 @@ class Enforcement:
         if "lock_minutes" not in held.restore:
             child, limit_entity = self._family_link_child(entity_id)
             state = self.hass.states.get(limit_entity) if limit_entity else None
-            limit = _number(state.state if state else None)
+            # The weekday's own limit (weekly_minutes): the state reads today's override, which may be Hearth's
+            # backstop (backstop.py) or a whole day for Unlimited, and must never become the weekday's setting
+            limit = _number(state.attributes.get("weekly_minutes")) if state else None
+            from_state = limit is None
+            if limit is None:
+                limit = _number(state.state if state else None)
             if limit is None:
                 raise ValueError(f"{entity_id}: no daily limit to keep for today")
             now = dt_util.now()
             held.restore = {
                 **held.restore,
                 "lock_minutes": int(limit),
+                # Read from the state (an older Family Link without weekly_minutes): may be an override
+                **({"lock_from_state": True} if from_state else {}),
                 "lock_child": child,
                 "lock_weekday": now.isoweekday(),
                 "lock_day": now.date().isoformat(),
@@ -1038,6 +1047,11 @@ class Enforcement:
         )
         return _number(state.state if state else None)
 
+    def _backstop_value(self, minutes: Any) -> bool:
+        """[minutes] came from an override, not a weekday's own limit: a whole day (Unlimited) or a backstop value."""
+        written = self.backstop_values() if self.backstop_values else set()
+        return minutes is not None and (int(minutes) >= 1440 or int(minutes) in written)
+
     async def _unlock_devices(self, held: Held) -> str | None:
         """The weekday's daily limit back as it was (that weekday's, even after midnight), only while it still reads
         what Hearth set (0): a limit a parent changed meanwhile in the Family Link app is theirs, and stays. Says what
@@ -1046,7 +1060,15 @@ class Enforcement:
         outcome = None
         if "lock_minutes" in restore:
             current = self._held_weekday_limit(restore)
-            if restore.get("lock_adopted") or (current is not None and current not in (0, restore["lock_minutes"])):
+            if restore.get("lock_from_state") and self._backstop_value(restore["lock_minutes"]):
+                # Kept from an override, not the weekday's own limit: never made the weekday's setting
+                _LOGGER.warning(
+                    "Family Link's daily limit for child %s: %s was Hearth's backstop or a whole day, not the weekday's "
+                    "own limit; not put back as the weekday's setting",
+                    restore.get("lock_child"), restore["lock_minutes"],
+                )
+                outcome = KEPT_CURRENT
+            elif restore.get("lock_adopted") or (current is not None and current not in (0, restore["lock_minutes"])):
                 _LOGGER.info(
                     "Family Link's daily limit for child %s changed to %s while Hearth held it: kept, %s not put back",
                     restore.get("lock_child"), current, restore["lock_minutes"],

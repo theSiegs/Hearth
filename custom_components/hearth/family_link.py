@@ -256,6 +256,34 @@ def app_lists(hass: HomeAssistant, child: str) -> tuple[set[str], set[str] | Non
     return listed, blocked
 
 
+# Google's capabilities of a device that takes a daily limit (HAFamilyLink's CAPS_TIME_LIMIT): a Google TV has neither
+TIME_LIMIT_CAPABILITIES = ("capabilityBedtime", "capabilityLockWithDeadline")
+
+
+def device_minutes_today(hass: HomeAssistant, child: str) -> list[tuple[str, float]]:
+    """Each of the child's devices that take a daily limit, with Family Link's screen time today on it, from their
+    Daily screen time sensors: (device id, minutes). A device whose capabilities say it takes no daily limit (a Google
+    TV) is left out; one with no capability list (an older Family Link) is kept."""
+    found: list[tuple[str, float]] = []
+    for state in hass.states.async_all("sensor"):
+        attrs = state.attributes
+        if (
+            not state.entity_id.endswith("_daily_screen_time")
+            or str(attrs.get("child_id")) != child
+            or not attrs.get("device_id")
+        ):
+            continue
+        caps = attrs.get("capabilities")
+        if caps and not any(c in caps for c in TIME_LIMIT_CAPABILITIES):
+            continue
+        try:
+            minutes = float(state.state)
+        except (TypeError, ValueError):
+            continue
+        found.append((str(attrs["device_id"]), minutes))
+    return found
+
+
 def app_minutes_today(hass: HomeAssistant, child: str, package: str) -> list[tuple[str, float]]:
     """An app's minutes today on each of the child's devices, from their Daily screen time sensors: (device, minutes)."""
     found: list[tuple[str, float]] = []

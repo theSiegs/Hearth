@@ -1274,6 +1274,13 @@ class HearthPanel extends HTMLElement {
         await this._loadConfig();
         return;
       }
+      case "app-block-kid": {
+        // A block a parent took back in Family Link: blocking it again in Hearth makes it Hearth's again
+        const name = d.name || d.app;
+        await this._service("block_app", { app: d.app, people: [d.person] }, `${name} blocked for ${this._personName(d.person)}`);
+        await this._loadConfig();
+        return;
+      }
       case "app-unblock": {
         const name = d.name || d.app;
         await this._service("unblock_app", { app: d.app, people: [d.person] }, `${name} unblocked for ${this._personName(d.person)}`);
@@ -3613,7 +3620,8 @@ class HearthPanel extends HTMLElement {
   }
 
   _blockStateLabel(b) {
-    if (b.error) return `couldn't block: ${b.error}`;
+    // "Family Link didn't block <app>" after Hearth's tries; any other error as it came
+    if (b.error) return /^Family Link didn't block/.test(b.error) ? b.error : `couldn't block: ${b.error}`;
     return { blocked: "blocked", parent: "blocked by a parent in Family Link", not_installed: "not installed: blocked when it shows up", pending: "blocking…" }[b.state] || b.state;
   }
 
@@ -3637,7 +3645,7 @@ class HearthPanel extends HTMLElement {
     };
     return `<section class="card">
       <h3><ha-icon icon="mdi:web-cancel"></ha-icon>Blocked by Hearth</h3>
-      <p class="muted">Apps Hearth blocks through Family Link. Hearth blocks them again when they come back, never pauses or resumes them, and an allow doesn't lift a block. Unblock here: Hearth only ever unblocks what it blocked, so a parent's own block in Family Link stays.</p>
+      <p class="muted">Apps Hearth blocks through Family Link. Hearth blocks one again when it's installed again, never pauses or resumes a blocked app, and an allow doesn't lift a block. Unblock here: Hearth only ever unblocks what it blocked, so a parent's own block in Family Link stays, and a block a parent takes back in the Family Link app stays unblocked until you block it again here.</p>
       <label class="check"><input type="checkbox" data-change="block-browsers" ${b.rule ? "checked" : ""}> Block browsers Hearth doesn't support</label>
       <div class="muted small">Hearth filters sites in: ${esc(supported)}. With this on, any other browser on a kid's Android devices is blocked as soon as Family Link lists it, and so are other app stores that skip Family Link's approval (${esc(Object.values(b.app_stores || {}).filter((v, i, all) => all.indexOf(v) === i).join(", "))}).</div>
       ${kids.length ? `<ul class="list compact">${kids
@@ -3647,6 +3655,10 @@ class HearthPanel extends HTMLElement {
             .map((x) => `<li><div class="grow"><div title="${esc(x.app)}">${esc(x.name || x.app)}</div><div class="muted small">${esc(this._blockWhyLabel(x.why))} · ${esc(this._blockStateLabel(x))}</div></div>
               <button class="btn" data-action="app-unblock" data-app="${esc(x.app)}" data-name="${esc(x.name || x.app)}" data-person="${esc(k.person)}">Unblock</button></li>`)
             .join("")}</ul>` : k.family_link ? `<div class="muted small">Nothing blocked</div>` : ""}
+          ${(k.parent_unblocked || []).length ? `<ul class="list compact">${k.parent_unblocked
+            .map((x) => `<li><div class="grow"><div title="${esc(x.app)}">${esc(x.name || x.app)}</div><div class="muted small">unblocked by a parent in Family Link: Hearth leaves it unblocked</div></div>
+              <button class="btn" data-action="app-block-kid" data-app="${esc(x.app)}" data-name="${esc(x.name || x.app)}" data-person="${esc(k.person)}">Block again</button></li>`)
+            .join("")}</ul>` : ""}
           <div>${filter(k)}</div></div></li>`)
         .join("")}</ul>` : `<p class="muted small">No kids yet.</p>`}
     </section>`;

@@ -127,20 +127,21 @@ def account(
 
 def backstop_minutes(
     base: int | None,
-    bonus_left: int,
-    raises_outside: int,
+    device_minutes: int,
+    today_left: int,
     margin: int,
     no_limits: bool = False,
 ) -> int | None:
-    """Family Link's daily limit Hearth keeps as a backstop: today's time + the bonus left + raised caps that count on
-    the device but not in today's time + a margin, rounded up to 5 minutes (at most a day). No limits today: a whole
-    day. None: no daily total, Family Link is left alone."""
+    """Family Link's daily limit Hearth keeps as a backstop (backstop.py): the most screen time Family Link counted today
+    on one of the kid's devices + Hearth's daily time left (bonus included) + a margin, rounded up to 5 minutes (at
+    most a day). Spending counted time leaves it steady (the device's minutes grow as the time left shrinks); time Hearth
+    doesn't count raises it. Unlimited: a whole day. None: no daily time ([base]), Family Link is left alone."""
     # No daily time: Family Link is Hearth's to leave alone, Unlimited or not (nothing would put it back after)
     if base is None:
         return None
     if no_limits:
         return DAY_MINUTES
-    total = max(0, base) + max(0, bonus_left) + max(0, raises_outside) + max(0, margin)
+    total = max(0, device_minutes) + max(0, today_left) + max(0, margin)
     return min(DAY_MINUTES, int(math.ceil(total / 5) * 5))
 
 

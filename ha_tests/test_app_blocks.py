@@ -235,6 +235,8 @@ async def test_a_blocked_app_is_never_paused_or_resumed_and_explain_says_so(
     assert calls["pause"] and GAME in calls["pause"][0].data["packages"]
     await _call(hass, "block_app", {"app": GAME})
     assert _packages(calls["block"]) == [GAME]
+    # Family Link lists it blocked (only then is it left out of Hearth's pauses)
+    _lists(hass, [GAME, other], [GAME])
     await _call(hass, "pause_end", {"app": GAME, "people": ["person.sam"]})
     await _recompute(hass)
     assert calls["resume"] == []
@@ -243,6 +245,8 @@ async def test_a_blocked_app_is_never_paused_or_resumed_and_explain_says_so(
 
     # Blocked first, then paused: never paused
     await _call(hass, "block_app", {"app": other})
+    _lists(hass, [GAME, other], [GAME, other])
+    await _recompute(hass)
     await _call(hass, "pause", {"app": other, "minutes": 30, "people": ["person.sam"]})
     assert all(other not in c.data["packages"] for c in calls["pause"])
 
@@ -254,8 +258,84 @@ async def test_a_blocked_app_is_never_paused_or_resumed_and_explain_says_so(
 
     # Unblocked: the pause Hearth kept is let go as usual (no pause of GAME is left)
     await _call(hass, "unblock_app", {"app": GAME})
+    _lists(hass, [GAME, other], [other])
     await _recompute(hass)
     assert [GAME] in [c.data["packages"] for c in calls["resume"]]
+
+
+async def test_a_block_family_link_hasn_t_confirmed_is_still_paused(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    calls = await _sam(hass, hass_client_no_auth, installed=[GAME])
+    await _call(hass, "block_app", {"app": GAME})
+    assert _household(hass).blocks.blocked_packages("person.sam") == set()
+    await _call(hass, "pause", {"app": GAME, "minutes": 30, "people": ["person.sam"]})
+    assert any(GAME in c.data["packages"] for c in calls["pause"])
+    # Confirmed: now Family Link's block holds it
+    _lists(hass, [GAME], [GAME])
+    assert _household(hass).blocks.blocked_packages("person.sam") == {GAME}
+
+
+async def test_an_unconfirmed_block_is_tried_three_times_then_said(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer, hass_ws_client
+) -> None:
+    from pytest_homeassistant_custom_component.common import async_capture_events
+
+    events = async_capture_events(hass, "hearth_app_blocked")
+    calls = await _sam(hass, hass_client_no_auth, installed=[GAME])
+    await _call(hass, "block_app", {"app": GAME})
+    for _ in range(4):
+        freezer.tick(timedelta(minutes=4))
+        await _recompute(hass)
+    # Family Link took the calls but never listed it: three tries, then Hearth stops and says so
+    assert _packages(calls["block"]) == [GAME, GAME, GAME]
+    [view] = _household(hass).blocks.views("person.sam")
+    assert view["error"] == f"Family Link didn't block {view['name']}"
+    assert events == []
+    # Listed at last: the event fires once
+    _lists(hass, [GAME], [GAME])
+    await _recompute(hass)
+    await _recompute(hass)
+    assert len(events) == 1
+
+
+async def test_a_parent_s_unblock_in_family_link_is_kept(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    calls = await _sam(hass, hass_client_no_auth, installed=[GAME])
+    await _call(hass, "block_app", {"app": GAME})
+    _lists(hass, [GAME], [GAME])
+    await _recompute(hass)
+    blocks = _household(hass).blocks
+    assert blocks.applied["person.sam"][GAME]["confirmed"]
+    # A parent unblocks it in the Family Link app: recorded, never blocked again by Hearth
+    _lists(hass, [GAME], [])
+    for _ in range(3):
+        freezer.tick(timedelta(minutes=4))
+        await _recompute(hass)
+    assert _packages(calls["block"]) == [GAME]
+    assert GAME in blocks.parent_unblocked["person.sam"] and GAME not in blocks.wanted("person.sam")
+    assert blocks.page()["kids"][0]["parent_unblocked"][0]["app"] == GAME
+    # An adult blocks it again in Hearth: it's Hearth's again
+    await _call(hass, "block_app", {"app": GAME})
+    assert _packages(calls["block"]) == [GAME, GAME]
+
+
+async def test_an_app_reinstalled_unblocked_is_blocked_again(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    calls = await _sam(hass, hass_client_no_auth, installed=[GAME])
+    await _call(hass, "block_app", {"app": GAME})
+    _lists(hass, [GAME], [GAME])
+    await _recompute(hass)
+    # Uninstalled, then installed again (Family Link lists it unblocked)
+    _lists(hass, [], [])
+    await _recompute(hass)
+    _lists(hass, [GAME], [])
+    freezer.tick(timedelta(minutes=4))
+    await _recompute(hass)
+    assert _packages(calls["block"]) == [GAME, GAME]
+    assert "person.sam" not in _household(hass).blocks.parent_unblocked
 
 
 async def test_windows_and_xbox_show_family_safety_s_web_filter(

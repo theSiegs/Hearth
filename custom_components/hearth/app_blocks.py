@@ -16,8 +16,14 @@ What Hearth blocked itself is kept (applied), so:
 - Hearth only ever unblocks an app it blocked: an app a parent blocked in the Family Link app before Hearth wanted it
   stays the parent's (shown as such), and unblocking it in Hearth leaves it blocked.
 - A block Hearth wants for an app that isn't installed waits, and is applied when the app shows up in Family Link's app
-  lists (installed again later, say). One Hearth applied that shows unblocked later (the app installed again, or
-  unblocked in the Family Link app) is applied again: to unblock, use Hearth.
+  lists. One that left the device and comes back unblocked (installed again) is applied again.
+- A block Family Link confirmed (listed blocked) that later shows unblocked while the app stays installed was taken
+  back by a parent in the Family Link app: Hearth records it (parent_unblocked, shown on its page) and doesn't block it
+  again, until an adult blocks the app again in Hearth.
+- A block call Family Link takes but never lists is tried MAX_TRIES times (about 10 minutes), then Hearth stops and
+  the card says "Family Link didn't block <app>". hearth_app_blocked fires once, when Family Link lists it blocked.
+- Only what Family Link lists as blocked (Hearth's confirmed blocks and a parent's) is left out of Hearth's pauses; a
+  block Hearth wants that isn't confirmed stays subject to them, so the app is still held meanwhile.
 - A browser added to SUPPORTED_BROWSERS later (or the rule turned off) is unblocked, only where Hearth blocked it.
 
 A blocked app is never paused or resumed by Hearth's holds (enforce.py: a budget, a pause, School time, the schedule):
@@ -149,6 +155,9 @@ _NOT_A_WEB_BROWSER = re.compile(r"\bfiles?\b|photo|music|video|gallery|document|
 QUIET = timedelta(minutes=3)
 # A failed call is tried again after this long
 RETRY = timedelta(minutes=5)
+# Block calls Family Link took without listing the app blocked: after this many (about 10 minutes, QUIET apart) Hearth
+# stops trying and the card says "Family Link didn't block <app>"
+MAX_TRIES = 3
 MAX_APPS = 50
 
 
@@ -177,8 +186,15 @@ class AppBlocks:
         self.adult: dict[str, dict[str, dict[str, Any]]] = {}
         # Apps an adult unblocked that the rule would block: person -> packages
         self.exempt: dict[str, set[str]] = {}
-        # What Hearth blocked in Family Link itself: person -> package -> {"at", "why"}
+        # What Hearth blocked in Family Link itself: person -> package -> {"at", "why", "confirmed"?, "gone"?}
+        # (confirmed: Family Link listed it blocked since; gone: it left the device since, so unblocked on its return
+        # is a reinstall, not a parent's unblock)
         self.applied: dict[str, dict[str, dict[str, Any]]] = {}
+        # Blocks of Hearth's a parent took back in the Family Link app: person -> package -> {"at"}. Hearth leaves
+        # them unblocked until an adult blocks the app again in Hearth
+        self.parent_unblocked: dict[str, dict[str, dict[str, Any]]] = {}
+        # Block calls Family Link hasn't confirmed yet, by (person, package); at MAX_TRIES Hearth stops and says so
+        self._tries: dict[tuple[str, str], int] = {}
         # When Hearth last called for an app, and the last error: (person, package) -> ...
         self._called: dict[tuple[str, str], datetime] = {}
         self._errors: dict[tuple[str, str], tuple[str, datetime]] = {}
@@ -201,12 +217,18 @@ class AppBlocks:
             for p, apps in (stored.get("applied") or {}).items()
             if isinstance(apps, dict)
         }
+        self.parent_unblocked = {
+            p: {pkg: dict(v) for pkg, v in apps.items() if isinstance(v, dict)}
+            for p, apps in (stored.get("parent_unblocked") or {}).items()
+            if isinstance(apps, dict)
+        }
 
     def _data(self) -> dict[str, Any]:
         return {
             "adult": {p: apps for p, apps in self.adult.items() if apps},
             "exempt": {p: sorted(apps) for p, apps in self.exempt.items() if apps},
             "applied": {p: apps for p, apps in self.applied.items() if apps},
+            "parent_unblocked": {p: apps for p, apps in self.parent_unblocked.items() if apps},
         }
 
     def _save(self) -> None:
@@ -275,20 +297,30 @@ class AppBlocks:
     def wanted(self, person: str, listed: set[str] | None = None) -> dict[str, set[str]]:
         """The apps Hearth blocks for [person] now, with why: an adult's blocks, and (the rule on) the browsers and
         stores among the apps Family Link lists for them ([listed]) or Hearth blocked for the rule before."""
-        found: dict[str, set[str]] = {p: {ADULT} for p in self.adult.get(person, {}) if not never_blocked(p)}
+        # A block a parent took back in the Family Link app stays theirs (until an adult blocks it again in Hearth)
+        taken_back = set(self.parent_unblocked.get(person, {}))
+        found: dict[str, set[str]] = {
+            p: {ADULT} for p in self.adult.get(person, {}) if not never_blocked(p) and p not in taken_back
+        }
         if self.rule_on:
             if listed is None:
                 target = self.target_of(person)
                 listed = fl.app_lists(self.hass, target[1])[0] if target else set()
-            exempt = self.exempt.get(person, set())
+            exempt = self.exempt.get(person, set()) | taken_back
             for package in (listed | set(self.applied.get(person, {}))) - exempt:
                 if (reason := self.rule_reason(package)) is not None:
                     found.setdefault(package, set()).add(reason)
         return found
 
     def blocked_packages(self, person: str) -> set[str]:
-        """What Hearth's blocks hold for [person]: never paused or resumed by Hearth's other holds (enforce.py)."""
-        return set(self.wanted(person))
+        """What is blocked for [person] in Family Link now (Hearth's confirmed blocks and a parent's): never paused or
+        resumed by Hearth's other holds (enforce.py). A block Hearth wants but Family Link doesn't list yet stays
+        subject to pauses, so an app it failed to block is still held."""
+        target = self.target_of(person)
+        if target is None:
+            return set()
+        blocked = fl.app_lists(self.hass, target[1])[1]
+        return set(blocked or ())
 
     def why_blocked(self, person: str, package: str) -> set[str]:
         return self.wanted(person).get(package, set())
@@ -304,6 +336,9 @@ class AppBlocks:
             for package in packages:
                 mine.setdefault(package, {"at": now})
                 self.exempt.get(person, set()).discard(package)
+                # An adult blocking it again in Hearth takes back a parent's unblock in the Family Link app
+                self.parent_unblocked.get(person, {}).pop(package, None)
+                self._tries.pop((person, package), None)
                 # A new decision: call now, not after the quiet of an earlier call
                 self._called.pop((person, package), None)
                 self._errors.pop((person, package), None)
@@ -341,11 +376,16 @@ class AppBlocks:
                 continue
             entity_id, child = target
             listed, blocked = fl.app_lists(self.hass, child)
-            want = self.wanted(person, listed) if person in self.kids() else {}
             applied = self.applied.setdefault(person, {})
+            if blocked is not None:
+                dirty |= self._confirm(person, applied, listed, blocked)
+            want = self.wanted(person, listed) if person in self.kids() else {}
             for package in sorted(want):
                 if blocked is None or package in blocked or package not in listed:
                     # Blocked already (Hearth's or a parent's), not installed (waits), or it can't be told yet
+                    continue
+                if self._tries.get((person, package), 0) >= MAX_TRIES:
+                    # Family Link took the call but never listed it blocked: Hearth stops and says so (views)
                     continue
                 if self._due(person, package, now):
                     calls.append((person, entity_id, package, True))
@@ -361,6 +401,32 @@ class AppBlocks:
         if dirty:
             self._save()
         return calls
+
+    def _confirm(self, person: str, applied: dict[str, dict[str, Any]], listed: set[str], blocked: set[str]) -> bool:
+        """What Family Link lists now, against what Hearth blocked: a block it lists is confirmed (its event fires
+        once); one that left the device is marked gone (a reinstall comes back unblocked, and is blocked again); one
+        confirmed, still installed and now unblocked was taken back by a parent in the Family Link app: recorded,
+        and Hearth doesn't block it again. Says whether anything changed."""
+        changed = False
+        for package, record in list(applied.items()):
+            if package in blocked:
+                self._tries.pop((person, package), None)
+                if not record.get("confirmed") or record.get("gone"):
+                    record["confirmed"] = True
+                    record.pop("gone", None)
+                    self.hass.bus.async_fire("hearth_app_blocked", {"person": person, "app": package})
+                    changed = True
+            elif package not in listed:
+                if not record.get("gone"):
+                    record["gone"] = True
+                    changed = True
+            elif record.get("confirmed") and not record.get("gone"):
+                applied.pop(package)
+                self.parent_unblocked.setdefault(person, {})[package] = {"at": dt_util.utcnow().isoformat()}
+                _LOGGER.info("%s: %s was unblocked in the Family Link app; Hearth leaves it unblocked", person, package)
+                self.hass.bus.async_fire("hearth_app_unblocked_by_parent", {"person": person, "app": package})
+                changed = True
+        return changed
 
     def _due(self, person: str, package: str, now: datetime) -> bool:
         key = (person, package)
@@ -401,11 +467,14 @@ class AppBlocks:
                     "at": dt_util.utcnow().isoformat(),
                     "why": sorted(self.why_blocked(person, package)),
                 }
+                # hearth_app_blocked fires once, when Family Link lists it blocked (_confirm)
+                tries = self._tries[key] = self._tries.get(key, 0) + 1
+                if tries >= MAX_TRIES:
+                    # Shown on the card until Family Link lists it, or an adult blocks it again
+                    self._errors[key] = (f"Family Link didn't block {self.name_of(package, person)}", dt_util.utcnow())
             else:
                 self.applied.get(person, {}).pop(package, None)
-            self.hass.bus.async_fire(
-                "hearth_app_blocked" if block else "hearth_app_unblocked", {"person": person, "app": package}
-            )
+                self.hass.bus.async_fire("hearth_app_unblocked", {"person": person, "app": package})
             self._save()
         if calls:
             self.household.enforcement.refresh_soon(calls[-1][1])
@@ -487,6 +556,11 @@ class AppBlocks:
                     "family_link": self.target_of(person) is not None,
                     "blocks": self.views(person),
                     "exempt": sorted(self.exempt.get(person, set())),
+                    # Blocks of Hearth's a parent took back in the Family Link app (Hearth leaves them unblocked)
+                    "parent_unblocked": [
+                        {"app": p, "name": self.name_of(p, person), "at": r.get("at")}
+                        for p, r in sorted(self.parent_unblocked.get(person, {}).items())
+                    ],
                     "web_filter": self.web_filter(person),
                 }
                 for person in self.kids()

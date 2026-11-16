@@ -9,6 +9,7 @@
 """
 
 from datetime import timedelta
+import math
 
 import pytest
 
@@ -131,15 +132,19 @@ def test_no_user_facing_string_says_pool() -> None:
 
 
 def test_the_backstop_math() -> None:
-    # Daily time 180 + 25 bonus left + 30 margin = 235, rounded up to 5: 235; 181 + 30 -> 215
-    assert backstop_minutes(180, 25, 0, 30) == 235
-    assert backstop_minutes(181, 0, 0, 30) == 215
-    # Raised limits of categories outside daily time count on the device too
-    assert backstop_minutes(180, 0, 45, 30) == 255
+    # The device's minutes today + Hearth's daily time left + margin, rounded up to 5
+    assert backstop_minutes(180, 0, 180, 30) == 210
+    # Spending counted time keeps it steady: 60 more on the phone, 60 less left
+    assert backstop_minutes(180, 60, 120, 30) == 210
+    # Spending bonus too: +30 bonus (210 left), 150 used of it all
+    assert backstop_minutes(180, 0, 210, 30) == backstop_minutes(180, 150, 60, 30) == 240
+    # Time Hearth doesn't count (a not-screen-time app, Unlimited) raises it
+    assert backstop_minutes(180, 120, 180, 30) == 330
+    assert backstop_minutes(180, 3, 177, 31) == 215
     # Unlimited: a whole day; no daily time: left alone (Unlimited or not)
     assert backstop_minutes(180, 0, 0, 30, no_limits=True) == 1440
     assert backstop_minutes(None, 30, 0, 30) is None and backstop_minutes(None, 0, 0, 30, no_limits=True) is None
-    assert backstop_minutes(1430, 30, 0, 30) == 1440
+    assert backstop_minutes(180, 1400, 30, 30) == 1440
 
 
 # Migration
@@ -397,63 +402,188 @@ async def test_unlimited_ends_at_midnight(
 
 # The Family Link backstop
 
+CHILD = "424242424242424242424"
+PHONE = "sensor.sam_phone_daily_screen_time"
+TV_FL = "sensor.sam_living_room_tv_daily_screen_time"
 
-async def _backstop_household(hass, hass_client_no_auth):
+
+def _phone(hass, minutes: float, counted: float | None = None, app: str = "com.example.game") -> None:
+    """Family Link's screen time today on Sam's phone (a device that takes a daily limit), and the part of it Hearth
+    counts (Family Link's daily total as Sam's source, all in [app]; None: all of it)."""
+    hass.states.async_set(
+        PHONE, str(minutes),
+        {"child_id": CHILD, "device_id": "phone1", "device_name": "Phone", "capabilities": ["capabilityBedtime"]},
+    )
+    counted = minutes if counted is None else counted
+    hass.states.async_set(
+        FAMILY_LINK, str(counted),
+        {"unit_of_measurement": "min", "child_id": CHILD, "apps": [{"package": app, "minutes": counted}] if counted else []},
+    )
+
+
+async def _backstop_household(hass, hass_client_no_auth, phone: float = 0):
     limits = async_mock_service(hass, "familylink", "set_daily_limit")
-    await _household_with_sam(hass, hass_client_no_auth)
-    hass.states.async_set(FAMILY_LINK, "0", {"unit_of_measurement": "min", "child_id": "424242424242424242424"})
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    _phone(hass, phone)
+    # Family Link's daily total is one of Sam's sources: Hearth counts the phone too
+    await _option(hass, "add_source", {"entity_id": FAMILY_LINK, "person": "person.sam"})
+    # A Google TV of the child's in Family Link: it takes no daily limit, so its minutes don't count
+    hass.states.async_set(
+        TV_FL, "500",
+        {"child_id": CHILD, "device_id": "tv1", "device_name": "Living Room TV", "capabilities": ["capabilityAppUsage"]},
+    )
     await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
     await _set(hass, "all", 180)
-    return limits
+    return limits, client, secret
+
+
+async def _tick(hass) -> None:
+    _household(hass).recompute()
+    await hass.async_block_till_done()
 
 
 async def test_the_backstop_follows_today_s_time_and_writes_only_on_change(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
-    limits = await _backstop_household(hass, hass_client_no_auth)
-    household = _household(hass)
-    # 180 + 0 + 30, rounded up to 5; the child's id as a string, today's override (no day)
-    assert [c.data for c in limits] == [{"child_id": "424242424242424242424", "daily_minutes": 210}]
-    household.recompute()
-    await hass.async_block_till_done()
+    limits, _client, _secret = await _backstop_household(hass, hass_client_no_auth)
+    # The phone's 0 + 165 left (15 counted on the TV) + 30, rounded up to 5; the child's id as a string, today's
+    # override (no day); the Google TV's 500 in Family Link don't count
+    assert [c.data for c in limits] == [{"child_id": CHILD, "daily_minutes": 195}]
+    await _tick(hass)
     assert len(limits) == 1
-    # Bonus time: more on Family Link too
+    # Bonus time: higher, written
     await _call(hass, "add_time", {"person": "person.sam", "minutes": 20})
-    assert limits[-1].data["daily_minutes"] == 230 and len(limits) == 2
+    assert limits[-1].data["daily_minutes"] == 215 and len(limits) == 2
     # A raised limit inside daily time changes nothing there
     await _call(hass, "raise_cap", {"person": "person.sam", "category": "video", "minutes": 30})
     assert len(limits) == 2
-    # Unlimited: a whole day, and back after
+    # Unlimited: a whole day, and the same sum again right after
     await _call(hass, "unlimited", {"person": "person.sam"})
     assert limits[-1].data["daily_minutes"] == 1440
     await _call(hass, "unlimited_end", {"person": "person.sam"})
-    assert limits[-1].data["daily_minutes"] == 230
-    # The margin is an option; off leaves Family Link alone
+    assert limits[-1].data["daily_minutes"] == 215
+    # The margin is an option (higher: written); off leaves Family Link alone
     await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop_margin": 60})
-    assert limits[-1].data["daily_minutes"] == 260
+    assert limits[-1].data["daily_minutes"] == 245
     count = len(limits)
     await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
     await _call(hass, "add_time", {"person": "person.sam", "minutes": 20})
     assert len(limits) == count
 
 
+async def test_spending_bonus_writes_nothing_and_never_locks_early(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """+30 bonus, then the phone uses daily time and the bonus, inside and past a category's limit: the limit
+    stays above what the phone used, and isn't written again while time is spent."""
+    limits, _client, _secret = await _backstop_household(hass, hass_client_no_auth)
+    await _set(hass, "games", 60)
+    await _call(hass, "add_time", {"person": "person.sam", "minutes": 30})
+    written = limits[-1].data["daily_minutes"]
+    count = len(limits)
+    household = _household(hass)
+    # Games on the phone: inside the limit, then past it on the bonus (5 more on the TV: 65, 95 of games)
+    for used in (30, 60, 90):
+        _phone(hass, used)
+        await _tick(hass)
+        assert len(limits) == count
+        assert limits[-1].data["daily_minutes"] >= used + 5
+    assert household.days["person.sam"].limits["all"].bonus_left < 30
+    # Past the bonus too: Games is held, the limit hasn't moved
+    _phone(hass, 120)
+    await _tick(hass)
+    assert household.days["person.sam"].limits["games"].minutes_left == 0
+    assert len(limits) == count and limits[-1].data["daily_minutes"] == written
+
+
+async def test_unlimited_ending_mid_day_doesn_t_lock_the_phone(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """30 counted on the phone, then 150 on it while Unlimited: Family Link counted 180 of the 180 daily time. After
+    Unlimited the limit is 180 + time left + margin, never the 180 that would lock it."""
+    limits, _client, _secret = await _backstop_household(hass, hass_client_no_auth, phone=30)
+    await _call(hass, "unlimited", {"person": "person.sam"})
+    assert limits[-1].data["daily_minutes"] == 1440
+    _phone(hass, 180)
+    await _tick(hass)
+    await _call(hass, "unlimited_end", {"person": "person.sam"})
+    view = _household(hass).time_view("person.sam")
+    assert limits[-1].data["daily_minutes"] == math.ceil((180 + view["today_left"] + 30) / 5) * 5
+    assert limits[-1].data["daily_minutes"] > 180 + 5
+
+
+async def test_a_not_screen_time_app_then_games_doesn_t_lock_early(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """2 h on the phone in an app outside daily time (Hearth doesn't count it), then games: Family Link's limit rises
+    with the phone's minutes, so it never sits below them."""
+    limits, _client, _secret = await _backstop_household(hass, hass_client_no_auth)
+    first = limits[-1].data["daily_minutes"]
+    # 2 h that Hearth doesn't count
+    _phone(hass, 120, counted=0)
+    await _tick(hass)
+    assert limits[-1].data["daily_minutes"] == first + 120
+    # Then 30 of games, counted: steady (the phone's minutes grow as daily time left shrinks)
+    _phone(hass, 150, counted=30)
+    await _tick(hass)
+    assert limits[-1].data["daily_minutes"] == first + 120 >= 150 + 5
+
+
+async def test_lower_values_wait_for_the_hysteresis_and_a_hold_is_checked_before_writing(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    limits, _client, _secret = await _backstop_household(hass, hass_client_no_auth)
+    await _call(hass, "add_time", {"person": "person.sam", "minutes": 20})
+    count = len(limits)
+    # 20 less (taken back): within 30 of what's written, not written
+    await _call(hass, "remove_time", {"person": "person.sam", "minutes": 20})
+    assert len(limits) == count
+    # 40 less (daily time lowered): written
+    await _set(hass, "all", 160)
+    assert len(limits) == count + 1 and limits[-1].data["daily_minutes"] == 175
+    # A hold started between the plan and the write: nothing written
+    household = _household(hass)
+    plans = household.backstop.plans()
+    household.backstop._out = lambda person: True
+    await household.backstop._write({"person.sam": (CHILD, 999)})
+    assert all(c.data["daily_minutes"] != 999 for c in limits)
+    assert plans == {}
+
+
 async def test_the_backstop_never_names_a_tv(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
     """Google TVs keep Family Link's limits off on purpose (Hearth holds them itself): the backstop names only the
     child, never a device, and Family Link's child_id path writes only devices that take a daily limit (its
-    time_limit_device_ids skips a Google TV)."""
-    limits = async_mock_service(hass, "familylink", "set_daily_limit")
-    await _household_with_sam(hass, hass_client_no_auth)
-    child = "424242424242424242424"
-    hass.states.async_set(FAMILY_LINK, "0", {"unit_of_measurement": "min", "child_id": child})
-    # Sam's phone and a Google TV, both Family Link devices of the child
-    hass.states.async_set("switch.sam_phone", "on", {"child_id": child, "device_id": "phone1", "device_name": "Phone"})
+    time_limit_device_ids skips a Google TV); a TV's own minutes in Family Link don't move it."""
+    limits, _client, _secret = await _backstop_household(hass, hass_client_no_auth)
+    hass.states.async_set("switch.sam_phone", "on", {"child_id": CHILD, "device_id": "phone1", "device_name": "Phone"})
     hass.states.async_set(
-        "switch.sam_living_room_tv", "on", {"child_id": child, "device_id": "tv1", "device_name": "Living Room TV"}
+        "switch.sam_living_room_tv", "on", {"child_id": CHILD, "device_id": "tv1", "device_name": "Living Room TV"}
     )
-    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK})
-    await _set(hass, "all", 120)
-    assert limits and all(c.data == {"child_id": child, "daily_minutes": 150} for c in limits)
-    assert not any("entity_id" in c.data or "device_id" in c.data for c in limits)
+    await _tick(hass)
+    assert limits and not any("entity_id" in c.data or "device_id" in c.data for c in limits)
+    assert all(c.data["child_id"] == CHILD and c.data["daily_minutes"] < 500 for c in limits)
+
+
+async def test_a_hold_s_put_back_is_the_weekday_s_own_limit(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """Hearth's whole-device hold keeps the weekday's own limit (weekly_minutes), not today's override (which is the
+    backstop's), and puts that back."""
+    from custom_components.hearth.enforce import WEEKDAYS
+
+    limits, _client, _secret = await _backstop_household(hass, hass_client_no_auth)
+    weekday = WEEKDAYS[dt_util.now().weekday()]
+    backstop = limits[-1].data["daily_minutes"]
+    hass.states.async_set(
+        f"number.sam_family_link_{weekday}_limit", str(backstop), {"child_id": CHILD, "weekly_minutes": 120}
+    )
+    await _set(hass, "all", 10)  # 15 counted: out, held
+    day = dt_util.now().isoweekday()
+    assert limits[-1].data == {"child_id": CHILD, "daily_minutes": 0, "day": day}
+    hass.states.async_set(f"number.sam_family_link_{weekday}_limit", "0", {"child_id": CHILD, "weekly_minutes": 0})
+    await _call(hass, "add_time", {"person": "person.sam", "minutes": 30})
+    put_back = [c.data for c in limits if c.data.get("day") == day]
+    assert put_back[-1] == {"child_id": CHILD, "daily_minutes": 120, "day": day}
 
 
 async def test_origins_say_where_each_status_came_from(

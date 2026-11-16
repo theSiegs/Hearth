@@ -219,6 +219,7 @@ class Household:
         self.sync = NativeSync(hass, self, hub.entry.entry_id)
         # Family Link's daily limit kept as a backstop above Hearth's own numbers (backstop.py)
         self.backstop = Backstop(hass, self, hub.entry.entry_id)
+        self.enforcement.backstop_values = self.backstop.written_minutes
         # Unlimited windows: time used then isn't counted (unlimited.py)
         self.unlimited = Unlimited(hass, self, hub.entry.entry_id)
         # An adult's extra time at bedtime lifts it while it lasts (bedtime_lift.py)

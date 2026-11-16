@@ -3,21 +3,25 @@
 Hearth's own holds are the real limit. Family Link's per-device daily limit is kept a little above them, so a phone
 whose Hearth companion is off, or a device Hearth can't see, still stops near the end of the day:
 
-    daily limit = daily time + bonus time left + raised limits of categories outside daily time + margin
+    daily limit = the most screen time Family Link counted today on one of the kid's devices (not a TV)
+                  + Hearth's daily time left (bonus included) + margin
 
-rounded up to 5 minutes, at most a day (time_model.backstop_minutes). The margin is 30 minutes by default (Configure >
-Enforce). With limits paused (hearth.pause_limits) it is a whole day, and back to the sum when the pause ends. A kid
-with no daily time in Hearth is left alone.
+rounded up to 5 minutes, at most a day (time_model.backstop_minutes). It's anchored on what Family Link itself counted,
+so it never sits below real use: time Hearth doesn't count (a category outside daily time, System screens, Unlimited)
+raises it, and spending counted time (bonus included) leaves it steady, since the device's minutes grow as Hearth's
+time left shrinks. The margin is 30 minutes by default (Configure > Enforce). While Unlimited is on it is a whole day,
+and the same sum again as soon as Unlimited ends. A kid with no daily time in Hearth is left alone.
 
-- Written only when the value changes (and again after Hearth's own whole-device hold let go, which puts back the
-  weekday's limit), through familylink.set_daily_limit with the child's id alone: today's override on each device of the
-  child that takes a daily limit (Family Link skips Google TVs). The child's id is read from the entity's attributes
-  and passed as a string, never templated (Home Assistant would read its 21 digits as a number).
+- Written with hysteresis: when the wanted value is higher than what Hearth wrote today, or more than HYSTERESIS lower
+  (and again after Hearth's own whole-device hold let go, which puts back the weekday's limit). Never below a device's
+  minutes today + 5. Through familylink.set_daily_limit with the child's id alone: today's override on each device of
+  the child that takes a daily limit (Family Link skips Google TVs). The child's id is read from the entity's
+  attributes and passed as a string, never templated (Home Assistant would read its 21 digits as a number).
 - Nothing is written while Hearth holds the child's devices (daily time used up: enforce.py sets the limit to 0), nor
-  when daily time is used up and that hold is about to start.
+  when daily time is used up and that hold is about to start; both are checked again right before each write.
 - A parent's change: the override is today's only, and Hearth writes it each day, so the backstop wins over a weekday
-  limit a parent changed in the Family Link app (and over a today's limit they set, at the next change of Hearth's
-  numbers). Switch the backstop off to keep Family Link's own limits.
+  limit a parent changed in the Family Link app (and over a today's limit they set, at the next write). Switch the
+  backstop off to keep Family Link's own limits.
 - Every grant of bonus time also adds a Family Link bonus where the device would stop sooner (native_sync.mirror_bonus).
 """
 
@@ -25,12 +29,14 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 import logging
+import math
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
+from . import family_link as fl
 from .counting import ALL
 from .enforce import FAMILY_LINK
 from .entry_tasks import entry_task
@@ -46,6 +52,10 @@ FL_DOMAIN = "familylink"
 CONF_FL_BACKSTOP = "fl_backstop"
 CONF_FL_BACKSTOP_MARGIN = "fl_backstop_margin"
 RETRY = timedelta(minutes=5)
+# A lower value is written only when it's this much lower than the one written today
+HYSTERESIS = 30
+# Never less than a device's minutes today plus this
+FLOOR = 5
 
 
 class Backstop:
@@ -84,22 +94,35 @@ class Backstop:
         except (TypeError, ValueError):
             return BACKSTOP_MARGIN
 
+    def device_minutes(self, person: str, child: str | None = None) -> float:
+        """The most screen time Family Link counted today on one of the person's devices that take a daily limit
+        (fl.device_minutes_today: never a Google TV); without any, what Hearth counted today across everything
+        (Unlimited minutes included), which is never less."""
+        child = child or self.household.family_link_child(person)
+        found = [m for _, m in fl.device_minutes_today(self.hass, child)] if child else []
+        if found:
+            return max(found)
+        day = self.household.days.get(person)
+        return ((day.raw_groups or day.groups).get(ALL, 0.0) / 60) if day else 0.0
+
+    def _out(self, person: str) -> bool:
+        """Daily time used up (not Unlimited): Hearth's whole-device hold is the limit then."""
+        day = self.household.days.get(person)
+        state = day.limits.get(ALL) if day else None
+        return bool(state and state.minutes_left == 0 and self.household.no_limits_until(person) is None)
+
     def wanted(self, person: str) -> int | None:
         """The daily limit Family Link should have today for the person; None: leave it alone."""
         day = self.household.days.get(person)
         state = day.limits.get(ALL) if day else None
-        if state is None:
+        if state is None or state.budget_min is None:
             return None
-        paused = self.household.no_limits_until(person) is not None
-        if not paused and state.minutes_left == 0:
+        if self._out(person):
             return None
-        outside = self.household.outside_all()
-        raised = sum(
-            max(0, s.bonus_min)
-            for gid, s in day.limits.items()
-            if gid != ALL and gid in outside and s.raised is not None and s.budget_min is not None
+        unlimited = self.household.no_limits_until(person) is not None
+        return backstop_minutes(
+            state.budget_min, int(math.ceil(self.device_minutes(person))), state.minutes_left or 0, self.margin(), unlimited
         )
-        return backstop_minutes(state.budget_min, state.bonus_left, raised, self.margin(), paused)
 
     def holds(self, person: str) -> bool:
         """Hearth's whole-device hold of the person's Family Link devices is on (enforce.py set the limit to 0)."""
@@ -148,7 +171,8 @@ class Backstop:
             if minutes is None:
                 continue
             record = self.written.get(person) or {}
-            if record.get("day") == today and record.get("minutes") == minutes:
+            last = record.get("minutes") if record.get("day") == today else None
+            if last is not None and last - HYSTERESIS <= minutes <= last:
                 continue
             failed = self._failed.get(person)
             if failed is not None and now - failed < RETRY:
@@ -159,6 +183,11 @@ class Backstop:
     async def _write(self, plans: dict[str, tuple[str, int]]) -> None:
         self._again = False
         for person, (child, minutes) in plans.items():
+            # Again right before the write: a hold may have started, or daily time run out, since the plan
+            if self.holds(person) or self._out(person):
+                continue
+            # Never below what a device already used today
+            minutes = min(1440, max(minutes, int(math.ceil(self.device_minutes(person, child))) + FLOOR))
             try:
                 # The child's id as a string, from its entity's attributes: never a template
                 await self.hass.services.async_call(
@@ -177,3 +206,8 @@ class Backstop:
         self._save()
         if self._again:
             self.check()
+
+    def written_minutes(self) -> set[int]:
+        """Every value the backstop wrote today (enforce.py never puts one of these back as a weekday's limit)."""
+        today = dt_util.now().date().isoformat()
+        return {int(r["minutes"]) for r in self.written.values() if r.get("day") == today and r.get("minutes")}

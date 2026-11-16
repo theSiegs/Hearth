@@ -795,10 +795,18 @@ so Hearth's pauses, its schedule and its blocks stay in step (`app_blocks.py`).
 - **Hearth only undoes its own blocks.** An app a parent already blocked in the Family Link app stays the parent's
   (Hearth's page shows "blocked by a parent in Family Link"); unblocking it in Hearth leaves it blocked there.
 - **A block stays.** An app that isn't installed waits ("not installed: blocked when it shows up") and is blocked as soon
-  as it appears in Family Link's app lists. An app Hearth blocked that shows up unblocked later (installed again, or
-  unblocked in the Family Link app) is blocked again: unblock in Hearth.
-- **Holds leave a blocked app alone.** A budget, a pause, School time's apps or the schedule never pause or resume an
-  app Hearth blocks: one Hearth had paused stays recorded as paused (its reason on Hearth's page is `blocked_app`) and Family
+  as it appears in Family Link's app lists. One that left the device and comes back unblocked (installed again) is
+  blocked again.
+- **A parent's unblock in the Family Link app is kept.** A block Family Link confirmed (listed as blocked) that later
+  shows unblocked while the app stays installed was taken back by a parent: Hearth records it ("unblocked by a parent
+  in Family Link" on Hearth's page, event `hearth_app_unblocked_by_parent`) and doesn't block it again, until an adult
+  blocks the app again in Hearth.
+- **When Family Link doesn't take it.** A block call Family Link accepts but never lists is tried 3 times, a few minutes
+  apart (about 10 minutes); then Hearth stops and the card says "Family Link didn't block <app>". `hearth_app_blocked`
+  fires once, when Family Link lists the app blocked.
+- **Holds leave a blocked app alone.** Only what Family Link lists as blocked (Hearth's confirmed blocks and a parent's)
+  is left out of Hearth's holds; a block Hearth wants that Family Link doesn't list yet is still paused like any app.
+  A budget, a pause, School time's apps or the schedule never pause or resume an app Family Link lists blocked: one Hearth had paused stays recorded as paused (its reason on Hearth's page is `blocked_app`) and Family
   Link's `resume_app` skips a blocked app anyway; once unblocked, it is let go as usual. `hearth.allow` doesn't lift a
   block, the MCP tools refuse to allow it, and `hearth.explain` lists it in `blocked_by` (`kind: blocked_app`).
 - **Block browsers Hearth doesn't support** (option `block_unsupported_browsers`, off by default; Hearth's page > Apps >
@@ -956,18 +964,27 @@ Hearth's own holds are the real limit. On top of them Hearth keeps each kid's Fa
 its own numbers (backstop.py), so a phone whose Hearth companion is off, or a device Hearth can't see, still stops near
 the end of the day:
 
-    Family Link daily limit today = daily time + bonus time left + raised limits of categories outside daily time
-                                    + margin, rounded up to 5 minutes (at most 24 hours)
+    Family Link daily limit today = the most screen time Family Link counted today on one of the kid's devices
+                                    (not a TV) + Hearth's daily time left (bonus included) + margin,
+                                    rounded up to 5 minutes (at most 24 hours)
+
+It's anchored on what Family Link itself counted, so it never sits below real use. Spending counted time (bonus
+included, past a category's limit or not) leaves it steady: the device's minutes grow as Hearth's time left shrinks.
+Time Hearth doesn't count (a category outside daily time, System screens, Unlimited) raises it. Example: 30 minutes
+counted, then 150 on the phone while Unlimited: after Unlimited it is 180 + the time left + 30, never 180.
 
 - On by default (Configure > Enforce: "Keep Family Link's daily limit as a backstop"); the margin is 30 minutes by
   default ("Backstop margin"). Off: Family Link's own limits are left as the parent set them.
-- While Unlimited is on: a whole day (1440), and back to the sum when it ends.
-- Written only when the value changes, through `familylink.set_daily_limit` with the child's id alone (today's
+- While Unlimited is on: a whole day (1440), and the same sum again as soon as it ends.
+- Written with hysteresis: when the value is higher than what Hearth wrote today, or more than 30 minutes lower; never
+  below a device's minutes today + 5. Through `familylink.set_daily_limit` with the child's id alone (today's
   override on each of the child's devices that take a daily limit; Family Link's `time_limit_device_ids` skips Google
   TVs, which keep Family Link's limits off on purpose: Hearth holds a TV itself). The child's id is read from the
   entity's attributes and passed as a string, never templated (Home Assistant reads 21 digits as a number).
-- Nothing is written while Hearth's whole-device hold is on (daily time used up: the limit is 0) or about to start; after
-  the hold lets go (which puts back the weekday's limit) the backstop is written again.
+- Nothing is written while Hearth's whole-device hold is on (daily time used up: the limit is 0) or about to start,
+  checked again right before each write; after the hold lets go the backstop is written again. The hold keeps the
+  weekday's own limit (the weekday number's `weekly_minutes`, not its state, which reads today's override) and puts
+  that back; a value read from the state that is the backstop's or a whole day is never put back as the weekday's.
 - A parent's own change: the backstop is today's override, written each day, so it wins over a weekday limit changed in
   the Family Link app (and over a today's limit they set, at Hearth's next change). Switch it off to keep Family Link's
   own limits.
