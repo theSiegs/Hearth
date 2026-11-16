@@ -84,6 +84,33 @@ def test_bonus_unused_at_the_end_of_the_day() -> None:
     assert tomorrow.bonus_left == 0 and tomorrow.today_left == 180
 
 
+def test_a_category_bonus_is_spent_first_and_only_there() -> None:
+    """+15 Messaging bonus and +30 general bonus. Daily time 180, Messaging limit 30."""
+    # 190 used (40 of Messaging): 10 past daily time and 10 past Messaging's limit: Messaging's own bonus pays them
+    # first (they're the same 10 minutes), the general bonus is untouched
+    day = account(180, 30, 190, {"messaging": (30, 40)}, {"messaging": (15, 40, True)})
+    assert day.cat_left["messaging"] == 5 and day.bonus_used == 0 and day.bonus_left == 30
+    assert day.today_left == 30  # 180 + 30 - (190 - 10)
+    # Messaging may still use its 5 and the general 30
+    assert day.usable["messaging"] == 35
+    # Past its own bonus: the general one takes over (60 of Messaging: 30 past the limit, 15 paid by its bonus)
+    more = account(180, 30, 210, {"messaging": (30, 60)}, {"messaging": (15, 60, True)})
+    assert more.cat_left["messaging"] == 0 and more.bonus_used == 15 and more.bonus_left == 15
+
+
+def test_a_messaging_bonus_can_t_be_spent_in_games() -> None:
+    """Daily time used up on games: the Messaging bonus doesn't open games, it only lets Messaging run."""
+    day = account(180, 0, 180, {"games": (None, 180)}, {"messaging": (15, 0, True)})
+    assert day.today_left == 0 and day.usable["games"] == 0
+    assert day.usable["messaging"] == 15 and day.cat_left["messaging"] == 15
+    # 15 of Messaging later: past daily time, paid by its bonus; then held
+    after = account(180, 0, 195, {"games": (None, 180)}, {"messaging": (15, 15, True)})
+    assert after.cat_left["messaging"] == 0 and after.usable["messaging"] == 0 and after.today_left == 0
+    # Messaging minutes early in the day (nothing past anything) don't use its bonus: games can't take them
+    early = account(180, 0, 20, {"games": (None, 0)}, {"messaging": (15, 20, True)})
+    assert early.cat_left["messaging"] == 15 and early.today_left == 160
+
+
 def test_a_raised_limit_isn_t_bonus_time() -> None:
     """Raising Games to 3 h lets games use more of daily time; daily time is unchanged."""
     raised = Raise(to=180)
@@ -93,7 +120,7 @@ def test_a_raised_limit_isn_t_bonus_time() -> None:
     bonus = account(180, 30, 150, {"games": (120, 150)})
     assert bonus.cap_left["games"] == 0 and bonus.today_left == 60
     assert Raise(add=60).cap(120) == 180 and Raise(no_cap=True).cap(120) is None and Raise(add=-200).cap(120) == 0
-    assert limit_text("Games", 120, 180, True) == "Games: 3 h limit today (raised)"
+    assert limit_text("Games", 120, 180, True) == "Games limit today: 3 h (raised)"
     assert limit_text("Games", 120, None, True) == "Games: no limit today (raised)"
     assert limit_text("Games", 120, 120, False) == "Games: 2 h limit"
     assert limit_text("Games", None, None, False) == "Games: no limit"
@@ -241,7 +268,7 @@ async def test_raise_a_limit_by_to_or_none_and_end_it(
     view = household.time_view("person.sam")
     video = next(c for c in view["categories"] if c["id"] == "video")
     assert (video["limit"], video["limit_today"], video["raised"], video["left"]) == (10, 40, True, 30)
-    assert video["limit_text"] == "Video: 40 min limit today (raised)"
+    assert video["limit_text"] == "Video limit today: 40 min (raised)"
     # Daily time is unchanged
     assert view["today_left"] == 45 and view["bonus_left"] == 0
     await _call(hass, "raise_cap", {"person": "person.sam", "category": "video", "no_cap": True})

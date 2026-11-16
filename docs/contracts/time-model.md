@@ -17,10 +17,10 @@ those minutes, so the day could run out first. Now:
   1. **Bonus time** (`hearth.add_time`): N minutes added to daily time, with **no category**. The kid may spend it
      anywhere. Minutes past any category's limit come out of the same N (one bonus, shared by every category).
      Chores, approved asks, the day-off bonus and adults all give bonus time. It ends at midnight.
-  2. **Raise limit** (`hearth.raise_cap`): one category's limit today, by some minutes, to some minutes, or no limit,
+  2. **A category's bonus** (`hearth.add_time` with `category`): "+15 min Messaging bonus", usable only in that
+     category, past daily time and its limit; spent before the general bonus. Ends at midnight.
+  3. **Raise limit** (`hearth.raise_cap`): one category's limit today, by some minutes, to some minutes, or no limit,
      until a time. Daily time is unchanged.
-  3. **Allow for a while** (`hearth.allow` {group, minutes}): one category runs for some minutes whatever daily time
-     or its limit says, and its minutes meanwhile aren't counted ("more minutes of messaging").
   4. **Unlimited** (`hearth.unlimited`): until a time, "until turned off", or the end of the day (always over at
      midnight). Nothing Hearth holds for daily time or a limit holds the kid, and **the minutes used meanwhile aren't
      counted**: daily time, limits and bonus time pick up exactly where they were. Bedtime, School time and Pause
@@ -58,10 +58,10 @@ New, under `time` (always present for a person; values may be `null`):
 | `time.used` | int | Minutes counted today (Unlimited minutes left out). |
 | `time.unlimited` | object \| null | While Unlimited is on: `{until, open, include_bedtime, text}`. `open`: "until turned off". |
 | `time.unlimited_today` | list | Today's ended windows: `{start, end, minutes, settled, text}`. |
-| `time.allowed` | list | Categories allowed for a while now (`hearth.allow` of a category): `{id, group, until, text}`; their minutes meanwhile aren't counted. |
 | `time.text` | string \| null | The kid's line, ready to show (see Words). |
 | `time.adult_text` | string \| null | The adult's line ("... (includes 30 min bonus)"). |
 | `time.categories[]` | list | Each category with a limit (or a raised one): `{id, name, limit, limit_today, raised, until, left, used, text, limit_text}`. `limit`: as set for today's kind of day; `limit_today`: in force today (`null`: no limit); `left`: usable (never more than `today_left`); `text`: the kid's line; `limit_text`: the adult's hint. |
+| `time.category_bonuses[]` | list | Categories with their own bonus today: `{id, name, bonus, bonus_left, left, text}` ("Messaging: 15 min bonus left"). Each `time.categories[]` entry also has `bonus` and `bonus_left`. |
 | `time.origins[]` | list | Where today's statuses came from (see Origin), newest first. |
 
 Unchanged: `groups[]` with `{id, name, minutes_left, apps, except}`. A category's `groups[].minutes_left` is
@@ -85,7 +85,7 @@ categorized app), and `groups` lists every group it counts in. New: `today_left`
 A kid asks for **bonus time**, with no category. `POST /api/hearth/device/{id}/ask` and the TV's ask still accept
 `group`, but Hearth records every ask as `group: "all"` and an approval gives bonus time (`hearth.add_time`), whatever
 group was sent. The ask's `request.group` in the state document is `"all"`. Amounts are unchanged (15, 30, 45, 60).
-A client should not offer a category choice.
+A client should not offer a category choice. (An adult, or an assistant asked for "more minutes of messaging", gives a category's bonus with `hearth.add_time` and `category`.)
 
 ## Words kids see (exact)
 
@@ -96,10 +96,11 @@ A client should not offer a category choice.
 | No time left | `No time left today` |
 | A category at its limit, daily time left | `Games are done for today · 40 min left for other things` |
 | A category with time | `Games: 25 min left` |
+| Only a category's own bonus is left | `Messaging: 15 min bonus left` |
+| A category's bonus given (adults, chores) | `+15 min Messaging bonus` |
 | Unlimited with an end | `Unlimited until 6 PM` |
 | Unlimited until turned off | `Unlimited (until turned off)` |
 | Unlimited ended | `Limits back on · 1 h 10 min left today` |
-| A category allowed for a while | `Messaging allowed until 4:25 PM` |
 | Ask button | `Ask for bonus time` |
 | Chore done | `+20 min bonus earned` |
 | Family pause | `Screens paused` |
@@ -107,7 +108,7 @@ A client should not offer a category choice.
 Durations read `40 min`, `1 h`, `1 h 10 min`; clocks `6 PM`, `6:30 PM`. `time.text` and each
 `time.categories[].text` already carry these lines; a client may show them as they come. Adults see, in addition:
 `1 h 10 min left today (includes 30 min bonus)` (the parenthesis only while bonus is left), `Games: 2 h limit`,
-`Games: no limit`, `Games: 3 h limit today (raised)`, and `Unlimited 2:00–5:10 PM · 3 h 10 min not counted`.
+`Games: no limit`, `Games limit today: 3 h (raised)`, and `Unlimited 2:00–5:10 PM · 3 h 10 min not counted`.
 
 Never say pool, bucket, budget or max to a person; never "grown-up" (it's "adult").
 

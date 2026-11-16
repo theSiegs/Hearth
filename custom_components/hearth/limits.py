@@ -543,6 +543,9 @@ class GroupState:
     usable: int | None = None
     bonus_left: int = 0
     raised: Raise | None = None
+    # A category's bonus today (usable only there) and what's left of it
+    cat_bonus: int = 0
+    cat_bonus_left: int = 0
     # A category's max as an adult set it for today (before any raise)
     configured: int | None = None
 
@@ -579,6 +582,8 @@ class LimitsData:
     model: int = 1
     # Where today's changes came from, per person: [{kind, source, by, at, detail, ...}] (household.note_origin)
     origins: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    # Today's category bonuses: person -> group -> minutes (usable only there, past daily time and its limit)
+    cat_bonus: dict[str, dict[str, int]] = field(default_factory=dict)
 
 
 MAX_ORIGINS = 50
@@ -615,6 +620,7 @@ class Limits:
             # A store with no version is an older Hearth's (or a new household's: nothing to move)
             model=stored.get("model", 1),
             origins=stored.get("origins", {}),
+            cat_bonus=stored.get("cat_bonus", {}),
         )
         if self.migrate_bonuses():
             self._save()
@@ -629,6 +635,7 @@ class Limits:
             "raises": self.data.raises,
             "model": self.data.model,
             "origins": self.data.origins,
+            "cat_bonus": self.data.cat_bonus,
         }
 
     def _save(self) -> None:
@@ -667,6 +674,7 @@ class Limits:
         self.data.reached = {}
         self.data.raises = {}
         self.data.origins = {}
+        self.data.cat_bonus = {}
         self._save()
         return True
 
@@ -728,6 +736,19 @@ class Limits:
             self.set_raise(person, group, Raise(minutes, held.to, held.no_cap, held.until))
             return
         self.data.bonus.setdefault(person, {})[group] = minutes
+        self._save()
+
+    def cat_bonus(self, person: str, group: str) -> int:
+        """Today's bonus for one category (hearth.add_time with a category): usable only there."""
+        return int(self.data.cat_bonus.get(person, {}).get(group, 0))
+
+    def set_cat_bonus(self, person: str, group: str, minutes: int) -> None:
+        """Today's bonus for one category; never below 0 (a category bonus can't take time away)."""
+        minutes = max(0, min(MAX_BONUS, int(minutes)))
+        if minutes:
+            self.data.cat_bonus.setdefault(person, {})[group] = minutes
+        else:
+            self.data.cat_bonus.get(person, {}).pop(group, None)
         self._save()
 
     def raise_of(self, person: str, group: str, now: Any = None) -> Raise | None:

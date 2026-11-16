@@ -28,8 +28,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
-from .counting import ALL
-from .time_model import allowed_text, say_clock, unlimited_span_text, unlimited_text
+from .time_model import say_clock, unlimited_span_text, unlimited_text
 
 if TYPE_CHECKING:
     from .household import Household
@@ -100,47 +99,6 @@ class Unlimited:
         return window
 
     @callback
-    def start_group(self, person: str, allow_id: str, group: str, until: datetime, in_all: bool) -> dict[str, Any]:
-        """Allow for a while (hearth.allow of a category): a window scoped to [group]: its minutes meanwhile count
-        neither in it nor (when it counts there, [in_all]) in daily time; nothing else is left out."""
-        now = dt_util.now()
-        self._new_day(now)
-        window = {
-            "id": secrets.token_hex(6),
-            "allow": allow_id,
-            "group": group,
-            "in_all": in_all,
-            "start": now.isoformat(),
-            "until": until.isoformat(),
-            "ended": None,
-            "base": None,
-            "excluded": None,
-        }
-        self.windows.setdefault(person, []).append(window)
-        self._save()
-        return window
-
-    @callback
-    def end_allows(self, allow_ids: list[str], people: list[str] | None = None) -> None:
-        """The windows of allows that just ended early (hearth.allow_end, a place) end now too."""
-        now = dt_util.now()
-        for person, windows in self.windows.items():
-            if people is not None and person not in people:
-                continue
-            for window in windows:
-                if window.get("allow") in allow_ids and window.get("ended") is None:
-                    window["until"] = window["ended"] = now.isoformat()
-                    self._save()
-
-    def allowed(self, person: str, now: datetime | None = None) -> list[dict[str, Any]]:
-        """The person's running category windows (Allow for a while)."""
-        now = now or dt_util.now()
-        return [
-            w for w in self.windows.get(person, [])
-            if w.get("group") and w.get("ended") is None and (u := _at(w.get("until"))) is not None and u > now
-        ]
-
-    @callback
     def end(self, person: str, now: datetime | None = None) -> dict[str, Any] | None:
         """Ends the person's running window now (unlimited_end); the window, None when none ran."""
         now = now or dt_util.now()
@@ -156,7 +114,7 @@ class Unlimited:
         now = now or dt_util.now()
         for window in self.windows.get(person, []):
             until = _at(window.get("until"))
-            if not window.get("group") and window.get("ended") is None and until is not None and until > now:
+            if window.get("ended") is None and until is not None and until > now:
                 return window
         return None
 
@@ -194,12 +152,7 @@ class Unlimited:
             else:
                 # While it lasts and SETTLE after: what's counted above its start, a later total's catch-up included
                 base = window["base"]
-                if (scope := window.get("group")) is not None:
-                    # A category's window: its own minutes only, and daily time's as many when it counts there
-                    grown = max(0.0, float(seconds.get(scope, 0.0)) - base.get(scope, 0.0))
-                    gone = {scope: grown, **({ALL: grown} if window.get("in_all") else {})}
-                else:
-                    gone = {g: max(0.0, float(s) - base.get(g, 0.0)) for g, s in seconds.items()}
+                gone = {g: max(0.0, float(s) - base.get(g, 0.0)) for g, s in seconds.items()}
                 ended = _at(window.get("ended"))
                 if ended is not None and now - ended >= SETTLE:
                     window["excluded"] = gone
@@ -215,11 +168,9 @@ class Unlimited:
         from .counting import ALL
         from .history import UNLIMITED
 
-        scope = window.get("group")
-        minutes = int((window.get("excluded") or {}).get(scope or ALL, 0.0) // 60)
+        minutes = int((window.get("excluded") or {}).get(ALL, 0.0) // 60)
         self.household.history.log(
-            UNLIMITED, person, start=window["start"], end=window["ended"], minutes=minutes, open=window.get("open"),
-            **({"group": scope} if scope else {}),
+            UNLIMITED, person, start=window["start"], end=window["ended"], minutes=minutes, open=window.get("open")
         )
 
     @callback
@@ -232,9 +183,6 @@ class Unlimited:
                     continue
                 window["told"] = True
                 self._save()
-                if window.get("group"):
-                    # A category's allow just ends: nothing to tell
-                    continue
                 text = self.back_on_text(person)
                 self.hass.bus.async_fire(EVENT_ENDED, {"person": person, "id": window["id"], "text": text})
                 self.household.hub.asks.tell(
@@ -251,23 +199,12 @@ class Unlimited:
     # Views
 
     def view(self, person: str) -> dict[str, Any]:
-        """{active: {until, open, include_bedtime, text} | None, today: [{start, end, minutes, text}], allowed:
-        [{id (the allow's), group, until, text}] (Allow for a while: "Messaging allowed until 4:25 PM")}."""
+        """{active: {until, open, include_bedtime, text} | None, today: [{start, end, minutes, text}]}."""
+        from .counting import ALL
+
         now = dt_util.now()
         running = self.active(person, now)
-        out: dict[str, Any] = {"active": None, "today": [], "allowed": []}
-        for window in self.allowed(person, now):
-            until = _at(window["until"])
-            group = self.household.group(window["group"])
-            name = group.name if group else window["group"]
-            out["allowed"].append(
-                {
-                    "id": window.get("allow"),
-                    "group": window["group"],
-                    "until": until.isoformat(),
-                    "text": allowed_text(name, say_clock(until.hour, until.minute)),
-                }
-            )
+        out: dict[str, Any] = {"active": None, "today": []}
         if running is not None:
             until = _at(running["until"])
             clock = None if running.get("open") else say_clock(until.hour, until.minute)
@@ -279,7 +216,7 @@ class Unlimited:
             }
         day = self.household.days.get(person)
         for window in self.windows.get(person, []):
-            if window.get("ended") is None or window.get("group"):
+            if window.get("ended") is None:
                 continue
             start, end = _at(window["start"]), _at(window["ended"])
             gone = window.get("excluded")

@@ -1126,6 +1126,7 @@ class Household:
             days,
             apps_of,
             lifted_of=self.allows.lifted,
+            budget_lifted_of=self.budget_lifted,
             school_time_of=self.in_school_time,
             groups_of_app=membership,
             granted_of=self.grants.lifted,
@@ -1654,7 +1655,8 @@ class Household:
                 bonus_here[extra.group] = max(bonus_here.get(extra.group, 0), self._extra_left(extra) or 0)
         # An adult's allows: an allowed group is left out (nothing holds it), an allowed app is taken out of every
         # group and is one of All screen time's exceptions
-        lifted = self.allows.lifted(person)
+        # A category with its own bonus left is lifted the same way, for its budget only (its apps run past daily time)
+        lifted = self.budget_lifted(person)
         groups = []
         for group in self.groups:
             state = day.limits.get(group.id) if day else None
@@ -1677,7 +1679,7 @@ class Household:
                     entry["except"] = sorted(spared)
             groups.append(entry)
         groups += self._paused_groups_document(person, membership)
-        groups += self._closed_groups_document(person, membership, lifted)
+        groups += self._closed_groups_document(person, membership, self.allows.lifted(person))
         return {
             "person": person,
             "groups": groups,
@@ -1876,7 +1878,6 @@ class Household:
         ended: list[tuple[dict[str, str], str]] = []
         for allow in list(self.allows.of(person)):
             if matches(allow.ends_on, came_from, went_to) and self.allows.end_for(allow.id, person):
-                self.unlimited.end_allows([allow.id], [person])
                 group = self.group(allow.group) if allow.group else None
                 what = (
                     "screen time" if allow.group == "all" else group.name if group else allow.group or allow.app
@@ -1935,7 +1936,9 @@ class Household:
             state = day.limits.get(group_id) if day else None
             if state is not None and state.minutes_left == 0 and not spared:
                 hold = {"kind": "budget", "by": group_id, "until": midnight}
-                (lifted_holds if excepted or lifted.group(group_id) else blocked).append(hold)
+                # A category's own bonus left lifts daily time's hold of its apps
+                bonus_open = group_id == ALL and bool(self.bonus_groups(person) & groups)
+                (lifted_holds if excepted or lifted.group(group_id) or bonus_open else blocked).append(hold)
         for entity_id in (day.locked_by if day else []):
             if entity_id == PAUSE:
                 pause = pause_of(self.hass, person, now) or {}
@@ -2214,7 +2217,14 @@ class Household:
                 raised[gid] = held
             cap = held.cap(state.budget_min) if held is not None else state.budget_min
             caps[gid] = (cap, state.counted_min)
-        result = account(base, bonus, all_state.counted_min, caps)
+        # Each category's own bonus (hearth.add_time with a category): spent there first
+        outside = self.outside_all()
+        cat_bonuses = {
+            gid: (own, state.counted_min, gid not in outside)
+            for gid, state in states.items()
+            if gid != ALL and (own := self.limits.cat_bonus(person, gid)) > 0
+        }
+        result = account(base, bonus, all_state.counted_min, caps, cat_bonuses)
         # Debug, only when it changed for the person (each recompute would repeat it)
         summary = (base, bonus, int(all_state.counted_min), result.bonus_used, result.today_left,
                    tuple(sorted((g, c, result.cap_left[g]) for g, (c, _) in caps.items() if c is not None)))
@@ -2242,6 +2252,8 @@ class Household:
                 state.bonus_min = cap - state.budget_min
             state.held_left = result.cap_left[gid]
             state.usable = result.usable[gid]
+            state.cat_bonus = cat_bonuses[gid][0] if gid in cat_bonuses else 0
+            state.cat_bonus_left = result.cat_left.get(gid, 0)
 
     def time_view(self, person: str) -> dict[str, Any]:
         """Today's time as people are shown it, for screens and the device API (docs/contracts/time-model.md):
@@ -2253,13 +2265,14 @@ class Household:
         all_state = day.limits.get(ALL) if day else None
         unlimited = self.unlimited.view(person)
         active = unlimited["active"]
-        allowed_now = {a["group"]: a["text"] for a in unlimited["allowed"]}
         today_left = all_state.shown_left if all_state else None
         bonus_left = all_state.bonus_left if all_state else 0
         categories = []
         for group in self.groups:
             state = day.limits.get(group.id) if day else None
-            if group.id == ALL or state is None or not (state.budget_min is not None or state.raised is not None):
+            if group.id == ALL or state is None or not (
+                state.budget_min is not None or state.raised is not None or state.cat_bonus
+            ):
                 continue
             limit_today = None if state.budget_min is None else state.budget_min + state.bonus_min
             raised = state.raised is not None
@@ -2274,8 +2287,12 @@ class Household:
                     "until": state.raised.until if raised else None,
                     "left": state.shown_left,
                     "used": int(state.counted_min),
-                    "text": allowed_now.get(group.id) or (None if active else category_text(group.name, state.shown_left, today_left)),
+                    "text": None if active else category_text(
+                        group.name, state.shown_left, today_left, state.cat_bonus_left
+                    ),
                     "limit_text": limit_text(group.name, state.configured, limit_today, raised),
+                    "bonus": state.cat_bonus,
+                    "bonus_left": state.cat_bonus_left,
                 }
             )
         return {
@@ -2289,11 +2306,22 @@ class Household:
             "used": int(all_state.counted_min) if all_state else 0,
             "unlimited": active,
             "unlimited_today": unlimited["today"],
-            # Allow for a while: [{id, group, until, text}] ("Messaging allowed until 4:25 PM")
-            "allowed": unlimited["allowed"],
             "text": today_text(today_left, bonus_left, active["text"] if active else None),
             "adult_text": today_text(today_left, bonus_left, active["text"] if active else None, adult=True),
             "categories": categories,
+            # Categories with their own bonus today ("+15 min Messaging bonus"), with or without a limit
+            "category_bonuses": [
+                {
+                    "id": g.id,
+                    "name": g.name,
+                    "bonus": s.cat_bonus,
+                    "bonus_left": s.cat_bonus_left,
+                    "left": s.shown_left,
+                    "text": f"{g.name}: {say_minutes(s.cat_bonus_left)} bonus left" if s.cat_bonus_left else f"{g.name}: bonus used",
+                }
+                for g in self.groups
+                if g.id != ALL and day and (s := day.limits.get(g.id)) is not None and s.cat_bonus
+            ],
             # Where today's statuses came from (bonus time, raised limits, Unlimited, Pause screens), newest first
             "origins": self.origins_of(person),
         }
@@ -2327,6 +2355,20 @@ class Household:
             )
         return out
 
+    def bonus_groups(self, person: str) -> set[str]:
+        """The categories with their own bonus left today (hearth.add_time with a category)."""
+        day = self.days.get(person)
+        return {gid for gid, s in (day.limits.items() if day else []) if gid != ALL and s.cat_bonus_left > 0}
+
+    def budget_lifted(self, person: str) -> Lifted:
+        """What lifts a budget hold for the person: their allows, and each category with its own bonus left (its apps
+        run past daily time and its limit). Never bedtime, School time or a pause."""
+        lifted = self.allows.lifted(person)
+        extra = self.bonus_groups(person)
+        if not extra:
+            return lifted
+        return Lifted(lifted.everything, set(lifted.groups) | extra, set(lifted.apps))
+
     def person_of_user(self, user_id: str | None) -> str | None:
         """The person entity whose Home Assistant user this is (the action log's "by": an id, never a name)."""
         if not user_id:
@@ -2351,11 +2393,22 @@ class Household:
 
     @callback
     def add_time(
-        self, person: str, minutes: int, reason: str | None = None, via: str | None = None, by: str | None = None
+        self,
+        person: str,
+        minutes: int,
+        reason: str | None = None,
+        via: str | None = None,
+        by: str | None = None,
+        category: str | None = None,
     ) -> None:
         """Bonus time today (hearth.add_time; negative takes time away from today's time): no category, spent
         anywhere. Google's and Microsoft's own limits get as much (each grant), and given in bedtime it lifts it.
-        [via]: ask, day_off or none (an adult); [by]: the adult's name, for its origin."""
+        [via]: ask, day_off or none (an adult); [by]: the adult's name, for its origin. With a [category]: a bonus
+        for that category only ("+15 min Messaging bonus"), usable there past daily time and its limit, spent before
+        the general bonus; never negative."""
+        if category is not None and category != ALL:
+            self._add_category_bonus(person, category, minutes, reason, by)
+            return
         self.limits.set_bonus(person, ALL, self.limits.bonus(person, ALL) + minutes)
         if minutes:
             fields = {k: v for k, v in (("reason", reason), ("via", via)) if v}
@@ -2373,10 +2426,32 @@ class Household:
             if in_bedtime:
                 self._lift_bedtime(person, minutes)
 
+    def _add_category_bonus(self, person: str, category: str, minutes: int, reason: str | None, by: str | None) -> None:
+        if minutes <= 0:
+            return
+        self.limits.set_cat_bonus(person, category, self.limits.cat_bonus(person, category) + minutes)
+        fields = {"reason": reason} if reason else {}
+        self.history.log(BONUS, person, group=category, minutes=minutes, category=True, **fields)
+        target = self.group(category)
+        detail = f"{target.name if target else category} bonus +{minutes}" + (f" · {reason}" if reason else "")
+        self.note_origin(person, "bonus", detail, "hearth", by, minutes=minutes, group=category)
+        self.recompute()
+        # The phone mustn't lock before it's used: Family Link and Family Safety get as much
+        self.sync.mirror_bonus(person)
+
     @callback
-    def remove_time(self, person: str, minutes: int) -> int:
-        """Takes back up to [minutes] of the bonus time an adult gave today (hearth.remove_time)."""
-        return self.remove_bonus(person, ALL, minutes)
+    def remove_time(self, person: str, minutes: int, category: str | None = None) -> int:
+        """Takes back up to [minutes] of the bonus time an adult gave today (hearth.remove_time); of one category's
+        bonus with [category]. The minutes taken back."""
+        if category is None or category == ALL:
+            return self.remove_bonus(person, ALL, minutes)
+        given = self.limits.cat_bonus(person, category)
+        taken = max(0, min(int(minutes), given))
+        if taken:
+            self.limits.set_cat_bonus(person, category, given - taken)
+            self.history.log(BONUS, person, group=category, minutes=-taken, category=True, undo=True)
+            self.recompute()
+        return taken
 
     @callback
     def raise_cap(
@@ -2447,30 +2522,6 @@ class Household:
             if reason:
                 detail += f" · {reason}"
             self.note_origin(person, "unlimited", detail, "hearth", by)
-        self.recompute()
-        return allowed
-
-    @callback
-    def allow_for_a_while(
-        self,
-        people: list[str],
-        until: dict[str, datetime],
-        group: str,
-        reason: str | None = None,
-        ends_on: dict[str, str] | None = None,
-        by: str | None = None,
-    ):
-        """Allow for a while (hearth.allow of a category): until [until], neither daily time nor the category's limit
-        holds its apps, and its minutes meanwhile aren't counted (a window scoped to the category, unlimited.py).
-        Bedtime, School time and Pause screens still lock. The allow it is."""
-        allowed = self.allows.add(until, None, group, reason, ends_on)
-        target = self.group(group)
-        name = target.name if target else group
-        for person in people:
-            self.unlimited.start_group(person, allowed.id, group, until[person], bool(target and target.in_all))
-            local = dt_util.as_local(until[person])
-            detail = f"{name} allowed until {say_clock(local.hour, local.minute)}" + (f" · {reason}" if reason else "")
-            self.note_origin(person, "allow", detail, "hearth", by, group=group, allow=allowed.id)
         self.recompute()
         return allowed
 

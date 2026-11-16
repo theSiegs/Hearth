@@ -88,6 +88,8 @@ class Account:
     caps: dict[str, int | None] = field(default_factory=dict)
     cap_left: dict[str, int | None] = field(default_factory=dict)
     usable: dict[str, int | None] = field(default_factory=dict)
+    # A category's own bonus left (hearth.add_time with a category)
+    cat_left: dict[str, int] = field(default_factory=dict)
 
 
 def split_bonus(base: int | None, given: int) -> tuple[int | None, int]:
@@ -103,25 +105,48 @@ def account(
     bonus: int,
     used: float,
     categories: dict[str, tuple[int | None, float]],
+    cat_bonuses: dict[str, tuple[int, float, bool]] | None = None,
 ) -> Account:
     """[base] today's time, [bonus] N, [used] today's minutes, [categories] {id: (cap in effect or None, minutes used
-    in it)}."""
+    in it)}, [cat_bonuses] {id: (that category's own bonus, minutes used in it, whether it counts in daily time)}.
+
+    A category's own bonus is spent first, on its minutes past its limit or past daily time (the minutes past daily
+    time go to the categories with a bonus first, in the kid's favour), then the general bonus. Its minutes are only
+    ever real minutes of that category, so it never pays for another category."""
     bonus = max(0, int(bonus))
+    cat_bonuses = {g: b for g, b in (cat_bonuses or {}).items() if b[0] > 0}
     over_day = max(0.0, used - base) if base is not None else 0.0
-    over_caps = sum(max(0.0, spent - cap) for cap, spent in categories.values() if cap is not None)
-    bonus_used = int(math.floor(max(over_day, over_caps)))
+    over = {gid: max(0.0, spent - cap) for gid, (cap, spent) in categories.items() if cap is not None}
+    # A category's own bonus first
+    paid: dict[str, float] = {}
+    left_of_day = over_day
+    for gid in sorted(cat_bonuses):
+        own, spent, in_all = cat_bonuses[gid]
+        need = max(over.get(gid, 0.0), min(spent, left_of_day) if in_all else 0.0)
+        paid[gid] = min(float(own), need)
+        if in_all:
+            left_of_day -= min(left_of_day, paid[gid])
+        if gid in over:
+            over[gid] = max(0.0, over[gid] - paid[gid])
+    counted = used - sum(p for g, p in paid.items() if cat_bonuses[g][2])
+    # Then the general bonus: what's still past daily time or past a limit
+    bonus_used = int(math.floor(max(left_of_day, sum(over.values()))))
     bonus_left = max(0, bonus - bonus_used)
-    today_left = None if base is None else max(0, int(base + bonus - used))
+    today_left = None if base is None else max(0, int(base + bonus - counted))
     out = Account(base, bonus, used, bonus_used, bonus_left, today_left)
-    for gid, (cap, spent) in categories.items():
+    for gid in sorted(set(categories) | set(cat_bonuses)):
+        cap, spent = categories.get(gid, (None, cat_bonuses.get(gid, (0, 0.0, True))[1]))
+        own_left = int(cat_bonuses[gid][0] - paid.get(gid, 0.0)) if gid in cat_bonuses else 0
+        out.cat_left[gid] = own_left
         out.caps[gid] = cap
+        day = None if today_left is None else today_left + own_left
         if cap is None:
             out.cap_left[gid] = None
-            out.usable[gid] = today_left
+            out.usable[gid] = day
             continue
-        left = max(0, int(cap - spent)) + bonus_left
+        left = max(0, int(cap - (spent - paid.get(gid, 0.0)))) + bonus_left + own_left
         out.cap_left[gid] = left
-        out.usable[gid] = left if today_left is None else min(left, today_left)
+        out.usable[gid] = left if day is None else min(left, day)
     return out
 
 
@@ -168,11 +193,6 @@ def unlimited_text(until_clock: str | None) -> str:
     return f"Unlimited until {until_clock}" if until_clock else "Unlimited (until turned off)"
 
 
-def allowed_text(name: str, until_clock: str) -> str:
-    """Allow for a while: "Messaging allowed until 4:25 PM"."""
-    return f"{name} allowed until {until_clock}"
-
-
 def unlimited_span_text(start: tuple[int, int], end: tuple[int, int], not_counted: int) -> str:
     """The adults' view and history: "Unlimited 2:00–5:10 PM · 3 h 10 min not counted"."""
     def full(hour: int, minute: int, half: bool) -> str:
@@ -202,11 +222,14 @@ def today_text(today_left: int | None, bonus_left: int, unlimited: str | None = 
     return line
 
 
-def category_text(name: str, usable: int | None, today_left: int | None) -> str | None:
-    """A category's line: "Games: 25 min left", or "Games are done for today · 40 min left for other things" when its
-    limit is reached but daily time remains. None without a limit."""
+def category_text(name: str, usable: int | None, today_left: int | None, own_left: int = 0) -> str | None:
+    """A category's line: "Games: 25 min left", "Messaging: 15 min bonus left" (only its own bonus is left), or
+    "Games are done for today · 40 min left for other things" when its limit is reached but daily time remains. None
+    without a limit."""
     if usable is None:
         return None
+    if own_left > 0 and usable <= own_left:
+        return f"{name}: {say_minutes(usable)} bonus left"
     if usable <= 0 and today_left:
         return f"{name} are done for today · {say_minutes(today_left)} left for other things"
     return f"{name}: {say_minutes(usable)} left"
@@ -234,8 +257,8 @@ def origin_text(detail: str, source: str, by: str | None, clock: str | None) -> 
 
 
 def limit_text(name: str, configured: int | None, today: int | None, raised: bool) -> str:
-    """An adult's hint: "Games: 2 h limit", "Games: 3 h limit today (raised)", "Games: no limit today (raised)",
+    """An adult's hint: "Games: 2 h limit", "Games limit today: 3 h (raised)", "Games: no limit today (raised)",
     "Games: no limit"."""
     if raised:
-        return f"{name}: no limit today (raised)" if today is None else f"{name}: {say_minutes(today)} limit today (raised)"
+        return f"{name}: no limit today (raised)" if today is None else f"{name} limit today: {say_minutes(today)} (raised)"
     return f"{name}: no limit" if configured is None else f"{name}: {say_minutes(configured)} limit"

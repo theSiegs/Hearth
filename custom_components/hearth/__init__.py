@@ -495,8 +495,6 @@ ALLOW_SCHEMA = vol.All(
             vol.Exclusive("app", "what"): cv.string,
             vol.Exclusive("group", "what"): cv.string,
             vol.Optional("until", default=END_OF_DAY): vol.Any(vol.In((END_OF_DAY, SCHOOL_TIME_END)), cv.time, cv.datetime),
-            # Allow for a while: until now + these minutes (wins over until)
-            vol.Optional("minutes"): vol.All(vol.Coerce(int), vol.Range(min=1, max=720)),
             vol.Optional("reason"): cv.string,
             vol.Optional("ends_on"): ENDS_ON_SCHEMA,
             # Only on this device of theirs (a target id): a group, open there until the time
@@ -539,12 +537,20 @@ ADD_TIME_SCHEMA = vol.All(
             **_WHO,
             vol.Required("minutes"): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
             vol.Optional("reason"): vol.All(cv.string, vol.Length(max=120)),
+            # A bonus for this category only ("+15 min Messaging bonus"); none: the general bonus
+            vol.Optional("category"): cv.string,
         }
     ),
     cv.has_at_least_one_key("person", "people"),
 )
 REMOVE_TIME_SCHEMA = vol.All(
-    vol.Schema({**_WHO, vol.Required("minutes"): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440))}),
+    vol.Schema(
+        {
+            **_WHO,
+            vol.Required("minutes"): vol.All(vol.Coerce(int), vol.Range(min=1, max=1440)),
+            vol.Optional("category"): cv.string,
+        }
+    ),
     cv.has_at_least_one_key("person", "people"),
 )
 RAISE_CAP_SCHEMA = vol.All(
@@ -650,11 +656,7 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         people = people_of(household, call.data["people"])
         app, group = what(household, call.data)
         now = dt_util.now()
-        if call.data.get("minutes"):
-            # Allow for a while: midnight at the latest
-            until = {p: min(end_of_day(now), now + timedelta(minutes=call.data["minutes"])) for p in people}
-        else:
-            until = {p: until_for(household, p, call.data["until"], now) for p in people}
+        until = {p: until_for(household, p, call.data["until"], now) for p in people}
         if call.data.get("device"):
             if app is not None:
                 raise ServiceValidationError("On one device, allow a group (an app goes with every device)")
@@ -670,13 +672,7 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
                 "until": {p: dt_util.as_local(u).isoformat() for p, u in until.items()},
             }
         ends_on = _place_ends_on(household, people, call.data.get("ends_on"))
-        if group is not None and group != ALL and app is None:
-            # Allow for a while: the category's minutes meanwhile aren't counted (unlimited.py)
-            allowed = household.allow_for_a_while(
-                people, until, group, call.data.get("reason"), ends_on, by=household.name_of_user(call.context.user_id)
-            )
-        else:
-            allowed = household.allows.add(until, app, group, call.data.get("reason"), ends_on)
+        allowed = household.allows.add(until, app, group, call.data.get("reason"), ends_on)
         household.recompute()
         answer = {"id": allowed.id, "until": {p: dt_util.as_local(u).isoformat() for p, u in until.items()}}
         if ends_on:
@@ -700,8 +696,6 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
             if call.data.get("device"):
                 return {"ended": ended}
         ended += household.allows.end(call.data.get("id"), call.data.get("people"), app, group)
-        # A category's allow for a while: its window ends with it
-        household.unlimited.end_allows(ended, call.data.get("people"))
         household.recompute()
         # Extra time Hearth gave in Family Link or Family Safety for an allow that ended goes too
         household.sync.allow_ended()
@@ -757,12 +751,15 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
 
     @callback
     def add_time(call: ServiceCall) -> ServiceResponse:
-        """Bonus time today: no category, spent anywhere (minutes past a category's limit come out of it too)."""
+        """Bonus time today: with no category, spent anywhere (minutes past a category's limit come out of it too);
+        with a category, usable only there, past daily time and its limit."""
         household = loaded_household()
         people = who(household, call.data)
+        category = category_of(household, call.data) if call.data.get("category") else None
         for person in people:
             household.add_time(
-                person, call.data["minutes"], call.data.get("reason"), by=household.name_of_user(call.context.user_id)
+                person, call.data["minutes"], call.data.get("reason"), by=household.name_of_user(call.context.user_id),
+                category=category,
             )
         return {p: household.time_view(p) for p in people}
 
@@ -770,7 +767,10 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
     def remove_time(call: ServiceCall) -> ServiceResponse:
         """Takes back bonus time an adult gave today (never more than was given)."""
         household = loaded_household()
-        return {"removed": {p: household.remove_time(p, call.data["minutes"]) for p in who(household, call.data)}}
+        category = category_of(household, call.data) if call.data.get("category") else None
+        return {
+            "removed": {p: household.remove_time(p, call.data["minutes"], category) for p in who(household, call.data)}
+        }
 
     @callback
     def raise_cap(call: ServiceCall) -> ServiceResponse:

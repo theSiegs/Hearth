@@ -321,14 +321,6 @@ allow:
       example: school_time_end
       selector:
         text:
-    minutes:
-      example: 15
-      selector:
-        number:
-          min: 1
-          max: 720
-          unit_of_measurement: min
-          mode: box
     reason:
       example: Homework video
       selector:
@@ -659,6 +651,10 @@ add_time:
       example: Finished homework early
       selector:
         text:
+    category:
+      example: messaging
+      selector:
+        text:
 
 remove_time:
   fields:
@@ -681,6 +677,10 @@ remove_time:
           step: 5
           unit_of_measurement: min
           mode: box
+    category:
+      example: messaging
+      selector:
+        text:
 
 raise_cap:
   fields:

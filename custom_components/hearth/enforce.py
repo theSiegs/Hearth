@@ -318,9 +318,10 @@ def wanted(
     if enforcer.kind == NINTENDO:
         return {SWITCH} if closed and not near_midnight(now) and playing is not False else set()
     packages: set[str] = set()
-    if enforcer.kind == FAMILY_LINK and ALL in closed:
+    if enforcer.kind == FAMILY_LINK and ALL in closed and not (lifted is not None and lifted.groups):
         # All screen time out of time: the devices are locked (apps with unlimited time still work); let go just
-        # before midnight, as the limit is the weekday's
+        # before midnight, as the limit is the weekday's. While a category stays open (its own bonus, an allow of
+        # it), every other app is paused instead, below, so that category's apps still run
         closed = [g for g in closed if g != ALL]
         held = {DEVICES} if not near_midnight(now) else set()
     else:
@@ -558,6 +559,7 @@ class Enforcement:
         spared=frozenset(),
         exempt_of=None,
         blocked_of=None,
+        budget_lifted_of=None,
     ) -> None:
         """[apps_of]: a group id's packages for a person (for All screen time, every app of theirs). [lifted_of]: what
         a person's allows lift (Lifted); [school_time_of]: whether an enforcer's child is in School time now;
@@ -577,7 +579,10 @@ class Enforcement:
         for e in enforcers:
             lifted = lifted_of(e.person) if lifted_of else None
             playing = self._playing(e)
-            budget = wanted(e, days.get(e.person), apps_of, now, playing, lifted, groups_of_app)
+            # [budget_lifted_of]: what lifts a budget hold only: the allows, and a category's own bonus left (its apps
+            # run past daily time). Bedtime, School time and pauses aren't lifted by it
+            budget_lifted = budget_lifted_of(e.person) if budget_lifted_of else lifted
+            budget = wanted(e, days.get(e.person), apps_of, now, playing, budget_lifted, groups_of_app)
             # An app a parent gave unlimited time in Family Link is never paused for a budget: it stays usable, as on
             # a locked device. The School-time apps are the parent's own choice, so they are paused all the same.
             if e.kind == FAMILY_LINK:

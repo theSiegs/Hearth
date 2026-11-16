@@ -484,16 +484,24 @@ Three ways to give more (services, adults only, as every Hearth service: [Securi
   extra time) where the device's own limit would stop the kid sooner (`native_sync.mirror_bonus`), so a phone never
   locks early: Hearth's holds stay the real limit. Given during bedtime, it lifts bedtime while it lasts
   ([Extra time at bedtime](#extra-time-at-bedtime)).
+- **A category's bonus**: `hearth.add_time` with `category` ("+15 min Messaging bonus"; `hearth.remove_time` with
+  the same `category` takes it back, never below 0). Minutes usable only in that category, past daily time and its
+  limit: its minutes past daily time or past its limit are paid from its own bonus first, then from the general one.
+  While it lasts, daily time's hold leaves that category's apps out (Family Link pauses the other apps instead of
+  locking the device), and Family Link's backstop counts it. Bedtime, School time and Pause screens still apply. It
+  ends at midnight. Kids see "Messaging: 15 min bonus left" (`time.category_bonuses`). "Give Sam 15 more minutes of
+  messaging" is this; "15 more minutes" with no category is the general bonus. As accurate as Family Link's per-app
+  minutes, which arrive a few minutes late. A bonus for one app isn't built.
 - **Raise limit**: `hearth.raise_cap` {`person` or `people`, `category`, one of `minutes` (raise by, -1440..1440),
   `to` (the limit today) or `no_cap: true` (no limit today), `until` (a time, `end_of_day` by default)};
   `hearth.raise_cap_end` {`person` or `people`, `category` (every raised one when left out)}. Daily time is unchanged.
-- **Allow for a while**: one category for some minutes or until a time, its minutes not counted ("more minutes of
-  messaging"): see [Exceptions](#exceptions).
 - **Unlimited**: see [Unlimited](#unlimited).
 
 **The accounting** (time_model.py; worked examples in `ha_tests/test_time_model.py`):
 
-    bonus_used = max(0, minutes over daily time, sum over categories of minutes over each limit)
+    a category's own bonus pays first: its minutes past its limit, or past daily time (those go to categories with
+      a bonus first, in the kid's favour), up to its bonus; paid minutes don't count in daily time or its limit
+    bonus_used = max(0, minutes still over daily time, sum over categories of minutes still over each limit)
     bonus_left = max(0, N - bonus_used)
     daily time left = max(0, daily time + N - used today)
     a category is held when max(0, limit - used in it) + bonus_left is 0
@@ -512,7 +520,7 @@ become raised limits by as many minutes (once; the stored data carries a version
 so nothing is counted twice.
 
 **Words** (one place each: strings.json, the panel's string table, the TV's app_en.arb; the contract lists the kids'):
-"Daily time", a category's "limit" ("2 h limit", "no limit", "3 h limit today (raised)"), "bonus" ("30 min bonus
+"Daily time", a category's "limit" ("2 h limit", "no limit", "Games limit today: 3 h (raised)"), "bonus" ("30 min bonus
 left", "+20 min bonus earned", "Ask for bonus time"), "Unlimited", and "Pause screens" for the family pause. Never pool,
 bucket, budget or max to a person, and "adult", never "grown-up".
 
@@ -703,19 +711,11 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
 
 - `hearth.allow` (`people`; `app`, a package, or `group`, a Hearth group or `all`; `until`: a time, tomorrow's if it
   has passed, `school_time_end` (the end of their School time today, from Family Link's sensors) or `end_of_day`, the
-  default; or `minutes`: for that long from now, midnight at the latest; `reason`) returns `{id, until: {person:
-  when}}`. It's kept across restarts. While it lasts, Hearth holds
+  default; `reason`) returns `{id, until: {person: when}}`. It's kept across restarts. While it lasts, Hearth holds
   that app or group nowhere for those people: their TVs' and phones' state documents leave the group out (an allowed
   app is taken out of every group's `apps` and added to All screen time's `except`, so a device needs no change),
   Family Link doesn't pause it (budget or School time), and Family Safety and Nintendo don't hold for an allowed group.
   It ends on its own; what should hold then holds again with the next minute's recompute.
-- **Allow for a while** (an allow of one category, such as `hearth.allow` {people, group: messaging, minutes: 15}):
-  the category's apps run whatever daily time or its limit says, and **its minutes meanwhile aren't counted** (an
-  exclusion window scoped to the category, as Unlimited's: [Unlimited](#unlimited)), so daily time and the limit are
-  where they were afterwards. Kids see "Messaging allowed until 4:25 PM" (`time.allowed` in the state document). Family
-  Link's backstop rises with the phone's minutes meanwhile, as for Unlimited. Bedtime, School time and Pause screens
-  still apply ("even now" for one category isn't built: those locks hold the whole device). This is what "give Sam 15
-  more minutes of messaging" means; "more time" with no category is bonus time. Recorded as an origin (`kind: allow`).
 - `hearth.allow_end` (`id`, or `people` with an optional `app` or `group`) ends one early; returns `{ended: [ids]}`.
 - **Ends on a place.** `hearth.allow`, `hearth.pause` and `hearth.school_time_off` take `ends_on: {arrive: <place>}`
   or `ends_on: {leave: <place>}`, a place key (`home`, `school`, or a favorite place's key, see [Places](#places)) of
@@ -982,7 +982,8 @@ its own numbers (backstop.py), so a phone whose Hearth companion is off, or a de
 the end of the day:
 
     Family Link daily limit today = the most screen time Family Link counted today on one of the kid's devices
-                                    (not a TV) + Hearth's daily time left (bonus included) + margin,
+                                    (not a TV) + Hearth's daily time left (bonus included) + each category's
+                                    own bonus left + margin,
                                     rounded up to 5 minutes (at most 24 hours)
 
 It's anchored on what Family Link itself counted, so it never sits below real use. Spending counted time (bonus

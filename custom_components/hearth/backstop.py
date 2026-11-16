@@ -110,7 +110,12 @@ class Backstop:
         """Daily time used up (not Unlimited): Hearth's whole-device hold is the limit then."""
         day = self.household.days.get(person)
         state = day.limits.get(ALL) if day else None
-        return bool(state and state.minutes_left == 0 and self.household.no_limits_until(person) is None)
+        return bool(
+            state
+            and state.minutes_left == 0
+            and self.household.no_limits_until(person) is None
+            and not self.household.bonus_groups(person)
+        )
 
     def wanted(self, person: str) -> int | None:
         """The daily limit Family Link should have today for the person; None: leave it alone."""
@@ -121,8 +126,10 @@ class Backstop:
         if self._out(person):
             return None
         unlimited = self.household.no_limits_until(person) is not None
+        # Daily time left, and each category's own bonus left (usable there past daily time)
+        left = (state.minutes_left or 0) + sum(s.cat_bonus_left for g, s in day.limits.items() if g != ALL)
         return backstop_minutes(
-            state.budget_min, int(math.ceil(self.device_minutes(person))), state.minutes_left or 0, self.margin(), unlimited
+            state.budget_min, int(math.ceil(self.device_minutes(person))), left, self.margin(), unlimited
         )
 
     def holds(self, person: str) -> bool:
