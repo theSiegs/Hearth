@@ -288,15 +288,15 @@ test("the kid's sheet: a lock box during bedtime, Allow an app instead of Give t
   p._sheetOpen = true;
   const html = p._page();
   const sheet = html.slice(html.indexOf('class="detail on"'));
-  assert.match(sheet, /Bedtime till 7:00<\/div>[^]*Set in Family Link\. Every screen is off for Alex until then, so extra time wouldn&#39;t help\./);
+  assert.match(sheet, /Bedtime till 7:00<\/div>[^]*Set in Family Link\. Every screen is off for Alex until then\. Extra time pauses bedtime while it lasts\./);
   assert.match(sheet, /data-action="allow-open"/);
   assert.doesNotMatch(sheet, /data-action="give-open" aria/);
   assert.doesNotMatch(sheet, /data-action="kid-pause"/);
   assert.match(sheet, /All 2 screens|Kitchen TV, Xbox/);
   assert.match(sheet, /Everything follows the lock/);
-  // More: Give time anyway
+  // More: extra time at bedtime pauses it while it lasts
   p._moreOpen = true;
-  assert.match(p._page(), /Give time anyway<small>Counts after bedtime ends/);
+  assert.match(p._page(), /Give extra time<small>Pauses bedtime while it lasts/);
 });
 
 test("the kid's sheet: today split by pool, lanes that open to apps and consoles, devices grouped by state", () => {
