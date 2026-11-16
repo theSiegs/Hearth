@@ -775,7 +775,7 @@ class HearthOptionsFlow(OptionsFlow):
         return self.async_show_form(step_id="schedule", data_schema=schema)
 
     async def async_step_site_list(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """A website block list synced into each kid's Family Link every day (familylink.sync_site_list)."""
+        """A website block list synced into each kid's Family Link and Family Safety every day (schedule.py)."""
         options = self._options()
         current: dict[str, Any] = dict(options.get(CONF_SITE_LIST) or {})
         errors: dict[str, str] = {}

@@ -48,8 +48,10 @@ day. At the watchdog time on a school day, the adults are told about anyone whos
 The day's actions run from DAY_START (00:05); a check at CHECK_AT (06:00) tries a School time that didn't go off again
 and tells the adults what didn't apply, so nobody is woken at midnight. Each action runs once a day (kept across a
 restart). The website list is synced once a day at its time, person by person, through Family Link
-(familylink.sync_site_list) and Family Safety (microsoft_family_safety.sync_site_list, when it has it) each on its own:
-a failure for one is logged, tried again later, and the others go on. The hearth_schedule events say which with "via".
+(familylink.sync_site_list) and Family Safety each on its own: a Family Safety with sync_site_list (a fork's) does it
+itself; the released one is kept in step by Hearth (fs_site_list.py: the list downloaded once, get_sites, block_website,
+remove_website, what Hearth added kept here). A failure for one is logged, tried again later, and the others go on. The
+hearth_schedule events say which with "via".
 
 What's pending is kept with Home Assistant's storage helper.
 """
@@ -64,10 +66,12 @@ import secrets
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from . import family_link as fl
+from . import fs_site_list
 from .enforce import (
     FAMILY_LINK,
     FAMILY_SAFETY,
@@ -247,6 +251,8 @@ class Scheduler:
         self._lock = asyncio.Lock()
         self._failed: dict[str, datetime] = {}
         self._done_at: dict[str, datetime] = {}
+        # What Hearth blocked from website lists in Family Safety itself (no sync_site_list): {account: {url: [domains]}}
+        self.fs_sites = fs_site_list.FsSiteList(hass, {}, self._save)
 
     # Storage
 
@@ -255,6 +261,11 @@ class Scheduler:
         self.day = stored.get("day")
         self.marks = {k: list(v) for k, v in (stored.get("marks") or {}).items()}
         self.limits_set = {k: int(v) for k, v in (stored.get("limits_set") or {}).items()}
+        self.fs_sites.owned = {
+            str(account): {str(url): [str(d) for d in domains] for url, domains in lists.items() if isinstance(domains, list)}
+            for account, lists in (stored.get("fs_sites") or {}).items()
+            if isinstance(lists, dict)
+        }
         # An older Hearth kept the Switches' as sw_limits; its fs_limits were Family Safety's own today-only changes,
         # which Family Safety put back itself: nothing of Hearth's to put back
         self.temporary.load(stored.get("temporary_limits"), stored.get("sw_limits"))
@@ -281,6 +292,7 @@ class Scheduler:
             "marks": self.marks,
             "limits_set": self.limits_set,
             "temporary_limits": self.temporary.dump(),
+            "fs_sites": self.fs_sites.owned,
             "offs": [
                 {
                     "id": o.id,
@@ -1068,21 +1080,48 @@ class Scheduler:
 
     async def _site_list(self, now: datetime) -> None:
         """The website list, once a day: Family Link's and Family Safety's, each on its own (one failing doesn't
-        hold up the other, or another kid). Family Safety is skipped quietly while it has no sync_site_list."""
+        hold up the other, or another kid). A Family Safety with sync_site_list does it itself; one without (the
+        released one) is kept in step by Hearth (fs_site_list.py), the list downloaded once for everyone; one with
+        neither is skipped quietly."""
         sites = SiteListConfig.from_options(self.household.options)
         if not sites.url or now.time() < sites.at:
             return
+        listed: dict[str, Any] = {}
         for person in self.site_list_people(sites.people):
             fl_entity = self.family_link_entity(person)
             if fl_entity is not None:
                 await self._sync_sites(person, "family_link", "familylink", {"entity_id": fl_entity, "url": sites.url})
             fs_entity = self.family_safety_entity(person)
-            if fs_entity is not None and self.hass.services.has_service(FS_DOMAIN, "sync_site_list"):
-                target = {"entity_id": fs_entity} if "." in fs_entity else {"account_id": fs_entity}
+            if fs_entity is None:
+                continue
+            target = {"entity_id": fs_entity} if "." in fs_entity else {"account_id": fs_entity}
+            if self.hass.services.has_service(FS_DOMAIN, "sync_site_list"):
                 await self._sync_sites(person, "family_safety", FS_DOMAIN, {**target, "url": sites.url})
+            elif fs_site_list.available(self.hass):
+                await self._sync_sites(
+                    person, "family_safety", FS_DOMAIN, target, own=lambda t=target: self._fs_own_sync(t, sites.url, listed)
+                )
 
-    async def _sync_sites(self, person: str, via: str, domain: str, data: dict[str, Any]) -> None:
-        """One side's sync for one person: marked done for the day, or tried again after RETRY (told once)."""
+    async def _fs_own_sync(self, target: dict[str, str], url: str, listed: dict[str, Any]) -> dict[str, Any]:
+        """Hearth's own sync of the list into one kid's Family Safety (fs_site_list.py); the list is downloaded once
+        per run ([listed] keeps it, or the download's failure, for the next kid)."""
+        if "domains" not in listed:
+            try:
+                listed["domains"] = fs_site_list.parse(await fs_site_list.fetch(self.hass, url))
+            except fs_site_list.SiteListError as err:
+                listed["domains"] = err
+        if isinstance(listed["domains"], Exception):
+            raise listed["domains"]
+        entity = target.get("entity_id") or target.get("account_id") or ""
+        account = fs_account_of(self.hass, entity) or entity
+        return await self.fs_sites.sync(target, account, url, listed["domains"])
+
+    async def _sync_sites(
+        self, person: str, via: str, domain: str, data: dict[str, Any], own=None
+    ) -> None:
+        """One side's sync for one person: marked done for the day, or tried again after RETRY (told once). [own]: Hearth
+        does the sync itself (Family Safety without sync_site_list); sites that failed are told per site, and tried
+        again the next day, unless every one failed (tried again after RETRY, as a failed call is)."""
         # Family Link's marks keep their older names (a restart mid-day doesn't sync twice)
         mark = "sites" if via == "family_link" else f"sites_{via}"
         if self._marked(person, mark):
@@ -1090,18 +1129,48 @@ class Scheduler:
         key = f"{person}|{mark}"
         if self._waiting(key):
             return
+        result: dict[str, Any] | None = None
         try:
-            await self.hass.services.async_call(domain, "sync_site_list", data, blocking=True)
+            if own is not None:
+                result = await own()
+                failed = result.get("failed") or []
+                if failed and len(failed) >= result.get("attempted", 0):
+                    raise HomeAssistantError(
+                        "every site failed: " + "; ".join(f"{f['site']} ({f['error']})" for f in failed[:5])
+                    )
+            else:
+                await self.hass.services.async_call(domain, "sync_site_list", data, blocking=True)
         except Exception as err:  # noqa: BLE001 - one child's list failing mustn't stop the others
             _LOGGER.warning("Hearth couldn't sync the website list for %s through %s: %s", person, via, err)
             self._failed[key] = dt_util.utcnow()
             # Tried again later today; told once
             if not self._marked(person, f"{mark}_failed"):
                 self._mark(person, f"{mark}_failed")
-                self._event("site_list_failed", person, via=via, error=str(err)[:200])
+                extra = {"failed": result["failed"]} if result and result.get("failed") else {}
+                self._event("site_list_failed", person, via=via, error=str(err)[:200], **extra)
             return
         self._mark(person, mark)
-        self._event("site_list", person, via=via)
+        if result is None:
+            self._event("site_list", person, via=via)
+            return
+        if result["failed"]:
+            _LOGGER.warning(
+                "Hearth couldn't change %d site(s) of the website list for %s in Family Safety: %s",
+                len(result["failed"]),
+                person,
+                ", ".join(f"{f['site']} ({f['error']})" for f in result["failed"][:10]),
+            )
+        self._event(
+            "site_list",
+            person,
+            via=via,
+            by="hearth",
+            added=len(result["added"]),
+            removed=len(result["removed"]),
+            kept=result["kept"],
+            skipped_allowed=len(result["skipped_allowed"]),
+            failed=result["failed"],
+        )
 
     # Telling
 

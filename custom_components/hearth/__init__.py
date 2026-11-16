@@ -836,6 +836,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
 
     entry.async_on_unload(async_track_time_interval(hass, schedule_tick, timedelta(minutes=1)))
     entry.async_create_background_task(hass, schedule_tick(), "hearth schedule")
+
+    # Family Safety allowed hours Hearth moved on a weekday's setting (upstream's has no today-only change) are
+    # watched, and put back after midnight or after a start that missed it; Family Safety extra time whose write
+    # failed is looked for, and adopted if Microsoft applied it anyway (native_sync.py); Hearth's locks by whole hours
+    # (upstream's lock_platform takes no end) are ended at midnight (enforce.py): every minute
+    async def fs_windows_tick(_now=None) -> None:
+        await hub.household.sync.async_windows_tick()
+        await hub.household.sync.async_pending_tick()
+        await hub.household.enforcement.async_lock_ends_tick()
+
+    entry.async_on_unload(async_track_time_interval(hass, fs_windows_tick, timedelta(minutes=1)))
     # The kids' to-do lists (todos.py): today's grants' notices back after a restart; the old Chores earn time lists
     # brought in once Home Assistant has started (their entities are there then); and each midnight, old marks go
     todos = hub.household.todos
@@ -874,6 +885,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     def family_safety_request(event) -> None:
         """A request made on an Xbox or a PC: an ask for the person whose Family Safety account it is."""
         account = event.data.get("account_id")
+        if event.data.get("request_id"):
+            # Known: the Pending Requests sensor's diff won't announce it again (fs_requests.py)
+            hub.fs_requests.event_seen(None if account in (None, "") else str(account), str(event.data["request_id"]))
         if account in (None, ""):
             return
         for enforcer in enforcers_from_options(hub.entry.options):
@@ -887,11 +901,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     def family_safety_resolved(event) -> None:
         """A Family Safety request answered: in the Family Safety app (via app), its ask closes as answered there;
         answered by Hearth itself (via service), nothing more to do."""
-        if event.data.get("via") == "service" or not event.data.get("request_id"):
+        if not event.data.get("request_id"):
+            return
+        hub.fs_requests.resolved_seen(str(event.data["request_id"]))
+        if event.data.get("via") == "service":
             return
         hub.asks.resolved_elsewhere(str(event.data["request_id"]), event.data.get("outcome"), event.data.get("minutes"))
 
     entry.async_on_unload(hass.bus.async_listen(EVENT_FS_RESOLVED, family_safety_resolved))
+
+    # The released Family Safety fires no request events: its Pending Requests sensors are read instead, on each
+    # change and every minute (a request gone a while is resolved), once now (fs_requests.py)
+    @callback
+    def pending_requests_filter(event_data) -> bool:
+        return event_data.get("entity_id") in hub.fs_requests.watched
+
+    @callback
+    def pending_requests_changed(_event=None) -> None:
+        hub.fs_requests.check()
+
+    entry.async_on_unload(
+        hass.bus.async_listen(EVENT_STATE_CHANGED, pending_requests_changed, event_filter=pending_requests_filter)
+    )
+    entry.async_on_unload(async_track_time_interval(hass, pending_requests_changed, timedelta(minutes=1)))
+    pending_requests_changed()
 
     @callback
     def parent_change_filter(event_data) -> bool:
