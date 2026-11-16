@@ -593,6 +593,7 @@ UNLIMITED_SCHEMA = vol.All(
     cv.has_at_least_one_key("person", "people"),
 )
 UNLIMITED_END_SCHEMA = vol.Schema(_WHO)
+END_GRANT_SCHEMA = vol.Schema({vol.Required("origin_id"): vol.All(cv.string, vol.Length(min=1, max=64))})
 SCHOOL_TIME_OFF_SCHEMA = vol.Schema(
     {
         vol.Required("people"): vol.All(cv.ensure_list, [cv.entity_id], vol.Length(min=1)),
@@ -828,7 +829,22 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         ended = household.end_unlimited(people)
         return {"ended": ended, "text": {p: household.unlimited.back_on_text(p) for p in ended}}
 
+    @callback
+    def end_grant(call: ServiceCall) -> ServiceResponse:
+        """Ends exactly the change one origin made (its id from time.origins): a bonus's unused part, one raise, one
+        Unlimited grant (the others stay in effect), a chore's reward, Pause screens."""
+        household = loaded_household()
+        origin_id = call.data["origin_id"]
+        person = household.person_of_origin(origin_id)
+        if person is None:
+            raise ServiceValidationError("No such grant today")
+        done = household.end_time_grant(person, origin_id)
+        if done is None:
+            raise ServiceValidationError("Nothing of it is left to end")
+        return {"person": person, **done}
+
     for name, handler, schema in (
+        ("end_grant", end_grant, END_GRANT_SCHEMA),
         ("add_time", add_time, ADD_TIME_SCHEMA),
         ("remove_time", remove_time, REMOVE_TIME_SCHEMA),
         ("raise_cap", raise_cap, RAISE_CAP_SCHEMA),

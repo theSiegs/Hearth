@@ -512,6 +512,8 @@ Games 2 h, +30 bonus. After 2 h 30 of games the bonus is used, Games is held ("G
 other things") and the kid has 1 h for anything else. Minutes past a limit before any bonus was given (counting runs a
 little behind) are paid from the next bonus. A negative bonus (an adult taking time away) lowers daily time instead.
 
+**Grants.** Each bonus, raised limit and Unlimited is a grant of its own (limits.py `add_grant`), linked to its origin; the effective numbers come from the active grants (bonuses add up; raises "by" add up, a "to" or no limit is a floor and the highest wins; Unlimited lasts to the latest end). `hearth.end_grant` {`origin_id`} ends exactly one: a bonus's unused part (spent minutes go to the oldest grants first), one raise, one Unlimited grant, a chore's reward or Pause screens. `raise_cap_end` and `unlimited_end` end all. Today's state became one grant each on the upgrade. See [docs/contracts/time-model.md](contracts/time-model.md).
+
 **Older services and entities, kept for one release** (see [docs/contracts/time-model.md](contracts/time-model.md)):
 `hearth.add_bonus` without a group (or with `all`) is bonus time; with a category's `group` it raises that category's
 limit by the minutes (negative lowers it). `hearth.remove_bonus` likewise. A category's "limit raised today" number is

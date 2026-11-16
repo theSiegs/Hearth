@@ -640,11 +640,9 @@ async def test_origins_have_ids_links_and_an_end(
     assert view["category_bonuses"][0]["origin"] == origins["bonus:games"]["id"]
     assert next(c for c in view["categories"] if c["id"] == "video")["origin"] == origins["raise:video"]["id"]
     assert view["unlimited"]["origin"] == origins["unlimited"]["id"]
-    # And says how it ends
-    assert origins["bonus"]["end"] == {"service": "hearth.remove_time", "data": {"person": "person.sam", "minutes": 30}}
-    assert origins["bonus:games"]["end"]["data"] == {"person": "person.sam", "minutes": 15, "category": "games"}
-    assert origins["raise:video"]["end"]["service"] == "hearth.raise_cap_end"
-    assert origins["unlimited"]["endable"] and origins["unlimited"]["end"]["service"] == "hearth.unlimited_end"
+    # And says how it ends: exactly that grant, through hearth.end_grant
+    for origin in origins.values():
+        assert origin["endable"] and origin["end"] == {"service": "hearth.end_grant", "data": {"origin_id": origin["id"]}}
     # The state document's never_paused: the system list enforce.py uses, and nothing like Messages
     document = household._person_document("person.sam")
     assert set(SYSTEM_NEVER_PAUSED) <= set(document["never_paused"])
@@ -673,6 +671,118 @@ async def test_origins_have_ids_links_and_an_end(
         f"/api/hearth/device/{TV_ID}/end_grant", json={"origin_id": origin["id"]}, headers={"X-Hearth-Secret": secret}
     )
     assert kid.status == 403
+
+
+async def _end(hass, origin_id: str):
+    return await _call(hass, "end_grant", {"origin_id": origin_id})
+
+
+def _origin(household, kind: str, nth: int = 0) -> str:
+    """The id of the person's [nth] newest origin of [kind]."""
+    return [o for o in household.time_view("person.sam")["origins"] if o["kind"] == kind][nth]["id"]
+
+
+async def test_ending_the_second_raise_keeps_the_first(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _set(hass, "video", 10)
+    household = _household(hass)
+    await _call(hass, "raise_cap", {"person": "person.sam", "category": "video", "minutes": 20})
+    await _call(hass, "raise_cap", {"person": "person.sam", "category": "video", "minutes": 15})
+    # Raises "by" add up: 10 + 20 + 15
+    assert household.limits.raise_of("person.sam", "video").cap(10) == 45
+    second = _origin(household, "raise")
+    await _end(hass, second)
+    assert household.limits.raise_of("person.sam", "video").cap(10) == 30
+    # A "to" is a floor, the highest wins: to 25 under 30 changes nothing; to 60 sets 60
+    await _call(hass, "raise_cap", {"person": "person.sam", "category": "video", "to": 25})
+    assert household.limits.raise_of("person.sam", "video").cap(10) == 30
+    await _call(hass, "raise_cap", {"person": "person.sam", "category": "video", "to": 60})
+    assert household.limits.raise_of("person.sam", "video").cap(10) == 60
+    # raise_cap_end is "all"
+    await _call(hass, "raise_cap_end", {"person": "person.sam", "category": "video"})
+    assert household.limits.raise_of("person.sam", "video") is None
+
+
+async def test_ending_an_unlimited_extension_keeps_the_first_window(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=14, minute=0, second=0, microsecond=0))
+    await _household_with_sam(hass, hass_client_no_auth)
+    household = _household(hass)
+    await _call(hass, "unlimited", {"person": "person.sam", "until": "16:00"})
+    await _call(hass, "unlimited", {"person": "person.sam", "until": "18:00"})
+    # One window, extended
+    assert len([w for w in household.unlimited.windows["person.sam"] if not w.get("group")]) == 1
+    assert household.time_view("person.sam")["unlimited"]["text"] == "Unlimited until 6 PM"
+    await _end(hass, _origin(household, "unlimited"))
+    # The first grant's window remains, to its own end
+    assert household.time_view("person.sam")["unlimited"]["text"] == "Unlimited until 4 PM"
+    await _end(hass, _origin(household, "unlimited", 1))
+    assert household.time_view("person.sam")["unlimited"] is None
+
+
+async def test_ending_a_partly_spent_bonus_takes_back_only_the_unused_part(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """Daily time 10, 15 used: +10 (older) and +20 bonus. 5 spent go to the older grant first; ending the older
+    takes back its 5 unused; ending the newer takes back its 20."""
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _set(hass, "all", 10)
+    household = _household(hass)
+    await _call(hass, "add_time", {"person": "person.sam", "minutes": 10})
+    await _call(hass, "add_time", {"person": "person.sam", "minutes": 20})
+    assert household.days["person.sam"].limits["all"].bonus_left == 25
+    older = _origin(household, "bonus", 1)
+    done = await _end(hass, older)
+    assert done["taken"] == 5
+    assert household.days["person.sam"].limits["all"].bonus_left == 20
+    # Nothing of it left to end now
+    assert not next(o for o in household.time_view("person.sam")["origins"] if o["id"] == older)["endable"]
+    done = await _end(hass, _origin(household, "bonus"))
+    assert done["taken"] == 20 and household.days["person.sam"].limits["all"].minutes_left == 0
+    # remove_time takes back only what the grants still give (the older one's 5 spent), never daily time itself
+    assert (await _call(hass, "remove_time", {"person": "person.sam", "minutes": 60}))["removed"] == {"person.sam": 5}
+    assert (await _call(hass, "remove_time", {"person": "person.sam", "minutes": 60}))["removed"] == {"person.sam": 0}
+    assert household.days["person.sam"].limits["all"].budget_min == 10
+
+
+def test_today_s_raises_bonus_and_unlimited_become_grants_once() -> None:
+    from custom_components.hearth.limits import GRANTS_MODEL, Limits
+
+    limits = Limits.__new__(Limits)
+    limits.data = LimitsData(
+        day="2026-11-16", bonus={"person.sam": {"all": 30}}, cat_bonus={"person.sam": {"messaging": 15}},
+        raises={"person.sam": {"games": Raise(add=60).view()}}, model=2,
+    )
+    limits._store = None
+    limits._save = lambda: None
+    origins = {("bonus", None): "o1", ("raise", "games"): "o2"}
+    assert limits.migrate_grants(
+        {"person.sam": {"until": "2026-11-16T18:00:00-08:00", "allow": "a1"}},
+        lambda person, kind, group: origins.get((kind, group)),
+    )
+    grants = {(g["kind"], g["group"]): g for g in limits.data.grants["person.sam"]}
+    assert grants[("bonus", None)]["id"] == "o1" and grants[("bonus", None)]["minutes"] == 30
+    assert grants[("bonus", "messaging")]["minutes"] == 15 and grants[("raise", "games")]["id"] == "o2"
+    assert grants[("unlimited", None)]["allow"] == "a1"
+    # Nothing counted twice
+    assert limits.bonus("person.sam", "all") == 30 and limits.cat_bonus("person.sam", "messaging") == 15
+    assert limits.raise_of("person.sam", "games").cap(120) == 180 and limits.data.model == GRANTS_MODEL
+    assert not limits.migrate_grants({}, lambda *a: None)
+
+
+async def test_by_category_adds_up_to_daily_time_used(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    await _household_with_sam(hass, hass_client_no_auth)
+    household = _household(hass)
+    view = household.time_view("person.sam")
+    # 10 of Video, 5 of Games on the TV: each once, adding up to 15
+    assert {p["id"]: p["minutes"] for p in view["by_category"]} == {"games": 5, "video": 10}
+    assert sum(p["minutes"] for p in view["by_category"]) == view["used"] == 15
+    assert view["uncounted"] == 0
 
 
 async def test_origins_say_where_each_status_came_from(

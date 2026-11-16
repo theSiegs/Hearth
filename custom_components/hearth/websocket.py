@@ -301,26 +301,9 @@ def _suggest_hints(hub, person: str, view: dict[str, Any], now) -> dict[str, Any
 
 def _all_by_pool(household, view: dict[str, Any]) -> list[dict[str, Any]]:
     """[{id, name, minutes}]: each pool counted in All screen time with minutes today, in the household's order, then
-    {id: "other"} for the rest; together All's used minutes. Nothing when All has none."""
-    used = (view.get("all") or {}).get("used_minutes") or 0
-    if used <= 0:
-        return []
-    outside = household.outside_all()
-    minutes = {g["id"]: g.get("used_minutes") or 0 for g in view.get("groups") or []}
-    parts = [
-        {"id": g.id, "name": g.name, "minutes": minutes[g.id]}
-        for g in household.groups
-        if g.id != ALL and g.in_all and g.id not in outside and minutes.get(g.id, 0) > 0
-    ]
-    counted = sum(p["minutes"] for p in parts)
-    if counted > used:
-        # Rounding each part may pass the whole by a minute or two: the largest gives it back
-        biggest = max(parts, key=lambda p: p["minutes"])
-        biggest["minutes"] -= counted - used
-        counted = used
-    if used - counted > 0:
-        parts.append({"id": OTHER, "name": "Other", "minutes": used - counted})
-    return parts
+    {id: "other"} for the rest; together All's used minutes. Nothing when All has none. The same split as the
+    state document's time.by_category (household.by_category)."""
+    return household.by_category(view["id"])[0]
 
 
 def _grant_views(household, person: str) -> list[dict[str, Any]]:

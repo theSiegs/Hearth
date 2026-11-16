@@ -1188,6 +1188,16 @@
           "description": "At most this many (200 by default)."
         }
       }
+    },
+    "end_grant": {
+      "name": "End a grant",
+      "description": "Ends exactly the change one origin made (its id from a person's today's origins): takes back a bonus's unused minutes, ends one raised limit or one Unlimited grant (the others stay in effect), undoes a chore's reward, or ends Pause screens.",
+      "fields": {
+        "origin_id": {
+          "name": "Origin id",
+          "description": "The id of the origin (time.origins[].id)."
+        }
+      }
     }
   },
   "issues": {

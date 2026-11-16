@@ -251,8 +251,8 @@ async def test_an_adult_s_undo_takes_the_whole_reward_back(
     uid = (await _items(hass))[0]["uid"]
     await _tick(hass, uid, users["sam"])
     assert _games(hass).minutes_left == 20
-    # Games' limit goes to 0 for today: its 5 minutes used are past it, paid from the bonus (15 - 5 = 10 left)
-    _hub(hass).household.limits.set_raise("person.sam", "games", Raise(to=0))
+    # Games' limit lowered to 0 for today: its 5 minutes used are past it, paid from the bonus (15 - 5 = 10 left)
+    _hub(hass).household.limits.set_raise("person.sam", "games", Raise(add=-10))
     _hub(hass).household.recompute()
     assert _games(hass).minutes_left == 10
     # The Undo on Alex's phone runs hearth.chore_undo as Alex

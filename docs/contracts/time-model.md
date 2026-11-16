@@ -61,6 +61,8 @@ New, under `time` (always present for a person; values may be `null`):
 | `time.unlimited_today` | list | Today's ended windows: `{start, end, minutes, settled, text}`. |
 | `time.text` | string \| null | The kid's line, ready to show (see Words). |
 | `time.adult_text` | string \| null | The adult's line ("... (includes 30 min bonus)"). |
+| `time.by_category[]` | list | Today's counted minutes by category, `{id, name, minutes}`, each minute once (the same split as the page's daily-time bar; `other` for apps in no category): they add up to `time.used`. |
+| `time.uncounted` | int | Minutes not counted in daily time (categories outside it, Unlimited windows), never inside `by_category`. |
 | `time.categories[]` | list | Each category with a limit (or a raised one): `{id, name, limit, limit_today, raised, until, left, used, text, limit_text}`. `limit`: as set for today's kind of day; `limit_today`: in force today (`null`: no limit); `left`: usable (never more than `today_left`); `text`: the kid's line; `limit_text`: the adult's hint. |
 | `time.category_bonuses[]` | list | Categories with their own bonus today: `{id, name, bonus, bonus_left, left, text}` ("Messaging: 15 min bonus left"). Each `time.categories[]` entry also has `bonus`, `bonus_left` and `origin` (the raised limit's origin id, when raised); each `time.category_bonuses[]` entry has `origin` (its bonus's). |
 | `time.origins[]` | list | Where today's statuses came from (see Origin), newest first. |
@@ -113,6 +115,33 @@ Durations read `40 min`, `1 h`, `1 h 10 min`; clocks `6 PM`, `6:30 PM`. `time.te
 
 Never say pool, bucket, budget or max to a person; never "grown-up" (it's "adult").
 
+## Grants
+
+Each bonus (general or a category's), raised limit and Unlimited is a grant of its own, linked to its origin by the
+same id. What's in effect is computed from the active grants:
+
+- **Bonus**: the sum of the grants (each less what an end took back). Spent bonus minutes are put on the oldest grants
+  first (chores before them).
+- **Raised limit**: raises "by" add up; a "to" or "no limit" sets a floor, and the highest wins.
+- **Unlimited**: on while any Unlimited grant is, to the latest end of them (or until turned off). One window of
+  uncounted time, extended by a second grant, never two.
+
+`hearth.end_grant {origin_id}` (adults only, in the action log; also `POST /api/hearth/device/<id>/end_grant` from an
+adult's device) ends exactly that grant: a bonus's unused part only (at most min(its minutes, the unused total)), one
+raise or one Unlimited grant (the others stay in effect), a chore's reward (undone), or Pause screens. Each origin's
+`end` is `{service: "hearth.end_grant", data: {origin_id}}`. The older services keep meaning "all":
+`hearth.raise_cap_end` ends every raise of a category, `hearth.unlimited_end` every Unlimited grant. On the first start
+after the upgrade, today's bonus, category bonuses, raised limits and a running Unlimited become one grant each, with
+their latest origin's id.
+
+Also, for the record:
+
+- `hearth.remove_time` takes back only what bonus grants still give, newest first; it never cuts daily time itself.
+- No new service takes time away. (The older `hearth.add_bonus` with negative minutes and the daily-time bonus number
+  entity, kept for one release, still lower today's time.)
+- An ask answered twice: the second answer is refused with `not_open` (`hearth.answer_request` raises a validation
+  error; the WebSocket answers `not_open`).
+
 ## Never paused
 
 The state document (phone and TV, per person) has `never_paused: [packages]`: what Hearth never pauses for any reason,
@@ -134,7 +163,7 @@ Each bonus, raised limit, Unlimited window and Pause screens record carries wher
 | `text` | Ready to show: `Bonus +30 · added by Alex in Hearth · 3:05 PM` |
 | `id` | Stable for the day: status lines link to it (`bonus_origin`, `origin` on categories, category bonuses and Unlimited) |
 | `endable` | Whether something of it can still be ended now (only the latest of each thing) |
-| `end` | `{service, data}`: the hearth service that ends it, or takes back its unused part (`hearth.remove_time` with the unused minutes, `hearth.raise_cap_end`, `hearth.unlimited_end`, `hearth.pause_end`, `hearth.chore_undo`), or `null` |
+| `end` | `{service: "hearth.end_grant", data: {origin_id}}` while something of it can be ended (see Grants), else `null` |
 
 They are in `time.origins[]` (the state document and the household summary, `hearth/summary` and `GET /api/hearth/household`: each person's today's changes, newest first, for adult phones), `hearth.explain`'s `origins`, and `hearth/config`'s `origins` (by person). Today
 `hearth`, `chore` and `ask` are recorded; `family_link`, `family_safety` and `nintendo` (a parent's change in their own
@@ -165,7 +194,7 @@ Extra time on one device (`hearth.add_bonus` or `hearth.allow` with `device`, de
 
 ## Payload changes, exactly
 
-- State document, per person: `+ time` (object above). `groups[]` unchanged in shape.
+- State document, per person: `+ time` (object above, with `by_category` and `uncounted`). `groups[]` unchanged in shape.
 - Summary, per person: `+ time`; per `groups[]` row: `+ held_left`, `+ bonus_left`, `+ raised`; `minutes_left` now
   the usable value.
 - `request.group` (the latest ask) is `"all"` for every new ask.
@@ -173,6 +202,6 @@ Extra time on one device (`hearth.add_bonus` or `hearth.allow` with `device`, de
   `+ bonus_left`, `+ unlimited`, `+ category_limit`, `+ raised_limits`, `+ origins`.
 - `hearth/config`: `+ fl_backstop`, `+ fl_backstop_margin`, `+ origins`.
 - State document, per person: `+ never_paused`; `time.bonus_origin`, `origin` on raised categories, category bonuses and Unlimited; each origin `+ id`, `+ endable`, `+ end`.
-- New: `POST /api/hearth/device/{device_id}/end_grant` (adults' devices).
+- New: `POST /api/hearth/device/{device_id}/end_grant` (adults' devices) and the service `hearth.end_grant`; an origin's `end` names it.
 - New services: `add_time`, `remove_time`, `raise_cap`, `raise_cap_end`, `unlimited`, `unlimited_end` (adults only).
 - New events: `hearth_unlimited_started {person, until, open}`, `hearth_unlimited_ended {person, id, text}`.

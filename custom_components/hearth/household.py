@@ -291,6 +291,9 @@ class Household:
         await self.backstop.async_load()
         await self.unlimited.async_load()
         await self.activity.async_load()
+        # Once: today's bonus time, category bonuses, raised limits and a running Unlimited become grants
+        running = {p: w for p in list(self.unlimited.windows) if (w := self.unlimited.active(p)) is not None}
+        self.limits.migrate_grants(running, self.latest_origin)
         await self.bedtime_lift.async_load()
         await self.scheduler.async_load()
         await self.week.async_load()
@@ -2270,6 +2273,37 @@ class Household:
             state.cat_bonus = cat_bonuses[gid][0] if gid in cat_bonuses else 0
             state.cat_bonus_left = result.cat_left.get(gid, 0)
 
+    def by_category(self, person: str) -> tuple[list[dict[str, Any]], int]:
+        """Today's counted minutes split by category, each minute once ([{id, name, minutes}] in the household's
+        order, then "other"; together daily time used), and the minutes not counted in daily time (categories
+        outside it, Unlimited and allowed windows). The panel's daily-time bar and the device API read the same."""
+        day = self.days.get(person)
+        if day is None:
+            return [], 0
+        used = int(round(day.groups.get(ALL, 0.0) / 60))
+        outside = self.outside_all()
+        parts: list[dict[str, Any]] = []
+        if used > 0:
+            parts = [
+                {"id": g.id, "name": g.name, "minutes": m}
+                for g in self.groups
+                if g.id != ALL and g.in_all and g.id not in outside
+                and (m := int(round(day.groups.get(g.id, 0.0) / 60))) > 0
+            ]
+            counted = sum(p["minutes"] for p in parts)
+            if counted > used:
+                # Rounding each part may pass the whole by a minute or two: the largest gives it back
+                biggest = max(parts, key=lambda p: p["minutes"])
+                biggest["minutes"] -= counted - used
+                counted = used
+            if used - counted > 0:
+                parts.append({"id": OTHER, "name": "Other", "minutes": used - counted})
+        not_in_day = sum(
+            day.groups.get(g.id, 0.0) for g in self.groups if g.id != ALL and (g.id in outside or not g.in_all)
+        )
+        unlimited = max(0.0, (day.raw_groups or day.groups).get(ALL, 0.0) - day.groups.get(ALL, 0.0))
+        return parts, int(round((not_in_day + unlimited) / 60))
+
     def time_view(self, person: str) -> dict[str, Any]:
         """Today's time as people are shown it, for screens and the device API (docs/contracts/time-model.md):
         {today_left, today_minutes, base_minutes, bonus, bonus_left, used, unlimited {until, open, include_bedtime,
@@ -2327,6 +2361,10 @@ class Household:
             "text": today_text(today_left, bonus_left, active["text"] if active else None),
             "adult_text": today_text(today_left, bonus_left, active["text"] if active else None, adult=True),
             "categories": categories,
+            # Today's counted minutes by category, each once (they add up to daily time used), and the minutes not
+            # counted in daily time apart
+            "by_category": (split := self.by_category(person))[0],
+            "uncounted": split[1],
             # Categories with their own bonus today ("+15 min Messaging bonus"), with or without a limit
             "category_bonuses": [
                 {
@@ -2361,63 +2399,43 @@ class Household:
         return record
 
     def origins_of(self, person: str) -> list[dict[str, Any]]:
-        """Today's origins of the person's statuses, newest first, each with its text, and whether and how it can be
-        ended: {endable, end: {service, data} | None} (the hearth service that ends it or takes back its unused part).
-        Only the latest of each thing (a category's bonus, a raised limit, Unlimited, Pause screens) is endable."""
+        """Today's origins of the person's statuses, newest first, each with its text, and whether it can be ended:
+        {endable, end: {service: hearth.end_grant, data: {origin_id}} | None}: ending one ends exactly that grant
+        (a bonus's unused part, a raise, an Unlimited grant, a chore's reward, Pause screens)."""
         out = []
-        seen: set[tuple[str, str | None]] = set()
         for record in reversed(self.limits.data.origins.get(person, [])):
             at = dt_util.parse_datetime(record.get("at") or "")
             local = dt_util.as_local(at) if at else None
-            thing = (record.get("kind"), record.get("group"))
-            end = None if thing in seen else self._end_of(person, record)
-            seen.add(thing)
+            origin_id = record.get("id") or f"{record.get('kind')}:{record.get('at')}"
+            endable = self._endable(person, {**record, "id": origin_id})
             out.append(
                 {
                     **record,
-                    "id": record.get("id") or f"{record.get('kind')}:{record.get('at')}",
+                    "id": origin_id,
                     "text": origin_text(
                         record.get("detail") or "", record.get("source") or "hearth", record.get("by"),
                         say_clock(local.hour, local.minute) if local else None,
                     ),
-                    "endable": end is not None,
-                    "end": end,
+                    "endable": endable,
+                    "end": {"service": "hearth.end_grant", "data": {"origin_id": origin_id}} if endable else None,
                 }
             )
         return out
 
-    def _end_of(self, person: str, record: dict[str, Any]) -> dict[str, Any] | None:
-        """The hearth service that ends an origin's change now, or takes back its unused part; None when nothing of
-        it is left to end."""
-        kind, group = record.get("kind"), record.get("group")
-        day = self.days.get(person)
-        if kind == "bonus":
-            if record.get("source") == "chore" and record.get("chore"):
-                return {"service": "hearth.chore_undo", "data": {"key": record["chore"]}}
-            minutes = int(record.get("minutes") or 0)
-            if group:
-                state = day.limits.get(group) if day else None
-                unused = min(minutes, state.cat_bonus_left if state else 0)
-                data = {"person": person, "minutes": unused, "category": group}
-            else:
-                state = day.limits.get(ALL) if day else None
-                given = max(0, self.limits.bonus(person, ALL))
-                unused = min(minutes, state.bonus_left if state else 0, given)
-                data = {"person": person, "minutes": unused}
-            return {"service": "hearth.remove_time", "data": data} if unused > 0 else None
-        if kind == "raise" and group:
-            if self.limits.raise_of(person, group, dt_util.now()) is None:
-                return None
-            return {"service": "hearth.raise_cap_end", "data": {"person": person, "category": group}}
-        if kind == "unlimited":
-            if self.unlimited.active(person) is None:
-                return None
-            return {"service": "hearth.unlimited_end", "data": {"people": [person]}}
-        if kind == "pause":
-            if pause_of(self.hass, person, dt_util.now()) is None:
-                return None
-            return {"service": "hearth.pause_end", "data": {"people": [person]}}
-        return None
+    def _endable(self, person: str, record: dict[str, Any]) -> bool:
+        """Whether something of an origin's change can still be ended now (hearth.end_grant)."""
+        now = dt_util.now()
+        grant = self.limits.grant(person, record["id"])
+        if grant is not None:
+            if grant["kind"] == "bonus":
+                return self._bonus_unused(person, grant) > 0
+            return not grant.get("ended") and grant in self.limits.grants(person, grant["kind"], now=now)
+        if record.get("kind") == "bonus" and record.get("source") == "chore" and record.get("chore"):
+            entry = next((e for e in self.todos.ledger if e.get("key") == record["chore"]), None)
+            return entry is not None and not entry.get("reversed_at")
+        if record.get("kind") == "pause":
+            return pause_of(self.hass, person, now) is not None
+        return False
 
     def latest_origin(self, person: str, kind: str, group: str | None = None) -> str | None:
         """The id of the latest origin of [kind] (and [group]) today, for a status line's link to its origin."""
@@ -2426,10 +2444,12 @@ class Household:
                 return record["id"]
         return None
 
-    def end_origin(self, person: str, origin_id: str) -> dict[str, Any] | None:
-        """The end {service, data} of one of the person's origins by its id (None: no such, or nothing to end)."""
-        found = next((o for o in self.origins_of(person) if o["id"] == origin_id), None)
-        return found["end"] if found else None
+    def person_of_origin(self, origin_id: str) -> str | None:
+        """Whose origin (or grant) [origin_id] is."""
+        for person, records in self.limits.data.origins.items():
+            if any(r.get("id") == origin_id for r in records):
+                return person
+        return next((p for p in self.limits.data.grants if self.limits.grant(p, origin_id)), None)
 
     def bonus_groups(self, person: str) -> set[str]:
         """The categories with their own bonus left today (hearth.add_time with a category)."""
@@ -2511,24 +2531,31 @@ class Household:
         by: str | None = None,
         category: str | None = None,
     ) -> None:
-        """Bonus time today (hearth.add_time; negative takes time away from today's time): no category, spent
-        anywhere. Google's and Microsoft's own limits get as much (each grant), and given in bedtime it lifts it.
-        [via]: ask, day_off or none (an adult); [by]: the adult's name, for its origin. With a [category]: a bonus
-        for that category only ("+15 min Messaging bonus"), usable there past daily time and its limit, spent before
-        the general bonus; never negative."""
+        """Bonus time today (hearth.add_time): a grant of its own, no category, spent anywhere. Google's and
+        Microsoft's own limits get as much (each grant), and given in bedtime it lifts it. [via]: ask, day_off or none
+        (an adult); [by]: the adult's name, for its origin. With a [category]: a bonus for that category only ("+15
+        min Messaging bonus"), usable there past daily time and its limit, spent before the general bonus. A negative
+        [minutes] (hearth.add_bonus's older "take away") lowers today's adjustment instead of a grant."""
         if category is not None and category != ALL:
             self._add_category_bonus(person, category, minutes, reason, by)
             return
-        self.limits.set_bonus(person, ALL, self.limits.bonus(person, ALL) + minutes)
-        if minutes:
-            fields = {k: v for k, v in (("reason", reason), ("via", via)) if v}
-            self.history.log(BONUS, person, group=ALL, minutes=minutes, **fields)
-            detail = f"Bonus {'+' if minutes > 0 else '−'}{abs(minutes)}"
-            if via == "day_off":
-                detail += " (day off)"
-            if reason:
-                detail += f" · {reason}"
-            self.note_origin(person, "bonus", detail, "ask" if via == "ask" else "hearth", by, minutes=minutes)
+        if minutes > 0:
+            grant = self.limits.add_grant(person, "bonus", None, minutes)
+        elif minutes < 0:
+            grant = None
+            self.limits.set_bonus(person, ALL, self.limits.bonus(person, ALL) + minutes)
+        else:
+            self.recompute()
+            return
+        fields = {k: v for k, v in (("reason", reason), ("via", via)) if v}
+        self.history.log(BONUS, person, group=ALL, minutes=minutes, **fields)
+        detail = f"Bonus {'+' if minutes > 0 else '−'}{abs(minutes)}"
+        if via == "day_off":
+            detail += " (day off)"
+        if reason:
+            detail += f" · {reason}"
+        about = {"id": grant["id"]} if grant else {}
+        self.note_origin(person, "bonus", detail, "ask" if via == "ask" else "hearth", by, minutes=minutes, **about)
         in_bedtime = minutes > 0 and self.in_bedtime(person)
         self.recompute()
         if minutes > 0:
@@ -2539,26 +2566,25 @@ class Household:
     def _add_category_bonus(self, person: str, category: str, minutes: int, reason: str | None, by: str | None) -> None:
         if minutes <= 0:
             return
-        self.limits.set_cat_bonus(person, category, self.limits.cat_bonus(person, category) + minutes)
+        grant = self.limits.add_grant(person, "bonus", category, minutes)
         fields = {"reason": reason} if reason else {}
         self.history.log(BONUS, person, group=category, minutes=minutes, category=True, **fields)
         target = self.group(category)
         detail = f"{target.name if target else category} bonus +{minutes}" + (f" · {reason}" if reason else "")
-        self.note_origin(person, "bonus", detail, "hearth", by, minutes=minutes, group=category)
+        self.note_origin(person, "bonus", detail, "hearth", by, minutes=minutes, group=category, id=grant["id"])
         self.recompute()
         # The phone mustn't lock before it's used: Family Link and Family Safety get as much
         self.sync.mirror_bonus(person)
 
     @callback
     def remove_time(self, person: str, minutes: int, category: str | None = None) -> int:
-        """Takes back up to [minutes] of the bonus time an adult gave today (hearth.remove_time); of one category's
-        bonus with [category]. The minutes taken back."""
+        """Takes back up to [minutes] of the bonus time given today (hearth.remove_time), newest grant first; of one
+        category's bonus with [category]. Never more than the grants give: daily time itself is never cut. The
+        minutes taken back."""
         if category is None or category == ALL:
             return self.remove_bonus(person, ALL, minutes)
-        given = self.limits.cat_bonus(person, category)
-        taken = max(0, min(int(minutes), given))
+        taken = self.limits.take_back(person, category, minutes)
         if taken:
-            self.limits.set_cat_bonus(person, category, given - taken)
             self.history.log(BONUS, person, group=category, minutes=-taken, category=True, undo=True)
             self.recompute()
         return taken
@@ -2574,33 +2600,29 @@ class Household:
         until: datetime | None = None,
         by: str | None = None,
     ) -> Raise:
-        """A category's limit today, raised (hearth.raise_cap): by [minutes] (more on top of a raise already there),
-        to [to] minutes, or no limit at all, until [until] (None: the end of the day). Daily time is unchanged."""
-        held = self.limits.raise_of(person, group, dt_util.now()) or Raise()
-        stamp = dt_util.as_local(until).isoformat() if until is not None else held.until
-        if no_cap:
-            new = Raise(0, None, True, stamp)
-        elif to is not None:
-            new = Raise(0, int(to), False, stamp)
-        else:
-            new = Raise(held.add + int(minutes or 0), held.to, held.no_cap, stamp)
-        self.limits.set_raise(person, group, new)
+        """A category's limit today, raised (hearth.raise_cap): a grant of its own, by [minutes] (raises "by" add up),
+        to [to] minutes or no limit at all (a floor: the highest wins), until [until] (None: the end of the day).
+        Daily time is unchanged. The raise in effect now."""
+        stamp = dt_util.as_local(until).isoformat() if until is not None else None
+        grant = self.limits.add_grant(
+            person, "raise", group, 0 if (no_cap or to is not None) else int(minutes or 0),
+            None if no_cap or to is None else int(to), bool(no_cap), stamp,
+        )
         self.history.log(
             RAISE, person, group=group,
             **{k: v for k, v in (("minutes", minutes), ("to", to), ("no_cap", no_cap or None), ("until", stamp)) if v is not None},
         )
         name = self.group(group).name if self.group(group) else group
         what = "no limit" if no_cap else f"limit {say_minutes(to)}" if to is not None else f"limit +{minutes or 0}"
-        self.note_origin(person, "raise", f"{name}: {what} today", "hearth", by, group=group)
+        self.note_origin(person, "raise", f"{name}: {what} today", "hearth", by, group=group, id=grant["id"])
         self.recompute()
-        return new
+        return self.limits.raise_of(person, group, dt_util.now()) or Raise()
 
     @callback
     def raise_cap_end(self, person: str, group: str | None = None) -> list[str]:
-        """The person's raised limit of [group] (every raised one: None) ends now; the groups it ended for."""
-        ended = [g for g in list(self.limits.data.raises.get(person, {})) if group is None or g == group]
+        """Every raise of [group] (every category's: None) ends now (hearth.raise_cap_end); the categories."""
+        ended = self.limits.end_raises(person, group)
         for gid in ended:
-            self.limits.set_raise(person, gid, None)
             self.history.log(RAISE, person, group=gid, ended=True)
         if ended:
             self.recompute()
@@ -2616,14 +2638,16 @@ class Household:
         reason: str | None = None,
         by: str | None = None,
     ):
-        """Unlimited (hearth.unlimited): until [until] (at midnight at the latest) nothing Hearth holds for daily
-        time or a category's limit holds the people, and the time they use isn't counted (unlimited.py). Bedtime,
+        """Unlimited (hearth.unlimited): a grant of its own, until [until] (at midnight at the latest): nothing Hearth
+        holds for daily time or a category's limit holds the people, and the time they use isn't counted
+        (unlimited.py). Another while one runs extends it (on until the latest end of the grants left). Bedtime,
         School time and Pause screens still lock, but bedtime not with [include_bedtime]. The allow it is."""
         allowed = self.allows.add(until, None, ALL, reason or "Unlimited")
         for person in people:
-            # A new one replaces the one running (its own allow ends with it)
-            if (running := self.unlimited.active(person)) is not None:
-                self.allows.end_for(running["allow"], person)
+            grant = self.limits.add_grant(
+                person, "unlimited", None, until=until[person].isoformat(), open=open_ended, allow=allowed.id,
+                include_bedtime=include_bedtime,
+            )
             self.unlimited.start(person, allowed.id, until[person], open_ended, include_bedtime)
             if include_bedtime:
                 self.bedtime_lift.give(person, 0, until=until[person])
@@ -2631,21 +2655,27 @@ class Household:
             detail = "Unlimited" + ("" if open_ended else f" until {say_clock(local.hour, local.minute)}")
             if reason:
                 detail += f" · {reason}"
-            self.note_origin(person, "unlimited", detail, "hearth", by)
+            self.note_origin(person, "unlimited", detail, "hearth", by, id=grant["id"])
         self.recompute()
         return allowed
 
     @callback
     def end_unlimited(self, people: list[str] | None) -> list[str]:
-        """The people's unlimited time ends now (hearth.unlimited_end): limits are back on where they were when it
-        started. The people it ended for."""
+        """The people's unlimited time ends now, every grant of it (hearth.unlimited_end): limits are back on where
+        they were when it started. The people it ended for."""
         ended: list[str] = []
         for person in people or self.people():
+            grants = self.limits.grants(person, "unlimited")
+            for grant in grants:
+                self.limits.end_grant(person, grant["id"])
+                if grant.get("allow"):
+                    self.allows.end_for(grant["allow"], person)
             window = self.unlimited.end(person)
-            if window is None:
+            if window is None and not grants:
                 continue
             ended.append(person)
-            self.allows.end_for(window["allow"], person)
+            if window is not None:
+                self.allows.end_for(window["allow"], person)
             if (self.bedtime_lift.lifts.get(person) or {}).get("no_limits"):
                 self.bedtime_lift.end(person)
         if ended:
@@ -2653,19 +2683,97 @@ class Household:
             self.sync.allow_ended()
         return ended
 
+    def _bonus_unused(self, person: str, grant: dict[str, Any]) -> int:
+        """What of a bonus grant isn't spent yet: the bonus spent today is put on the oldest givers first (chores and
+        an older adjustment, then the grants by age), so this grant's unused part is what's left of it after them."""
+        day = self.days.get(person)
+        group = grant.get("group")
+        state = day.limits.get(group or ALL) if day else None
+        if state is None:
+            return self.limits.given(grant)
+        if group:
+            total, left = self.limits.cat_bonus(person, group), state.cat_bonus_left
+        else:
+            total, left = state.bonus_min, state.bonus_left
+        spent = max(0, total - left)
+        grants = self.limits.grants(person, "bonus", group)
+        others = total - sum(self.limits.given(g) for g in grants)
+        spent -= min(spent, max(0, others))
+        for g in grants:
+            share = min(spent, self.limits.given(g))
+            if g["id"] == grant["id"]:
+                return max(0, self.limits.given(g) - share)
+            spent -= share
+        return 0
+
+    @callback
+    def end_time_grant(self, person: str, origin_id: str) -> dict[str, Any] | None:
+        """hearth.end_grant: ends exactly the change [origin_id] made (an origin's id): a bonus's unused part goes, a
+        raise or an Unlimited grant ends (the others stay in effect), a chore's reward is undone, Pause screens end.
+        What it did, None when there's nothing of it left to end."""
+        grant = self.limits.grant(person, origin_id)
+        now = dt_util.now()
+        if grant is not None:
+            kind = grant["kind"]
+            if kind == "bonus":
+                unused = self._bonus_unused(person, grant)
+                if unused <= 0:
+                    return None
+                self.limits.end_grant(person, origin_id, unused)
+                self.history.log(BONUS, person, group=grant.get("group") or ALL, minutes=-unused, undo=True)
+                self.recompute()
+                return {"kind": "bonus", "taken": unused}
+            if grant.get("ended") or (kind != "bonus" and grant not in self.limits.grants(person, kind, now=now)):
+                return None
+            self.limits.end_grant(person, origin_id)
+            if kind == "raise":
+                self.history.log(RAISE, person, group=grant.get("group"), ended=True)
+                self.recompute()
+                return {"kind": "raise", "group": grant.get("group")}
+            if kind == "unlimited":
+                if grant.get("allow"):
+                    self.allows.end_for(grant["allow"], person)
+                left = self.limits.grants(person, "unlimited", now=now)
+                if left:
+                    ends = [dt_util.parse_datetime(g["until"]) for g in left if g.get("until")]
+                    self.unlimited.extend_to(person, max(ends) if ends else None, any(g.get("open") for g in left))
+                else:
+                    window = self.unlimited.end(person)
+                    if window is not None:
+                        self.allows.end_for(window["allow"], person)
+                    if (self.bedtime_lift.lifts.get(person) or {}).get("no_limits"):
+                        self.bedtime_lift.end(person)
+                self.recompute()
+                self.sync.allow_ended()
+                return {"kind": "unlimited", "still_on": bool(left)}
+            return None
+        origin = next((o for o in self.limits.data.origins.get(person, []) if o.get("id") == origin_id), None)
+        if origin is None:
+            return None
+        if origin.get("kind") == "bonus" and origin.get("source") == "chore" and origin.get("chore"):
+            self.todos.undo(origin["chore"], None)
+            return {"kind": "chore"}
+        if origin.get("kind") == "pause" and pause_of(self.hass, person, now) is not None:
+            end_pause(self.hass, [person])
+            self.recompute()
+            return {"kind": "pause"}
+        return None
+
     @callback
     def add_bonus(self, person: str, group: str, minutes: int, by: str | None = None) -> None:
         """hearth.add_bonus, kept: daily time's (or none) is bonus time; a category's raises its limit by as many
-        minutes today (negative lowers it)."""
+        minutes today (a raise grant; negative lowers it)."""
         if group == ALL:
             self.add_time(person, minutes, by=by)
             return
-        held = self.limits.raise_of(person, group, dt_util.now()) or Raise()
-        self.limits.set_raise(person, group, Raise(held.add + minutes, held.to, held.no_cap, held.until))
-        if minutes:
-            self.history.log(RAISE, person, group=group, minutes=minutes)
-            name = self.group(group).name if self.group(group) else group
-            self.note_origin(person, "raise", f"{name}: limit {minutes:+d} today", "hearth", by, group=group)
+        if not minutes:
+            # Nothing to give: a recompute all the same (older automations call it so)
+            self.recompute()
+            return
+        grant = self.limits.add_grant(person, "raise", group, int(minutes))
+        self.history.log(RAISE, person, group=group, minutes=minutes)
+        name = self.group(group).name if self.group(group) else group
+        self.note_origin(person, "raise", f"{name}: limit {minutes:+d} today", "hearth", by, group=group, id=grant["id"])
         self.recompute()
 
     def _lift_bedtime(self, person: str, minutes: int) -> None:
@@ -2681,16 +2789,25 @@ class Household:
 
     @callback
     def remove_bonus(self, person: str, group: str, minutes: int) -> int:
-        """Takes back up to [minutes] of the extra time an adult gave [person]'s group today (an undo,
-        hearth.remove_bonus): never more than was given, so it never takes their own budget (and chores' minutes
-        stay). Logged as a negative bonus. When All screen time is none again, what Hearth gave for it in Family Link
-        and Family Safety goes too. The minutes taken back."""
-        given = max(0, self.limits.bonus(person, group))
-        taken = max(0, min(int(minutes), given))
+        """Takes back up to [minutes] of the extra time given [person]'s group today (an undo, hearth.remove_bonus
+        and remove_time): never more than was given, so it never takes their own daily time (and chores' minutes
+        stay); bonus time newest grant first. Logged as a negative bonus. When daily time is none again, what Hearth
+        gave for it in Family Link and Family Safety goes too. The minutes taken back."""
+        if group == ALL:
+            taken = self.limits.take_back(person, None, minutes)
+            adjust = max(0, self.limits.data.bonus.get(person, {}).get(ALL, 0))
+            if taken < minutes and adjust:
+                more = min(int(minutes) - taken, adjust)
+                self.limits.data.bonus[person][ALL] = adjust - more
+                taken += more
+        else:
+            given = max(0, self.limits.bonus(person, group))
+            taken = max(0, min(int(minutes), given))
+            if taken:
+                self.limits.set_bonus(person, group, given - taken)
         if not taken:
             return 0
-        self.limits.set_bonus(person, group, given - taken)
-        # A category's: its raised max is that much lower again (hearth.add_bonus with a group raised it)
+        # A category's: its raised limit is that much lower again (hearth.add_bonus with a group raised it)
         self.history.log(BONUS if group == ALL else RAISE, person, group=group, minutes=-taken, undo=True)
         if group == ALL:
             # Its bedtime lift is that much shorter too

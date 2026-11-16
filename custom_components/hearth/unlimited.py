@@ -77,11 +77,16 @@ class Unlimited:
     def start(self, person: str, allow_id: str, until: datetime, open_ended: bool, include_bedtime: bool) -> dict[str, Any]:
         now = dt_util.now()
         self._new_day(now)
-        # One at a time: a new one replaces what's left of the one running (its minutes so far stay excluded)
+        # One window at a time: another grant while one runs extends it (to the later end), never a second window
+        # (its minutes would be left out twice)
         running = self.active(person, now)
         if running is not None:
-            running["until"] = now.isoformat()
-            running["ended"] = now.isoformat()
+            ends = [x for x in (_at(running.get("until")), until) if x is not None]
+            running["until"] = max(ends).isoformat()
+            running["open"] = bool(running.get("open")) or open_ended
+            running["include_bedtime"] = bool(running.get("include_bedtime")) or include_bedtime
+            self._save()
+            return running
         window = {
             "id": secrets.token_hex(6),
             "allow": allow_id,
@@ -109,6 +114,17 @@ class Unlimited:
         window["ended"] = now.isoformat()
         self._save()
         return window
+
+    @callback
+    def extend_to(self, person: str, until: datetime | None, open_ended: bool) -> None:
+        """The running window's end, set again from the Unlimited grants still in effect (one of them ended)."""
+        running = self.active(person)
+        if running is None:
+            return
+        if until is not None:
+            running["until"] = until.isoformat()
+        running["open"] = open_ended
+        self._save()
 
     def active(self, person: str, now: datetime | None = None) -> dict[str, Any] | None:
         now = now or dt_util.now()

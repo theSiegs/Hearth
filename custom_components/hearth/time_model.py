@@ -50,11 +50,11 @@ class Raise:
         """The cap in effect, from the configured one ([base]; None: no cap)."""
         if self.no_cap:
             return None
+        by = None if base is None else max(0, base + self.add)
         if self.to is not None:
-            return max(0, self.to + self.add)
-        if base is None:
-            return None
-        return max(0, base + self.add)
+            # A "to" sets a floor: the limit is at least that much (never lower than the raise "by")
+            return max(int(self.to), by or 0)
+        return by
 
     def view(self) -> dict[str, Any]:
         return {"add": self.add, "to": self.to, "no_cap": self.no_cap, "until": self.until}

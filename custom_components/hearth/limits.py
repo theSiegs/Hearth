@@ -584,6 +584,9 @@ class LimitsData:
     origins: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     # Today's category bonuses: person -> group -> minutes (usable only there, past daily time and its limit)
     cat_bonus: dict[str, dict[str, int]] = field(default_factory=dict)
+    # Today's grants: person -> [{id, kind: bonus | raise | unlimited, group, minutes, to, no_cap, until, at, ended,
+    # taken}] (add_grant)
+    grants: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
 
 
 MAX_ORIGINS = 50
@@ -591,6 +594,8 @@ MAX_ORIGINS = 50
 
 # The stored data's version under the time model: per-category bonuses are raised caps
 TIME_MODEL = 2
+# ... and every bonus, raised limit and Unlimited is a grant of its own
+GRANTS_MODEL = 3
 
 # A TV's own rules name their groups all, games and youtube (ScreenTimeRules on the TV)
 TV_GROUP_ALIASES: dict[str, tuple[str, ...]] = {"youtube": ("youtube", "video")}
@@ -621,6 +626,7 @@ class Limits:
             model=stored.get("model", 1),
             origins=stored.get("origins", {}),
             cat_bonus=stored.get("cat_bonus", {}),
+            grants=stored.get("grants", {}),
         )
         if self.migrate_bonuses():
             self._save()
@@ -636,6 +642,7 @@ class Limits:
             "model": self.data.model,
             "origins": self.data.origins,
             "cat_bonus": self.data.cat_bonus,
+            "grants": self.data.grants,
         }
 
     def _save(self) -> None:
@@ -675,6 +682,7 @@ class Limits:
         self.data.raises = {}
         self.data.origins = {}
         self.data.cat_bonus = {}
+        self.data.grants = {}
         self._save()
         return True
 
@@ -720,30 +728,131 @@ class Limits:
         self._save()
         return taken
 
+    # Grants: each bonus (general or a category's), raised limit and Unlimited is its own record, linked to its origin
+    # by id; the effective numbers are computed from them (see docs/contracts/time-model.md, Grants)
+
+    def add_grant(
+        self,
+        person: str,
+        kind: str,
+        group: str | None = None,
+        minutes: int = 0,
+        to: int | None = None,
+        no_cap: bool = False,
+        until: str | None = None,
+        grant_id: str | None = None,
+        **about: Any,
+    ) -> dict[str, Any]:
+        """A new grant today: kind bonus (general when [group] is None), raise or unlimited."""
+        import secrets
+
+        from homeassistant.util import dt as dt_util
+
+        record = {
+            "id": grant_id or secrets.token_hex(6),
+            "kind": kind,
+            "group": group,
+            "minutes": int(minutes),
+            "to": to,
+            "no_cap": bool(no_cap),
+            "until": until,
+            "at": dt_util.utcnow().isoformat(),
+            "ended": None,
+            "taken": 0,
+            **about,
+        }
+        self.data.grants.setdefault(person, []).append(record)
+        self._save()
+        return record
+
+    def grant(self, person: str, grant_id: str) -> dict[str, Any] | None:
+        return next((g for g in self.data.grants.get(person, []) if g["id"] == grant_id), None)
+
+    def grants(self, person: str, kind: str, group: Any = ..., now: Any = None) -> list[dict[str, Any]]:
+        """The person's grants of [kind] (and [group]; ... any), oldest first: a raise or Unlimited only while active
+        (not ended, its until not passed: [now]); a bonus always (its spent part stays given)."""
+        out = []
+        for g in self.data.grants.get(person, []):
+            if g["kind"] != kind or (group is not ... and g.get("group") != group):
+                continue
+            if kind != "bonus":
+                if g.get("ended"):
+                    continue
+                if now is not None and g.get("until"):
+                    from homeassistant.util import dt as dt_util
+
+                    until = dt_util.parse_datetime(g["until"])
+                    if until is not None and until <= now:
+                        continue
+            out.append(g)
+        return out
+
+    @staticmethod
+    def given(grant: dict[str, Any]) -> int:
+        """What a bonus grant gives now (its minutes, less what an end took back)."""
+        return max(0, int(grant.get("minutes") or 0) - int(grant.get("taken") or 0))
+
+    def end_grant(self, person: str, grant_id: str, unused: int | None = None) -> dict[str, Any] | None:
+        """Ends a raise or Unlimited grant; takes [unused] minutes back from a bonus grant (never more than it
+        gives). The grant, None when there's no such."""
+        from homeassistant.util import dt as dt_util
+
+        record = self.grant(person, grant_id)
+        if record is None:
+            return None
+        if record["kind"] == "bonus":
+            take = max(0, min(int(unused or 0), self.given(record)))
+            record["taken"] = int(record.get("taken") or 0) + take
+        record["ended"] = dt_util.utcnow().isoformat()
+        self._save()
+        return record
+
+    def take_back(self, person: str, group: str | None, minutes: int) -> int:
+        """hearth.remove_time: up to [minutes] of the bonus grants (general: [group] None, or one category's), newest
+        first; never more than they give, so never daily time itself. The minutes taken back."""
+        left = max(0, int(minutes))
+        taken = 0
+        for record in reversed(self.grants(person, "bonus", group)):
+            take = min(left, self.given(record))
+            if take:
+                record["taken"] = int(record.get("taken") or 0) + take
+                left -= take
+                taken += take
+            if not left:
+                break
+        if taken:
+            self._save()
+        return taken
+
     def bonus(self, person: str, group: str) -> int:
-        """All screen time: the bonus time an adult gave today (chores' aside). A category: what its raised cap adds
-        (an older Hearth's per-category bonus)."""
+        """Daily time: the bonus time adults, asks and the day off gave today (its grants, and an older adjustment of
+        the number entity's); chores' aside. A category: what its raised limit adds (an older per-category bonus)."""
         if group != ALL:
             held = self.raise_of(person, group)
             return held.add if held else 0
-        return self.data.bonus.get(person, {}).get(group, 0)
+        return self.data.bonus.get(person, {}).get(group, 0) + sum(self.given(g) for g in self.grants(person, "bonus", None))
 
     def set_bonus(self, person: str, group: str, minutes: int) -> None:
-        # Negative takes time away today (down to none left; minutes_left never goes below 0)
+        """The number entities: today's bonus time to [minutes] (negative takes time away), or what a category's
+        raised limit adds; kept as an adjustment beside the grants."""
         minutes = max(-MAX_BONUS, min(MAX_BONUS, minutes))
         if group != ALL:
-            held = self.raise_of(person, group) or Raise()
-            self.set_raise(person, group, Raise(minutes, held.to, held.no_cap, held.until))
+            held = Raise.of(self.data.raises.get(person, {}).get(group)) or Raise()
+            grants = sum(int(g.get("minutes") or 0) for g in self.grants(person, "raise", group))
+            self.set_raise(person, group, Raise(minutes - grants, held.to, held.no_cap, held.until))
             return
-        self.data.bonus.setdefault(person, {})[group] = minutes
+        grants = sum(self.given(g) for g in self.grants(person, "bonus", None))
+        self.data.bonus.setdefault(person, {})[group] = minutes - grants
         self._save()
 
     def cat_bonus(self, person: str, group: str) -> int:
         """Today's bonus for one category (hearth.add_time with a category): usable only there."""
-        return int(self.data.cat_bonus.get(person, {}).get(group, 0))
+        return int(self.data.cat_bonus.get(person, {}).get(group, 0)) + sum(
+            self.given(g) for g in self.grants(person, "bonus", group)
+        )
 
     def set_cat_bonus(self, person: str, group: str, minutes: int) -> None:
-        """Today's bonus for one category; never below 0 (a category bonus can't take time away)."""
+        """An adjustment of one category's bonus beside its grants; never below 0 (it can't take time away)."""
         minutes = max(0, min(MAX_BONUS, int(minutes)))
         if minutes:
             self.data.cat_bonus.setdefault(person, {})[group] = minutes
@@ -752,37 +861,93 @@ class Limits:
         self._save()
 
     def raise_of(self, person: str, group: str, now: Any = None) -> Raise | None:
-        """The category's raised cap today, while it lasts ([now]: an aware datetime; None: its end isn't checked)."""
-        held = Raise.of(self.data.raises.get(person, {}).get(group))
-        if held is None:
+        """The category's raised limit today from its active raise grants and an adjustment (the number entity):
+        the minutes "by" add up; a "to" or "no limit" sets a floor, the highest wins ([now]: an aware datetime; None:
+        ends aren't checked)."""
+        adjust = Raise.of(self.data.raises.get(person, {}).get(group))
+        grants = self.grants(person, "raise", group, now)
+        if adjust is None and not grants:
             return None
-        if now is not None and held.until is not None:
-            from homeassistant.util import dt as dt_util
-
-            until = dt_util.parse_datetime(held.until)
-            if until is not None and until <= now:
-                return None
-        return held
+        add = (adjust.add if adjust else 0) + sum(int(g.get("minutes") or 0) for g in grants if g.get("to") is None)
+        tos = [int(g["to"]) for g in grants if g.get("to") is not None] + ([adjust.to] if adjust and adjust.to is not None else [])
+        no_cap = any(g.get("no_cap") for g in grants) or bool(adjust and adjust.no_cap)
+        ends = [g["until"] for g in grants if g.get("until")]
+        until = None if len(ends) < len(grants) or not ends else max(ends)
+        return Raise(add, max(tos) if tos else None, no_cap, until)
 
     def set_raise(self, person: str, group: str, held: Raise | None) -> None:
-        """Today's raised cap of the category. None, or one that changes nothing: back to the configured cap."""
+        """The adjustment of a category's limit today (the number entity, a migration). None, or one that changes
+        nothing: none."""
         if held is None or (not held.add and held.to is None and not held.no_cap):
             self.data.raises.get(person, {}).pop(group, None)
         else:
             self.data.raises.setdefault(person, {})[group] = held.view()
         self._save()
 
+    def end_raises(self, person: str, group: str | None) -> list[str]:
+        """Every raise of [group] (every category's: None) ends now: its grants and the adjustment. The categories."""
+        ended = set()
+        for g in self.grants(person, "raise"):
+            if group is None or g.get("group") == group:
+                self.end_grant(person, g["id"])
+                ended.add(g["group"])
+        for gid in list(self.data.raises.get(person, {})):
+            if group is None or gid == group:
+                self.set_raise(person, gid, None)
+                ended.add(gid)
+        return sorted(ended)
+
     def prune_raises(self, now: Any) -> bool:
-        """Raised caps whose time is up go; says whether any did."""
+        """An adjustment whose time is up goes; says whether any did (a grant's end is checked as it's read)."""
         gone = False
         for person, groups in self.data.raises.items():
             for group in list(groups):
-                if self.raise_of(person, group, now) is None:
-                    del groups[group]
-                    gone = True
+                held = Raise.of(groups[group])
+                if held is not None and held.until is not None:
+                    from homeassistant.util import dt as dt_util
+
+                    until = dt_util.parse_datetime(held.until)
+                    if until is not None and until <= now:
+                        del groups[group]
+                        gone = True
         if gone:
             self._save()
         return gone
+
+    def migrate_grants(self, unlimited: dict[str, dict[str, Any]], origin_of) -> bool:
+        """Once (GRANTS_MODEL): today's bonus time, category bonuses, raised limits and a running Unlimited become one
+        grant each, linked to their latest origin ([origin_of](person, kind, group) -> id or None). Nothing is counted
+        twice: what moves to a grant leaves the older store. [unlimited]: person -> its running window."""
+        if self.data.model >= GRANTS_MODEL:
+            return False
+        for person, groups in list(self.data.bonus.items()):
+            minutes = int(groups.get(ALL) or 0)
+            if minutes > 0:
+                groups[ALL] = 0
+                self.add_grant(person, "bonus", None, minutes, grant_id=origin_of(person, "bonus", None))
+        for person, groups in list(self.data.cat_bonus.items()):
+            for group, minutes in list(groups.items()):
+                if minutes > 0:
+                    del groups[group]
+                    self.add_grant(person, "bonus", group, minutes, grant_id=origin_of(person, "bonus", group))
+        for person, groups in list(self.data.raises.items()):
+            for group, stored in list(groups.items()):
+                held = Raise.of(stored)
+                if held is None:
+                    continue
+                del groups[group]
+                self.add_grant(
+                    person, "raise", group, held.add, held.to, held.no_cap, held.until,
+                    grant_id=origin_of(person, "raise", group),
+                )
+        for person, window in unlimited.items():
+            self.add_grant(
+                person, "unlimited", None, until=window.get("until"), open=bool(window.get("open")),
+                allow=window.get("allow"), grant_id=origin_of(person, "unlimited", None),
+            )
+        self.data.model = GRANTS_MODEL
+        self._save()
+        return True
 
     def chores_today(self, person: str, groups: list[str]) -> int:
         """Every chore minute the person earned today, whatever group its reward names: chores give bonus time."""

@@ -806,3 +806,11 @@ get_activity:
           min: 1
           max: 2000
           mode: box
+
+end_grant:
+  fields:
+    origin_id:
+      required: true
+      example: 3fa4c1d2e5b6
+      selector:
+        text:

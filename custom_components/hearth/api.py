@@ -879,21 +879,19 @@ class EndGrantView(HomeAssistantView):
         if not origin_id:
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
         household = hub.household
-        end = next(
-            (e for person in household.people() if (e := household.end_origin(person, origin_id)) is not None), None
-        )
-        if end is None:
+        person = household.person_of_origin(origin_id)
+        found = next((o for o in household.origins_of(person) if o["id"] == origin_id), None) if person else None
+        if found is None or not found["endable"]:
             return _error(HTTPStatus.NOT_FOUND, "not_found")
         user_id = await notices.adult_user(hass, hub, adult)
-        domain, service = end["service"].split(".", 1)
         try:
-            await call_service(
-                hass, domain, service, dict(end["data"]), blocking=True, context=Context(user_id=user_id),
-                why=f"end_grant:{origin_id}",
+            ended = await call_service(
+                hass, DOMAIN, "end_grant", {"origin_id": origin_id}, blocking=True, context=Context(user_id=user_id),
+                return_response=True, why=f"end_grant:{origin_id}",
             )
         except Exception as err:  # noqa: BLE001 - said to the phone
             return web.json_response({"error": "failed", "detail": str(err)[:200]}, status=HTTPStatus.BAD_REQUEST)
-        return web.json_response({"ok": True, "ended": end})
+        return web.json_response({"ok": True, "ended": ended})
 
 
 def async_register_views(hass: HomeAssistant) -> None:
