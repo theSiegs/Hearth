@@ -264,6 +264,18 @@ class FLauncherChannel {
   /// Listens with the TV's speech recognizer; what was said, or null when cancelled or nothing was heard.
   Future<String?> voiceSearch() async => await _methodChannel.invokeMethod<String>("voiceSearch");
 
+  /// The TV's keyboard for Hearth's text fields: {current, kind ("onscreen", "phone", "voice" or "none"), phone (a
+  /// phone remote is there now), canSwitch (Hearth may change the TV's keyboard), onScreen (the one it would use)}.
+  Future<Map<dynamic, dynamic>> getKeyboardStatus() async =>
+      await _methodChannel.invokeMethod<Map<dynamic, dynamic>>("getKeyboardStatus") ?? {};
+
+  /// Puts the TV's on-screen keyboard back when its keyboard is a phone's with no phone there (needs the keyboard
+  /// setup fix). True when it switched.
+  Future<bool> useOnScreenKeyboard() async => await _methodChannel.invokeMethod<bool>("useOnScreenKeyboard") ?? false;
+
+  /// Android's keyboard chooser, which changes the TV's keyboard for every app. False when it couldn't be shown.
+  Future<bool> showKeyboardPicker() async => await _methodChannel.invokeMethod<bool>("showKeyboardPicker") ?? false;
+
   /// A search the remote asked for before Flutter was listening: "voice", "text" or null.
   Future<String?> takePendingSearch() async => await _methodChannel.invokeMethod<String>("takePendingSearch");
 
@@ -711,8 +723,8 @@ class FLauncherChannel {
       await _methodChannel.invokeMethod<bool>("openDeviceInfoSettings") ?? false;
 
   /// The shell commands one of the setup flow's named fixes runs, to show the parent before it does: "restricted_settings",
-  /// "home_button_fix", "profile_pairing", "watch_next" or "notification_access". Null for another name, or when the
-  /// fix can't be run safely as things are.
+  /// "home_button_fix", "profile_pairing", "watch_next", "notification_access" or "keyboard". Null for another name,
+  /// or when the fix can't be run safely as things are.
   Future<List<String>?> getSetupFixCommands(String fix) async =>
       await _methodChannel.invokeListMethod<String>("getSetupFixCommands", fix);
 

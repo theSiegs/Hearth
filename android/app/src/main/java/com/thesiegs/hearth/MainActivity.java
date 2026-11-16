@@ -292,6 +292,10 @@ public class MainActivity extends FlutterActivity {
                 result.success(!on || openGoogleTvHome());
             }
             case "voiceSearch" -> startVoiceSearch(result);
+            // The TV's keyboard for Hearth's text fields (Keyboards): on-screen and voice first, a phone only when there
+            case "getKeyboardStatus" -> result.success(Keyboards.status(this));
+            case "useOnScreenKeyboard" -> result.success(Keyboards.useOnScreen(this));
+            case "showKeyboardPicker" -> result.success(Keyboards.showPicker(this));
             case "getAppLastProfiles" -> {
                 Map<String, Object> users = new HashMap<>(LauncherAccessibilityService.getAppLastProfiles(this));
                 result.success(users);

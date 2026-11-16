@@ -3,6 +3,13 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Hearth TV
+
+- **On-screen and voice first, never a phone by default.** When the TV's keyboard is Google TV's phone keyboard (it can stay stuck after a phone goes away), Hearth TV's text boxes show Hearth TV's own on-screen keyboard with a mic key instead of telling you to type on a phone. Search has a mic button next to the box. **Type on your phone** is offered only while a phone has Hearth TV's remote open. A section's custom name now waits for OK before the keyboard comes up, like Hearth TV's other settings fields.
+- **On-screen keyboard first** in Set up Hearth TV: one adb grant (Hearth TV runs it itself when the TV's debugging is on) lets Hearth TV put the TV's own on-screen keyboard back when a Hearth TV text box needs it and no phone is there.
+
 ## 2026.11.18
 
 ### Home Assistant integration

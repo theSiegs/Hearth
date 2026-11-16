@@ -22,6 +22,7 @@ import 'package:flutter/services.dart';
 
 import '../../providers/open_meteo_client.dart';
 import '../../providers/weather_service.dart';
+import 'remote_text_field.dart';
 
 /// Type a city, pick a match. Pops with the chosen place, or null.
 class WeatherLocationDialog extends StatefulWidget {
@@ -88,10 +89,12 @@ class _WeatherLocationDialogState extends State<WeatherLocationDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
+            // On-screen first: the TV's keyboard when it's on screen, else Hearth's own (a phone's stuck)
+            RemoteTextField(
               controller: _query,
               focusNode: _queryFocus,
               autofocus: true,
+              startEditing: true,
               textInputAction: TextInputAction.search,
               onSubmitted: (_) => _search(),
               decoration: InputDecoration(

@@ -30,6 +30,12 @@ public class SetupFixesTest {
     }
 
     @Test
+    public void keyboardGrantsHearthTheSecureSettingsPermission() {
+        assertEquals(Collections.singletonList("pm grant " + PKG + " android.permission.WRITE_SECURE_SETTINGS"),
+                SetupFixes.commands(context, SetupFixes.KEYBOARD));
+    }
+
+    @Test
     public void anUnknownFixHasNoCommands() {
         assertNull(SetupFixes.commands(context, null));
         assertNull(SetupFixes.commands(context, "rm -rf /"));

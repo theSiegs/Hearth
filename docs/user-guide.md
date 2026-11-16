@@ -23,6 +23,7 @@
 | Installing updates | Lets Hearth TV update itself and install its companion apps. |
 | Profile Pairing | A second accessibility service that picks your profile in streaming apps (optional). |
 | Hearth TV voice | A text-to-speech engine that lets Profile Pairing hear apps that announce their profile screens (optional). |
+| On-screen keyboard first | Lets Hearth TV put the TV's on-screen keyboard back when a phone's keyboard got stuck (optional, see Typing below). |
 
 **Profiles are Google TV's.** Hearth TV doesn't make profiles: it follows Google TV's, and shows each person their own
 home. Add every adult and every child as a profile in Google TV (**Settings → Accounts & profiles**). A kid's
@@ -99,6 +100,19 @@ profile, a parent's **Fix** (Settings → Family → Kids profiles) lets Hearth 
 services you have come first). Netflix, Apple TV, HBO Max and Paramount+ open straight on the title; other services
 open through Google TV's title page. Adult titles never appear. The voice button hands the search to Google's assistant;
 "Ask Google" does the same for typed searches.
+
+**Typing.** Hearth TV's text boxes (search, Settings, Home Assistant's address, a word to block) type on screen or by
+voice first, never on a phone by default. The search box has a mic of its own next to it. When the TV's keyboard is
+Google TV's phone keyboard (a phone with the Google TV app connected, or one that went away without disconnecting and
+left the keyboard set to it), Hearth TV shows its own on-screen keyboard with a mic key instead of waiting for a phone.
+It offers **Type on your phone** only while a phone has Hearth TV's remote open (Glint); a phone typing with the Google
+TV app alone can still type, Hearth TV just can't see it to offer it. With **On-screen keyboard first** allowed in
+**Set up Hearth TV** (one adb grant; Hearth TV runs it itself when the TV's debugging is on), Hearth TV also puts the
+TV's own on-screen keyboard (Gboard) back when no phone is there, which fixes typing in every app. From a computer:
+
+```sh
+adb shell pm grant com.thesiegs.hearth android.permission.WRITE_SECURE_SETTINGS
+```
 
 ## Profiles
 
@@ -290,6 +304,9 @@ Hearth TV is in English only.
 
 ## When something's wrong
 
+- **Text boxes say to type on your phone, with no phone around.** The TV's keyboard got stuck on Google TV's phone
+  keyboard. Hearth TV's own boxes show their own keyboard; for other apps, allow **On-screen keyboard first** in **Set up
+  Hearth TV**, or pick Gboard with the keyboard key (**TV keyboards**) on Hearth TV's keyboard.
 - **The Home button opens Google TV.** The Home Button Fix is off; the home screen shows **Home button needs a fix**.
   Turn it back on from there, or in **Set up Hearth TV**.
 - **Use Google TV's home** (**Settings → TV & power**) leaves Google TV's own home in front until you press Home or turn it off,

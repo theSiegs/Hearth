@@ -37,6 +37,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <uses-permission android:name="android.permission.READ_TV_LISTINGS" />
+    <!-- Granted only over adb (Settings > System > Set up Hearth TV > On-screen keyboard first): puts the TV's on-screen keyboard back
+         when Google TV's phone keyboard got stuck with no phone there (Keyboards) -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:ignore="ProtectedPermissions" />
     <!-- The Google calendars synced to the TV, read only: the active profile's events by the top bar's date and
          time (TvCalendars). Nothing is written or sent anywhere. -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
@@ -82,6 +85,10 @@
         </intent>
         <intent>
             <action android:name="android.intent.action.GET_CONTENT" />
+        </intent>
+        <!-- Which keyboards the TV has (Keyboards): Android 11+ hides input methods without this -->
+        <intent>
+            <action android:name="android.view.InputMethod" />
         </intent>
         <!-- Hearth voice passes speech on to Google's voice -->
         <intent>

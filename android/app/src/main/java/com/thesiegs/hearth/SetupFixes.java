@@ -29,6 +29,8 @@ final class SetupFixes {
     static final String PROFILE_PAIRING = "profile_pairing";
     static final String WATCH_NEXT = "watch_next";
     static final String NOTIFICATION_ACCESS = "notification_access";
+    /** Lets Hearth put the TV's on-screen keyboard back when a phone's keyboard got stuck (Keyboards). */
+    static final String KEYBOARD = "keyboard";
 
     private static final String PREFS = "hearth_setup";
     /** The install (its lastUpdateTime) whose block Hearth lifted itself: an update may bring the block back. */
@@ -103,6 +105,8 @@ final class SetupFixes {
             case NOTIFICATION_ACCESS:
                 return Collections.singletonList("cmd notification allow_listener "
                         + new ComponentName(context, LauncherNotificationListenerService.class).flattenToString());
+            case KEYBOARD:
+                return Collections.singletonList("pm grant " + pkg + " android.permission.WRITE_SECURE_SETTINGS");
             default:
                 return null;
         }

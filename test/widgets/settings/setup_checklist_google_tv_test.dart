@@ -79,4 +79,27 @@ void main() {
     await open(tester);
     expect(find.text("Google TV's own settings"), findsNothing);
   });
+
+  testWidgets("on-screen keyboard first: Hearth runs the one grant itself when debugging is on", (tester) async {
+    channel.adb = true;
+    await open(tester);
+    await tap(tester, "On-screen keyboard first");
+    expect(find.textContaining("pm grant com.example.hearth android.permission.WRITE_SECURE_SETTINGS"),
+        findsOneWidget);
+    await tap(tester, "Let Hearth fix it");
+    expect(channel.fixesRun, [
+      ["keyboard"]
+    ]);
+    expect(channel.keyboardCanSwitch, isTrue);
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.check_circle), findsWidgets);
+  });
+
+  testWidgets("on-screen keyboard first, debugging off: the adb command for a computer", (tester) async {
+    channel.adb = false;
+    await open(tester);
+    await tap(tester, "On-screen keyboard first");
+    expect(find.text("adb shell pm grant com.example.hearth android.permission.WRITE_SECURE_SETTINGS"), findsOneWidget);
+    expect(find.text("Let Hearth fix it"), findsNothing);
+  });
 }

@@ -120,6 +120,21 @@ public class RemoteApiService extends Service {
         service.mMain.postDelayed(service.mPush, PUSH_DEBOUNCE_MS);
     }
 
+    /**
+     * Whether a paired phone has a session open now that has lasted at least {@code minOpenMs}: a phone remote that is
+     * really there (Glint keeps its session while its remote is open; a check-in closes within a second or two).
+     * False outside the TV owner's user, where the server doesn't run.
+     */
+    static boolean phoneRemoteOpen(long minOpenMs) {
+        RemoteApiService service = sInstance;
+        if (service == null) return false;
+        long now = SystemClock.elapsedRealtime();
+        for (Connection c : service.mSessions.keySet()) {
+            if (now - c.openedAt >= minOpenMs) return true;
+        }
+        return false;
+    }
+
     /** A phone was removed in Settings: close its sessions now. */
     static void phoneRemoved(String fingerprint) {
         RemoteApiService service = sInstance;
@@ -325,6 +340,7 @@ public class RemoteApiService extends Service {
         final String fingerprint;
         final RemoteSession session;
         final OutputStream out;
+        final long openedAt = SystemClock.elapsedRealtime();
 
         Connection(SSLSocket ssl, String fingerprint, RemoteSession session) throws IOException {
             this.ssl = ssl;

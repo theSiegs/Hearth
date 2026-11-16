@@ -15,13 +15,23 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import 'package:flauncher/flauncher_channel.dart';
+import 'package:flauncher/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+
+import '../keyboard/hearth_keyboard.dart';
+import '../keyboard/keyboard_choice.dart';
 
 /// A one-line text field for the remote. Moving onto it only selects it: OK starts editing (the keyboard comes up),
 /// so passing through a page never changes a value by accident. While editing, Up and Down leave it for the row above
 /// or below (a plain field keeps them, so the remote could never get past it), Left and Right move the cursor, and
 /// OK brings the keyboard back after it was put away; leaving the field or submitting ends the editing.
+///
+/// The keyboard is on-screen first: the TV's own when it is an on-screen one, else Hearth's own over the page (the
+/// TV's keyboard is a phone's, as Google TV leaves it after a phone remote went away), which offers the phone only
+/// while one is there (see [chooseKeyboard]).
 class RemoteTextField extends StatefulWidget {
   final TextEditingController controller;
   final InputDecoration decoration;
@@ -29,6 +39,14 @@ class RemoteTextField extends StatefulWidget {
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onSubmitted;
+  final ValueChanged<String>? onChanged;
+
+  /// The field's focus node, when the page needs it; otherwise the field keeps its own.
+  final FocusNode? focusNode;
+  final bool autofocus;
+
+  /// Start editing as soon as the field shows (with [autofocus]), as a dialog with one box does.
+  final bool startEditing;
 
   const RemoteTextField({
     super.key,
@@ -38,6 +56,10 @@ class RemoteTextField extends StatefulWidget {
     this.keyboardType,
     this.textInputAction,
     this.onSubmitted,
+    this.onChanged,
+    this.focusNode,
+    this.autofocus = false,
+    this.startEditing = false,
   });
 
   @override
@@ -48,7 +70,13 @@ class _RemoteTextFieldState extends State<RemoteTextField> {
   /// OK was pressed on it: the value can change (until the field is left or submitted).
   bool _editing = false;
 
-  late final FocusNode _focus = FocusNode(onKeyEvent: (node, event) {
+  /// Hearth's keyboard is over the page for this field.
+  bool _hearthKeyboardOpen = false;
+
+  FocusNode? _ownFocus;
+  FocusNode get _focus => widget.focusNode ?? (_ownFocus ??= FocusNode());
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is KeyUpEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
     final bool sideways = key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.arrowRight;
@@ -64,24 +92,24 @@ class _RemoteTextFieldState extends State<RemoteTextField> {
       return KeyEventResult.handled;
     }
     if (event is KeyDownEvent && (key == LogicalKeyboardKey.select || key == LogicalKeyboardKey.enter)) {
-      if (!_editing) {
-        setState(() => _editing = true);
-        // Editable from the next frame: the field asks for the keyboard itself then
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _focus.hasFocus) SystemChannels.textInput.invokeMethod("TextInput.show");
-        });
-      } else {
-        SystemChannels.textInput.invokeMethod("TextInput.show");
-      }
+      _startEditing();
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
-  });
+  }
 
   @override
   void initState() {
     super.initState();
+    _focus.onKeyEvent = _onKey;
     _focus.addListener(_onFocusChange);
+    if (widget.startEditing) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _focus.requestFocus();
+        _startEditing();
+      });
+    }
   }
 
   void _onFocusChange() {
@@ -91,19 +119,86 @@ class _RemoteTextFieldState extends State<RemoteTextField> {
   @override
   void dispose() {
     _focus.removeListener(_onFocusChange);
-    _focus.dispose();
+    if (widget.focusNode != null && widget.focusNode!.onKeyEvent == _onKey) widget.focusNode!.onKeyEvent = null;
+    _ownFocus?.dispose();
     super.dispose();
+  }
+
+  /// OK on the field: the keyboard on screen first (see the class comment).
+  Future<void> _startEditing() async {
+    final channel = context.read<FLauncherChannel?>();
+    if (channel == null) {
+      _systemKeyboard();
+      return;
+    }
+    final choice = await chooseKeyboard(channel);
+    if (!mounted || _hearthKeyboardOpen) return;
+    switch (choice.way) {
+      case KeyboardWay.system:
+        _systemKeyboard();
+      case KeyboardWay.systemAfterSwitch:
+        await Future<void>.delayed(KeyboardChoice.switchSettle);
+        if (mounted) _systemKeyboard();
+      case KeyboardWay.hearth:
+        await _hearthKeyboard(channel, choice.status);
+    }
+  }
+
+  void _systemKeyboard() {
+    if (!_editing) {
+      setState(() => _editing = true);
+      // Editable from the next frame: the field asks for the keyboard itself then
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _focus.hasFocus) SystemChannels.textInput.invokeMethod("TextInput.show");
+      });
+    } else {
+      SystemChannels.textInput.invokeMethod("TextInput.show");
+    }
+  }
+
+  Future<void> _hearthKeyboard(FLauncherChannel channel, KeyboardStatus status) async {
+    final l = AppLocalizations.of(context)!;
+    final decoration = widget.decoration;
+    final numeric = widget.keyboardType == TextInputType.number;
+    _hearthKeyboardOpen = true;
+    final before = widget.controller.text;
+    final result = await showHearthKeyboardSheet(
+      context,
+      controller: widget.controller,
+      status: status,
+      channel: channel,
+      label: decoration.labelText ?? decoration.hintText,
+      obscure: widget.obscureText,
+      numeric: numeric,
+      actionLabel: widget.textInputAction == TextInputAction.next ? l.keyboardNext : l.done,
+    );
+    _hearthKeyboardOpen = false;
+    if (!mounted) return;
+    if (widget.controller.text != before) widget.onChanged?.call(widget.controller.text);
+    switch (result) {
+      case HearthKeyboardResult.action:
+        widget.onSubmitted?.call(widget.controller.text);
+        if (widget.textInputAction == TextInputAction.next) _focus.focusInDirection(TraversalDirection.down);
+      case HearthKeyboardResult.phone:
+        // The TV's keyboard, which sends the typing to the phone remote
+        _focus.requestFocus();
+        _systemKeyboard();
+      case null:
+        break;
+    }
   }
 
   @override
   Widget build(BuildContext context) => TextField(
         controller: widget.controller,
         focusNode: _focus,
+        autofocus: widget.autofocus,
         readOnly: !_editing,
         showCursor: _editing,
         obscureText: widget.obscureText,
         keyboardType: widget.keyboardType,
         textInputAction: widget.textInputAction,
+        onChanged: widget.onChanged,
         onSubmitted: (value) {
           setState(() => _editing = false);
           widget.onSubmitted?.call(value);
