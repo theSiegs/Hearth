@@ -117,6 +117,19 @@ def test_the_words_people_see() -> None:
     assert unlimited_span_text((11, 30), (13, 0), 90).startswith("Unlimited 11:30 AM–1:00 PM")
 
 
+def test_no_user_facing_string_says_pool() -> None:
+    """The words people see: one daily time, categories with limits, bonus time; never pools, buckets or a max."""
+    import json
+    import pathlib
+    import re
+
+    root = pathlib.Path(__file__).resolve().parent.parent / "custom_components" / "hearth"
+    for name in ("strings.json", "translations/en.json"):
+        text = json.dumps(json.load(open(root / name, encoding="utf-8")), ensure_ascii=False)
+        for word in (r"\bpools?\b", r"\bbuckets?\b", r"All screen time", r"grown-up", r"\bmax\b(?! screentime)"):
+            assert not re.search(word, text, re.IGNORECASE), (name, word)
+
+
 def test_the_backstop_math() -> None:
     # Daily time 180 + 25 bonus left + 30 margin = 235, rounded up to 5: 235; 181 + 30 -> 215
     assert backstop_minutes(180, 25, 0, 30) == 235

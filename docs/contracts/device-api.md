@@ -16,6 +16,12 @@ ignores fields it doesn't know.
 - Asks (`/ask`, `/wait`, `hearth.answer_request`), `verify_pin`, the household summary and `hearth/me`,
   `hearth.add_bonus`, `hearth.pause`, push "changed" pings (`caps: ["push"]`).
 
+## The time model (additive, within contract 3)
+
+Daily time, category limits, bonus time and Unlimited add `time` to each person's state document, change what an ask
+gives (bonus time, no category) and deprecate per-category bonuses for one release. The fields, the exact words kids see
+and the payload changes are in [time-model.md](time-model.md).
+
 ## New in contract 3
 
 ### `client`

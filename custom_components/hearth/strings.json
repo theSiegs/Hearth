@@ -346,9 +346,9 @@
           "family_link": "Family Link: any of the person's Family Link entities",
           "family_safety": "Family Safety: the person's account sensor",
           "platforms": "Family Safety: platforms to lock",
-          "groups": "Family Safety: lock while one of these groups is out of time",
+          "groups": "Family Safety: lock while one of these categories (or daily time) is out of time",
           "nintendo": "Nintendo: the person's Switch (its Max screentime today)",
-          "nintendo_groups": "Nintendo: suspend while one of these groups is out of time",
+          "nintendo_groups": "Nintendo: suspend while one of these categories (or daily time) is out of time",
           "nintendo_playing": "A shared Switch: held only while this person is the one playing (their playing sensor)",
           "school_time_apps": "Family Link: during School time, pause these apps",
           "fl_backstop": "Keep Family Link's daily limit as a backstop",
@@ -428,7 +428,7 @@
   },
   "services": {
     "pause": {
-      "name": "Pause",
+      "name": "Pause screens",
       "description": "Holds the people's Hearth devices (dinner time, say) for some minutes, until a time, or until they arrive at or leave a place; they stop and show the reason. Everyone in the household when no one is chosen.",
       "fields": {
         "minutes": {
@@ -453,16 +453,16 @@
         },
         "app": {
           "name": "App",
-          "description": "Pause only this app (its package name), not all screen time."
+          "description": "Pause only this app (its package name), not every app."
         },
         "group": {
           "name": "Group",
-          "description": "Pause only this group's apps (its id or name, such as youtube), not all screen time."
+          "description": "Pause only this group's apps (its id or name, such as youtube), not every app."
         }
       }
     },
     "pause_end": {
-      "name": "End the pause",
+      "name": "End Pause screens",
       "description": "Lets the people go again (everyone paused when no one is chosen).",
       "fields": {
         "people": {
@@ -713,7 +713,7 @@
         },
         "device": {
           "name": "Device",
-          "description": "Only on this device of theirs (a target id): the group is open there until the time. Only All screen time on a Family Link device, a Family Safety platform or a Switch."
+          "description": "Only on this device of theirs (a target id): the group is open there until the time. Only daily time on a Family Link device, a Family Safety platform or a Switch."
         }
       }
     },

@@ -240,6 +240,23 @@ Hearth TV treats a profile as a kids profile when Family Link supervises it.
 - **Uninstalling.** Use **Settings → System → Uninstall Hearth TV**: it takes Hearth TV off the kids profiles first.
   Android's own uninstall would leave copies behind there.
 
+### Daily time, limits and bonus time (with Home Assistant)
+
+With Hearth's Home Assistant integration, each kid has one **daily time** across the TVs, phones, Xbox and Switch (one
+for school days, one for other days). A category such as Games or YouTube can have a **limit** inside it ("Games: 2 h
+limit"); a limit never adds time, it only keeps one category from taking the whole day.
+
+- **When a category's limit is reached** but daily time is left, the TV says so: "Games are done for today · 40 min left
+  for other things". Other apps keep working.
+- **When daily time is used up**, the kid can choose **Ask for bonus time** (15 to 60 minutes). The adults get the
+  request on their phones and in Hearth's page. Bonus time has no category: an adult's yes adds it to the day, and the
+  kid may spend it anywhere, a category past its limit included. Chores and the day-off bonus give bonus time too.
+- **An adult can also** raise one category's limit for today ("Games: 3 h limit today (raised)"), or make the kid's
+  time **Unlimited** until a time or until they turn it off (a play date): the minutes used then aren't counted, so the
+  day picks up where it was afterwards ("Limits back on · 1 h 10 min left today").
+- **Screens paused** is Hearth's family pause (dinner, say). It is separate from the limits: bonus time doesn't end it.
+  Bedtime and School time also stay, unless an adult includes bedtime in Unlimited.
+
 ## The remote
 
 **Settings → TV & power → Remote → Remote buttons.** Pick a button, then what a press and a hold do:

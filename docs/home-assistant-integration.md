@@ -448,14 +448,95 @@ time today sensor lists each group's packages (`groups_apps`) and these groups (
 
 ### Budgets
 
-Per person and group, number entities an adult (or an automation) sets:
+Per person, number entities an adult (or an automation) sets:
 
-- a daily **budget** (one for school days and one for other days, as Configure > School days says; -1 is no limit);
-- **Bonus today** (minutes, back to 0 at midnight).
+- **Daily time** on school days and on other days (group `all`; "Daily time on school days"), as Configure > School
+  days says; -1 is no daily time.
+- Per category, a **limit** on school days and on other days ("Games limit on school days"; -1 is no limit).
+- **Bonus time today** (daily time's; back to 0 at midnight) and, per category, **limit raised today** (what a raised
+  limit adds; back to 0 at midnight). Their entity ids are as an older Hearth named them
+  (`number.hearth_<person>_all_screen_time_bonus_today`, `number.hearth_<person>_games_budget_on_school_days`).
 
-From them, per person and group: **Minutes left** (budget + bonus - counted today, never below 0) and the event
-`hearth_budget_reached` (person, group, group_name) when it reaches 0, and again if a bonus reopened it. A **shared
-budget** could also span people (one pool the siblings draw from), with its own Minutes left (not built yet).
+From them, per person: **Daily time left** (`sensor.hearth_<person>_all_screen_time_minutes_left`), each category's
+**Minutes left** (what can actually be used: never more than daily time left), **Bonus time left**
+(`sensor.hearth_<person>_bonus_time_left`), and the event `hearth_budget_reached` (person, group, group_name) when one
+reaches 0, and again after bonus time or a raised limit reopened it. How they're worked out is
+[Today's time](#todays-time).
+
+### Today's time
+
+One **daily time** per kid; **categories** may have a **limit** inside it ("Games: 2 h limit"). A limit never gives
+time: it only stops one category from taking the whole day. The categories' limits may add up to more than daily time
+(Games 2 h + YouTube 1 h + Streaming 1 h 30 against 3 h of daily time is normal: they're ceilings, not shares).
+
+Three ways to give more (services, adults only, as every Hearth service: [Security](#security)):
+
+- **Bonus time**: `hearth.add_time` {`person` or `people`, `minutes` 1-1440, `reason`}; `hearth.remove_time` {`person`
+  or `people`, `minutes`} takes back what an adult gave today (never more). It has **no category**: N minutes added to
+  daily time, which the kid may spend anywhere. Minutes past any category's limit come out of the same N, so one bonus
+  is shared by every category. Chores' minutes, approved asks, the schedule's day-off and half-day minutes and an
+  adult's gift are all bonus time. It ends at midnight. Each grant also adds a Family Link bonus (and Family Safety
+  extra time) where the device's own limit would stop the kid sooner (`native_sync.mirror_bonus`), so a phone never
+  locks early: Hearth's holds stay the real limit. Given during bedtime, it lifts bedtime while it lasts
+  ([Extra time at bedtime](#extra-time-at-bedtime)).
+- **Raise limit**: `hearth.raise_cap` {`person` or `people`, `category`, one of `minutes` (raise by, -1440..1440),
+  `to` (the limit today) or `no_cap: true` (no limit today), `until` (a time, `end_of_day` by default)};
+  `hearth.raise_cap_end` {`person` or `people`, `category` (every raised one when left out)}. Daily time is unchanged.
+- **Unlimited**: see [Unlimited](#unlimited).
+
+**The accounting** (time_model.py; worked examples in `ha_tests/test_time_model.py`):
+
+    bonus_used = max(0, minutes over daily time, sum over categories of minutes over each limit)
+    bonus_left = max(0, N - bonus_used)
+    daily time left = max(0, daily time + N - used today)
+    a category is held when max(0, limit - used in it) + bonus_left is 0
+    a category's minutes left (shown) = min(that, daily time left)
+
+Minutes past a limit are also minutes of the day, which is why bonus_used is a max, not a sum. Example: daily time 3 h,
+Games 2 h, +30 bonus. After 2 h 30 of games the bonus is used, Games is held ("Games are done for today · 1 h left for
+other things") and the kid has 1 h for anything else. Minutes past a limit before any bonus was given (counting runs a
+little behind) are paid from the next bonus. A negative bonus (an adult taking time away) lowers daily time instead.
+
+**Older services and entities, kept for one release** (see [docs/contracts/time-model.md](contracts/time-model.md)):
+`hearth.add_bonus` without a group (or with `all`) is bonus time; with a category's `group` it raises that category's
+limit by the minutes (negative lowers it). `hearth.remove_bonus` likewise. A category's "limit raised today" number is
+the older per-category bonus. **Migration:** on the first start after the upgrade, today's stored per-category bonuses
+become raised limits by as many minutes (once; the stored data carries a version). Daily time's bonus stays bonus time,
+so nothing is counted twice.
+
+**Words** (one place each: strings.json, the panel's string table, the TV's app_en.arb; the contract lists the kids'):
+"Daily time", a category's "limit" ("2 h limit", "no limit", "3 h limit today (raised)"), "bonus" ("30 min bonus
+left", "+20 min bonus earned", "Ask for bonus time"), "Unlimited", and "Pause screens" for the family pause. Never pool,
+bucket, budget or max to a person, and "adult", never "grown-up".
+
+**Where it came from (origin).** Each bonus, raised limit, Unlimited window and Pause screens records `{kind, source
+(hearth, chore, ask; family_link, family_safety and nintendo are coming), by (the adult's name when known), at,
+detail}`, shown on a status line's "?" ("Bonus +30 · added by Alex in Hearth · 3:05 PM"): in the state document's
+`time.origins`, `hearth.explain` and `hearth/config`.
+
+### Unlimited
+
+`hearth.unlimited` {`person` or `people`, `until` (a time, `end_of_day` by default, or `turned_off`: until an adult
+ends it), `include_bedtime`, `reason`}; `hearth.unlimited_end` {`person` or `people` (everyone's when left out)}.
+It's always over at midnight.
+
+While it lasts nothing Hearth holds for daily time or a category's limit holds the kid (it's an allow of daily time:
+[Exceptions](#exceptions)), and **the minutes used aren't counted**: daily time, every limit and bonus time pick up
+exactly where they were when it started ("Limits back on · 1 h 10 min left today"). Bedtime, School time and Pause
+screens still lock the kid; with `include_bedtime`, bedtime is lifted for the window too (Family Link's bedtime moved,
+[Extra time at bedtime](#extra-time-at-bedtime)).
+
+**How the minutes are left out** (unlimited.py): an exclusion window per person and group. At its start Hearth notes
+the minutes counted so far in each group; while it lasts, and for 10 minutes after it ends, whatever is counted above
+that is left out of today's minutes. This works the same for a live source (a TV, a title Hearth times) and a
+total-only one (Family Link's and Family Safety's daily totals, which only give a day's sum): the window's minutes are
+the total's growth between the two notes. Totals arrive a few minutes late, so the end note is taken after the 10-minute
+settle, and what is counted in the settle goes to the kid. Approximation: a minute a total reports late from just
+before the window (or one played during the settle) is left out too; never one the other way. Each window is
+recorded in the history (`unlimited`: start, end, minutes not counted; "Unlimited 2:00–5:10 PM · 3 h 10 min not
+counted") and fires `hearth_unlimited_started` {person, until, open} and `hearth_unlimited_ended` {person, id, text}.
+
+While it lasts Family Link's backstop is a whole day ([Family Link backstop](#family-link-backstop)), and back after.
 
 ### Rules
 
@@ -869,6 +950,36 @@ all. It's not a problem to fix.
   whichever comes first: an event marks its id known (or resolved), and an ask is made once per request id.
   `capabilities.family_safety` has `request_events` (its own events were seen here) and `pending_requests`.
 
+#### Family Link backstop
+
+Hearth's own holds are the real limit. On top of them Hearth keeps each kid's Family Link daily limit a little above
+its own numbers (backstop.py), so a phone whose Hearth companion is off, or a device Hearth can't see, still stops near
+the end of the day:
+
+    Family Link daily limit today = daily time + bonus time left + raised limits of categories outside daily time
+                                    + margin, rounded up to 5 minutes (at most 24 hours)
+
+- On by default (Configure > Enforce: "Keep Family Link's daily limit as a backstop"); the margin is 30 minutes by
+  default ("Backstop margin"). Off: Family Link's own limits are left as the parent set them.
+- While Unlimited is on: a whole day (1440), and back to the sum when it ends.
+- Written only when the value changes, through `familylink.set_daily_limit` with the child's id alone (today's
+  override on each of the child's devices that take a daily limit; Family Link's `time_limit_device_ids` skips Google
+  TVs, which keep Family Link's limits off on purpose: Hearth holds a TV itself). The child's id is read from the
+  entity's attributes and passed as a string, never templated (Home Assistant reads 21 digits as a number).
+- Nothing is written while Hearth's whole-device hold is on (daily time used up: the limit is 0) or about to start; after
+  the hold lets go (which puts back the weekday's limit) the backstop is written again.
+- A parent's own change: the backstop is today's override, written each day, so it wins over a weekday limit changed in
+  the Family Link app (and over a today's limit they set, at Hearth's next change). Switch it off to keep Family Link's
+  own limits.
+- With the backstop on, the schedule's day-off and half-day minutes go to Hearth's bonus time (and from there to Family
+  Link), not onto Family Link's limit directly (`bonus_family_link`).
+
+**Family Safety (Windows, Xbox):** bonus time is mirrored as extra time where Family Safety would stop the kid sooner,
+as before. Family Safety's per-day limit (set_screentime_limit with a day of the week) is a weekly setting, not today's
+only, so Hearth doesn't keep it as a backstop: writing it daily would change every later same weekday and need the
+put-back machinery the day-off bonus uses (temporary_limit.py). The day-off bonus still raises it for that day when
+chosen (bonus_family_safety).
+
 ### Places
 
 Where each kid is, as a place's name: Hearth keeps no coordinates and shows nothing else. Places are Home Assistant
@@ -1232,7 +1343,7 @@ app is named in Hearth's code any more.
 ### Ask for more
 
 A device asks: `POST /api/hearth/device/<device_id>/ask` (header `X-Hearth-Secret`) with `{"minutes": 15 | 30 | 45 |
-60, "group": "all" or a group id, "note": up to 120 characters, "profile_id": a TV's profile}` (a phone asks for its own
+60, "group": ignored (bonus time has no category: every ask is "all"), "note": up to 120 characters, "profile_id": a TV's profile}` (a phone asks for its own
 person; a TV for the profile's, the one in front when none is given). 200 `{"ok": true, "request": {id, status:
 "pending", minutes, asked_minutes, group, expires}}`; 409 `already_open` with that request (one open per person); 429
 `cooldown` with `retry_in` (10 minutes after "not now"); 404 `no_person`; 429 `too_often` past 10 asks and event posts a minute; 400 otherwise. A request is open 30 minutes.
@@ -1243,7 +1354,7 @@ asked amount, the next one up, Not now: `HEARTH_MORE|<id>|<minutes>`, 0 for not 
 phones](#the-adults-phones)). The first answer wins, once: from a phone, Hearth's page, or `{"type": "hearth/approvals/answer", "request_id", "minutes" (1-600) |
 "deny": true}` on the WebSocket, or the service `hearth.answer_request` (`request_id`; `minutes` 1-600 or `deny:
 true`; returns the request as the device sees it; a second answer, or one to an expired request, is refused with a
-validation error) (administrators, and adults on Hearth's page). More time is extra time today (as `add_bonus`); the answer fires
+validation error) (administrators, and adults on Hearth's page). An approval is bonus time today (as `hearth.add_time`: no category, whatever group was asked); the answer fires
 `hearth_more_time_answered` (`id`, `person`, `status`, `minutes`, `by`: the user). The asking device sees it in the
 person's state document: `request` {id, status: pending | approved | denied | expired, minutes (granted when
 approved), asked_minutes, group, expires, answered (when it was answered or expired, null while pending)}, for two hours after.
