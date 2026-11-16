@@ -117,6 +117,23 @@ async def _sam_on_family_safety(hass: HomeAssistant, hass_client_no_auth, platfo
     await hass.async_block_till_done()
 
 
+PENDING = "sensor.sam_pending_requests"
+
+
+def _pending(hass: HomeAssistant, requests: list[dict] | None, state: str | None = None) -> None:
+    """Sam's Pending Requests sensor as upstream's has it: the count, and Microsoft's requests (None: no attribute)."""
+    er.async_get(hass).async_get_or_create(
+        "sensor", FS, f"entry_{ACCOUNT}_pending_requests", suggested_object_id="sam_pending_requests"
+    )
+    attrs = {"user_id": str(ACCOUNT)} if requests is None else {"user_id": str(ACCOUNT), "requests": requests}
+    hass.states.async_set(PENDING, state if state is not None else str(len(requests or [])), attrs)
+
+
+def _request(request_id: str, platform: str = "Xbox") -> dict:
+    return {"puid": str(ACCOUNT), "id": request_id, "type": "ScreenTime", "platform": platform,
+            "requestedTime": 3600, "displayName": "A Game"}
+
+
 def _weekday_entities(hass: HomeAssistant, weekday: str, start: str, end: str) -> None:
     """The integration's Start and End entities of a Windows weekday."""
     registry = er.async_get(hass)
@@ -150,20 +167,29 @@ async def test_upstream_s_capabilities_and_what_hearth_does_with_less(
         "windows_extra_time": True,
         "cancel_extra_time": True,
         "pause_apps": True,
+        "request_events": False,
+        "pending_requests": False,
     }
+    _pending(hass, [])
+    found["pending_requests"] = True
     ws = await hass_ws_client(hass)
     await ws.send_json({"id": 1, "type": "hearth/config"})
     config = (await ws.receive_json())["result"]
     assert config["capabilities"]["family_safety"] == found
     [row] = config["parental_controls"]
-    assert len(row["reduced"]) == 3
+    assert len(row["reduced"]) == 4
     assert "puts them back after midnight" in row["reduced"][0]
     assert "by what Hearth asked for" in row["reduced"][1]
     assert "whole hours" in row["reduced"][2]
+    assert "Pending Requests sensors" in row["reduced"][3]
 
 
 async def test_a_family_safety_with_today_only_and_hold_attributes_has_it_all(hass: HomeAssistant) -> None:
+    from custom_components.hearth.fs_requests import EVENTS_SEEN
+
     _fork(hass)
+    hass.data[EVENTS_SEEN] = True
+    hass.states.async_set("sensor.sam_pending_requests", "0", {"user_id": ACCOUNT, "requests": []})
     hass.states.async_set(XBOX_ALLOWED, "on", {"user_id": ACCOUNT, "platform": "Xbox", "hold": "none", "override": None})
     found = fs_capabilities.capabilities(hass)
     assert all(found.values()), found
@@ -559,3 +585,122 @@ async def test_a_fork_s_hold_attributes_confirm_it(
     [row] = _household(hass).sync.first_party("person.sam")["family_safety"]
     assert (row["hold"], row["hold_from"]) == ("bonus_ours", "attributes")
     assert any("write failed" in r.getMessage() for r in caplog.records if r.levelname == "WARNING")
+
+
+# Requests from an Xbox or PC, read from the Pending Requests sensor
+
+
+async def _sam_with_pending(hass: HomeAssistant, hass_client_no_auth, requests: list[dict]):
+    """Sam with Family Safety, his Pending Requests sensor reading [requests] when Hearth starts. The hub."""
+    _upstream(hass)
+    _pending(hass, requests)
+    await _sam_on_family_safety(hass, hass_client_no_auth)
+    await hass.async_block_till_done()
+    return hass.config_entries.async_entries(DOMAIN)[0].runtime_data
+
+
+async def test_a_new_request_on_the_sensor_is_an_ask_as_the_event_makes(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    asked = async_capture_events(hass, "hearth_more_time_requested")
+    answers = async_capture_events(hass, "hearth_more_time_answered")
+    hub = await _sam_with_pending(hass, hass_client_no_auth, [_request("old")])
+    # What was pending at the first reading is learned, not announced
+    assert hub.asks.pending() == []
+
+    _pending(hass, [_request("old"), _request("r1", "Windows")])
+    await hass.async_block_till_done()
+    [ask] = hub.asks.pending()
+    assert (ask.person, ask.external_id, ask.platform, ask.app_name) == ("person.sam", "r1", "Windows", "A Game")
+    assert len(asked) == 1
+
+    # Gone from the list: resolved once it's been gone a while (an empty read is no answer at once)
+    _pending(hass, [_request("old")])
+    await hass.async_block_till_done()
+    assert len(hub.asks.pending()) == 1
+    freezer.tick(timedelta(minutes=6))
+    hub.fs_requests.check()
+    assert hub.asks.pending() == []
+    assert answers[-1].data["status"] == "handled" and answers[-1].data["answered_in"] == "family_safety"
+
+
+async def test_a_request_back_in_the_list_isn_t_resolved(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    hub = await _sam_with_pending(hass, hass_client_no_auth, [])
+    _pending(hass, [_request("r1")])
+    await hass.async_block_till_done()
+    _pending(hass, [])
+    await hass.async_block_till_done()
+    freezer.tick(timedelta(minutes=2))
+    _pending(hass, [_request("r1")])
+    await hass.async_block_till_done()
+    freezer.tick(timedelta(minutes=6))
+    hub.fs_requests.check()
+    assert len(hub.asks.pending()) == 1
+
+
+async def test_unavailable_or_no_requests_resolves_nothing(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    hub = await _sam_with_pending(hass, hass_client_no_auth, [])
+    _pending(hass, [_request("r1")])
+    await hass.async_block_till_done()
+    for state, requests in (("unavailable", []), ("unknown", []), ("0", None)):
+        _pending(hass, requests, state)
+        await hass.async_block_till_done()
+        freezer.tick(timedelta(minutes=6))
+        hub.fs_requests.check()
+        assert len(hub.asks.pending()) == 1, state
+        assert hub.fs_requests.known[str(ACCOUNT)] == {"r1": None}, state
+
+
+async def test_a_restart_doesn_t_announce_requests_again(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    asked = async_capture_events(hass, "hearth_more_time_requested")
+    hub = await _sam_with_pending(hass, hass_client_no_auth, [])
+    _pending(hass, [_request("r1")])
+    await hass.async_block_till_done()
+    assert len(asked) == 1
+    await hub.fs_requests.async_flush()
+    # A restart: the asks are kept, the tracker comes back from storage; a request that came meanwhile is new
+    hub.fs_requests.known = {}
+    await hub.fs_requests.async_load()
+    _pending(hass, [_request("r1"), _request("r2")])
+    await hass.async_block_till_done()
+    assert [e.data.get("platform") for e in asked] == ["Xbox", "Xbox"]
+    assert {a.external_id for a in hub.asks.pending()} == {"r1", "r2"}
+
+
+async def test_the_fork_s_event_and_the_sensor_are_handled_once(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    asked = async_capture_events(hass, "hearth_more_time_requested")
+    answers = async_capture_events(hass, "hearth_more_time_answered")
+    hub = await _sam_with_pending(hass, hass_client_no_auth, [])
+    # The event first, then the sensor
+    hass.bus.async_fire(FS + "_request", {"account_id": str(ACCOUNT), "request_id": "r1", "platform": "Xbox"})
+    await hass.async_block_till_done()
+    _pending(hass, [_request("r1")])
+    await hass.async_block_till_done()
+    # The sensor first, then the event
+    _pending(hass, [_request("r1"), _request("r2")])
+    await hass.async_block_till_done()
+    hass.bus.async_fire(FS + "_request", {"account_id": str(ACCOUNT), "request_id": "r2", "platform": "Xbox"})
+    await hass.async_block_till_done()
+    assert len(asked) == 2 and len(hub.asks.pending()) == 2
+
+    # Resolved by the event; the sensor catching up later changes nothing
+    hass.bus.async_fire(
+        FS + "_request_resolved", {"account_id": str(ACCOUNT), "request_id": "r1", "outcome": "denied", "via": "app"}
+    )
+    await hass.async_block_till_done()
+    _pending(hass, [_request("r1"), _request("r2")])
+    _pending(hass, [_request("r2")])
+    await hass.async_block_till_done()
+    freezer.tick(timedelta(minutes=6))
+    hub.fs_requests.check()
+    assert [a.data["status"] for a in answers] == ["denied"]
+    assert len(asked) == 2
+    assert hub.fs_requests.known[str(ACCOUNT)] == {"r2": None}

@@ -50,6 +50,7 @@ from .const import (
     STORAGE_VERSION,
 )
 from .asks import Asks
+from .fs_requests import RequestTracker
 from .attention import ADMINS, Attention, Item
 from .client import checks_of, locked
 from .client_settings import ClientSettings
@@ -179,6 +180,8 @@ class HearthHub:
         self.attention = Attention(hass, self)
         self.household = Household(hass, self)
         self.asks = Asks(hass, self)
+        # Family Safety requests read from its Pending Requests sensors (the released one fires no events)
+        self.fs_requests = RequestTracker(hass, self)
         # One-shot commands for the TVs (hearth.play_on_tv), handed over in their state documents
         self.commands = Commands(hass)
         # "Something changed" pings to the phones, when the household has a push server
@@ -216,6 +219,7 @@ class HearthHub:
 
     async def async_load(self) -> None:
         await self.household.async_load()
+        await self.fs_requests.async_load()
         await self.client_settings.async_load()
         await self.glint_agent.async_load()
         stored = await self._store.async_load() or {}
@@ -378,6 +382,7 @@ class HearthHub:
         await self._store.async_save(self._data_to_save())
         await self.household.async_flush()
         await self.household.apps.async_flush()
+        await self.fs_requests.async_flush()
         await self.client_settings.async_flush()
         await self.glint_agent.async_flush()
 

@@ -13,6 +13,8 @@ release) is used for what it has:
 - lock_until: lock_platform takes an end. Without it Hearth's locks last whole hours (to just after midnight).
 - xbox_extra_time, windows_extra_time, cancel_extra_time: add_time_bonus (Xbox, Windows) and cancel_time_bonus.
 - pause_apps: pause_app and resume_app (single Xbox and Windows apps).
+- request_events, pending_requests: it fires its own request events (a fork's), or Hearth reads requests from its
+  Pending Requests sensors (fs_requests.py).
 """
 
 from __future__ import annotations
@@ -22,6 +24,7 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 
 from .enforce import FS_DOMAIN, fs_accepts, next_midnight
+from .fs_requests import EVENTS_SEEN
 
 # A child's entity, for asking a schema whether it takes a call (nothing is called)
 _PROBE = {"entity_id": "sensor.hearth_probe"}
@@ -47,6 +50,13 @@ def capabilities(hass: HomeAssistant) -> dict[str, Any]:
         "windows_extra_time": fs_accepts(hass, "add_time_bonus", {**_PROBE, "platform": "Windows", "minutes": 30}),
         "cancel_extra_time": has(FS_DOMAIN, "cancel_time_bonus"),
         "pause_apps": has(FS_DOMAIN, "pause_app"),
+        # It fired microsoft_family_safety_request / _resolved here (a fork's; kept once seen)
+        "request_events": bool(hass.data.get(EVENTS_SEEN)),
+        # Pending Requests sensors with their requests (read for new and resolved ones: fs_requests.py)
+        "pending_requests": any(
+            isinstance(state.attributes.get("requests"), list) and "user_id" in state.attributes
+            for state in hass.states.async_all("sensor")
+        ),
     }
     if not installed:
         return {key: False for key in found}
@@ -93,4 +103,12 @@ def reduced(found: dict[str, Any]) -> list[str]:
         lines.append("Extra time Hearth gave can't be ended early in Family Safety.")
     if not found["pause_apps"]:
         lines.append("Hearth can't pause single Xbox or Windows apps, only lock the whole platform.")
+    if not found.get("request_events"):
+        if found.get("pending_requests"):
+            lines.append(
+                "Requests from an Xbox or PC are read from the Pending Requests sensors: one answered in the "
+                "Family Safety app closes here a few minutes later."
+            )
+        else:
+            lines.append("Requests for more time made on an Xbox or PC don't reach Hearth.")
     return lines

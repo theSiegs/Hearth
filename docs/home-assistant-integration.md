@@ -775,6 +775,18 @@ integration as "Works with less on this version"; empty when it has it all. It's
   Family Safety seeing how: answered in the Family Safety app or on the device) as status `handled`, shown as
   "handled outside Hearth (the Family Safety app or the device)", never as expired. `hearth_more_time_answered` says
   the same status. `via: service` (Hearth's own answer) is left alone. Family Link has no kid requests, so there's nothing to close there.
+- **Requests without those events.** The released Family Safety (upstream's 2.3.0) fires neither
+  `microsoft_family_safety_request` nor `_request_resolved`; it has each child's **Pending Requests** sensor (unique
+  id `<entry>_<account>_pending_requests`: the count, and Microsoft's requests in `requests`). Hearth reads it for each
+  child with a Family Safety enforcer, on every change and every minute, and tells requests apart by `id`: a new one
+  becomes an ask exactly as the event makes it (platform, app name, requested time); one gone from the list for 5
+  minutes while the sensor reads is resolved as "handled outside Hearth" (one Hearth answered itself is already
+  closed). An unavailable or unknown sensor, or one without `requests`, changes nothing; an id back in the list isn't
+  resolved. The first reading of a child's sensor learns what's pending without announcing it; the ids known (and
+  those resolved lately) are kept with Home Assistant's storage helper, so a restart announces nothing again and a
+  request that came or went meanwhile is found. Where the fork's events fire too, each request is handled once,
+  whichever comes first: an event marks its id known (or resolved), and an ask is made once per request id.
+  `capabilities.family_safety` has `request_events` (its own events were seen here) and `pending_requests`.
 
 ### Places
 
