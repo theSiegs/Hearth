@@ -614,11 +614,14 @@ async def test_a_new_request_on_the_sensor_is_an_ask_as_the_event_makes(
     assert (ask.person, ask.external_id, ask.platform, ask.app_name) == ("person.sam", "r1", "Windows", "A Game")
     assert len(asked) == 1
 
-    # Gone from the list: resolved once it's been gone a while (an empty read is no answer at once)
+    # Gone from the list: resolved at the second fresh reading without it (one read that lost it is no answer)
     _pending(hass, [_request("old")])
     await hass.async_block_till_done()
     assert len(hub.asks.pending()) == 1
     freezer.tick(timedelta(minutes=6))
+    hub.fs_requests.check()  # no new reading: no answer, however long
+    assert len(hub.asks.pending()) == 1
+    _pending(hass, [_request("old")])  # Family Safety's next poll
     hub.fs_requests.check()
     assert hub.asks.pending() == []
     assert answers[-1].data["status"] == "handled" and answers[-1].data["answered_in"] == "family_safety"
@@ -817,3 +820,90 @@ async def test_a_lock_with_an_end_needs_no_unlock_at_midnight(
     assert "until" in locked.data and "duration_hours" not in locked.data
     held = _household(hass).enforcement.held[f"{enforce.FAMILY_SAFETY}|person.sam"]
     assert "fs_unlock_at" not in held.restore
+
+
+async def _gone_once(hass: HomeAssistant, hass_client_no_auth, freezer, platform: str = "Xbox"):
+    """Sam's Xbox (no extra time) and a request r1 on [platform], then a reading without it. The hub."""
+    _xbox(hass)
+    hub = await _sam_with_pending(hass, hass_client_no_auth, [])
+    _pending(hass, [_request("r1", platform)])
+    await hass.async_block_till_done()
+    freezer.tick(timedelta(minutes=1))
+    _pending(hass, [])
+    await hass.async_block_till_done()
+    return hub
+
+
+async def test_extra_time_showing_as_a_request_goes_is_its_approval(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    answers = async_capture_events(hass, "hearth_more_time_answered")
+    hub = await _gone_once(hass, hass_client_no_auth, freezer)
+    assert len(hub.asks.pending()) == 1
+    until = (dt_util.now() + timedelta(minutes=60)).replace(microsecond=0)
+    _xbox(hass, "on", reason="extra_time", override="allowUntil", override_until=until.isoformat())
+    await hass.async_block_till_done()
+    assert hub.asks.pending() == []
+    assert (answers[-1].data["status"], answers[-1].data["minutes"]) == ("approved", 60)
+
+
+async def test_extra_time_before_the_request_goes_counts_too(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    answers = async_capture_events(hass, "hearth_more_time_answered")
+    _xbox(hass)
+    hub = await _sam_with_pending(hass, hass_client_no_auth, [])
+    _pending(hass, [_request("r1")])
+    await hass.async_block_till_done()
+    # The same poll: Allowed Now written before the Pending Requests sensor
+    until = (dt_util.now() + timedelta(minutes=30)).replace(microsecond=0)
+    _xbox(hass, "on", reason="extra_time", override="allowUntil", override_until=until.isoformat())
+    await hass.async_block_till_done()
+    _pending(hass, [])
+    await hass.async_block_till_done()
+    assert answers[-1].data["status"] == "approved"
+
+
+async def test_extra_time_on_another_platform_or_hearth_s_own_isn_t_an_approval(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    answers = async_capture_events(hass, "hearth_more_time_answered")
+    hub = await _gone_once(hass, hass_client_no_auth, freezer, "Windows")
+    until = (dt_util.now() + timedelta(minutes=60)).replace(microsecond=0)
+    _xbox(hass, "on", reason="extra_time", override="allowUntil", override_until=until.isoformat())
+    await hass.async_block_till_done()
+    assert len(hub.asks.pending()) == 1
+    freezer.tick(timedelta(minutes=1))
+    _pending(hass, [])
+    hub.fs_requests.check()
+    assert hub.asks.pending() == [] and answers[-1].data["status"] == "handled"
+
+
+async def test_hearth_s_own_extra_time_isn_t_a_parent_s_approval(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    hub = await _gone_once(hass, hass_client_no_auth, freezer)
+    until = (dt_util.now() + timedelta(minutes=60)).replace(microsecond=0)
+    hub.household.enforcement.fs_bonus_until = lambda person, platform: until if platform == "Xbox" else None
+    _xbox(hass, "on", reason="extra_time", override="allowUntil", override_until=until.isoformat())
+    await hass.async_block_till_done()
+    assert len(hub.asks.pending()) == 1
+
+
+async def test_an_older_record_of_a_gone_request_reads_as_one_reading(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    hub = await _sam_with_pending(hass, hass_client_no_auth, [])
+    _pending(hass, [_request("r1")])
+    await hass.async_block_till_done()
+    await hub.fs_requests.async_flush()
+    # An older Hearth kept when it went, as a time
+    await hub.fs_requests._store.async_save(
+        {"known": {str(ACCOUNT): {"r1": dt_util.utcnow().isoformat()}}, "resolved": []}
+    )
+    await hub.fs_requests.async_load()
+    assert hub.fs_requests.known[str(ACCOUNT)]["r1"]["readings"] == 1
+    freezer.tick(timedelta(minutes=1))
+    _pending(hass, [])
+    await hass.async_block_till_done()
+    assert hub.asks.pending() == []
