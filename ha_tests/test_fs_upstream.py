@@ -704,3 +704,116 @@ async def test_the_fork_s_event_and_the_sensor_are_handled_once(
     assert [a.data["status"] for a in answers] == ["denied"]
     assert len(asked) == 2
     assert hub.fs_requests.known[str(ACCOUNT)] == {"r2": None}
+
+
+# Locks by whole hours ended at midnight by Hearth
+
+
+async def _locked_by_hours(hass: HomeAssistant, hass_client_no_auth, freezer) -> tuple[dict, object, str]:
+    """Sam's Xbox locked by Hearth at 12:10 through upstream's Family Safety: 12 whole hours, to 00:10. (calls, the
+    enforcement, the lock's end as Family Safety shows it.)"""
+    freezer.move_to(dt_util.now().replace(hour=12, minute=10, second=0, microsecond=0))
+    calls = _upstream(hass)
+    _xbox(hass)
+    await _sam_on_family_safety(hass, hass_client_no_auth)
+    await _budget(hass, "games", 5)
+    [locked] = calls["lock_platform"]
+    assert locked.data["duration_hours"] == 12
+    enforcement = _household(hass).enforcement
+    held = enforcement.held[f"{enforce.FAMILY_SAFETY}|person.sam"]
+    assert dt_util.parse_datetime(held.restore["fs_unlock_at"]["Xbox"]) == enforce.next_midnight()
+    until = dt_util.as_local(dt_util.parse_datetime(held.restore["fs_lock_until"]["Xbox"])).isoformat()
+    _xbox(hass, "off", reason="locked", override="blockUntil", override_until=until)
+    return calls, enforcement, until
+
+
+async def test_a_lock_by_whole_hours_is_ended_at_midnight(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    grants = async_capture_events(hass, "hearth_parent_grant")
+    calls, enforcement, _ = await _locked_by_hours(hass, hass_client_no_auth, freezer)
+    midnight = enforce.next_midnight()
+    freezer.move_to(midnight - timedelta(minutes=1))
+    await enforcement.async_lock_ends_tick()
+    assert calls["unlock_platform"] == []
+    freezer.move_to(midnight + timedelta(seconds=30))
+    await enforcement.async_lock_ends_tick()
+    [unlocked] = calls["unlock_platform"]
+    assert unlocked.data["platform"] == "Xbox"
+    held = enforcement.held[f"{enforce.FAMILY_SAFETY}|person.sam"]
+    assert "fs_unlock_at" not in held.restore and "Xbox" in held.restore["fs_lock_ended"]
+    # Ended as a lock with an end would end: nothing in force now is no parent's unlock
+    _xbox(hass, "on")
+    await _bonus(hass, "games", 0)
+    assert grants == []
+    # Once: a new day lets go as before (finding nothing locked), the tick has nothing more to end
+    sent = len(calls["unlock_platform"])
+    await enforcement.async_lock_ends_tick()
+    assert len(calls["unlock_platform"]) == sent
+
+
+async def test_a_parent_s_change_cancels_the_unlock_at_midnight(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    calls, enforcement, until = await _locked_by_hours(hass, hass_client_no_auth, freezer)
+    # A parent locks the Xbox longer in the Family Safety app
+    later = (dt_util.parse_datetime(until) + timedelta(hours=7)).isoformat()
+    _xbox(hass, "off", reason="locked", override="blockUntil", override_until=later)
+    freezer.tick(timedelta(minutes=5))
+    await enforcement.async_lock_ends_tick()
+    held = enforcement.held[f"{enforce.FAMILY_SAFETY}|person.sam"]
+    assert "fs_unlock_at" not in held.restore
+    freezer.move_to(enforce.next_midnight() + timedelta(seconds=30))
+    await enforcement.async_lock_ends_tick()
+    assert calls["unlock_platform"] == []
+
+
+async def test_a_midnight_missed_while_off_is_caught_up_after_a_restart(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    calls, enforcement, _ = await _locked_by_hours(hass, hass_client_no_auth, freezer)
+    midnight = enforce.next_midnight()
+    await enforcement._store.async_save(enforcement._data())
+    enforcement.held = {}
+    await enforcement.async_load()
+    freezer.move_to(midnight + timedelta(minutes=5))
+    await enforcement.async_lock_ends_tick()
+    assert [c.data["platform"] for c in calls["unlock_platform"]] == ["Xbox"]
+
+
+async def test_a_lock_that_ended_by_itself_isn_t_unlocked_later(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    calls, enforcement, until = await _locked_by_hours(hass, hass_client_no_auth, freezer)
+    # Home Assistant was off past the lock's own end: it's over, nothing to unlock
+    _xbox(hass, "on")
+    freezer.move_to(dt_util.parse_datetime(until) + timedelta(minutes=5))
+    await enforcement.async_lock_ends_tick()
+    assert calls["unlock_platform"] == []
+    held = enforcement.held[f"{enforce.FAMILY_SAFETY}|person.sam"]
+    assert "fs_unlock_at" not in held.restore
+
+
+async def test_letting_go_drops_the_unlock_at_midnight(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    calls, enforcement, _ = await _locked_by_hours(hass, hass_client_no_auth, freezer)
+    await _budget(hass, "games", 600)
+    await hass.async_block_till_done()
+    assert len(calls["unlock_platform"]) == 1
+    held = enforcement.held.get(f"{enforce.FAMILY_SAFETY}|person.sam")
+    assert held is None or "fs_unlock_at" not in held.restore
+
+
+async def test_a_lock_with_an_end_needs_no_unlock_at_midnight(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=12, minute=10, second=0, microsecond=0))
+    calls = _fork(hass)
+    _xbox(hass)
+    await _sam_on_family_safety(hass, hass_client_no_auth)
+    await _budget(hass, "games", 5)
+    [locked] = calls["lock_platform"]
+    assert "until" in locked.data and "duration_hours" not in locked.data
+    held = _household(hass).enforcement.held[f"{enforce.FAMILY_SAFETY}|person.sam"]
+    assert "fs_unlock_at" not in held.restore
