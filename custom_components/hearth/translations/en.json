@@ -217,10 +217,10 @@
       },
       "app_categories": {
         "title": "App categories",
-        "description": "Hearth knows what many apps are (a game, YouTube, streaming, a companion app) from its starter list. When a kid first uses an app it doesn't know, Hearth can look the app's genre up in its store (Google Play, Microsoft Store, Steam): that sends the app's public store id and nothing else. When the genre is unclear, an AI Task entity you choose (a local model works) can be asked; its answer is only a guess and never puts an app in Messaging or Accessibility. Your own choice on Hearth's page always wins.",
+        "description": "Hearth knows what many apps are (a game, YouTube, streaming, a companion app) from its starter list. When a kid first uses an app it doesn't know, Hearth can look the app's genre up in its store (Google Play, Microsoft Store, Steam): that sends the app's public store id and nothing else. When the genre is unclear, an AI is asked: by default Home Assistant's default AI Task (Settings > AI Task; a local model works), or one you choose, or none. It gets the app's name, store id and the store's one-line description, at most 20 apps a day; its answer is only a guess and never puts an app in Messaging, Accessibility or System screens. Your own choice on Hearth's page always wins.",
         "data": {
           "lookup": "Look new apps up in their store",
-          "ai_task": "AI Task entity to ask (none: no AI)"
+          "ai_task": "AI for unclear apps"
         }
       },
       "voice_assistants": {

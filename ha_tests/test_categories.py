@@ -355,14 +355,53 @@ def _ai_service(hass: HomeAssistant, answer: dict | None = None, fail: bool = Fa
     return calls
 
 
-async def test_no_ai_is_asked_without_an_entity(hass: HomeAssistant, aioclient_mock) -> None:
+class _Preferences:
+    """What the ai_task integration keeps: its default entity for generating data."""
+
+    def __init__(self, entity_id: str | None) -> None:
+        self.gen_data_entity_id = entity_id
+
+
+async def test_no_ai_is_asked_with_no_default_set_or_turned_off(hass: HomeAssistant, aioclient_mock) -> None:
     calls = _ai_service(hass)
     aioclient_mock.get(PLAY.format("com.netflix.example"), text=_fixture("play_netflix.html"))
+    # The default choice, and Home Assistant has no default AI Task: quietly nothing
     book = await _book(hass, {})
+    assert book.ai_setting == "default" and book.ai_entity is None
+    hass.data["ai_task_preferences"] = _Preferences(None)
     book.note_used({"com.netflix.example": None})
     await book.async_next()
     assert calls == [] and book.lookup("com.netflix.example") is None
     assert book.describe("com.netflix.example")["source"] == "unknown"
+    assert book.page()["ai"] == "default" and book.page()["ai_entity"] is None
+    # Off: never, even with a default set
+    hass.data["ai_task_preferences"] = _Preferences("ai_task.local")
+    off = await _book(hass, {}, category_ai_task="off", category_lookup=False)
+    assert off.ai_entity is None and not off.wants_lookup("android:com.netflix.example", dt_util.now().date())
+    assert cats.ai_setting({"category_ai_task": None}) == "off"
+
+
+async def test_the_default_ai_task_is_read_at_each_question(hass: HomeAssistant, aioclient_mock) -> None:
+    calls = _ai_service(hass, {"category": "video", "detail": "streaming"})
+    aioclient_mock.get(PLAY.format("com.netflix.example"), text=_fixture("play_netflix.html"))
+    aioclient_mock.get(PLAY.format("com.example.other"), text=_fixture("play_netflix.html"))
+    book = await _book(hass, {})
+    hass.data["ai_task_preferences"] = _Preferences("ai_task.local")
+    assert book.ai_entity == "ai_task.local"
+    assert book.page()["ai_default"] == "ai_task.local"
+    book.note_used({"com.netflix.example": "Netflix", "com.example.other": None})
+    await book.async_next()
+    assert calls[0].data["entity_id"] == "ai_task.local"
+    assert book.answers["android:com.netflix.example"]["ai"]["entity"] == "ai_task.local"
+    # Changed in Home Assistant: the next question goes to the new default
+    hass.data["ai_task_preferences"] = _Preferences("ai_task.cloud")
+    await book.async_next()
+    assert calls[1].data["entity_id"] == "ai_task.cloud"
+    hit = book.lookup("com.example.other")
+    assert (hit.source, hit.confirmed) == ("ai", False)
+    # An explicit choice is kept whatever the default is
+    chosen = await _book(hass, {}, category_ai_task="ai_task.local")
+    assert chosen.ai_setting == "ai_task.local" and chosen.ai_entity == "ai_task.local"
 
 
 async def test_the_ai_is_asked_only_when_the_store_is_unclear_and_once(hass: HomeAssistant, aioclient_mock) -> None:
@@ -490,7 +529,9 @@ async def test_the_page_shows_and_sets_what_apps_are(
     rows = {r["package"]: r for r in config["apps"]}
     assert (rows["com.example.game"]["source"], rows["com.example.game"]["category"]) == ("ai", "game")
     c = config["categories"]
-    assert c["lookup"] is True and c["ai_entity"] is None and c["starter"] > 350
+    assert c["lookup"] is True and c["starter"] > 350
+    # No choice made: Home Assistant's default AI Task, here none set
+    assert (c["ai"], c["ai_entity"], c["ai_default"]) == ("default", None, None)
     assert c["sources"]["ai"] >= 1 and c["pools"]["game"] == "games" and c["labels"]["youtube"] == "YouTube"
     assert "interface" in c["category_choices"] and c["detail_choices"]["streaming"] == "video"
     assert "catalog" not in config
@@ -522,6 +563,10 @@ async def test_the_page_shows_and_sets_what_apps_are(
     book = entry.runtime_data.household.categories_book
     assert book.lookup_on is False and book.ai_entity == "ai_task.local"
     assert not (await _ws(ws, {"type": "hearth/config/set", "key": "category_ai_task", "value": "light.kitchen"}))["success"]
+    for value in ("off", "default"):
+        assert (await _ws(ws, {"type": "hearth/config/set", "key": "category_ai_task", "value": value}))["success"]
+        await hass.async_block_till_done()
+    assert entry.runtime_data.household.categories_book.ai_setting == "default"
     assert not (await _ws(ws, {"type": "hearth/config/set", "key": "catalog_url", "value": "https://x.example/"}))["success"]
 
 
@@ -559,11 +604,24 @@ async def test_an_interface_app_from_the_starter_list_counts_nowhere(
 
 async def test_the_setting_in_configure(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
     await _household_with_sam(hass, hass_client_no_auth)
-    await _option(hass, "app_categories", {"lookup": False, "ai_task": "ai_task.local"})
+    hass.states.async_set("ai_task.local", "unknown", {"friendly_name": "Local AI"})
+    hass.data["ai_task_preferences"] = _Preferences("ai_task.local")
     entry = hass.config_entries.async_entries(DOMAIN)[0]
+    # The choices name Home Assistant's default and what it is
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"next_step_id": "app_categories"})
+    field = next(k for k in result["data_schema"].schema if str(k) == "ai_task")
+    assert field.default() == "default"
+    choices = result["data_schema"].schema[field].config["options"]
+    assert choices[0] == {"value": "default", "label": "Home Assistant's default AI Task (Local AI)"}
+    assert {"value": "off", "label": "Off: no AI"} in choices and {"value": "ai_task.local", "label": "Local AI"} in choices
+    hass.config_entries.options.async_abort(result["flow_id"])
+    await _option(hass, "app_categories", {"lookup": False, "ai_task": "ai_task.local"})
     assert (entry.options["category_lookup"], entry.options["category_ai_task"]) == (False, "ai_task.local")
     book = entry.runtime_data.household.categories_book
     assert book.lookup_on is False and book.ai_entity == "ai_task.local"
+    await _option(hass, "app_categories", {"lookup": True, "ai_task": "off"})
+    assert entry.runtime_data.household.categories_book.ai_entity is None
 
 
 async def test_lookups_run_on_their_own(hass: HomeAssistant, aioclient_mock, freezer) -> None:

@@ -45,7 +45,7 @@ from .const import (
 )
 from .counting import ALL
 from .enforce import CONF_ENFORCE, FAMILY_LINK, FAMILY_SAFETY, FS_DOMAIN, NINTENDO, NINTENDO_DOMAIN, PLATFORMS
-from .categories import BUILTIN_VALUES, CONF_CATEGORY_AI, CONF_CATEGORY_LOOKUP, DETAILS, KNOWN_CATEGORIES
+from .categories import AI_DEFAULT, AI_OFF, BUILTIN_VALUES, CONF_CATEGORY_AI, CONF_CATEGORY_LOOKUP, DETAILS, KNOWN_CATEGORIES
 from .limits import (
     BUILTIN_GROUPS,
     CATEGORY_VALUES,
@@ -413,7 +413,7 @@ OPTION_SCHEMAS: dict[str, Any] = {
     CONF_SHARE_APP_DATA: [_PERSON],
     CONF_CATEGORY_POOLS: vol.Schema({vol.In((*DETAIL_VALUES, *CATEGORY_VALUES)): vol.Any(OTHER, _ID)}),
     CONF_CATEGORY_LOOKUP: bool,
-    CONF_CATEGORY_AI: vol.Any(None, cv.entity_domain("ai_task")),
+    CONF_CATEGORY_AI: vol.Any(AI_DEFAULT, AI_OFF, cv.entity_domain("ai_task")),
     CONF_VOICE_ASSISTANTS: bool,
     CONF_SOURCES: [
         vol.Schema(

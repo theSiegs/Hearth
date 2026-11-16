@@ -1130,7 +1130,7 @@ class HearthPanel extends HTMLElement {
         await this._setOption("category_lookup", el.checked, el.checked ? "New apps are looked up in their store" : "No store lookups");
         return;
       case "category-ai":
-        await this._setOption("category_ai_task", el.value || null, el.value ? "Unclear apps go to the AI" : "No AI is asked");
+        await this._setOption("category_ai_task", el.value, el.value === "off" ? "No AI is asked" : "Unclear apps go to the AI");
         return;
       case "client-settings-clear":
         if (!window.confirm(`Remove everything Hearth keeps for ${d.client}? The app's settings on every device go with it.`)) return;
@@ -3414,6 +3414,11 @@ class HearthPanel extends HTMLElement {
     const counts = [["override", "set by you"], ["starter", "from Hearth's list"], ["store", "from their store"], ["ai", "AI guesses"], ["unknown", "not known"]]
       .filter(([k]) => n[k]).map(([k, label]) => `${n[k]} ${label}`).join(", ");
     const ais = c.ai_entities || [];
+    const aiName = (e) => this._hass?.states?.[e]?.attributes?.friendly_name || e;
+    const choice = c.ai || "default";
+    const using = choice === "off" ? "No AI is asked."
+      : c.ai_entity ? `AI guesses use ${aiName(c.ai_entity)}.`
+      : "No default AI Task in Home Assistant (Settings > AI Task): no AI is asked.";
     return `<section class="card">
       <h3><ha-icon icon="mdi:shape-outline"></ha-icon>App categories</h3>
       <p class="muted">What each app is (a game, YouTube, streaming, a companion app) decides its group unless you moved it. Hearth knows ${c.starter || 0} apps from its own list. When a kid first uses one it doesn't know, it can look the app's genre up in its store: that sends the app's public store id to Google Play, the Microsoft Store or Steam, and nothing else. Your choice always wins.</p>
@@ -3421,10 +3426,11 @@ class HearthPanel extends HTMLElement {
       <label class="check"><input type="checkbox" data-change="category-lookup" ${c.lookup ? "checked" : ""}> Look new apps up in their store</label>
       <label class="field">Ask an AI when the store doesn't say
         <select data-change="category-ai" aria-label="AI Task entity">
-          <option value="" ${c.ai_entity ? "" : "selected"}>No AI</option>
-          ${ais.map((e) => `<option value="${esc(e)}" ${c.ai_entity === e ? "selected" : ""}>${esc(this._hass?.states?.[e]?.attributes?.friendly_name || e)}</option>`).join("")}
+          <option value="default" ${choice === "default" ? "selected" : ""}>Home Assistant's default AI Task${c.ai_default ? ` (${esc(aiName(c.ai_default))})` : " (none set)"}</option>
+          <option value="off" ${choice === "off" ? "selected" : ""}>Off</option>
+          ${ais.map((e) => `<option value="${esc(e)}" ${choice === e ? "selected" : ""}>${esc(aiName(e))}</option>`).join("")}
         </select></label>
-      <div class="muted small">${ais.length ? "An AI Task entity (a local model works) gets the app's name, store id and the store's one-line description. Its answer is only a guess: it never puts an app in Messaging or Accessibility." : "No AI Task entity is set up in Home Assistant."}</div>
+      <div class="muted small">${esc(using)} The AI gets the app's name, store id and the store's one-line description, at most 20 apps a day. Its answer is only a guess: it never puts an app in Messaging, Accessibility or System screens.</div>
       <details><summary>Which group each kind of app goes to</summary>
         <ul class="list compact">${(c.values || [])
           .map((v) => `<li><div class="grow">${esc(c.labels?.[v] || v)}</div><select data-change="category-pool" data-value="${esc(v)}" aria-label="${esc(v)}">

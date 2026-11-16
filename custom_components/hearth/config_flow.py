@@ -50,7 +50,7 @@ from .const import (
 )
 from .counting import ALL
 from .limits import BUILTIN_GROUPS, CONF_POOLS, GAMES, POOLS_VERSION, one_pool_per_app, slug
-from .categories import CONF_CATEGORY_AI, CONF_CATEGORY_LOOKUP
+from .categories import AI_DEFAULT, AI_OFF, CONF_CATEGORY_AI, CONF_CATEGORY_LOOKUP, ai_setting, default_ai_entity
 from .apps import CONF_APP_WATCH, CONF_ASK_NOTIFY, OTHER, options_with_app_in_group, update_notification
 from .enforce import (
     CONF_ENFORCE,
@@ -298,27 +298,45 @@ class HearthOptionsFlow(OptionsFlow):
 
     async def async_step_app_categories(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Hearth's settings for app categories (categories.py): looking a new app's genre up in its store (on by
-        default; it sends the app's public store id and nothing else) and the AI Task entity asked when that's unclear
-        (none by default). Options are for Home Assistant's administrators only, as the page is."""
+        default; it sends the app's public store id and nothing else) and which AI Task entity is asked when that's
+        unclear: Home Assistant's default (the default), off, or a chosen one. Options are for Home Assistant's
+        administrators only, as the page is."""
         options = self._options()
         if user_input is not None:
             return self.async_create_entry(
                 data={
                     **options,
                     CONF_CATEGORY_LOOKUP: bool(user_input.get("lookup", True)),
-                    CONF_CATEGORY_AI: user_input.get("ai_task") or None,
+                    CONF_CATEGORY_AI: user_input.get("ai_task") or AI_DEFAULT,
                 }
             )
-        ai = options.get(CONF_CATEGORY_AI)
+        default = default_ai_entity(self.hass)
+        choices = [
+            SelectOptionDict(
+                value=AI_DEFAULT,
+                label=f"Home Assistant's default AI Task ({self._ai_name(default)})" if default
+                else "Home Assistant's default AI Task (none set: no AI is asked)",
+            ),
+            SelectOptionDict(value=AI_OFF, label="Off: no AI"),
+            *(
+                SelectOptionDict(value=state.entity_id, label=self._ai_name(state.entity_id))
+                for state in sorted(self.hass.states.async_all("ai_task"), key=lambda s: s.entity_id)
+            ),
+        ]
+        current = ai_setting(options)
+        if current not in {c["value"] for c in choices}:
+            choices.append(SelectOptionDict(value=current, label=current))
         schema = vol.Schema(
             {
                 vol.Optional("lookup", default=options.get(CONF_CATEGORY_LOOKUP, True) is not False): BooleanSelector(),
-                vol.Optional("ai_task", **({"description": {"suggested_value": ai}} if ai else {})): EntitySelector(
-                    EntitySelectorConfig(domain="ai_task")
-                ),
+                vol.Optional("ai_task", default=current): SelectSelector(SelectSelectorConfig(options=choices)),
             }
         )
         return self.async_show_form(step_id="app_categories", data_schema=schema)
+
+    def _ai_name(self, entity_id: str | None) -> str:
+        state = self.hass.states.get(entity_id) if entity_id else None
+        return (state.name if state is not None else entity_id) or "none"
 
     async def async_step_voice_assistants(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Voice assistants may use Hearth (llm_api.py): calls without a Home Assistant user (a voice satellite) get

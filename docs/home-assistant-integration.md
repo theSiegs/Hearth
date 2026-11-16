@@ -396,9 +396,11 @@ sends nothing upward. For any app it sees, the answer is the first of:
    browsers and hearing tools too); an application's store category and Steam software are unconfirmed; Entertainment,
    Lifestyle, Education, Travel, Comics, Parenting and an unmapped store category are **unclear**; anything else
    (Shopping, Finance) is none of the ten. A store never confirms a detail or a loose category.
-4. **An AI answer**, only when an HA administrator chose an AI Task entity (none by default; a local model such as
-   Ollama works) and only for an app whose store genre is unclear or that its store doesn't have (or, with store
-   lookups off, has no other answer). Hearth calls `ai_task.generate_data` with structured output (a category from
+4. **An AI answer**, by default from **Home Assistant's default AI Task** (Settings > AI Task, its default for
+   generating data, read at each question, so a change there counts at once); an HA administrator can choose a
+   specific AI Task entity instead, or Off. With the default and none set in Home Assistant, nothing is asked. Only
+   for an app whose store genre is unclear or that its store doesn't have (or, with store lookups off, has no other
+   answer), at most 20 a day. Hearth calls `ai_task.generate_data` with structured output (a category from
    the ten or unknown, and a detail or none), giving the app's name, its store id and the store's one-line
    description, nothing else. The answer is **never confirmed**: it places an app only in a pool that doesn't loosen
    a limit, never in Messaging, Accessibility or System screens, and shows in Check these. It's kept; an AI that
@@ -407,15 +409,18 @@ sends nothing upward. For any app it sees, the answer is the first of:
 
 - **What leaves the house.** A store lookup sends one public store id to that store (Google Play, Microsoft's
   displaycatalog, Steam), with a fixed language and market, a generic user agent and no cookies kept; nothing about
-  the household, the kid or the device. An adult's apps aren't looked up. An AI question goes only to the AI Task
-  entity the owner chose (a local model stays in the house; a cloud one gets the name, id and store description).
+  the household, the kid or the device. An adult's apps aren't looked up. An AI question goes to the model behind
+  Home Assistant's default AI Task (or the AI Task entity an adult chose instead; none when it's Off): a local model
+  such as Ollama keeps it in the house, a cloud one gets the app's name, store id and store description.
   Nothing else is sent anywhere.
 - **How often.** One lookup at a time, every 30 seconds while apps wait, at most 100 store lookups and 20 AI
   questions a day. A store's answer is looked at again after 90 days, an app the store doesn't have after 30, a
   lookup that failed (offline, an odd answer) the next day. Answers are kept in Home Assistant's storage
   (`hearth.categories.<entry>`); a new answer places apps again at once.
 - **Settings** (Hearth's page > Apps > App categories, or Configure > App categories): `category_lookup` (store
-  lookups, on by default) and `category_ai_task` (the AI Task entity, none by default).
+  lookups, on by default) and `category_ai_task`: `default` (Home Assistant's default AI Task; what an install
+  with no value uses), `off`, or an `ai_task.*` entity. Both places show which entity the AI guesses use now, or that
+  Home Assistant has no default AI Task.
 - **The household's map** (Hearth's page > Apps > App categories > Which group each kind of app goes to;
   `catalog_pools`, value -> pool or `other`, a name kept from the catalog's days): by default a game goes to Games,
   social to Social, messaging to Messaging and accessibility to Accessibility (those two on a confirmed answer only),

@@ -12,14 +12,15 @@ says which pool each value goes to (limits.pool_map). For any app Hearth sees, t
 3. **A store's genre**, looked up when a kid first uses an app 1 and 2 don't cover (category_lookup.py) and kept
    with its date: Google Play's, the Microsoft Store's (Windows and Xbox) and Steam's. Only the mappings the old
    catalog's classifier was sure of confirm a category, and never a loose one (messaging, accessibility).
-4. **An AI answer**, only with an AI Task entity chosen in the options and only when the store's genre was unclear.
+4. **An AI answer**, from Home Assistant's default AI Task (or the entity an adult chose; none when off), only when
+   the store's genre was unclear.
    Never confirmed: it never puts an app in Messaging or Accessibility, nor in System screens.
 5. Unknown: the device's own category and where its time came from answer instead (limits.placer).
 
 What leaves the house: a store lookup sends the app's public store id (an Android package, a Microsoft Store or
 Xbox id, a package family name, a Steam app id) to that store, and nothing else; at most STORE_PER_DAY a day, one at
-a time. An AI question goes to the AI Task entity the owner chose (a local model stays local). Nothing is sent
-anywhere else.
+a time. An AI question goes to the model behind Home Assistant's default AI Task, or the entity an adult chose (a
+local model stays local); at most AI_PER_DAY a day. Nothing is sent anywhere else.
 """
 
 from __future__ import annotations
@@ -48,8 +49,41 @@ _LOGGER = logging.getLogger(__name__)
 CONF_APP_CATEGORIES = "app_categories"
 # Store lookups (on by default; off sends nothing to any store)
 CONF_CATEGORY_LOOKUP = "category_lookup"
-# The AI Task entity asked about apps whose store genre is unclear (none by default: no AI is asked)
+# Which AI Task entity is asked about apps whose store genre is unclear: AI_DEFAULT (Home Assistant's default AI
+# Task for generating data, read at each question; the default), AI_OFF (no AI is asked), or an ai_task entity
 CONF_CATEGORY_AI = "category_ai_task"
+AI_DEFAULT = "default"
+AI_OFF = "off"
+# Where the ai_task integration keeps its preferences (gen_data_entity_id: the default for generating data)
+_AI_PREFERENCES = "ai_task_preferences"
+
+
+def ai_setting(options: dict[str, Any]) -> str:
+    """The AI choice in [options]: AI_DEFAULT when none was made, AI_OFF for an explicit none, else the entity."""
+    if CONF_CATEGORY_AI not in options:
+        return AI_DEFAULT
+    value = options[CONF_CATEGORY_AI]
+    if value in (None, "", AI_OFF):
+        return AI_OFF
+    return str(value)
+
+
+def default_ai_entity(hass: HomeAssistant) -> str | None:
+    """Home Assistant's default AI Task entity for generating data (Settings > AI Task), or None when none is set
+    or the ai_task integration isn't loaded."""
+    preferences = hass.data.get(_AI_PREFERENCES)
+    entity_id = getattr(preferences, "gen_data_entity_id", None)
+    return entity_id if isinstance(entity_id, str) and entity_id.startswith("ai_task.") else None
+
+
+def resolve_ai_entity(hass: HomeAssistant, setting: str) -> str | None:
+    """The entity an AI question goes to now: the chosen one, Home Assistant's default (read now, so a change there
+    counts at once), or None (off, or no default set: nothing is asked)."""
+    if setting == AI_OFF:
+        return None
+    if setting == AI_DEFAULT:
+        return default_ai_entity(hass)
+    return setting
 
 # The finer values Hearth knows, and the category each sits under
 DETAILS = {"youtube": "video", "streaming": "video", "education": "productivity", "companion": "productivity",
@@ -304,7 +338,7 @@ class CategoryBook:
                 category, detail = clean_answer(value.get("category"), value.get("detail"))
                 self.overrides[key] = {"category": category, "detail": detail}
         self.lookup_on = options.get(CONF_CATEGORY_LOOKUP, True) is not False
-        self.ai_entity: str | None = options.get(CONF_CATEGORY_AI) or None
+        self.ai_setting = ai_setting(options)
         # key -> {"store": {...}, "ai": {...}} (category_lookup.py's answers, with their dates)
         self.answers: dict[str, dict[str, Any]] = {}
         # Keys waiting to be looked up, oldest first, and the names they were seen with (for an AI's question)
@@ -317,6 +351,11 @@ class CategoryBook:
         self._run: Callable[[Any], Any] | None = None
         self._busy = False
         self._session = None
+
+    @property
+    def ai_entity(self) -> str | None:
+        """The AI Task entity asked now (resolved at each question), or None: no AI is asked."""
+        return resolve_ai_entity(self.hass, self.ai_setting)
 
     # Store
 
@@ -500,15 +539,17 @@ class CategoryBook:
                     # The store says something new: an AI's answer about the old one goes
                     answers.pop("ai", None)
                 answers["store"] = store
-            if self.ai_entity and ns in AI_NAMESPACES and ai_due(answers, today) and needs_ai(answers.get("store")):
+            ai_entity = self.ai_entity
+            if ai_entity and ns in AI_NAMESPACES and ai_due(answers, today) and needs_ai(answers.get("store")):
                 if not self._count("ai"):
                     self.answers[key] = answers
                     self._save()
                     return None
                 name = (answers.get("store") or {}).get("name") or self.names.get(key)
-                ai = await lookup.async_ask_ai(self.hass, self.ai_entity, key, name, (answers.get("store") or {}).get("about"))
+                ai = await lookup.async_ask_ai(self.hass, ai_entity, key, name, (answers.get("store") or {}).get("about"))
                 # None: the entity couldn't answer (asked again a day later)
-                answers["ai"] = {**(ai if ai is not None else {"failed": True}), "at": today.isoformat()}
+                answers["ai"] = {**(ai if ai is not None else {"failed": True}), "at": today.isoformat(),
+                                 "entity": ai_entity}
             self.answers[key] = answers
             self.queue.pop(0)
             self.names.pop(key, None)
@@ -532,7 +573,10 @@ class CategoryBook:
             sources[self.describe(item)["source"]] += 1
         return {
             "lookup": self.lookup_on,
+            # The choice (default, off or an entity), what it resolves to now, and Home Assistant's default
+            "ai": self.ai_setting,
             "ai_entity": self.ai_entity,
+            "ai_default": default_ai_entity(self.hass),
             "starter": len(self.starter),
             "waiting": len(self.queue),
             "today": {"store": self.counts.get("store", 0), "ai": self.counts.get("ai", 0)}

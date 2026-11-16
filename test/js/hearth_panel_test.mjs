@@ -630,7 +630,7 @@ test("the Chores card says when the list couldn't be read", () => {
 });
 
 const CATEGORIES = {
-  lookup: true, ai_entity: null, starter: 400, waiting: 1,
+  lookup: true, ai: "default", ai_entity: null, ai_default: null, starter: 400, waiting: 1,
   sources: { override: 1, starter: 5, store: 2, ai: 1, unknown: 3 },
   values: ["game", "youtube", "companion"], pools: { game: "games", companion: "other" }, own_pools: { companion: "games" },
   labels: { game: "Games", video: "Video", youtube: "YouTube", productivity: "Productivity", companion: "Companion apps", interface: "System screens", messaging: "Messaging" },
@@ -731,16 +731,29 @@ test("the App categories card: counts by source, store lookups, the AI Task enti
   assert.match(html, /sends the app's public store id/);
   assert.match(html, /1 set by you, 5 from Hearth&#39;s list, 2 from their store, 1 AI guesses, 3 not known · 1 waiting to be looked up/);
   assert.match(html, /data-change="category-lookup" checked/);
-  assert.match(html, /<option value="" selected>No AI<\/option>/);
+  // The default: Home Assistant's default AI Task, here none set
+  assert.match(html, /<option value="default" selected>Home Assistant's default AI Task \(none set\)<\/option>/);
+  assert.match(html, /<option value="off" >Off<\/option>/);
   assert.match(html, /<option value="ai_task.ollama" >ai_task.ollama<\/option>/);
-  assert.match(html, /never puts an app in Messaging or Accessibility/);
+  assert.match(html, /No default AI Task in Home Assistant/);
+  assert.match(html, /never puts an app in Messaging, Accessibility or System screens/);
   assert.match(html, /Hearth's default \(Other\)/);
   assert.match(html, /<option value="games" selected>Games<\/option>/);
   assert.match(html, /<div class="grow">Companion apps<\/div>/);
-  p._config.categories = { ...CATEGORIES, lookup: false, ai_entity: "ai_task.ollama", ai_entities: [] };
+  // Home Assistant's default set: named as what AI guesses use
+  p._hass = { states: { "ai_task.ollama": { attributes: { friendly_name: "Ollama AI Task" } } } };
+  p._config.categories = { ...CATEGORIES, lookup: false, ai_entity: "ai_task.ollama", ai_default: "ai_task.ollama" };
   html = p._categoriesCard();
   assert.match(html, /data-change="category-lookup" >/);
-  assert.match(html, /No AI Task entity is set up/);
+  assert.match(html, /Home Assistant's default AI Task \(Ollama AI Task\)/);
+  assert.match(html, /AI guesses use Ollama AI Task\./);
+  // A specific entity, and off
+  p._config.categories = { ...CATEGORIES, ai: "ai_task.ollama", ai_entity: "ai_task.ollama" };
+  assert.match(p._categoriesCard(), /<option value="ai_task.ollama" selected>Ollama AI Task<\/option>/);
+  p._config.categories = { ...CATEGORIES, ai: "off", ai_entity: null, ai_default: "ai_task.ollama" };
+  html = p._categoriesCard();
+  assert.match(html, /<option value="off" selected>Off<\/option>/);
+  assert.match(html, /No AI is asked\./);
   // The card sits on the Apps tab, and nothing names the retired catalog
   assert.match(p._appsTab(), /App categories<\/h3>/);
   assert.doesNotMatch(html, /App facts|catalog|Glint|tile/i);

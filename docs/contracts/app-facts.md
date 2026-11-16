@@ -13,7 +13,8 @@ Hearth keeps app categories itself (`custom_components/hearth/categories.py`; th
    made from the dataset's last confirmed answers and hand overrides by `tool/categories_starter.py`;
 3. a **store's genre**, looked up once when a kid first uses an app (Google Play, Microsoft Store and Xbox, Steam),
    mapped only where the old classifier was sure;
-4. an **AI Task** answer, only with an entity the owner chose, only for an unclear genre, and never confirmed;
+4. an **AI Task** answer (Home Assistant's default AI Task unless an adult chose another entity or Off), only for
+   an unclear genre, and never confirmed;
 5. unknown.
 
 What each value is (its label, default pool, whether it loosens a limit, and System screens' counted-nowhere mark) is
@@ -23,7 +24,8 @@ to a pool (`catalog_pools`) is unchanged.
 ## What leaves the house now
 
 Only a store lookup: one public store id to that store (no household, person or device id, no usage, no cookies),
-at most 100 a day. An AI question goes only to the AI Task entity the owner chose. No signed index is fetched, no
+at most 100 a day. An AI question goes to the model behind Home Assistant's default AI Task (or the entity an adult chose; none when
+Off): the app's name, store id and store description. No signed index is fetched, no
 relay is called, and no proposals or corrections are sent anywhere.
 
 ## Migration
