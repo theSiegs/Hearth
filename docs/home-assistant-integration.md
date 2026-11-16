@@ -366,11 +366,12 @@ only until put in a pool (the log names them). Configure > Add apps to Games rep
 
 #### Shared app catalog (App facts)
 
-App facts, a public, signed dataset (published for now from the glint-recipes repository; its own repository comes
-later, [contracts/app-facts.md](contracts/app-facts.md)), says what an app **is**, on every platform; the household
+App facts, a public, signed dataset (published from the app-facts repository,
+[contracts/app-facts.md](contracts/app-facts.md)), says what an app **is**, on every platform; the household
 says which pool that goes to. Hearth fetches it itself (catalog.py), so it needs no other app.
 
-- **What it reads.** The signed index at `https://thesiegs.github.io/glint-recipes/` (`catalog_url` in the options)
+- **What it reads.** The signed index at `https://thesiegs.github.io/app-facts/` (`catalog_url` in the options; one
+  still set to the old default, `https://thesiegs.github.io/glint-recipes/`, reads as the new one)
   and its shards (`glint.catalog/1`, one per platform: android, msstore, xbox, pfn, steam, switch, web, name). Per key:
   `category` (the ten Android categories), `detail` (youtube, streaming, education, companion, system; read first),
   the app's slug `app` (the same app's keys on other platforms share it), `name` and `state` (`confirmed`, else
@@ -385,7 +386,10 @@ says which pool that goes to. Hearth fetches it itself (catalog.py), so it needs
   household's own titles never are. A key's own confirmed answer comes first, then another key of the same app's.
 - **When.** Once a day at a random time, and a minute or ten after starting when the copy is over a day old; never
   per app. The index is asked with its ETag, and a shard only when its SHA-256 changed. Nothing identifying is sent:
-  a generic user agent, no household or device id.
+  a generic user agent, no household or device id. A fetch that fails a check (a 404 or other error answer, a shard
+  whose SHA-256 isn't the index's, an index listing no shards) is tried again after 10-15 minutes, then 20-30, then
+  40-60, at most three times a day; a good fetch ends the retries, and unloading the integration cancels a pending
+  one. Offline (no answer, a timeout) isn't retried: the next daily time asks again.
 - **Checks**, any failure keeping the last good copy: the index's Ed25519 signature over its exact bytes with one of
   the two pinned keys (`catalog_data/keys`, `exchange-1` and `exchange-2`), its format, its `seq`
   (lower than the copy's is a rollback and refused), and each shard's SHA-256, format and platform. An index that

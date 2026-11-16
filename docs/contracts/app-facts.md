@@ -6,17 +6,19 @@ App facts is a neutral, public, signed dataset of what an app **is**: a category
 slug, a name, and whether that's confirmed or only suggested. Hearth reads it to put apps in pools; which pool a
 fact goes to is the household's own choice (Hearth's page > App facts > Which group each kind of app goes to).
 
-Today it's published from the glint-recipes repository under its current format ids (`glint.exchange/1`,
-`glint.catalog/1`, `glint.catalog-propose/1`) and keys (`exchange-1`, `exchange-2`). Moving it to its own repository
-with `appfacts.*` formats and its own keys is a later step: the new URL, keys and formats will replace these in one
-Hearth release, with no overlap. Until then this page describes the rules both sides keep.
+It's published from its own repository, app-facts (Pages: `https://thesiegs.github.io/app-facts/`), still under its
+current format ids (`glint.exchange/1`, `glint.catalog/1`, `glint.catalog-propose/1`) and keys (`exchange-1`,
+`exchange-2`). Moving to `appfacts.*` formats and its own keys is a later step: the new keys and formats will replace
+these in one Hearth release, with no overlap. Until then this page describes the rules both sides keep.
 
 ## Reading
 
 **Source.** The signed index at `catalog_url` (by default the publisher's Pages URL): `index.json`,
 `index.json.sig`, then the shards it names. A generic user agent and `If-None-Match`; nothing else is sent.
 
-**Cadence.** Once a day at a random minute; at startup when the copy is over a day old; never per app.
+**Cadence.** Once a day at a random minute; at startup when the copy is over a day old; never per app. A fetch that
+fails a check below (or a 404) is tried again within about an hour, with jittered backoff, at most three times a day;
+offline isn't retried.
 
 **Verify, in order** (any failure keeps the last good copy):
 
