@@ -844,3 +844,22 @@ test("Schedule: a kid with no times yet, and a today-only change with Back to th
   assert.match(html, /data-action="sch-resume"/);
   assert.match(html, /Changed for today<\/span>/);
 });
+
+test("Parental controls: what Hearth does with less on the installed Family Safety, not a problem", () => {
+  const fs = {
+    domain: "microsoft_family_safety",
+    name: "Microsoft Family Safety",
+    entries: [{ entry_id: "e1", title: "Family Safety", state: "loaded" }],
+    connection: { entity_id: "sensor.microsoft_family_safety_connection", state: "connected", reauth_required: false },
+    reduced: ["Hearth's locks last whole hours, so they end up to an hour after midnight."],
+  };
+  const p = panel({ controls: [fs] });
+  const html = p._parentalControlsCard();
+  assert.match(html, /Works with less on this version \(1\)/);
+  assert.match(html, /end up to an hour after midnight/);
+  assert.match(html, /dot on/);
+  assert.deepEqual(p._controlProblems(), []);
+  // A version with everything: nothing said
+  const full = panel({ controls: [{ ...fs, reduced: [] }] });
+  assert.doesNotMatch(full._parentalControlsCard(), /Works with less/);
+});

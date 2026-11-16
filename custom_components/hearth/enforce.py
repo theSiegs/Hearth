@@ -14,6 +14,8 @@ add, per person, the parental controls of other integrations (Configure > Enforc
   screen time) is out of time, and unlocked when it isn't (lock_platform with until, naming the child by the chosen
   entity; an older Family Safety gets the account sensor's user_id and whole hours). An unlock that finds the hold ran
   out, a parent's own lock in force, or nothing locked is fine: Family Safety leaves a parent's lock alone.
+  When the lock ends is kept with what's held: where Family Safety doesn't say whose a lock is (no hold attribute:
+  the released one), Hearth tells its own from a parent's by it (fs_derived_hold).
   A group may list Xbox and Windows apps too (Family Safety's app ids: x:... Xbox, appx:... or win32:... Windows).
   While any group with such apps is out of time, those of the chosen platforms are paused (microsoft_family_safety.
   pause_app: a block that keeps whether the app was blocked before; a parent's own block is left alone) and resumed
@@ -121,8 +123,16 @@ FL_UNLOCK_CODE = 4
 FS_HOLD_OURS = "ours"
 FS_HOLD_PARENT = "parent"
 FS_HOLD_BONUS_OURS = "bonus_ours"
+FS_HOLD_NONE = "none"
 FS_ALLOW_UNTIL = "allowUntil"
 FS_BLOCK_UNTIL = "blockUntil"
+# A lock or extra time Microsoft shows ending within this of the end Hearth asked for is Hearth's (its clock and
+# Microsoft's differ by seconds)
+FS_OWN_TOLERANCE = timedelta(minutes=2)
+# Where a hold state came from: Family Safety's own hold attributes (a Family Safety that keeps them), or Hearth's own
+# record of what it asked for against what Family Safety shows (upstream's)
+FS_FROM_ATTRIBUTES = "attributes"
+FS_FROM_HEARTH = "hearth"
 # What letting go did: put back what was there before, or kept what a parent set meanwhile
 RESTORED = "restored"
 KEPT_CURRENT = "kept_current"
@@ -431,6 +441,9 @@ class Enforcement:
         self._why: dict[str, dict[str, str]] = {}
         # The refreshes waiting after a write, by entity: one each at a time
         self._refresh: dict[str, CALLBACK_TYPE] = {}
+        # When the extra time Hearth last gave on a Family Safety platform today ends: (person, platform) -> datetime
+        # or None (native_sync.py sets it). With what Hearth locked, how Hearth tells its own from a parent's
+        self.fs_bonus_until = None
 
     async def async_load(self) -> None:
         stored = await self._store.async_load() or {}
@@ -790,7 +803,7 @@ class Enforcement:
             return outcomes
         apps = {item for item in items if fs_app(item)}
         for platform in sorted(items - apps):
-            applied = await self._platform(entity_id, platform, hold)
+            applied = await self._platform(entity_id, platform, hold, held)
             if not hold and applied is not None:
                 outcomes[platform] = applied
         if apps:
@@ -817,14 +830,17 @@ class Enforcement:
             FS_DOMAIN, "pause_app" if hold else "resume_app", {**target, "apps": sorted(apps)}, blocking=True
         )
 
-    async def _platform(self, entity_id: str, platform: str, hold: bool) -> str | None:
+    async def _platform(self, entity_id: str, platform: str, hold: bool, held: Held | None = None) -> str | None:
         """Locks a Family Safety platform until the next local midnight, or unlocks it. The child is named by the
         configured entity (any of the child's Family Safety entities) or by a typed-in account id. An older Family
-        Safety (no entity_id or until fields) is called as before: the account sensor's user_id and whole hours."""
+        Safety (no entity_id or until fields: upstream's) is called as before: the account sensor's user_id and whole
+        hours (the lock then ends up to an hour after midnight). When the lock ends is kept in [held] (fs_lock_until):
+        with it Hearth tells its own lock from a parent's where Family Safety doesn't say (fs_derived_hold)."""
         target = {"entity_id": entity_id} if "." in entity_id else {"account_id": entity_id}
         data: dict[str, Any] = {**target, "platform": platform}
+        until = next_midnight()
         if hold:
-            data["until"] = next_midnight().isoformat()
+            data["until"] = until.isoformat()
         service = "lock_platform" if hold else "unlock_platform"
         try:
             response = await self._fs_call(service, data)
@@ -836,8 +852,17 @@ class Enforcement:
             legacy: dict[str, Any] = {"account_id": account, "platform": platform}
             if hold:
                 legacy["duration_hours"] = hours_to_midnight()
+                until = dt_util.now() + timedelta(hours=legacy["duration_hours"])
             _LOGGER.debug("Family Safety refused the newer %s call (%s): calling it as before", service, err)
             response = await self._fs_call(service, legacy)
+        if held is not None:
+            sent = held.restore.setdefault("fs_lock_until", {})
+            if hold:
+                sent[platform] = dt_util.as_utc(until).isoformat()
+            else:
+                sent.pop(platform, None)
+            if not sent:
+                held.restore.pop("fs_lock_until", None)
         applied = response.get("applied") if isinstance(response, dict) else None
         if not hold and applied in UNLOCK_DONE:
             # Nothing of Hearth's left to undo: the hold ran out, a parent's own lock stays, or it wasn't locked
@@ -1190,7 +1215,7 @@ class Enforcement:
                 self._switch_changes(e, held, grant, watch, quiet)
             elif e.kind == FAMILY_SAFETY:
                 for platform in sorted(held.items & set(PLATFORMS)):
-                    state = fs_hold_state(self.hass, e.entity_id, platform, watch)
+                    state = self.fs_state(e, platform, watch)
                     spec = family_safety_grant(state) if state is not None else None
                     if spec is not None:
                         grant(g.PLATFORM, platform, spec["reason"], spec["until"] or midnight, spec["end_with"])
@@ -1289,6 +1314,20 @@ class Enforcement:
                     if isinstance(app, dict) and app.get("package") in packages and app.get("pause_intact") is False:
                         grant(g.APP, app["package"], "the app's limit was changed in the Family Link app")
 
+    def fs_mine(self, e: Enforcer, platform: str) -> dict[str, Any]:
+        """What Hearth itself asked of a Family Safety platform of the enforcer's: whether it holds it, when its lock
+        ends (None: not known, a lock from before Hearth kept it) and when the extra time it last gave there today
+        ends."""
+        held = self.held.get(e.key)
+        holds = bool(held and platform in held.items)
+        sent = (held.restore.get("fs_lock_until") or {}).get(platform) if held else None
+        bonus = self.fs_bonus_until(e.person, platform) if self.fs_bonus_until is not None else None
+        return {"held": holds, "lock_until": _utc(sent) if holds else None, "bonus_until": bonus}
+
+    def fs_state(self, e: Enforcer, platform: str, watch: set[str] | None = None) -> dict[str, Any] | None:
+        """Who decides the enforcer's Family Safety platform now (fs_hold_state), with what Hearth asked for."""
+        return fs_hold_state(self.hass, e.entity_id, platform, watch, self.fs_mine(e, platform))
+
     def fs_parent_locks(self, person: str) -> list[dict[str, Any]]:
         """Family Safety platforms a parent locked themselves (hold parent, a blockUntil that isn't Hearth's)."""
         found = []
@@ -1296,7 +1335,7 @@ class Enforcement:
             if e.person != person or e.kind != FAMILY_SAFETY:
                 continue
             for platform in e.platforms:
-                state = fs_hold_state(self.hass, e.entity_id, platform)
+                state = self.fs_state(e, platform)
                 if state and state.get("hold") == FS_HOLD_PARENT and state.get("override") == FS_BLOCK_UNTIL:
                     found.append(
                         {"platform": platform, "until": state.get("override_until"), "by": state.get("entity_id")}
@@ -1305,21 +1344,27 @@ class Enforcement:
 
 
 def fs_hold_state(
-    hass: HomeAssistant, entity_id: str, platform: str, watch: set[str] | None = None
+    hass: HomeAssistant,
+    entity_id: str,
+    platform: str,
+    watch: set[str] | None = None,
+    mine: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
-    """Who decides a Family Safety platform's lock now, from a newer Family Safety's Allowed Now sensor or platform
-    lock switch of the child's account: {hold, override, override_until, allow_until, entity_id}; None from an older
-    one (no hold attribute)."""
+    """Who decides a Family Safety platform's lock now: {hold, override, override_until, allow_until, entity_id,
+    source}. hold is ours, bonus_ours (Hearth's extra time), parent or none; None when it can't be told.
+
+    A Family Safety that keeps hold attributes on its Allowed Now sensors or platform lock switches says so itself
+    (source attributes). Upstream's doesn't: there Hearth tells it from what Family Safety shows in force (Allowed Now's
+    override and override_until, else the lock switch) against what Hearth itself asked for ([mine], Enforcement.
+    fs_mine): a lock or extra time Hearth didn't ask for is a parent's (source hearth, fs_derived_hold). None without
+    either (an older Family Safety, or no [mine])."""
     account = fs_account_of(hass, entity_id)
     if account is None:
         return None
     for domain in ("binary_sensor", "switch"):
         for state in hass.states.async_all(domain):
             attrs = state.attributes
-            if "hold" not in attrs or str(attrs.get("user_id")) != account:
-                continue
-            named = attrs.get("platform") or ("Xbox" if "xbox" in state.entity_id else "Windows")
-            if str(named).lower() != platform.lower():
+            if "hold" not in attrs or str(attrs.get("user_id")) != account or not _platform_of(state, platform):
                 continue
             if watch is not None:
                 watch.add(state.entity_id)
@@ -1329,8 +1374,99 @@ def fs_hold_state(
                 "override_until": attrs.get("override_until"),
                 "allow_until": attrs.get("allow_until"),
                 "entity_id": state.entity_id,
+                "source": FS_FROM_ATTRIBUTES,
             }
-    return None
+    if mine is None:
+        return None
+    return fs_derived_hold(hass, account, platform, mine, watch)
+
+
+def _platform_of(state: Any, platform: str) -> bool:
+    named = state.attributes.get("platform") or ("Xbox" if "xbox" in state.entity_id else "Windows")
+    return str(named).lower() == platform.lower()
+
+
+def _utc(value: Any) -> datetime | None:
+    """A time as given (an ISO string or a datetime) in UTC; one without an offset is local."""
+    parsed = value if isinstance(value, datetime) else dt_util.parse_datetime(str(value or ""))
+    if parsed is None:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=dt_util.get_default_time_zone())
+    return dt_util.as_utc(parsed)
+
+
+def _close(a: datetime | None, b: datetime | None) -> bool:
+    return a is not None and b is not None and abs(a - b) <= FS_OWN_TOLERANCE
+
+
+def fs_derived_hold(
+    hass: HomeAssistant, account: str, platform: str, mine: dict[str, Any], watch: set[str] | None = None
+) -> dict[str, Any] | None:
+    """The hold state of a platform from upstream's Family Safety, which shows what's in force but not whose.
+
+    Read from the platform's Allowed Now sensor (override blockUntil or allowUntil, override_until), else its lock
+    switch (on: a lock, with no end). Against [mine] (held, lock_until, bonus_until: what Hearth asked for):
+
+    - a lock while Hearth holds the platform, ending when Hearth's does (or either end unknown: a Windows lock's end
+      isn't shown after Family Safety restarts): ours; any other lock: parent;
+    - extra time ending when the extra time Hearth gave there does: bonus_ours; any other: parent;
+    - nothing in force while Hearth's lock should be (its end not passed): parent, override none (a parent unlocked
+      it), unless Hearth's own extra time replaced that lock today (none) or Hearth doesn't know when its lock ends
+      (None: can't tell);
+    - nothing in force and no lock of Hearth's: none.
+
+    None while Family Safety can't read the platform's locks (unknown), or there's no such entity. A Windows lock a
+    parent sets while Hearth holds Windows reads as Hearth's: Family Safety shows no end for it."""
+    found = None
+    for domain, marker in (("binary_sensor", "override"), ("switch", "blocked")):
+        for state in hass.states.async_all(domain):
+            attrs = state.attributes
+            if marker in attrs and str(attrs.get("user_id")) == account and _platform_of(state, platform):
+                found = state
+                break
+        if found is not None:
+            break
+    if found is None:
+        return None
+    if watch is not None:
+        watch.add(found.entity_id)
+    attrs = found.attributes
+    if found.domain == "binary_sensor":
+        override = attrs.get("override") if attrs.get("override") in (FS_BLOCK_UNTIL, FS_ALLOW_UNTIL) else None
+        until = _utc(attrs.get("override_until"))
+        known = override is not None or (found.state in ("on", "off") and attrs.get("reason") != "unknown")
+    else:
+        override = FS_BLOCK_UNTIL if found.state == "on" else None
+        until = None
+        known = found.state in ("on", "off")
+    now = dt_util.utcnow()
+    lock_until: datetime | None = mine.get("lock_until")
+    bonus_until: datetime | None = mine.get("bonus_until")
+    lock_live = bool(mine.get("held")) and (lock_until is None or lock_until > now - FS_OWN_TOLERANCE)
+    if not known:
+        hold = None
+    elif override == FS_BLOCK_UNTIL:
+        own = lock_live and (until is None or lock_until is None or _close(until, lock_until))
+        hold = FS_HOLD_OURS if own else FS_HOLD_PARENT
+    elif override == FS_ALLOW_UNTIL:
+        own = bonus_until is not None and (_close(until, bonus_until) or (until is None and bonus_until > now))
+        hold = FS_HOLD_BONUS_OURS if own else FS_HOLD_PARENT
+    elif lock_live and bonus_until is not None:
+        hold = FS_HOLD_NONE  # Hearth's own extra time replaced its lock
+    elif lock_live:
+        hold = FS_HOLD_PARENT if lock_until is not None else None
+    else:
+        hold = FS_HOLD_NONE
+    local = dt_util.as_local(until).isoformat() if until is not None else None
+    return {
+        "hold": hold,
+        "override": override or ("none" if known else None),
+        "override_until": local,
+        "allow_until": local if override == FS_ALLOW_UNTIL else None,
+        "entity_id": found.entity_id,
+        "source": FS_FROM_HEARTH,
+    }
 
 
 def family_safety_grant(state: dict[str, Any]) -> dict[str, Any] | None:

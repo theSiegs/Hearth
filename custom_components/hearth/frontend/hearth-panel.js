@@ -3315,9 +3315,17 @@ class HearthPanel extends HTMLElement {
       <h3><ha-icon icon="mdi:shield-check-outline"></ha-icon>Parental controls Hearth works through</h3>
       ${controls.length ? `<ul class="list">${controls
         .map((c) => `<li><span class="dot ${problems.has(c.name) ? "idle" : "on"}"></span><div class="grow"><div>${esc(c.name)}</div>
-          <div class="muted small">${esc((c.entries || []).map((e) => `${e.title}: ${e.state.replace(/_/g, " ")}`).join(", "))}${c.connection ? ` · connection ${esc(c.connection.state)}` : ""}</div></div></li>`)
+          <div class="muted small">${esc((c.entries || []).map((e) => `${e.title}: ${e.state.replace(/_/g, " ")}`).join(", "))}${c.connection ? ` · connection ${esc(c.connection.state)}` : ""}</div>${this._reducedLines(c)}</div></li>`)
         .join("")}</ul>` : `<p class="muted">None installed. Family Link (phones and tablets), Microsoft Family Safety (Windows and Xbox) and Nintendo Switch Parental Controls each add their devices.</p>`}
     </section>`;
+  }
+
+  // What Hearth does with less on the version installed (Family Safety: fs_capabilities.py), not a problem to fix
+  _reducedLines(c) {
+    const lines = c.reduced || [];
+    if (!lines.length) return "";
+    return `<details class="reduced"><summary class="muted small">Works with less on this version (${lines.length})</summary>
+      ${lines.map((t) => `<div class="muted small">${esc(t)}</div>`).join("")}</details>`;
   }
 
   _groupSelect(app, group, idx = null) {

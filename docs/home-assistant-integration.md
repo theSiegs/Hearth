@@ -625,7 +625,21 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
     the end of today's allowed hours moves that end to cover it, rounded up to the next half hour
     (`set_screentime_intervals` with `today_only`: Family Safety puts the day back at midnight; only a day with one
     allowed window, and on the Xbox only with the Xbox Family Settings sign-in). Ended early, the end it found goes
-    back, unless a parent changed it since or other extra time of theirs still needs it. Any platform their Family
+    back, unless a parent changed it since or other extra time of theirs still needs it. **A Family Safety without
+    `today_only`** (the released one, upstream's 2.3.0) gets this weekday's setting instead (`day_of_week`, 0 is
+    Sunday), and Hearth puts the window back itself: it records the window it found and the one it wrote before
+    writing (kept with Home Assistant's storage helper, so a restart or a missed midnight still knows it), watches
+    each minute whether the day still reads Hearth's window, and after midnight writes the window it found back,
+    only while the weekday still reads Hearth's: read from the Windows weekday's own Start and End entities, the Xbox's
+    allowed hours when today is that weekday again, else as last seen before midnight (a parent's change seen before
+    midnight stays). After a start that missed midnight it does so once Home Assistant has settled (a few minutes);
+    a failed write is tried again every 5 minutes. On Windows it's never moved while Family Safety keeps a saved
+    schedule (`has_saved_policy` on the child's account Lock or Screen Time Limits switch: its account lock, or
+    limits off through its web fallback), because Family Safety then writes every change of a Windows day into that
+    restore point too and the unlock would write Hearth's window back for good; a window moved before such a lock is
+    put back only once the restore point is gone (the unlock wrote the schedule back), still only while it reads
+    Hearth's. Upstream's platform locks (`lock_platform`, `unlock_platform`) are Microsoft overrides and never save
+    or touch the schedule, and its Xbox allowed hours (Xbox Family Settings) have no restore point. Any platform their Family
     Safety reports is a target, whether or not Hearth's enforcer holds it. When it ends, Hearth locks
     the platform again if the pool is still out.
   - a Switch: Hearth's hold of the Switch is let go (its own limit and Suspend software put back, which still
@@ -661,6 +675,16 @@ Hearth adopts it and never writes over it or fights it. And Hearth's own "all sc
 Microsoft's own limits too. Everything below is gated on what the installed integrations offer (a service there, an
 attribute present), so an older Family Link or Family Safety keeps working as before.
 
+**What the installed Family Safety can do.** New families get the integration's released version; Hearth finds what
+it has from its services' schemas and its entities' attributes and uses what's there. Hearth's page (`hearth/config`)
+has it as `capabilities.family_safety`: `installed`, `today_only` (set_screentime_intervals changes today only),
+`weekday_hours` (it takes `day_of_week`), `hold_attributes` (Allowed Now and lock switches say whose a lock is),
+`allowed_now` (Allowed Now sensors with the override in force), `lock_until` (lock_platform takes an end),
+`xbox_extra_time`, `windows_extra_time`, `cancel_extra_time` and `pause_apps`. Family Safety's row under
+`parental_controls` adds `reduced`: one line per thing Hearth does with less on this version (allowed hours put back
+by Hearth, a parent's lock told from Hearth's own record, locks by whole hours, ...), shown on the page under the
+integration as "Works with less on this version"; empty when it has it all. It's not a problem to fix.
+
 - **Compare and restore.** Letting go of a Family Link device lock puts the weekday's daily limit back only while that
   limit still reads 0 (what Hearth set); a Switch's Max screentime and Suspend software, only while the limit still
   reads 0. A limit a parent changed meanwhile stays (`kept_current`). Family Link's `resume_app` compares in Family
@@ -683,6 +707,17 @@ attribute present), so an older Family Link or Family Safety keeps working as be
   - Family Safety (its Allowed Now sensors' and lock switches' `hold`, `override`, `allow_until`): `hold: parent` with
     extra time (`allowUntil`) is a grant until `allow_until`; with no override left (a parent cancelled Hearth's lock),
     until midnight. A parent's own lock (`blockUntil`) is no grant but a **parent lock** (below).
+    **Without the `hold` attribute** (the released Family Safety, upstream's 2.3.0) Hearth works out the same answer
+    from what Family Safety shows in force (Allowed Now's `override` and `override_until`, else the platform's Lock
+    switch) against its own record of what it asked for: when its lock ends (kept with what's held: `until` the next
+    midnight, or by whole hours where `lock_platform` takes only `duration_hours`) and when the extra time it gave
+    there ends. A lock ending when Hearth's does (within 2 minutes) while Hearth holds the platform is Hearth's, any
+    other lock a parent's; extra time ending when Hearth's does is Hearth's (`bonus_ours`), any other a parent's;
+    nothing in force while Hearth's lock should still be is a parent's unlock (unless Hearth's own extra time
+    replaced the lock today). Unknown locks (Family Safety couldn't read them) are nobody's: no grant. What it can't
+    tell: Family Safety shows no end for a Windows lock after it restarts, so a parent's Windows lock while Hearth
+    holds Windows reads as Hearth's, and a lock from before this version (no end kept) is taken as Hearth's. The
+    first-party rows say where the answer came from (`hold_from`: `attributes` or `hearth`).
   - A change right after Hearth's own call (a minute), or a limit that still shows what it was before Hearth's 0
     arrived, is Hearth's own and not a grant. Hearth's own bonuses are remembered, so they never count as a parent's.
   - After any write Hearth makes to Family Link, Family Safety or Nintendo (a hold or release, extra time, a bonus
@@ -704,9 +739,10 @@ attribute present), so an older Family Link or Family Safety keeps working as be
     none), as much as is missing; once per allow.
   - Family Safety: extra time (its experimental `add_time_bonus`, `until` the allow's end or midnight) on the
     enforcer's platforms whose allowance would block (allowance minus used lower than the minutes needed): the Xbox,
-    and Windows where the installed Family Safety takes `platform: Windows` (its service schema says so; upstream's
-    is Xbox only, and Windows is then skipped quietly). It replaces Hearth's own lock there (`replace_lock` only when
-    the platform's `hold` is Hearth's, never over a parent's lock). Family Safety's answer says what became of that
+    and Windows where the installed Family Safety takes `platform: Windows` (its service schema says so; releases
+    before 2.3.0 are Xbox only, and Windows is then skipped quietly). It replaces Hearth's own lock there
+    (`replace_lock` only when the platform's `hold` is Hearth's, from Family Safety's attribute or worked out as
+    above, never over a parent's lock). When it ends is kept, so Family Safety showing it later is Hearth's own. Family Safety's answer says what became of that
     lock: with `hold_kept: true` (a Family Safety that keeps holds puts the lock back after the extra time) Hearth
     still holds the platform; with `hold_kept: false`, or upstream's `replaced_lock: true` without `hold_kept` (the
     extra time ended the lock), Hearth no longer holds it and doesn't let go of it again later; an answer with

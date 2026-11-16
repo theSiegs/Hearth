@@ -18,6 +18,7 @@ import voluptuous as vol
 
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
@@ -31,6 +32,9 @@ from .enforce import (
     FS_HOLD_OURS,
     FS_HOLD_PARENT,
     NINTENDO,
+    QUIET_AFTER_CALL,
+    RETRY,
+    _utc as _when,
     fs_accepts,
     fs_account_of,
     fs_hold_state,
@@ -48,6 +52,9 @@ FS_DOMAIN = "microsoft_family_safety"
 # The platforms Family Safety can give extra time on (Windows only where the installed one takes it: fs_accepts)
 FS_BONUS_PLATFORMS = ("Xbox", "Windows")
 MINUTES_A_DAY = 24 * 60
+SET_INTERVALS = "set_screentime_intervals"
+# Family Safety's day_of_week: 0 is Sunday
+FS_WEEKDAYS = ("sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday")
 # A parent's change became a grant (its view)
 EVENT_PARENT_GRANT = "hearth_parent_grant"
 
@@ -66,8 +73,13 @@ class NativeSync:
         # The Family Link bonus minutes Hearth added today, by person: {"day", "devices" {device id: minutes}}
         self.fl_added: dict[str, dict[str, Any]] = {}
         household.enforcement.on_applied = self.after_apply
+        household.enforcement.fs_bonus_until = self.fs_bonus_until
         # Extra time Hearth gave in the first-party apps, by (person, why: allow:<id> or bonus:<when>)
         self._given: dict[tuple[str, str], dict[str, Any]] = {}
+        # Family Safety allowed hours Hearth moved on a weekday's setting (no today_only: upstream's), to put back
+        # itself after midnight: by <entity>|<platform>|<weekday> (async_windows_tick). Kept until put back or found
+        # changed by a parent, over a restart and a missed midnight
+        self.windows: dict[str, dict[str, Any]] = {}
 
     async def async_load(self) -> None:
         stored = await self._store.async_load() or {}
@@ -83,9 +95,21 @@ class NativeSync:
             if sep and isinstance(record, dict) and record.get("day") == today:
                 given[(person, why)] = record
         self._given = given
+        self.windows = {
+            str(key): record
+            for key, record in (stored.get("windows") or {}).items()
+            if isinstance(record, dict)
+            and all(isinstance(record.get(f), int) for f in ("begin", "end", "target", "target_begin"))
+            and all(isinstance(record.get(f), str) for f in ("person", "entity_id", "platform", "day"))
+            and record.get("weekday") in FS_WEEKDAYS
+        }
 
     def _data(self) -> dict[str, Any]:
-        return {"fl_added": self.fl_added, "given": {f"{p}|{why}": r for (p, why), r in self._given.items()}}
+        return {
+            "fl_added": self.fl_added,
+            "given": {f"{p}|{why}": r for (p, why), r in self._given.items()},
+            "windows": self.windows,
+        }
 
     def _save(self) -> None:
         self._store.async_delay_save(self._data, 2)
@@ -156,6 +180,18 @@ class NativeSync:
 
     def _enforcer(self, person: str, kind: str):
         return next((e for e in self.household.enforcement.enforcers if e.person == person and e.kind == kind), None)
+
+    def fs_bonus_until(self, person: str, platform: str):
+        """When the latest extra time Hearth gave the person on a Family Safety platform today ends (None: none
+        given): how Hearth tells its own extra time from a parent's where Family Safety doesn't say."""
+        today = dt_util.now().date().isoformat()
+        ends = [
+            parsed
+            for (p, _), record in self._given.items()
+            if p == person and record.get("day") == today
+            and (parsed := _when((record.get("until") or {}).get(platform))) is not None
+        ]
+        return max(ends) if ends else None
 
     @callback
     def end_grant(self, grant: Grant) -> None:
@@ -370,7 +406,7 @@ class NativeSync:
             except (HomeAssistantError, vol.Invalid) as err:
                 _LOGGER.info("Family Safety's allowed hours on %s for %s not moved: %s", platform, person, err)
                 error = f"Family Safety's allowed hours not moved: {err}"[:200]
-            if not bonus or not self._fs_would_block(enforcer.entity_id, platform, minutes):
+            if not bonus or not self._fs_would_block(enforcer, platform, minutes):
                 continue
             data = {
                 **_fs_target(enforcer.entity_id),
@@ -378,7 +414,7 @@ class NativeSync:
                 "until": dt_util.as_local(until).replace(tzinfo=None, microsecond=0).isoformat(),
             }
             # Extra time replaces Hearth's own lock (Family Safety puts it back when the time ends), never a parent's
-            hold = fs_hold_state(self.hass, enforcer.entity_id, platform)
+            hold = self.household.enforcement.fs_state(enforcer, platform)
             if hold and hold.get("hold") in (FS_HOLD_OURS, FS_HOLD_BONUS_OURS):
                 data["replace_lock"] = True
             if platform != "Xbox" and not fs_accepts(self.hass, "add_time_bonus", data):
@@ -402,6 +438,9 @@ class NativeSync:
                 response.get("applied_until") or response.get("until") if isinstance(response, dict) else None
             )
             record["platforms"].append(platform)
+            # When it ends, as Family Safety took it: Hearth's own extra time, not a parent's (fs_derived_hold)
+            ends = _when(given[platform]) or until
+            record.setdefault("until", {})[platform] = dt_util.as_utc(ends).isoformat()
             if fs_hold_released(response):
                 held = self.household.enforcement.held.get(f"{FAMILY_SAFETY}|{person}")
                 if held is not None:
@@ -425,41 +464,98 @@ class NativeSync:
     async def _fs_move_cutoff(
         self, person: str, entity_id: str, platform: str, until, record: dict[str, Any]
     ) -> str | None:
-        """Extra time that runs past the end of the platform's allowed hours today moves that end to cover it (Family
-        Safety's set_screentime_intervals with today_only: Family Safety puts the day back at midnight). Allowed
+        """Extra time that runs past the end of the platform's allowed hours today moves that end to cover it. Allowed
         hours go by half hours, so the end is rounded up to the next one. Only a day with one allowed window (two
-        would be merged into one), and only where the installed Family Safety takes today_only (the Xbox's goes
-        through the Xbox Family Settings sign-in). The window from before any extra time moved it is kept in [record]
-        to be put back when the extra time ends early (_put_back_cutoffs). The new end ("HH:MM"), or None."""
+        would be merged into one); the Xbox's goes through the Xbox Family Settings sign-in.
+
+        A Family Safety that takes today_only (set_screentime_intervals) puts the day back itself at midnight. One that
+        doesn't (upstream's) gets this weekday's setting (day_of_week), and Hearth puts the window back itself after
+        midnight (self.windows, async_windows_tick): recorded before the write, so a restart or a missed midnight still
+        knows it. Not on Windows while Family Safety keeps a saved schedule (its account lock, or limits off without
+        the app's switch): it writes every change of a day into that restore point too, so Hearth's window would come
+        back with it for good (fs_saved_schedule).
+
+        The window from before any extra time moved it is kept in [record] to be put back when the extra time ends
+        early (_put_back_cutoffs). The new end ("HH:MM"), or None."""
         window = fs_allowed_window(self.hass, entity_id, platform)
         if window is None:
             return None
         begin, end = window
+        now = dt_util.now()
         local = dt_util.as_local(until)
-        if local.date() != dt_util.now().date():
+        if local.date() != now.date():
             wanted = MINUTES_A_DAY  # until midnight
         else:
             wanted = local.hour * 60 + local.minute + (1 if local.second or local.microsecond else 0)
         wanted = min(MINUTES_A_DAY, math.ceil(wanted / 30) * 30)
         if wanted <= end:
             return None
+        weekday = None
         data = _fs_window_data(entity_id, platform, begin, wanted)
-        if not fs_accepts(self.hass, "set_screentime_intervals", data):
-            _LOGGER.debug("Family Safety can't move today's allowed hours on %s; skipped for %s", platform, person)
-            return None
+        if not fs_accepts(self.hass, SET_INTERVALS, data):
+            weekday = fs_weekday(now)
+            data = _fs_window_data(entity_id, platform, begin, wanted, weekday)
+            if not fs_accepts(self.hass, SET_INTERVALS, data):
+                _LOGGER.debug("Family Safety can't move today's allowed hours on %s; skipped for %s", platform, person)
+                return None
+            if platform == "Windows" and fs_saved_schedule(self.hass, entity_id):
+                raise HomeAssistantError(
+                    "Family Safety keeps a saved schedule (its account lock or limits off), which would keep the change"
+                )
         before = self._cutoff_elsewhere(person, platform, record) or {"begin": begin, "end": end}
-        await self.hass.services.async_call(FS_DOMAIN, "set_screentime_intervals", data, blocking=True)
+        key = was = None
+        if weekday is not None:
+            key, was = await self._window_begin(person, entity_id, platform, weekday, before, begin, wanted)
+        try:
+            await self.hass.services.async_call(FS_DOMAIN, SET_INTERVALS, data, blocking=True)
+        except Exception:
+            if was is not None:
+                # The earlier move is still what's there: its record stands (a first move's stays unwritten:
+                # Hearth's only if it's found to have landed after all)
+                self.windows[key] = was
+                self._save()
+            raise
+        if key is not None:
+            self.windows[key]["written_at"] = dt_util.utcnow().isoformat()
         self.household.enforcement.refresh_soon(entity_id)
-        record.setdefault("cutoffs", {})[platform] = {"begin": before["begin"], "end": before["end"], "set": wanted}
+        cut = {"begin": before["begin"], "end": before["end"], "set": wanted}
+        if weekday is not None:
+            cut["weekday"] = weekday
+        record.setdefault("cutoffs", {})[platform] = cut
         self._save()
         return _hhmm(wanted)
+
+    async def _window_begin(
+        self, person: str, entity_id: str, platform: str, weekday: str, before: dict[str, Any], begin: int, wanted: int
+    ) -> tuple[str, dict[str, Any] | None]:
+        """Hearth's moved window, kept before its write (saved at once: a write whose answer was lost is still known
+        as Hearth's). A window of this weekday Hearth moved and hasn't put back yet keeps what it was before (never
+        Hearth's own as what to put back). (key, the record it replaced)."""
+        key = f"{entity_id}|{platform}|{weekday}"
+        was = self.windows.get(key)
+        self.windows[key] = {
+            "person": person,
+            "entity_id": entity_id,
+            "platform": platform,
+            "weekday": weekday,
+            "day": dt_util.now().date().isoformat(),
+            "begin": int(was["begin"] if was else before["begin"]),
+            "end": int(was["end"] if was else before["end"]),
+            "target": int(wanted),
+            "target_begin": int(begin),
+            "written_at": None,
+            "seen": None,
+        }
+        await self._store.async_save(self._data())
+        return key, (dict(was) if was else None)
 
     async def _put_back_cutoffs(
         self, person: str, entity_id: str, record: dict[str, Any]
     ) -> tuple[list[str], str | None]:
         """Extra time that moved a platform's allowed hours today ended early: the window from before is put back,
-        while the end still reads Hearth's (a parent's change since stays) and no other extra time of the person's
-        still moves it. ([platforms put back], error)."""
+        while it still reads Hearth's (a parent's change since stays) and no other extra time of the person's still
+        moves it; as it was moved (today only, or the weekday's setting, whose record then goes). ([platforms put
+        back], error)."""
         back: list[str] = []
         error = None
         for platform, cut in (record.get("cutoffs") or {}).items():
@@ -468,26 +564,105 @@ class NativeSync:
             window = fs_allowed_window(self.hass, entity_id, platform)
             if window is None or window[1] != cut["set"]:
                 continue
+            weekday = cut.get("weekday")
             try:
                 await self.hass.services.async_call(
                     FS_DOMAIN,
-                    "set_screentime_intervals",
-                    _fs_window_data(entity_id, platform, cut["begin"], cut["end"]),
+                    SET_INTERVALS,
+                    _fs_window_data(entity_id, platform, cut["begin"], cut["end"], weekday),
                     blocking=True,
                 )
                 back.append(platform)
                 self.household.enforcement.refresh_soon(entity_id)
-            except (HomeAssistantError, vol.Invalid) as err:  # Family Safety puts the day back at midnight anyway
+            except (HomeAssistantError, vol.Invalid) as err:  # put back at midnight anyway
                 error = f"Family Safety's allowed hours left until midnight: {err}"[:200]
+                continue
+            key = f"{entity_id}|{platform}|{weekday}"
+            if weekday is not None and (kept := self.windows.get(key)) is not None:
+                if (kept["begin"], kept["end"]) == (cut["begin"], cut["end"]):
+                    self.windows.pop(key)
+                else:
+                    kept.update(target=cut["end"], target_begin=cut["begin"], written_at=dt_util.utcnow().isoformat())
+                self._save()
         return back, error
 
-    def _fs_would_block(self, entity_id: str, platform: str, minutes: int) -> bool:
+    # Allowed hours Hearth moved on a weekday's setting go back after midnight
+
+    async def async_windows_tick(self) -> None:
+        """Each minute while Hearth has moved allowed hours (self.windows): today's are watched (whether they still
+        read Hearth's window, so a parent's change is known after midnight too); a record from an earlier day is put
+        back once Home Assistant has settled after a start. Put back only while the weekday still reads Hearth's
+        window; read from the Windows weekday's own Start and End entities, or the Xbox's allowed hours when today is
+        that weekday again, else as last seen (nothing seen: Hearth's, which it wrote). Windows waits while Family
+        Safety keeps a saved schedule (it would write the window into it and back over the lock); a failed write is
+        tried again after a while."""
+        if not self.windows:
+            return
+        now = dt_util.now()
+        today = now.date().isoformat()
+        changed = False
+        for key, record in list(self.windows.items()):
+            reading = fs_weekday_window(self.hass, record["entity_id"], record["platform"], record["weekday"], now)
+            hearths = (record["target_begin"], record["target"])
+            if record["day"] == today:
+                if reading == hearths and record.get("written_at") is None:
+                    record["written_at"] = dt_util.utcnow().isoformat()  # it did land
+                    changed = True
+                if reading is not None and record.get("written_at") is not None:
+                    seen = "hearth" if reading == hearths else None if _just(record["written_at"]) else "other"
+                    if seen is not None and seen != record.get("seen"):
+                        record["seen"] = seen
+                        changed = True
+                continue
+            if not self.household.enforcement._may_let_go():
+                continue
+            if record["platform"] == "Windows" and fs_saved_schedule(self.hass, record["entity_id"]):
+                continue
+            if _when(record.get("failed_at")) and dt_util.utcnow() - _when(record["failed_at"]) < RETRY:
+                continue
+            if reading is not None:
+                ours = reading == hearths
+            else:
+                # Can't be read now: as last seen; never seen, Hearth's if its write went through
+                ours = record.get("seen") == "hearth" or (
+                    record.get("seen") is None and record.get("written_at") is not None
+                )
+            if not ours:
+                # A parent's change since (or Hearth's write never landed): it stays
+                self.windows.pop(key)
+                changed = True
+                continue
+            if not self.hass.services.has_service(FS_DOMAIN, SET_INTERVALS):
+                continue
+            data = _fs_window_data(record["entity_id"], record["platform"], record["begin"], record["end"], record["weekday"])
+            note_key = f"{FAMILY_SAFETY}|{record['person']}"
+            try:
+                await self.hass.services.async_call(FS_DOMAIN, SET_INTERVALS, data, blocking=True)
+            except (HomeAssistantError, vol.Invalid) as err:
+                _LOGGER.info("Family Safety's allowed hours on %s not put back yet: %s", record["platform"], err)
+                record["failed_at"] = dt_util.utcnow().isoformat()
+                self.household.enforcement.note(
+                    note_key, error=f"Family Safety's allowed hours not put back yet: {err}"[:200]
+                )
+                changed = True
+                continue
+            self.windows.pop(key)
+            changed = True
+            self.household.enforcement.refresh_soon(record["entity_id"])
+            self.household.enforcement.note(
+                note_key, allowed_hours_back=[record["platform"]], weekday=record["weekday"]
+            )
+        if changed:
+            self._save()
+
+    def _fs_would_block(self, enforcer, platform: str, minutes: int) -> bool:
         """Microsoft's own allowance would stop the platform within [minutes] (not a lock of Hearth's)."""
-        state = fs_platform_state(self.hass, entity_id, platform)
+        state = fs_platform_state(self.hass, enforcer.entity_id, platform)
         if state is None:
             return False
         allowance, used = _number(state.get("allowance_minutes")), _number(state.get("used_minutes"))
-        if state.get("hold") in ("ours", "bonus_ours") or (allowance is not None and used is not None):
+        hold = (self.household.enforcement.fs_state(enforcer, platform) or {}).get("hold")
+        if hold in (FS_HOLD_OURS, FS_HOLD_BONUS_OURS) or (allowance is not None and used is not None):
             # Hearth's own lock reads as 0 left: the allowance itself decides
             return allowance is not None and used is not None and allowance - used < minutes
         left = _number(state.get("remaining_minutes"))
@@ -550,7 +725,10 @@ class NativeSync:
         for platform in record["platforms"]:
             # Only Hearth's own extra time is cancelled: a parent's extra time or lock that came since (the hold
             # reads parent) is theirs, and a cancel would end it
-            hold = fs_hold_state(self.hass, enforcer.entity_id, platform)
+            mine = self.household.enforcement.fs_mine(enforcer, platform)
+            # This extra time's own end (it's no longer among today's given ones)
+            mine["bonus_until"] = _when((record.get("until") or {}).get(platform)) or mine["bonus_until"]
+            hold = fs_hold_state(self.hass, enforcer.entity_id, platform, mine=mine)
             if hold and hold.get("hold") == FS_HOLD_PARENT:
                 kept.append(platform)
                 continue
@@ -608,8 +786,10 @@ class NativeSync:
                 if state is None:
                     continue
                 allowed = state.get("state") if state["entity_id"].startswith("binary_sensor.") else None
-                hold = state.get("hold")
-                parent_lock = hold == FS_HOLD_PARENT and state.get("override") == FS_BLOCK_UNTIL
+                # Who holds it: Family Safety's own hold attributes, else told from what Hearth asked for
+                who = self.household.enforcement.fs_state(enforcer, platform) or {}
+                hold = who.get("hold")
+                parent_lock = hold == FS_HOLD_PARENT and who.get("override") == FS_BLOCK_UNTIL
                 rows.append(
                     {
                         "platform": platform,
@@ -620,8 +800,10 @@ class NativeSync:
                         "allowed_now": None if allowed is None else allowed == "on",
                         "reason": state.get("reason"),
                         "hold": hold,
-                        "override_until": state.get("override_until"),
-                        "allow_until": state.get("allow_until"),
+                        # attributes (Family Safety says), hearth (told from Hearth's own record) or None
+                        "hold_from": who.get("source"),
+                        "override_until": who.get("override_until") or state.get("override_until"),
+                        "allow_until": who.get("allow_until") or state.get("allow_until"),
                         "held_by_hearth": bool(held and platform in held.items),
                         "parent_lock": parent_lock,
                         # Microsoft's own allowance or hours stop it, not a lock of anyone's
@@ -696,14 +878,16 @@ class NativeSync:
         return found
 
 
-def fs_platform_state(hass: HomeAssistant, entity_id: str, platform: str) -> dict[str, Any] | None:
+def fs_platform_state(
+    hass: HomeAssistant, entity_id: str, platform: str, domains: tuple[str, ...] = ("binary_sensor", "sensor")
+) -> dict[str, Any] | None:
     """A Family Safety platform today, from a newer Family Safety: its Allowed Now sensor's attributes (reason,
     remaining_minutes, allowance_minutes, used_minutes, hold...) with its state, else its Time Remaining sensor's.
     None when there's neither."""
     account = fs_account_of(hass, entity_id)
     if account is None:
         return None
-    for domain in ("binary_sensor", "sensor"):
+    for domain in domains:
         for state in hass.states.async_all(domain):
             attrs = state.attributes
             if str(attrs.get("user_id")) != account or "allowance_minutes" not in attrs:
@@ -716,6 +900,11 @@ def fs_platform_state(hass: HomeAssistant, entity_id: str, platform: str) -> dic
             found = {**attrs, "state": state.state, "entity_id": state.entity_id}
             if domain == "sensor":
                 found["remaining_minutes"] = _number(state.state)
+            elif "remaining_minutes" not in found:
+                # Upstream's Allowed Now leaves the minutes left to the Time Remaining sensor
+                found["remaining_minutes"] = (fs_platform_state(hass, entity_id, platform, ("sensor",)) or {}).get(
+                    "remaining_minutes"
+                )
             return found
     return None
 
@@ -745,16 +934,73 @@ def fs_allowed_window(hass: HomeAssistant, entity_id: str, platform: str) -> tup
     return None
 
 
-def _fs_window_data(entity_id: str, platform: str, begin: int, end: int) -> dict[str, Any]:
+def _fs_window_data(
+    entity_id: str, platform: str, begin: int, end: int, weekday: str | None = None
+) -> dict[str, Any]:
+    """set_screentime_intervals' data: today only (a Family Safety that takes today_only), or the setting of
+    [weekday] (upstream's: day_of_week, 0 is Sunday)."""
+    day: dict[str, Any] = {"today_only": True} if weekday is None else {"day_of_week": FS_WEEKDAYS.index(weekday)}
     return {
         **_fs_target(entity_id),
         "platform": platform,
-        "today_only": True,
+        **day,
         "start_hour": begin // 60,
         "start_minute": begin % 60,
         "end_hour": end // 60,
         "end_minute": end % 60,
     }
+
+
+def fs_weekday(when) -> str:
+    """Family Safety's name of a local day's weekday ("monday"...)."""
+    return FS_WEEKDAYS[(dt_util.as_local(when).weekday() + 1) % 7]
+
+
+def fs_saved_schedule(hass: HomeAssistant, entity_id: str) -> bool:
+    """Family Safety keeps a saved schedule of the child's now (has_saved_policy on its account Lock or Screen Time
+    Limits switch): its account lock, or limits turned off through its web fallback. While it does, every change of a
+    Windows day is written into that restore point too, and the unlock writes the restore point back."""
+    account = fs_account_of(hass, entity_id)
+    if account is None:
+        return False
+    return any(
+        state.attributes.get("has_saved_policy") is True and str(state.attributes.get("user_id")) == account
+        for state in hass.states.async_all("switch")
+    )
+
+
+def fs_weekday_window(hass: HomeAssistant, entity_id: str, platform: str, weekday: str, now=None) -> tuple[int, int] | None:
+    """A weekday's allowed hours of a Family Safety platform as (begin, end) minutes (1440: midnight): today's from
+    its Time Remaining sensor (fs_allowed_window); another day's on Windows from the integration's Start and End
+    entities of that weekday (unique id <entry>_<account>_interval_<weekday>_start/_end; an end of 23:59 is midnight).
+    None when it can't be read (the Xbox on another day)."""
+    if weekday == fs_weekday(now or dt_util.now()):
+        return fs_allowed_window(hass, entity_id, platform)
+    if platform != "Windows":
+        return None
+    account = fs_account_of(hass, entity_id)
+    if account is None:
+        return None
+    found: dict[str, int | None] = {}
+    for entry in er.async_get(hass).entities.values():
+        if entry.domain != "time" or entry.platform != FS_DOMAIN:
+            continue
+        for end in ("start", "end"):
+            if str(entry.unique_id).endswith(f"_{account}_interval_{weekday}_{end}"):
+                state = hass.states.get(entry.entity_id)
+                found[end] = _clock(state.state) if state else None
+    begin, end = found.get("start"), found.get("end")
+    if begin is None or end is None:
+        return None
+    if end >= MINUTES_A_DAY - 1 or end <= begin:
+        end = MINUTES_A_DAY  # 23:59 (how the integration shows midnight) or 00:00
+    return begin, end
+
+
+def _just(written_at: Any) -> bool:
+    """Written this soon: Family Safety may not show it yet."""
+    written = _when(written_at)
+    return written is not None and dt_util.utcnow() - written < QUIET_AFTER_CALL
 
 
 def _clock(value: Any) -> int | None:

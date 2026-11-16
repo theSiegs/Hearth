@@ -44,7 +44,7 @@ from .const import (
     KIND_MOBILE,
 )
 from .counting import ALL
-from .enforce import CONF_ENFORCE, FAMILY_LINK, FAMILY_SAFETY, NINTENDO, NINTENDO_DOMAIN, PLATFORMS
+from .enforce import CONF_ENFORCE, FAMILY_LINK, FAMILY_SAFETY, FS_DOMAIN, NINTENDO, NINTENDO_DOMAIN, PLATFORMS
 from .catalog import CONF_CATALOG_ASKED, CONF_CATALOG_FETCH, CONF_CATALOG_RELAY, CONF_CATALOG_SHARE, CONF_CATALOG_URL
 from .limits import (
     BUILTIN_GROUPS,
@@ -69,7 +69,7 @@ from .schooldays import CONF_SCHOOL_DAYS
 from .sources import CONF_SOURCES, CONF_TITLES
 from .suggest_push import CONF_SUGGEST_PUSH, pairs as suggest_pairs
 from .profiles import OPTION_KEY
-from . import nintendo, parent_pin, phones
+from . import fs_capabilities, nintendo, parent_pin, phones
 from .push import clean_server
 
 URL_PATH = "hearth"
@@ -184,8 +184,9 @@ def _entity_choices(hass: HomeAssistant) -> dict[str, list[dict[str, Any]]]:
 
 def _parental_controls(hass: HomeAssistant) -> list[dict[str, Any]]:
     """Each parental control integration that's installed, and whether it works now: its entries' states (loaded, a
-    failed setup, waiting to retry) and, for Family Safety, its Connection sensor (connected, degraded, disconnected).
-    The page tells a parent when one needs them, as the integrations' own dashboards do."""
+    failed setup, waiting to retry) and, for Family Safety, its Connection sensor (connected, degraded, disconnected)
+    and what Hearth does with less on the version installed (reduced: fs_capabilities.py). The page tells a parent
+    when one needs them, as the integrations' own dashboards do."""
     registry = er.async_get(hass)
     found = []
     for domain, name in PARENTAL_CONTROLS:
@@ -214,6 +215,8 @@ def _parental_controls(hass: HomeAssistant) -> list[dict[str, Any]]:
                 "state": state.state,
                 "reauth_required": bool(state.attributes.get("reauth_required")),
             }
+        if domain == FS_DOMAIN:
+            row["reduced"] = fs_capabilities.reduced(fs_capabilities.capabilities(hass))
         found.append(row)
     return found
 
@@ -351,7 +354,11 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
         # Each person's Screen time today sensor, whose hourly statistics draw Today's hour-by-hour chart
         "screen_time_sensors": _screen_time_sensors(hass, hub),
         # What the installed integrations can do, found now: the page offers only those (nintendo.py)
-        "capabilities": {"nintendo": nintendo.capabilities(hass)},
+        "capabilities": {
+            "nintendo": nintendo.capabilities(hass),
+            # The Family Safety version's features (today_only, hold_attributes, ...): fs_capabilities.py
+            "family_safety": fs_capabilities.capabilities(hass),
+        },
         "parental_controls": _parental_controls(hass),
     }
 

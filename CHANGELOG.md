@@ -3,6 +3,15 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **Works on the released Microsoft Family Safety (2.3.0).** Hearth no longer needs a Family Safety with today-only allowed hours or `hold` attributes; it uses them where the installed one has them:
+  - Extra time that runs past today's allowed hours on Windows or the Xbox changes this weekday's hours where Family Safety can't change today's only, and Hearth puts them back itself after midnight (kept across a restart and a missed midnight), only while they still read Hearth's: a parent's change stays. On Windows they're never moved while Family Safety keeps a saved schedule (its account lock or limits off), which would keep Hearth's hours for good.
+  - A parent's own lock, unlock or extra time in the Family Safety app is told from Hearth's by what Hearth asked for (when its lock and its extra time end) against what Family Safety shows in force. One gap: a parent's Windows lock while Hearth holds Windows reads as Hearth's.
+- **Hearth's page says what's reduced.** Under Parental controls, Microsoft Family Safety lists what Hearth does with less on the installed version ("Works with less on this version"), and `hearth/config` has `capabilities.family_safety` (today_only, hold_attributes, lock_until, Windows extra time, ...).
+
 ## 2026.11.18
 
 ### Home Assistant integration
