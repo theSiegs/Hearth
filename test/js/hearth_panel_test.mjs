@@ -1102,3 +1102,60 @@ test("Block and Unblock go through hearth.block_app and hearth.unblock_app; the 
   ]);
   assert.deepEqual(ws, [{ type: "hearth/config/set", key: "block_unsupported_browsers", value: false }]);
 });
+
+test("a category's row: +15 min of its own bonus beside Raise limit, with Undo; a bonus line for a category without a limit", async () => {
+  const p = today(16);
+  const calls = [];
+  p._hass.callService = async (domain, service, data) => calls.push([service, data]);
+  p._render = () => {};
+  p._sel = "person.sam";
+  p._sheetOpen = true;
+  p._exp = new Set(["person.sam|cat|games"]);
+  const time = p._summary.people[0].time || {};
+  p._summary.people[0].time = {
+    ...time,
+    category_bonuses: [{ id: "messaging", name: "Messaging", bonus: 15, bonus_left: 15, text: "Messaging: 15 min bonus left" }],
+  };
+  const sheet = p._page().split('class="detail on"')[1];
+  assert.match(sheet, /data-action="raise-open" data-group="games">Raise limit/);
+  assert.match(sheet, /data-action="cat-bonus" data-person="person.sam" data-group="games" data-minutes="15">\+15 min Games bonus/);
+  for (const m of [5, 30, 60]) assert.match(sheet, new RegExp(`data-minutes="${m}">\\+${m} min Games bonus`));
+  assert.match(sheet, /Messaging: 15 min bonus left/);
+  assert.doesNotMatch(sheet, /allow-cat|allowed until/);
+  await p._act("cat-bonus", { dataset: { person: "person.sam", group: "games", minutes: "15" } });
+  assert.deepEqual(calls.at(-1), ["add_time", { person: "person.sam", minutes: 15, category: "games" }]);
+  assert.equal(p._undo.text, "+15 min Games bonus");
+  await p._act("undo", { dataset: {} });
+  assert.deepEqual(calls.at(-1), ["remove_time", { person: "person.sam", minutes: 15, category: "games" }]);
+  clearTimeout(p._undoTimer);
+  clearTimeout(p._toastTimer);
+});
+
+test("Activity: plain lines from hearth/activity, a kid filter, failures marked with their error", async () => {
+  const p = today(16);
+  const asked = [];
+  p._render = () => {};
+  p._hass.callWS = async (m) => {
+    asked.push(m);
+    return {
+      records: [
+        { at: "2026-11-16T21:05:00Z", kind: "call", person: "person.sam", service: "familylink.set_daily_limit", why: "backstop", result: "ok", duration_ms: 120 },
+        { at: "2026-11-16T21:00:00Z", kind: "call", person: "person.sam", service: "familylink.block_app", why: "adult", result: "failed", error: "Google said no", duration_ms: 80 },
+        { at: "2026-11-16T20:55:00Z", kind: "hold_start", person: "person.sam", target: ["all"], reason: "daily_time", by: "hearth" },
+        { at: "2026-11-16T20:50:00Z", kind: "hold_end", person: "person.sam", target: ["games"], reason: "time_given", by: "hearth" },
+      ],
+    };
+  };
+  p._tab = "family";
+  assert.match(p._familyTab(), /data-action="activity-open" aria-expanded="false">Show activity/);
+  await p._act("activity-open", { dataset: {} });
+  assert.deepEqual(asked.at(-1), { type: "hearth/activity", limit: 200 });
+  const card = p._activityCard();
+  assert.match(card, /<strong>Sam<\/strong> familylink\.set_daily_limit · backstop · ok · 120 ms/);
+  assert.match(card, /class="activity-row failed"[^]*?familylink\.block_app · adult · failed · 80 ms <span class="chip small warn">Google said no/);
+  assert.match(card, /hold started · all · daily_time/);
+  assert.match(card, /hold ended · games · time_given/);
+  assert.match(card, /<option value="person\.sam" >Sam<\/option>/);
+  await p._act("activity-who", { value: "person.sam", dataset: {} });
+  assert.deepEqual(asked.at(-1), { type: "hearth/activity", limit: 200, person: "person.sam" });
+});

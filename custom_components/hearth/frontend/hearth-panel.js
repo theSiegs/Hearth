@@ -96,6 +96,18 @@ const WORDS = {
   origin: "Where this came from",
   noOrigin: "Set by Hearth's rules",
   outOfTime: "No time left today",
+  catBonusMinutes: [5, 15, 30, 60],
+  // "+15 min Messaging bonus"
+  catBonus: (minutes, name) => `+${minutes} min ${name} bonus`,
+  catBonusHint: "Bonus time for this category only: it can go on past daily time and its limit for that long.",
+  activity: "Activity",
+  activityHint: "What Hearth did: its calls to Family Link, Family Safety and the Switch, the holds it started and ended, TV commands and Glint requests. Kept 14 days.",
+  activityAll: "Everyone",
+  activityNone: "Nothing yet",
+  holdStarted: "hold started",
+  holdEnded: "hold ended",
+  tvCommand: "TV command",
+  glintInbox: "Glint request",
   backstop: "Keep Family Link's daily limit as a backstop",
   backstopMargin: "Backstop margin (minutes)",
   backstopHint:
@@ -851,6 +863,24 @@ class HearthPanel extends HTMLElement {
         await this._raise(d.person, d.group, d.how);
         return;
       }
+      case "cat-bonus": {
+        // Bonus time for one category; Undo takes back just that (hearth.remove_time with the category)
+        const minutes = Number(d.minutes || 15);
+        const data = { person: d.person, minutes, category: d.group };
+        await this._undoable("add_time", data, WORDS.catBonus(minutes, this._groupName(d.group)), () =>
+          this._call("remove_time", { person: d.person, minutes, category: d.group })
+        );
+        return;
+      }
+      case "activity-who":
+        this._activityWho = el.value || "";
+        await this._loadActivity();
+        return;
+      case "activity-open":
+        this._activityOpen = !this._activityOpen;
+        if (this._activityOpen) await this._loadActivity();
+        else this._render();
+        return;
       case "raise-end":
         await this._service("raise_cap_end", { person: d.person, category: d.group }, `${this._groupName(d.group)} limit back as set`);
         return;
@@ -2902,14 +2932,71 @@ class HearthPanel extends HTMLElement {
         }
         h += `<div class="expand ${out ? "t-out" : ""}">${esc(fmtMinutes(c.used || 0))} of ${esc(fmtMinutes(c.limit_today))} today${c.raised ? " (raised)" : ""}.
           <div class="apps">${apps.length ? apps.map((a) => `<div><span${a.title ? ` title="${esc(a.title)}"` : ""}>${esc(a.name)}</span><span>${esc(fmtMinutes(a.minutes))}</span></div>`).join("") : `<div><span>No apps in ${esc(c.name)} today</span><span></span></div>`}</div>
-          ${locked ? "" : `<div class="acts"><button class="b" data-action="raise-open" data-group="${esc(c.id)}">${esc(WORDS.raise)}</button>${c.raised ? `<button class="b ghost" data-action="raise-end" data-person="${esc(kid.id)}" data-group="${esc(c.id)}">${esc(WORDS.raiseEnd)}</button>` : ""}</div>`}</div>`;
+          ${locked ? "" : `<div class="acts"><button class="b" data-action="raise-open" data-group="${esc(c.id)}">${esc(WORDS.raise)}</button>${c.raised ? `<button class="b ghost" data-action="raise-end" data-person="${esc(kid.id)}" data-group="${esc(c.id)}">${esc(WORDS.raiseEnd)}</button>` : ""}</div>`}
+          ${locked ? "" : this._categoryBonus(kid.id, c.id, c.name)}</div>`;
       }
+    }
+    // Categories with a bonus of their own but no limit
+    for (const b of (t.category_bonuses || []).filter((x) => !cats.some((c) => c.id === x.id))) {
+      h += `<div class="lane"><span class="nm"><i style="background:${this._poolVar(b.id)}"></i>${esc(b.text || `${b.name}: ${fmtMinutes(b.bonus_left || 0)} bonus left`)}</span></div>`;
     }
     const other = byPool.find((x) => x.id === "other");
     const notCounted = pools.filter((g) => !g.counted && (g.used_minutes || 0) > 0);
     const free = pools.filter((g) => g.id !== "all" && g.counted && !g.limited && (g.used_minutes || 0) > 0 && g.id !== "other");
     h += `</div>${other ? `<div class="notcounted">Other apps: ${esc(fmtMinutes(other.minutes))} (no category)</div>` : ""}${free.length ? `<div class="notcounted">No limit: ${esc(free.map((g) => `${g.name} ${fmtMinutes(g.used_minutes)}`).join(", "))}</div>` : ""}${notCounted.length ? `<div class="notcounted">Not counted: ${esc(notCounted.map((g) => `${g.name} ${fmtMinutes(g.used_minutes)}`).join(", "))}</div>` : ""}</div>`;
     return h;
+  }
+
+  // A category's own bonus on its row: +15 min (or 5, 30, 60) of that category, next to Raise limit
+  _categoryBonus(person, group, name) {
+    return `<div class="acts cat-bonus">${WORDS.catBonusMinutes
+      .map((m) => `<button class="${m === 15 ? "b" : "chip-t"}" data-action="cat-bonus" data-person="${esc(person)}" data-group="${esc(group)}" data-minutes="${m}">${esc(WORDS.catBonus(m, name))}</button>`)
+      .join("")}<div class="d">${esc(WORDS.catBonusHint)}</div></div>`;
+  }
+
+  // The action log (hearth/activity): plain lines, a kid filter, failures marked
+  _activityCard() {
+    const open = Boolean(this._activityOpen);
+    const kids = this._kids();
+    const who = this._activityWho || "";
+    const records = this._activity || [];
+    const line = (r) => {
+      const at = clockAmPm(new Date(r.at));
+      const kid = r.person ? this._personName(r.person) : "";
+      const targets = (r.target || []).join(", ");
+      let what;
+      if (r.kind === "call") {
+        what = [r.service, r.why, r.result, r.duration_ms !== undefined ? `${r.duration_ms} ms` : null].filter(Boolean).join(" · ");
+      } else if (r.kind === "hold_start" || r.kind === "hold_end") {
+        what = [r.kind === "hold_start" ? WORDS.holdStarted : WORDS.holdEnded, targets, r.reason].filter(Boolean).join(" · ");
+      } else {
+        what = [r.kind === "tv_command" ? WORDS.tvCommand : WORDS.glintInbox, r.service, targets, r.result].filter(Boolean).join(" · ");
+      }
+      const failed = r.result === "failed";
+      return `<li class="activity-row${failed ? " failed" : ""}"><span class="muted small">${esc(at)}</span>${kid ? ` <strong>${esc(kid)}</strong>` : ""} ${esc(what)}${failed && r.error ? ` <span class="chip small warn">${esc(r.error)}</span>` : ""}</li>`;
+    };
+    return `<section class="card activity">
+      <h3><ha-icon icon="mdi:history"></ha-icon>${esc(WORDS.activity)}</h3>
+      <p class="muted">${esc(WORDS.activityHint)}</p>
+      <button class="btn" data-action="activity-open" aria-expanded="${open}">${open ? "Hide" : "Show"} ${esc(WORDS.activity.toLowerCase())}</button>
+      ${open ? `<div><select data-change="activity-who" aria-label="Kid"><option value="">${esc(WORDS.activityAll)}</option>${kids
+        .map((k) => `<option value="${esc(k.id)}" ${k.id === who ? "selected" : ""}>${esc(k.name)}</option>`)
+        .join("")}</select></div>
+      ${records.length ? `<ul class="list compact activity-list">${records.map(line).join("")}</ul>` : `<p class="muted small">${esc(WORDS.activityNone)}</p>`}` : ""}
+    </section>`;
+  }
+
+  async _loadActivity() {
+    try {
+      const msg = { type: "hearth/activity", limit: 200 };
+      if (this._activityWho) msg.person = this._activityWho;
+      const answer = await this._hass.callWS(msg);
+      this._activity = answer?.records || [];
+    } catch (err) {
+      this._activity = [];
+      this._notify(this._message(err));
+    }
+    this._render();
   }
 
   // A device's state in a kid's sheet, as the server worked it out (targets: left, left_by, left_pool, locked_kind)
@@ -3850,6 +3937,7 @@ class HearthPanel extends HTMLElement {
         ${shown.length && others.length ? `<details id="family-others"><summary>Others in Home Assistant (${others.length})</summary><ul class="list">${others.map(row).join("")}</ul></details>` : ""}
       </section>
       ${this._summary ? this._familyPools(this._kids()) : ""}
+      ${this._activityCard()}
       ${this._pinsCard()}
       ${this._sharingCard()}
       ${this._voiceCard()}
@@ -4065,6 +4153,8 @@ p { margin: 6px 0 12px; line-height: 1.45; }
   background: var(--secondary-background-color, #eee); color: var(--primary-text-color); }
 .chip ha-icon { --mdc-icon-size: 14px; }
 p.warn { color: var(--warning-color, #ffa600); }
+.activity-row.failed { color: var(--error-color, #db4437); }
+.cat-bonus { flex-wrap: wrap; gap: 6px; align-items: center; }
 .chip.warn { background: color-mix(in srgb, var(--warning-color, #ffa600) 22%, transparent); }
 .chip.out { background: color-mix(in srgb, var(--error-color, #db4437) 20%, transparent); }
 .chip.play { background: color-mix(in srgb, var(--success-color, #43a047) 20%, transparent); }
