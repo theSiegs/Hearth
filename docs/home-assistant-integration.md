@@ -487,6 +487,8 @@ Three ways to give more (services, adults only, as every Hearth service: [Securi
 - **Raise limit**: `hearth.raise_cap` {`person` or `people`, `category`, one of `minutes` (raise by, -1440..1440),
   `to` (the limit today) or `no_cap: true` (no limit today), `until` (a time, `end_of_day` by default)};
   `hearth.raise_cap_end` {`person` or `people`, `category` (every raised one when left out)}. Daily time is unchanged.
+- **Allow for a while**: one category for some minutes or until a time, its minutes not counted ("more minutes of
+  messaging"): see [Exceptions](#exceptions).
 - **Unlimited**: see [Unlimited](#unlimited).
 
 **The accounting** (time_model.py; worked examples in `ha_tests/test_time_model.py`):
@@ -701,11 +703,19 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
 
 - `hearth.allow` (`people`; `app`, a package, or `group`, a Hearth group or `all`; `until`: a time, tomorrow's if it
   has passed, `school_time_end` (the end of their School time today, from Family Link's sensors) or `end_of_day`, the
-  default; `reason`) returns `{id, until: {person: when}}`. It's kept across restarts. While it lasts, Hearth holds
+  default; or `minutes`: for that long from now, midnight at the latest; `reason`) returns `{id, until: {person:
+  when}}`. It's kept across restarts. While it lasts, Hearth holds
   that app or group nowhere for those people: their TVs' and phones' state documents leave the group out (an allowed
   app is taken out of every group's `apps` and added to All screen time's `except`, so a device needs no change),
   Family Link doesn't pause it (budget or School time), and Family Safety and Nintendo don't hold for an allowed group.
   It ends on its own; what should hold then holds again with the next minute's recompute.
+- **Allow for a while** (an allow of one category, such as `hearth.allow` {people, group: messaging, minutes: 15}):
+  the category's apps run whatever daily time or its limit says, and **its minutes meanwhile aren't counted** (an
+  exclusion window scoped to the category, as Unlimited's: [Unlimited](#unlimited)), so daily time and the limit are
+  where they were afterwards. Kids see "Messaging allowed until 4:25 PM" (`time.allowed` in the state document). Family
+  Link's backstop rises with the phone's minutes meanwhile, as for Unlimited. Bedtime, School time and Pause screens
+  still apply ("even now" for one category isn't built: those locks hold the whole device). This is what "give Sam 15
+  more minutes of messaging" means; "more time" with no category is bonus time. Recorded as an origin (`kind: allow`).
 - `hearth.allow_end` (`id`, or `people` with an optional `app` or `group`) ends one early; returns `{ended: [ids]}`.
 - **Ends on a place.** `hearth.allow`, `hearth.pause` and `hearth.school_time_off` take `ends_on: {arrive: <place>}`
   or `ends_on: {leave: <place>}`, a place key (`home`, `school`, or a favorite place's key, see [Places](#places)) of

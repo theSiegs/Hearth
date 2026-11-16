@@ -1856,6 +1856,7 @@ class Household:
         ended: list[tuple[dict[str, str], str]] = []
         for allow in list(self.allows.of(person)):
             if matches(allow.ends_on, came_from, went_to) and self.allows.end_for(allow.id, person):
+                self.unlimited.end_allows([allow.id], [person])
                 group = self.group(allow.group) if allow.group else None
                 what = (
                     "screen time" if allow.group == "all" else group.name if group else allow.group or allow.app
@@ -2223,6 +2224,7 @@ class Household:
         all_state = day.limits.get(ALL) if day else None
         unlimited = self.unlimited.view(person)
         active = unlimited["active"]
+        allowed_now = {a["group"]: a["text"] for a in unlimited["allowed"]}
         today_left = all_state.shown_left if all_state else None
         bonus_left = all_state.bonus_left if all_state else 0
         categories = []
@@ -2243,7 +2245,7 @@ class Household:
                     "until": state.raised.until if raised else None,
                     "left": state.shown_left,
                     "used": int(state.counted_min),
-                    "text": None if active else category_text(group.name, state.shown_left, today_left),
+                    "text": allowed_now.get(group.id) or (None if active else category_text(group.name, state.shown_left, today_left)),
                     "limit_text": limit_text(group.name, state.configured, limit_today, raised),
                 }
             )
@@ -2258,6 +2260,8 @@ class Household:
             "used": int(all_state.counted_min) if all_state else 0,
             "unlimited": active,
             "unlimited_today": unlimited["today"],
+            # Allow for a while: [{id, group, until, text}] ("Messaging allowed until 4:25 PM")
+            "allowed": unlimited["allowed"],
             "text": today_text(today_left, bonus_left, active["text"] if active else None),
             "adult_text": today_text(today_left, bonus_left, active["text"] if active else None, adult=True),
             "categories": categories,
@@ -2406,6 +2410,30 @@ class Household:
             if reason:
                 detail += f" · {reason}"
             self.note_origin(person, "unlimited", detail, "hearth", by)
+        self.recompute()
+        return allowed
+
+    @callback
+    def allow_for_a_while(
+        self,
+        people: list[str],
+        until: dict[str, datetime],
+        group: str,
+        reason: str | None = None,
+        ends_on: dict[str, str] | None = None,
+        by: str | None = None,
+    ):
+        """Allow for a while (hearth.allow of a category): until [until], neither daily time nor the category's limit
+        holds its apps, and its minutes meanwhile aren't counted (a window scoped to the category, unlimited.py).
+        Bedtime, School time and Pause screens still lock. The allow it is."""
+        allowed = self.allows.add(until, None, group, reason, ends_on)
+        target = self.group(group)
+        name = target.name if target else group
+        for person in people:
+            self.unlimited.start_group(person, allowed.id, group, until[person], bool(target and target.in_all))
+            local = dt_util.as_local(until[person])
+            detail = f"{name} allowed until {say_clock(local.hour, local.minute)}" + (f" · {reason}" if reason else "")
+            self.note_origin(person, "allow", detail, "hearth", by, group=group, allow=allowed.id)
         self.recompute()
         return allowed
 

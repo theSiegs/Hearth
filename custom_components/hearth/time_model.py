@@ -168,6 +168,11 @@ def unlimited_text(until_clock: str | None) -> str:
     return f"Unlimited until {until_clock}" if until_clock else "Unlimited (until turned off)"
 
 
+def allowed_text(name: str, until_clock: str) -> str:
+    """Allow for a while: "Messaging allowed until 4:25 PM"."""
+    return f"{name} allowed until {until_clock}"
+
+
 def unlimited_span_text(start: tuple[int, int], end: tuple[int, int], not_counted: int) -> str:
     """The adults' view and history: "Unlimited 2:00–5:10 PM · 3 h 10 min not counted"."""
     def full(hour: int, minute: int, half: bool) -> str:

@@ -90,6 +90,92 @@ async def test_messages_counts_and_is_paused_when_daily_time_runs_out(
     assert MESSAGES not in document.get("never_held", [])
 
 
+async def test_allow_messaging_for_a_while_when_daily_time_is_used_up(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer, monkeypatch
+) -> None:
+    """"You can finish your conversation": Messaging allowed for 15 minutes while daily time is 0. It runs, its
+    minutes don't count, it ends on time and everything is where it was."""
+    from homeassistant.util import dt as dt_util
+
+    from custom_components.hearth import unlimited as unlimited_module
+
+    monkeypatch.setattr(unlimited_module, "SETTLE", timedelta(0))
+    freezer.move_to(dt_util.now().replace(hour=16, minute=10, second=0, microsecond=0))
+    calls, household = await _sam_with_messages(hass, hass_client_no_auth, 40)
+    await _budget(hass, "all", 50)
+    assert household.days["person.sam"].limits["all"].minutes_left == 0
+    answer = await hass.services.async_call(
+        DOMAIN, "allow", {"people": ["person.sam"], "group": "messaging", "minutes": 15},
+        blocking=True, return_response=True,
+    )
+    await hass.async_block_till_done()
+    view = household.time_view("person.sam")
+    assert [a["text"] for a in view["allowed"]] == ["Messaging allowed until 4:25 PM"]
+    assert view["allowed"][0]["id"] == answer["id"]
+    # Messages runs: daily time still holds every other app, not Messages
+    document = household._person_document("person.sam")
+    whole = next(g for g in document["groups"] if g["id"] == "all")
+    assert whole["minutes_left"] == 0 and MESSAGES in whole.get("except", [])
+    assert not any(g["id"] == "messaging" for g in document["groups"])
+    explained = await hass.services.async_call(
+        DOMAIN, "explain", {"person": "person.sam", "app": MESSAGES}, blocking=True, return_response=True
+    )
+    assert explained["allowed"] is True
+    assert view["origins"][0]["kind"] == "allow" and view["origins"][0]["detail"] == "Messaging allowed until 4:25 PM"
+    # 12 minutes of Messages meanwhile: not counted
+    freezer.tick(timedelta(minutes=12))
+    hass.states.async_set(
+        FAMILY_LINK, "52",
+        {"unit_of_measurement": "min", "child_id": "42", "apps": [{"package": MESSAGES, "minutes": 52}]},
+    )
+    await hass.async_block_till_done()
+    household.recompute()
+    day = household.days["person.sam"]
+    assert int(day.groups["messaging"] // 60) == 40 and int(day.groups["all"] // 60) == 55
+    # Ends on time: held again, its minutes still left out
+    freezer.tick(timedelta(minutes=4))
+    household.recompute()
+    await hass.async_block_till_done()
+    assert household.time_view("person.sam")["allowed"] == []
+    document = household._person_document("person.sam")
+    whole = next(g for g in document["groups"] if g["id"] == "all")
+    assert MESSAGES not in whole.get("except", [])
+    day = household.days["person.sam"]
+    assert int(day.groups["messaging"] // 60) == 40 and int(day.raw_groups["messaging"] // 60) == 52
+
+
+async def test_allowed_minutes_raise_the_backstop_as_unlimited_does(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    from homeassistant.util import dt as dt_util
+
+    freezer.move_to(dt_util.now().replace(hour=16, minute=10, second=0, microsecond=0))
+    calls, household = await _sam_with_messages(hass, hass_client_no_auth, 40)
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": True})
+    # The options reload the entry: its household is a new one
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    phone = "sensor.sam_phone_daily_screen_time"
+    hass.states.async_set(phone, "40", {"child_id": "42", "device_id": "p1", "capabilities": ["capabilityBedtime"]})
+    await _budget(hass, "all", 100)
+    first = calls["limit"][-1].data["daily_minutes"]
+    # 45 left (15 TV + 40 phone of 100): 40 + 45 + 30, rounded up to 5
+    assert first == 115
+    await hass.services.async_call(
+        DOMAIN, "allow", {"people": ["person.sam"], "group": "messaging", "minutes": 30}, blocking=True
+    )
+    # 20 of Messages meanwhile: not counted, so daily time left is unchanged, but the phone's minutes grew
+    hass.states.async_set(phone, "60", {"child_id": "42", "device_id": "p1", "capabilities": ["capabilityBedtime"]})
+    hass.states.async_set(
+        FAMILY_LINK, "60",
+        {"unit_of_measurement": "min", "child_id": "42", "apps": [{"package": MESSAGES, "minutes": 60}]},
+    )
+    await hass.async_block_till_done()
+    household.recompute()
+    await hass.async_block_till_done()
+    assert household.time_view("person.sam")["today_left"] == 45
+    assert calls["limit"][-1].data["daily_minutes"] == 135
+
+
 async def test_messages_is_paused_when_its_limit_is_used_up(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:

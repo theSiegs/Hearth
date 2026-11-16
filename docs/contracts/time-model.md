@@ -19,7 +19,9 @@ those minutes, so the day could run out first. Now:
      Chores, approved asks, the day-off bonus and adults all give bonus time. It ends at midnight.
   2. **Raise limit** (`hearth.raise_cap`): one category's limit today, by some minutes, to some minutes, or no limit,
      until a time. Daily time is unchanged.
-  3. **Unlimited** (`hearth.unlimited`): until a time, "until turned off", or the end of the day (always over at
+  3. **Allow for a while** (`hearth.allow` {group, minutes}): one category runs for some minutes whatever daily time
+     or its limit says, and its minutes meanwhile aren't counted ("more minutes of messaging").
+  4. **Unlimited** (`hearth.unlimited`): until a time, "until turned off", or the end of the day (always over at
      midnight). Nothing Hearth holds for daily time or a limit holds the kid, and **the minutes used meanwhile aren't
      counted**: daily time, limits and bonus time pick up exactly where they were. Bedtime, School time and Pause
      screens still apply unless `include_bedtime` (bedtime only).
@@ -56,6 +58,7 @@ New, under `time` (always present for a person; values may be `null`):
 | `time.used` | int | Minutes counted today (Unlimited minutes left out). |
 | `time.unlimited` | object \| null | While Unlimited is on: `{until, open, include_bedtime, text}`. `open`: "until turned off". |
 | `time.unlimited_today` | list | Today's ended windows: `{start, end, minutes, settled, text}`. |
+| `time.allowed` | list | Categories allowed for a while now (`hearth.allow` of a category): `{id, group, until, text}`; their minutes meanwhile aren't counted. |
 | `time.text` | string \| null | The kid's line, ready to show (see Words). |
 | `time.adult_text` | string \| null | The adult's line ("... (includes 30 min bonus)"). |
 | `time.categories[]` | list | Each category with a limit (or a raised one): `{id, name, limit, limit_today, raised, until, left, used, text, limit_text}`. `limit`: as set for today's kind of day; `limit_today`: in force today (`null`: no limit); `left`: usable (never more than `today_left`); `text`: the kid's line; `limit_text`: the adult's hint. |
@@ -96,6 +99,7 @@ A client should not offer a category choice.
 | Unlimited with an end | `Unlimited until 6 PM` |
 | Unlimited until turned off | `Unlimited (until turned off)` |
 | Unlimited ended | `Limits back on · 1 h 10 min left today` |
+| A category allowed for a while | `Messaging allowed until 4:25 PM` |
 | Ask button | `Ask for bonus time` |
 | Chore done | `+20 min bonus earned` |
 | Family pause | `Screens paused` |
