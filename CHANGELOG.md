@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.11.23
+
+### Home Assistant integration
+
+- **The Family Link backstop leaves a switched-off daily limit alone.** With a child's daily limit switched off in Family Link, Family Link stores a written limit as that weekday's own limit, every week, instead of today's override. Hearth now writes nothing for that child (and checks again right before each write).
+
 ## 2026.11.22
 
 ### Home Assistant integration

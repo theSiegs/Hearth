@@ -170,3 +170,23 @@ async def test_diagnostics_redact_pin_hashes_errors_and_named_devices(
     assert pin_hash not in text and "ntfy.example.org" not in text and "didn't answer" not in text
     for name in ("Sam", "sam", "Rivera", "rivera"):
         assert name not in text, name
+
+
+async def test_backstop_leaves_a_switched_off_daily_limit_alone(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """With the child's daily limit switched off, Family Link writes the weekday's own limit (every week): nothing is
+    written then."""
+    from homeassistant.helpers import entity_registry as er
+
+    er.async_get(hass).async_get_or_create(
+        "switch", "familylink", f"familylink_{CHILD}_daily_limit", suggested_object_id="sam_family_link_daily_limit"
+    )
+    hass.states.async_set("switch.sam_family_link_daily_limit", "off")
+    household = await _sam(hass, hass_client_no_auth)
+    assert not [r for r in household.activity.records if r.get("service") == "familylink.set_daily_limit"]
+    # Switched on: the backstop writes
+    hass.states.async_set("switch.sam_family_link_daily_limit", "on")
+    household.backstop.check()
+    await hass.async_block_till_done()
+    assert [r for r in household.activity.records if r.get("service") == "familylink.set_daily_limit"]

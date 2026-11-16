@@ -155,6 +155,15 @@ class Backstop:
             state.budget_min, int(math.ceil(self.device_minutes(person))), left, self.margin(), unlimited
         )
 
+    def limit_on(self, child: str) -> bool:
+        """The child's daily limit isn't known to be off in Family Link: its switch is on, or not found (an older Family
+        Link). A switch that's off or unavailable: not on."""
+        switch = fl.daily_limit_switch(self.hass, str(child))
+        if switch is None:
+            return True
+        state = self.hass.states.get(switch)
+        return state is not None and state.state == "on"
+
     def holds(self, person: str) -> bool:
         """Hearth's whole-device hold of the person's Family Link devices is on (enforce.py set the limit to 0)."""
         from .enforce import key_parts
@@ -191,6 +200,11 @@ class Backstop:
             child = self.household.family_link_child(person)
             if child is None:
                 continue
+            if not self.limit_on(child):
+                # With the child's daily limit switched off, Family Link writes the weekday's own limit (every week),
+                # not today's override: nothing to back up then, and nothing written
+                _LOGGER.debug("backstop %s: Family Link's daily limit is off, nothing written", person)
+                continue
             if self.holds(person):
                 _LOGGER.debug("backstop %s: Hearth's whole-device hold is on, nothing written", person)
                 # What letting go puts back is the weekday's limit: written again after it
@@ -220,8 +234,8 @@ class Backstop:
     async def _write(self, plans: dict[str, tuple[str, int]]) -> None:
         self._again = False
         for person, (child, minutes) in plans.items():
-            # Again right before the write: a hold may have started, or daily time run out, since the plan
-            if self.holds(person) or self._out(person):
+            # Again right before the write: a hold may have started, daily time run out, or the limit been switched off
+            if self.holds(person) or self._out(person) or not self.limit_on(child):
                 _LOGGER.debug("backstop %s: skipped at the write (a hold started or daily time ran out)", person)
                 continue
             # Never below what a device already used today

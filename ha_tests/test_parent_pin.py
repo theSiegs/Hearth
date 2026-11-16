@@ -33,7 +33,8 @@ async def _verify(client, secret: str | None, pin, device_id: str = TV_ID):
 
 def test_the_pin_is_kept_as_a_salted_hash_in_the_tv_s_form() -> None:
     stored = parent_pin.make(PIN)
-    assert PIN not in stored
+    # (A hex salt or hash can contain the digits by chance: no field is the PIN itself)
+    assert PIN not in stored.split("$")
     assert parent_pin.valid(stored) and stored.startswith("v2$10000$")
     assert stored != parent_pin.make(PIN)
     assert parent_pin.matches(stored, PIN)
