@@ -28,6 +28,7 @@ and say so in the change. When another part gets the same review-probe-fix-test 
 | `glint_api.py` | Who may forget a phone. The start-screen options come from adults' phones only (`test_glint_agent`) |
 | `entity.py` | Removes the entities of pools that no longer exist, only for keys that setup made (`test_qc_fixes`) |
 | `media.py` | Rooms whose players have no name (`test_media`) |
+| Settings (`panel.py` `hearth/config/set`, services) | Probed with 34 schema-valid odd values (built-in pool ids, missing entities, ghost people, cycles): none stops the household; keep new option consumers tolerant of missing targets |
 | `frontend/hearth-panel.js` | Every interpolation of device-supplied text goes through `esc()`. Keep it that way |
 
 Run `ha_tests` before every push and read the result first.
