@@ -86,7 +86,7 @@ def media_rooms(hass: HomeAssistant) -> list[dict[str, Any]]:
         found.append(
             {
                 "entity_id": state.entity_id,
-                "name": (device.name_by_user or device.name) if device else state.name,
+                "name": ((device.name_by_user or device.name) if device else None) or state.name or state.entity_id,
                 "area_id": area_id,
                 "platform": platform,
                 "kind": _kind(platform, device.model if device else None, state.attributes.get("device_class")),
@@ -152,7 +152,7 @@ def media_rooms(hass: HomeAssistant) -> list[dict[str, Any]]:
     out = []
     for room in rooms.values():
         # The room's own player: its TV, else what's left by name
-        room["players"].sort(key=lambda p: (p["kind"] != TV, p["name"].lower(), p["entity_id"]))
+        room["players"].sort(key=lambda p: (p["kind"] != TV, (p["name"] or "").lower(), p["entity_id"]))
         main = room["players"][0]
         out.append(
             {

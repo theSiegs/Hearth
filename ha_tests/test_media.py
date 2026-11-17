@@ -143,3 +143,12 @@ async def test_players_in_different_rooms_are_never_twins(hass: HomeAssistant) -
     rooms = {r["room"]: r for r in media_rooms(hass)}
     assert rooms["Study"]["entity_id"] == study and rooms["Kitchen"]["entity_id"] == kitchen
     assert rooms["Study"]["also"] == [] and rooms["Kitchen"]["also"] == []
+
+
+async def test_players_with_no_name_never_break_the_rooms(hass: HomeAssistant) -> None:
+    for object_id in ("speaker_a", "speaker_b"):
+        entity_id = _player(hass, "cast", object_id, "x", "Kitchen", "Speaker")
+        device_id = er.async_get(hass).async_get(entity_id).device_id
+        dr.async_get(hass).async_update_device(device_id, name=None)
+    rooms = media_rooms(hass)
+    assert rooms and all(p["name"] for r in rooms for p in r.get("players", []))
