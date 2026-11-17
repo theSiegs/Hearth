@@ -546,6 +546,8 @@ class GroupState:
     # A category's bonus today (usable only there) and what's left of it
     cat_bonus: int = 0
     cat_bonus_left: int = 0
+    # The limit today is 0: bonus time doesn't open the category (time_model.account)
+    closed: bool = False
     # A category's max as an adult set it for today (before any raise)
     configured: int | None = None
 

@@ -39,6 +39,8 @@ those minutes, so the day could run out first. Now:
     bonus_left = max(0, N - bonus_used)
     today_left = max(0, daily time + N - used today)
     held_left  = max(0, limit - used in the category) + bonus_left + its own bonus left   (0: held)
+                 (a category whose limit today is 0 is closed: no bonus_left in it, and its minutes never
+                 count in bonus_used; only its own bonus, a raised limit or Unlimited opens it)
     left       = min(held_left, today_left + its own bonus left)                         (what a person is shown)
 
 Worked examples are in `ha_tests/test_time_model.py`. Example: daily time 3 h, Games limit 2 h, +30 bonus. After 2 h
@@ -65,7 +67,7 @@ New, under `time` (always present for a person; values may be `null`):
 | `time.adult_text` | string \| null | The adult's line ("... (includes 30 min bonus)"). |
 | `time.by_category[]` | list | Today's counted minutes by category, `{id, name, minutes}` in the household's category order, then `{id: "other", name: "Other"}` for apps in no category. Each minute once, and the minutes add up to `time.used` exactly (largest remainders). Categories with no minutes are left out; empty when nothing is counted. The page's daily-time bar shows the same split. |
 | `time.uncounted` | int | Whole minutes used today but not counted in daily time: categories outside it (and Accessibility) plus Unlimited windows. Never inside `by_category`. |
-| `time.categories[]` | list | Each category with a limit, a raised limit or its own bonus today: `{id, name, limit, limit_today, raised, until, left, used, text, limit_text, bonus, bonus_left, origin}`. `limit`: as set for today's kind of day (`null`: none); `limit_today`: in force today (`null`: no limit); `raised`: bool; `until`: the raises' latest end (`null`: midnight); `left`: usable (its limit, the bonus left and its own bonus left, never more than `today_left` + its own bonus left); `used`: its minutes today; `text`: the kid's line (`null` while Unlimited); `limit_text`: the adult's hint; `bonus`/`bonus_left`: its own bonus today; `origin`: the latest raise's origin id when raised, else `null`. |
+| `time.categories[]` | list | Each category with a limit, a raised limit or its own bonus today: `{id, name, limit, limit_today, raised, closed, until, left, used, text, limit_text, bonus, bonus_left, origin}`. `limit`: as set for today's kind of day (`null`: none); `limit_today`: in force today (`null`: no limit); `raised`: bool; `closed`: bool, its limit today is 0, so bonus time doesn't open it (its own bonus, a raise or Unlimited does; `text` is `Games are off today` while nothing opens it); `until`: the raises' latest end (`null`: midnight); `left`: usable (its limit, the bonus left and its own bonus left, never more than `today_left` + its own bonus left); `used`: its minutes today; `text`: the kid's line (`null` while Unlimited); `limit_text`: the adult's hint; `bonus`/`bonus_left`: its own bonus today; `origin`: the latest raise's origin id when raised, else `null`. |
 | `time.category_bonuses[]` | list | Categories with their own bonus today, with a limit or not: `{id, name, bonus, bonus_left, origin, left, text}`. `origin`: the latest bonus origin of that category; `text`: `Messaging: 15 min bonus left`, or `Messaging: bonus used` once it's spent. |
 | `time.origins[]` | list | Where today's statuses came from (see Origin), newest first. |
 

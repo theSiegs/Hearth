@@ -2262,7 +2262,8 @@ class Household:
             state.modeled = True
             state.configured = base_cap
             state.raised = raised.get(gid)
-            state.bonus_left = result.bonus_left
+            state.closed = gid in result.closed
+            state.bonus_left = 0 if state.closed else result.bonus_left
             if cap is None:
                 state.budget_min, state.bonus_min = None, 0
             else:
@@ -2350,11 +2351,13 @@ class Household:
                     "limit": state.configured,
                     "limit_today": limit_today,
                     "raised": raised,
+                    # Its limit today is 0: bonus time doesn't open it (only its own bonus, a raise or Unlimited)
+                    "closed": state.closed,
                     "until": state.raised.until if raised else None,
                     "left": state.shown_left,
                     "used": int(state.counted_min),
                     "text": None if active else category_text(
-                        group.name, state.shown_left, today_left, state.cat_bonus_left
+                        group.name, state.shown_left, today_left, state.cat_bonus_left, state.closed
                     ),
                     "limit_text": limit_text(group.name, state.configured, limit_today, raised),
                     "bonus": state.cat_bonus,

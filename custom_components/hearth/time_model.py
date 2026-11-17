@@ -19,6 +19,10 @@ The accounting (account()):
     cap_left   = max(0, cap - used_in_category) + bonus_left   (what holds the category: at 0 it's held)
     usable     = min(cap_left, today_left)               (what a person is shown for the category)
 
+A category whose limit today is 0 is closed: bonus time never opens it (its minutes aren't paid from the bonus, and its
+cap_left has no bonus_left). Only that category's own bonus, a raised limit or Unlimited opens it, each given on purpose
+for it.
+
 Minutes past a cap are part of today's minutes too, so paying them from the bonus and counting them against today's
 time is the same minutes seen twice, which is why bonus_used is a max and not a sum. Worked examples are in
 ha_tests/test_time_model.py.
@@ -90,6 +94,8 @@ class Account:
     usable: dict[str, int | None] = field(default_factory=dict)
     # A category's own bonus left (hearth.add_time with a category)
     cat_left: dict[str, int] = field(default_factory=dict)
+    # Categories whose limit today is 0: bonus time doesn't open them (only their own bonus does)
+    closed: set[str] = field(default_factory=set)
 
 
 def split_bonus(base: int | None, given: int) -> tuple[int | None, int]:
@@ -117,6 +123,8 @@ def account(
     cat_bonuses = {g: b for g, b in (cat_bonuses or {}).items() if b[0] > 0}
     over_day = max(0.0, used - base) if base is not None else 0.0
     over = {gid: max(0.0, spent - cap) for gid, (cap, spent) in categories.items() if cap is not None}
+    # A closed category (limit 0 today) never takes bonus time: what's past its limit isn't the bonus's to pay
+    closed = {gid for gid, (cap, _) in categories.items() if cap is not None and cap <= 0}
     # A category's own bonus first
     paid: dict[str, float] = {}
     left_of_day = over_day
@@ -130,10 +138,10 @@ def account(
             over[gid] = max(0.0, over[gid] - paid[gid])
     counted = used - sum(p for g, p in paid.items() if cat_bonuses[g][2])
     # Then the general bonus: what's still past daily time or past a limit
-    bonus_used = int(math.floor(max(left_of_day, sum(over.values()))))
+    bonus_used = int(math.floor(max(left_of_day, sum(v for g, v in over.items() if g not in closed))))
     bonus_left = max(0, bonus - bonus_used)
     today_left = None if base is None else max(0, int(base + bonus - counted))
-    out = Account(base, bonus, used, bonus_used, bonus_left, today_left)
+    out = Account(base, bonus, used, bonus_used, bonus_left, today_left, closed=closed)
     for gid in sorted(set(categories) | set(cat_bonuses)):
         cap, spent = categories.get(gid, (None, cat_bonuses.get(gid, (0, 0.0, True))[1]))
         own_left = int(cat_bonuses[gid][0] - paid.get(gid, 0.0)) if gid in cat_bonuses else 0
@@ -144,7 +152,8 @@ def account(
             out.cap_left[gid] = None
             out.usable[gid] = day
             continue
-        left = max(0, int(cap - (spent - paid.get(gid, 0.0)))) + bonus_left + own_left
+        general = 0 if gid in closed else bonus_left
+        left = max(0, int(cap - (spent - paid.get(gid, 0.0)))) + general + own_left
         out.cap_left[gid] = left
         out.usable[gid] = left if day is None else min(left, day)
     return out
@@ -222,14 +231,18 @@ def today_text(today_left: int | None, bonus_left: int, unlimited: str | None = 
     return line
 
 
-def category_text(name: str, usable: int | None, today_left: int | None, own_left: int = 0) -> str | None:
-    """A category's line: "Games: 25 min left", "Messaging: 15 min bonus left" (only its own bonus is left), or
-    "Games are done for today · 40 min left for other things" when its limit is reached but daily time remains. None
-    without a limit."""
+def category_text(
+    name: str, usable: int | None, today_left: int | None, own_left: int = 0, closed: bool = False
+) -> str | None:
+    """A category's line: "Games: 25 min left", "Messaging: 15 min bonus left" (only its own bonus is left), "Games
+    are off today" (its limit today is 0, and no bonus of its own left), or "Games are done for today · 40 min left
+    for other things" when its limit is reached but daily time remains. None without a limit."""
     if usable is None:
         return None
     if own_left > 0 and usable <= own_left:
         return f"{name}: {say_minutes(usable)} bonus left"
+    if closed and usable <= 0:
+        return f"{name} are off today"
     if usable <= 0 and today_left:
         return f"{name} are done for today · {say_minutes(today_left)} left for other things"
     return f"{name}: {say_minutes(usable)} left"

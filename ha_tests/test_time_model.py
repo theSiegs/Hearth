@@ -126,6 +126,26 @@ def test_a_raised_limit_isn_t_bonus_time() -> None:
     assert limit_text("Games", None, None, False) == "Games: no limit"
 
 
+def test_a_category_closed_today_stays_closed_to_bonus_time() -> None:
+    """YouTube's limit today is 0 ("off today"): +30 bonus time doesn't open it, and its minutes never take the bonus.
+    Only YouTube's own bonus, a raised limit or Unlimited opens it."""
+    day = account(180, 30, 60, {"youtube": (0, 0), "games": (60, 60)})
+    assert "youtube" in day.closed and day.cap_left["youtube"] == 0 and day.usable["youtube"] == 0
+    # The bonus still opens games past its limit
+    assert day.cap_left["games"] == 30 and day.bonus_left == 30
+    # YouTube minutes from before it closed (5) aren't paid from the bonus
+    early = account(180, 30, 65, {"youtube": (0, 5)})
+    assert early.bonus_used == 0 and early.bonus_left == 30 and early.cap_left["youtube"] == 0
+    # Its own bonus opens it, for just that much
+    own = account(180, 30, 60, {"youtube": (0, 0)}, {"youtube": (15, 0, True)})
+    assert own.usable["youtube"] == 15 and own.cat_left["youtube"] == 15 and own.bonus_left == 30
+    # A raised limit opens it: no longer closed
+    raised = account(180, 30, 60, {"youtube": (Raise(add=20).cap(0), 0)})
+    assert "youtube" not in raised.closed and raised.cap_left["youtube"] == 50
+    assert category_text("YouTube", 0, 120, closed=True) == "YouTube are off today"
+    assert category_text("YouTube", 15, 120, 15, closed=True) == "YouTube: 15 min bonus left"
+
+
 def test_time_taken_away_lowers_daily_time() -> None:
     assert split_bonus(180, 30) == (180, 30)
     assert split_bonus(180, -30) == (150, 0)

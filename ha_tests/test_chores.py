@@ -251,16 +251,17 @@ async def test_an_adult_s_undo_takes_the_whole_reward_back(
     uid = (await _items(hass))[0]["uid"]
     await _tick(hass, uid, users["sam"])
     assert _games(hass).minutes_left == 20
-    # Games' limit lowered to 0 for today: its 5 minutes used are past it, paid from the bonus (15 - 5 = 10 left)
-    _hub(hass).household.limits.set_raise("person.sam", "games", Raise(add=-10))
+    # Games' limit lowered to 2 for today: 3 of its 5 minutes used are past it, paid from the bonus (15 - 3 = 12 left)
+    # (lowered to 0 it would be closed, and the bonus wouldn't pay for it)
+    _hub(hass).household.limits.set_raise("person.sam", "games", Raise(add=-8))
     _hub(hass).household.recompute()
-    assert _games(hass).minutes_left == 10
+    assert _games(hass).minutes_left == 12
     # The Undo on Alex's phone runs hearth.chore_undo as Alex
     _press(hass, f"HEARTH_ACT|hearth_chore_{uid}|0", users["alex"])
     await hass.async_block_till_done()
     assert _games(hass).bonus_chores == 0 and _games(hass).minutes_left == 0
     entry = _book(hass).ledger[0]
-    assert entry["reversed_why"] == "undo" and entry["reversed_by"] == users["alex"].id and entry["spent"] == 5
+    assert entry["reversed_why"] == "undo" and entry["reversed_by"] == users["alex"].id and entry["spent"] == 3
     # The item stays done; Sam's tick is a no-op, an adult's Give grants it again (#2)
     assert (await _items(hass))[0]["status"] == "completed"
     await _tick(hass, uid, users["sam"])

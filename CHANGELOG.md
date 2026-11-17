@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **A category off today stays off.** A category whose limit today is 0 is closed: bonus time (an adult's, a chore's, an approved ask) no longer opens it, and its minutes never use the bonus. Its own bonus, a raised limit or Unlimited still opens it, each given on purpose for it. Its entry in `time.categories` says `closed: true`, and the kid's line reads "Games are off today".
+
 ## 2026.11.24
 
 ### Home Assistant integration
