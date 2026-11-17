@@ -1131,6 +1131,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     entry.runtime_data = hub
     # A pause running when Home Assistant stopped goes on (pause.py)
     await async_load_pauses(hass)
+    # A Parent PIN lockout running when Home Assistant stopped goes on (hub.py)
+    from .hub import async_load_pin_lockouts
+
+    await async_load_pin_lockouts(hass)
     await hub.household.school.async_refresh()
     hub.household.recompute()
     # The views stay registered for Home Assistant's lifetime (aiohttp can't take one away); with no entry

@@ -40,7 +40,7 @@ from .const import (
     PAIRING_EXPIRES,
     TICKET_EXPIRES,
 )
-from .hub import HearthHub, collect_secret, find_pairing, pin_lockout
+from .hub import HearthHub, collect_secret, find_pairing, pin_lockout, save_pin_lockouts
 from .wait import WAIT_MAX
 from .push import clean_server, push_answer
 from .attention import async_note_admins
@@ -480,6 +480,7 @@ async def _check_pin(hass: HomeAssistant, device_id: str, stored: dict[str, str]
         person = await hass.async_add_executor_job(parent_pin.whose, stored, pin)
     finally:
         lock.checking -= 1
+    save_pin_lockouts(hass)
     if person:
         lock.failures = 0
         lock.locked_until = None

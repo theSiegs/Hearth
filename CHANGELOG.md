@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **A Parent PIN lockout goes on across a restart.** Wrong PINs and a lockout were kept in memory only, so restarting Home Assistant gave someone guessing a fresh set of tries.
+
 ## 2026.11.37
 
 ### TV

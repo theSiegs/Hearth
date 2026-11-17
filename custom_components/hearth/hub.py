@@ -165,9 +165,53 @@ class PinLockout:
 
 def pin_lockout(hass: HomeAssistant, device_id: str) -> PinLockout:
     """A device's parent-PIN lockout, kept outside the entry like the pairings: changing an option reloads the
-    entry, and that must not hand someone guessing the PIN a fresh set of tries. A restart still clears it."""
+    entry, and that must not hand someone guessing the PIN a fresh set of tries. Saved too (save_pin_lockouts), so
+    a restart doesn't either."""
     lockouts: dict[str, PinLockout] = hass.data.setdefault(f"{DOMAIN}_pin_lockout", {})
     return lockouts.setdefault(device_id, PinLockout())
+
+
+def _pin_store(hass: HomeAssistant):
+    from homeassistant.helpers.storage import Store
+
+    key = f"{DOMAIN}_pin_lockout_store"
+    if key not in hass.data:
+        hass.data[key] = Store(hass, 1, f"{DOMAIN}.pin_lockout")
+    return hass.data[key]
+
+
+@callback
+def save_pin_lockouts(hass: HomeAssistant) -> None:
+    """Every device's wrong PINs in a row and lockout, saved a moment later."""
+
+    def data() -> dict[str, Any]:
+        lockouts: dict[str, PinLockout] = hass.data.get(f"{DOMAIN}_pin_lockout", {})
+        return {
+            device_id: {
+                "failures": lock.failures,
+                "locked_until": lock.locked_until.isoformat() if lock.locked_until else None,
+            }
+            for device_id, lock in lockouts.items()
+            if lock.failures or lock.locked_until
+        }
+
+    _pin_store(hass).async_delay_save(data, 1)
+
+
+async def async_load_pin_lockouts(hass: HomeAssistant) -> None:
+    """The lockouts saved before Home Assistant stopped, once per start."""
+    flag = f"{DOMAIN}_pin_lockout_loaded"
+    if hass.data.get(flag):
+        return
+    hass.data[flag] = True
+    for device_id, kept in (await _pin_store(hass).async_load() or {}).items():
+        if not isinstance(kept, dict):
+            continue
+        lock = pin_lockout(hass, device_id)
+        lock.failures = max(lock.failures, int(kept.get("failures") or 0))
+        until = dt_util.parse_datetime(kept["locked_until"]) if isinstance(kept.get("locked_until"), str) else None
+        if until is not None and (lock.locked_until is None or until > lock.locked_until):
+            lock.locked_until = until
 
 
 def find_pairing(hass: HomeAssistant, pairing_id: str, nonce: str | None) -> Pairing | None:

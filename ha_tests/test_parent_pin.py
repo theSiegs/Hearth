@@ -227,3 +227,21 @@ async def test_json_nested_too_deep_is_a_bad_request_not_a_crash(
     for path, headers in (("/api/hearth/pair", {}), (f"/api/hearth/device/{TV_ID}/status", {"X-Hearth-Secret": secret})):
         response = await client.post(path, data=deep, headers={**headers, "Content-Type": "application/json"})
         assert response.status < 500
+
+
+async def test_a_lockout_goes_on_across_a_restart(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_storage
+) -> None:
+    from datetime import timedelta as _td
+
+    from homeassistant.util import dt as dt_util
+
+    until = (dt_util.utcnow() + _td(minutes=10)).isoformat()
+    hass_storage["hearth.pin_lockout"] = {
+        "version": 1, "key": "hearth.pin_lockout", "data": {TV_ID: {"failures": 6, "locked_until": until}},
+    }
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    await _adults(hass, "person.alex")
+    await _option(hass, "parent_pin", {"person": "person.alex", "pin": PIN, "pin_again": PIN})
+    response = await _verify(client, secret, PIN)
+    assert response.status == 429
