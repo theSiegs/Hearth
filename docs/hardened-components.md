@@ -13,6 +13,7 @@ and say so in the change. When another part gets the same review-probe-fix-test 
 | `household.py` totals sources | Keeps the day's highest count across restarts. A drop of 5 min or less is accepted; a bigger drop counts as the source's new day before 6 AM and is ignored after. The count is capped at the time since midnight (`test_sources`) |
 | `household.py` startup | A limit reached today stays held for 90 s after Home Assistant starts, but not on a reload. `group_packages` is cached once per recompute (`test_qc_fixes`) |
 | `enforce.py` | A shared Switch keeps its real limit when it passes from one kid to another. Family Safety locks are applied again past midnight, and a pause locks platforms. The held set is updated as each platform's call succeeds. Hearth's own Family Link bonus isn't counted twice against a parent's. Extra time that has ended is ignored (`test_enforce`, `test_native_sync`) |
+| `native_sync.py` | A parent's Family Link bonus grant lasts while their share is left; extra time Hearth couldn't cancel stays known as Hearth's (`test_native_sync`) |
 | `pause.py` | Pauses are saved and survive a restart (`test_qc_fixes`) |
 | `backstop.py` | A whole-device hold is remembered across a restart |
 | `api.py` | Parent PIN guesses are checked one at a time past the free tries. Deeply nested JSON gets a 400 (`test_parent_pin`) |
