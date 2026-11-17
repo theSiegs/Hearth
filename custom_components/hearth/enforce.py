@@ -1461,12 +1461,19 @@ class Enforcement:
         if DEVICES in held.items and child:
             base = restore.get("lock_bonus") or {}
             unlocked = set(restore.get("lock_unlocked") or [])
+            # The bonus the devices showed at the hold's start has Hearth's own mirrored bonus in it already: only
+            # what Hearth mirrors after that start (its own, as first seen under this hold) is Hearth's on top
+            if "lock_own" not in restore:
+                restore["lock_own"] = {str(k): v for k, v in (own_bonus or {}).items()}
+                self._save()
+            own_at_start = restore["lock_own"]
             for device in fl.devices(self.hass, str(child)):
                 watch.add(device.entity_id)
                 device_id = str(device.attributes.get("device_id"))
                 bonus = _number(device.attributes.get("bonus_minutes")) or 0
                 own = (own_bonus or {}).get(device_id, 0)
-                if bonus > (base.get(device_id) or 0) + own:
+                own_since = max(0, own - own_at_start.get(device_id, own))
+                if bonus > (base.get(device_id) or 0) + own_since:
                     grant(
                         g.DEVICE,
                         DEVICES,
@@ -1715,8 +1722,8 @@ def fs_derived_hold(
     elif override == FS_ALLOW_UNTIL:
         own = bonus_until is not None and (_close(until, bonus_until) or (until is None and bonus_until > now))
         hold = FS_HOLD_BONUS_OURS if own else FS_HOLD_PARENT
-    elif lock_live and bonus_until is not None:
-        hold = FS_HOLD_NONE  # Hearth's own extra time replaced its lock
+    elif lock_live and bonus_until is not None and bonus_until > now - FS_OWN_TOLERANCE:
+        hold = FS_HOLD_NONE  # Hearth's own extra time (still running) replaced its lock
     elif lock_live:
         hold = FS_HOLD_PARENT if lock_until is not None else None
     else:

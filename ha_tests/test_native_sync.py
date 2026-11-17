@@ -1009,3 +1009,28 @@ async def test_the_summary_shows_grants_first_party_limits_and_sync(
     assert sam["allows"] == [] and sam["answered_elsewhere"] == []
     assert any(a["id"].startswith("grant_end:") for a in sam["actions"])
     assert any(line["key"].startswith("grant:") for line in [sam["headline"], *sam["lines"]])
+
+
+async def test_a_parent_s_bonus_counts_after_hearth_mirrored_one(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Hearth's 15 mirrored to the phone, then out of time again (held with the phone showing 15): a parent's 10 more
+    in the Family Link app (25) is the parent's, never taken for Hearth's own 15 twice over."""
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+    async_mock_service(hass, "familylink", "add_time_bonus")
+    async_mock_service(hass, "familylink", "reset_bonus")
+    await _sam_with_family_link(hass, hass_client_no_auth)
+    grants = async_capture_events(hass, "hearth_parent_grant")
+    _phone(hass)
+    _remaining(hass, 0)
+    await _budget(hass, "all", 30)
+    await _bonus(hass, "all", 20)  # 15 mirrored to the phone
+    _phone(hass, bonus=15)
+    await hass.async_block_till_done()
+    await _budget(hass, "all", 10)  # out of time again: held, the phone showing Hearth's 15
+    hass.states.async_set(_weekday_limit(), "0", {"child_id": CHILD})
+    await _settle(hass, freezer)
+    assert grants == []
+    _phone(hass, bonus=25)  # a parent's 10
+    await hass.async_block_till_done()
+    assert [g.data["reason"] for g in grants] == ["bonus time given in the Family Link app"]

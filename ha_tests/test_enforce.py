@@ -1119,3 +1119,19 @@ async def test_a_let_go_that_fails_half_way_locks_the_let_go_platform_again(
     freezer.tick(timedelta(minutes=10))  # past the retry wait
     await _bonus(hass, "games", -30)  # out of time again
     assert locks.count("Windows") == 2
+
+
+async def test_a_parent_s_unlock_after_hearth_s_extra_time_ended_is_the_parent_s(hass: HomeAssistant) -> None:
+    """Upstream Family Safety (no hold attributes): Hearth's extra time ended this afternoon, Hearth locked again this
+    evening, and nothing is in force now: a parent unlocked it, not Hearth's extra time."""
+    from custom_components.hearth.enforce import FS_HOLD_NONE, FS_HOLD_PARENT, fs_derived_hold
+
+    hass.states.async_set(
+        "binary_sensor.sam_xbox_allowed_now", "on", {"override": None, "user_id": "123", "platform": "Xbox"}
+    )
+    now = dt_util.utcnow()
+    mine = {"held": True, "lock_until": now + timedelta(hours=2), "bonus_until": now - timedelta(hours=3)}
+    assert fs_derived_hold(hass, "123", "Xbox", mine)["hold"] == FS_HOLD_PARENT
+    # Hearth's own extra time still running replaced its lock: nobody's
+    mine["bonus_until"] = now + timedelta(minutes=20)
+    assert fs_derived_hold(hass, "123", "Xbox", mine)["hold"] == FS_HOLD_NONE
