@@ -917,6 +917,7 @@ class Household:
     def recompute(self) -> None:
         self._known_for = None
         self._never_held_for = None
+        self._group_packages_cache = None
         now = dt_util.now()
         # A TV's commands that waited too long are told as expired
         self.hub.commands.prune()
@@ -1664,9 +1665,14 @@ class Household:
         return [p for p in self._group_apps(group, membership) if p not in spared]
 
     def group_packages(self) -> dict[str, list[str]]:
-        """Each group's packages (not All's: every app), as devices are held to them."""
-        membership = self.membership()
-        return {g.id: self._group_apps(g, membership) for g in self.groups if g.id != ALL}
+        """Each group's packages (not All's: every app), as devices are held to them. Worked out once a recompute: every
+        person's sensor reads it on each write."""
+        cached = getattr(self, "_group_packages_cache", None)
+        if cached is None:
+            membership = self.membership()
+            cached = {g.id: self._group_apps(g, membership) for g in self.groups if g.id != ALL}
+            self._group_packages_cache = cached
+        return {gid: list(apps) for gid, apps in cached.items()}
 
     def _lifted_packages(self, lifted: Lifted, membership) -> set[str]:
         """The packages a person's allows lift: the allowed apps, and the apps of the allowed groups."""
