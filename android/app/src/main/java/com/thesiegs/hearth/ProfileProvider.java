@@ -100,7 +100,7 @@ public class ProfileProvider extends ContentProvider {
     static Object[] row(Context context) {
         HearthWallpaper.State wallpaper = HearthWallpaper.current(context);
         Allowance.Values allowance = Allowance.forProfile(context,
-                LauncherAccessibilityService.getActiveProfileKey(context), System.currentTimeMillis());
+                LauncherAccessibilityService.getActiveProfileKey(context), TvClock.now(context));
         String[] formats = dateTimeFormats(context);
         return new Object[]{
                 LauncherAccessibilityService.getActiveProfileName(context),
@@ -128,7 +128,8 @@ public class ProfileProvider extends ContentProvider {
                 allowance.youtubeMinutesLeft,
                 allowance.scheduleLocked ? 1 : 0,
                 allowance.message,
-                allowance.checkedAt,
+                // As the TV's clock shows it: HearthTube tells how fresh it is by that clock
+                allowance.checkedAt != null ? (Object) TvClock.toWall(context, allowance.checkedAt) : null,
                 allowance.source,
                 shareNowPlaying(context) == null ? null : shareNowPlaying(context) ? 1 : 0,
                 // What a parent blocked in HearthTube for the active profile (both sources), and a change counter
@@ -245,7 +246,7 @@ public class ProfileProvider extends ContentProvider {
      * it may play: the minutes left go down a minute at a time, so not at every 30-second report.
      */
     static void addHearthTubePlaying(Context context, String profile, long ms) {
-        long now = System.currentTimeMillis();
+        long now = TvClock.now(context);
         Integer before = Allowance.forProfile(context, profile, now).youtubeMinutesLeft;
         UsageToday.addPlaying(context, profile, CompanionApps.HEARTHTUBE, ms, now);
         Integer after = Allowance.forProfile(context, profile, now).youtubeMinutesLeft;

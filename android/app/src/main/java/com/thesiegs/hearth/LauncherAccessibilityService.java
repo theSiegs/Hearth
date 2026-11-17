@@ -429,6 +429,10 @@ public class LauncherAccessibilityService extends AccessibilityService {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
+            if (Intent.ACTION_TIME_CHANGED.equals(action)) {
+                TvClock.now(context);
+                return;
+            }
             if (Intent.ACTION_DREAMING_STARTED.equals(action) || Intent.ACTION_DREAMING_STOPPED.equals(action)) {
                 // The screensaver: nobody's using the app behind it
                 addFrontSoFar();
@@ -561,7 +565,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
             // Hearth's own user's sessions: an adult's profile (a kid's apps play in its own user)
             String profile = getActiveProfileKey(this);
             if (ProfileUsers.serialOfKey(profile) == ProfileUsers.ownerSerial(this)) {
-                UsageToday.addPlaying(this, profile, pkg, ms, now);
+                UsageToday.addPlaying(this, profile, pkg, ms, TvClock.now(this));
             }
         });
         mPlaying.ensureStarted();
@@ -569,6 +573,8 @@ public class LauncherAccessibilityService extends AccessibilityService {
         ProfileProvider.notifyChanged(this);  // service_running
         IntentFilter screenFilter = new IntentFilter(Intent.ACTION_SCREEN_ON);
         screenFilter.addAction(Intent.ACTION_SCREEN_OFF);
+        // The clock set (by hand, or by the network): TvClock measures it now, while it can still tell which
+        screenFilter.addAction(Intent.ACTION_TIME_CHANGED);
         screenFilter.addAction(Intent.ACTION_DREAMING_STARTED);
         screenFilter.addAction(Intent.ACTION_DREAMING_STOPPED);
         PowerManager power = (PowerManager) getSystemService(Context.POWER_SERVICE);
@@ -882,7 +888,7 @@ public class LauncherAccessibilityService extends AccessibilityService {
     private void addFrontSoFar() {
         if (mFrontSince == 0 || mFrontApp == null) return;
         long now = SystemClock.elapsedRealtime();
-        UsageToday.addFront(this, mFrontProfile, mFrontApp, now - mFrontSince, System.currentTimeMillis());
+        UsageToday.addFront(this, mFrontProfile, mFrontApp, now - mFrontSince, TvClock.now(this));
         mFrontSince = now;
     }
 

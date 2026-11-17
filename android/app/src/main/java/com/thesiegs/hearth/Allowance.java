@@ -112,8 +112,8 @@ final class Allowance {
                 || ProfileUsers.isAdults(context, ProfileUsers.serialOfKey(profileKey))) {
             return null;
         }
-        long now = System.currentTimeMillis();
-        String group = HaAllowance.forProfile(context, profileKey, now).timeUpGroup(packageName);
+        long now = TvClock.now(context);
+        String group = HaAllowance.forProfile(context, profileKey, now).timeUpGroup(packageName, now);
         if (group != null) return group;
         // A lock (bedtime, School time, a pause by name) holds every app, however it was opened: HELD_ALL, as for
         // Hearth's own tiles (heldApps), never the apps Home Assistant never holds
@@ -149,7 +149,7 @@ final class Allowance {
         if (profileKey == null || ProfileUsers.isAdults(context, ProfileUsers.serialOfKey(profileKey))) {
             return new java.util.HashMap<>();
         }
-        long now = System.currentTimeMillis();
+        long now = TvClock.now(context);
         Values values = forProfile(context, profileKey, now);
         return heldApps(packages, HaAllowance.entryFor(context, profileKey, now), values.youtubeMinutesLeft,
                 "YouTube", now);
@@ -235,7 +235,7 @@ final class Allowance {
         sToldGroup = HELD_ALL;
         sToldAt = now;
         JSONObject lock = HaLocks.locksOf(HaAllowance.entryFor(context,
-                LauncherAccessibilityService.getActiveProfileKey(context), System.currentTimeMillis()))
+                LauncherAccessibilityService.getActiveProfileKey(context), TvClock.now(context)))
                 .optJSONObject("lock");
         Long until = lock != null ? HaLocks.parseTime(lock.optString("until", null)) : null;
         String time = until != null ? DateFormat.getTimeFormat(context).format(new Date(until)) : "";
@@ -244,7 +244,7 @@ final class Allowance {
 
     /** "Paused: Dinner, until 7:00 PM", as the active profile's pause says it. */
     private static String pauseMessage(Context context) {
-        long now = System.currentTimeMillis();
+        long now = TvClock.now(context);
         JSONObject pause = HaLocks.locksOf(HaAllowance.entryFor(context,
                 LauncherAccessibilityService.getActiveProfileKey(context), now)).optJSONObject("pause");
         String reason = pause != null ? pause.optString("reason", "").trim() : "";

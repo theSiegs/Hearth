@@ -37,7 +37,7 @@ final class BedtimeHeadsUp {
         if (!HaIntegration.isPaired(app)) return;
         String profile = LauncherAccessibilityService.getActiveProfileKey(app);
         if (profile == null || !ProfileUsers.isKids(app)) return;
-        long now = System.currentTimeMillis();
+        long now = TvClock.now(app);
         JSONObject entry = HaAllowance.entryFor(app, profile, now);
         Long at = HaLocks.nextLockAt(entry, now);
         if (at == null) return;

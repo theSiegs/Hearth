@@ -241,7 +241,7 @@ final class AgentHub {
                                     sContext, ProfileUsers.key(serial), message.optLong("ms")));
                         } else {
                             UsageToday.addPlaying(sContext, ProfileUsers.key(serial), played, message.optLong("ms"),
-                                    System.currentTimeMillis());
+                                    TvClock.now(sContext));
                         }
                         break;
                     case "started": {

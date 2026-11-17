@@ -558,8 +558,9 @@ public class MainActivity extends FlutterActivity {
                 result.success(AdbPromptGuard.allowedUntil(this));
             }
             case "adbComputerAllowedUntil" -> result.success(AdbPromptGuard.allowedUntil(this));
-            case "parentPinLockedUntil" -> result.success(ParentPinPolicy.lockedUntil(this, System.currentTimeMillis()));
-            case "parentPinMiss" -> result.success(ParentPinPolicy.miss(this, System.currentTimeMillis()));
+            case "parentPinLockedUntil" -> result.success(
+                    pinWaitOnTheClock(ParentPinPolicy.lockedUntil(this, TvClock.now(this))));
+            case "parentPinMiss" -> result.success(pinWaitOnTheClock(ParentPinPolicy.miss(this, TvClock.now(this))));
             case "parentPinClear" -> {
                 ParentPinPolicy.clear(this);
                 result.success(null);
@@ -674,7 +675,7 @@ public class MainActivity extends FlutterActivity {
             }
             case "getHaLockState" -> {
                 String key = LauncherAccessibilityService.getActiveProfileKey(this);
-                long now = System.currentTimeMillis();
+                long now = TvClock.now(this);
                 result.success(HaLocks.forFlutter(HaAllowance.entryFor(this, key, now), HaIntegration.isPaired(this),
                         key != null && ProfileUsers.isKids(this), now));
             }
@@ -892,6 +893,11 @@ public class MainActivity extends FlutterActivity {
     }
 
     /** The data used this period, worked out off the main thread (NetworkStatsManager can take a while). */
+    /** When the PIN pad opens again, as the TV's clock shows it (Flutter counts down on that clock); 0: open. */
+    private long pinWaitOnTheClock(long until) {
+        return until > 0 ? TvClock.toWall(this, until) : 0;
+    }
+
     private void answerDataUsage(String method, MethodChannel.Result result) {
         sIoExecutor.execute(() -> {
             long usage;

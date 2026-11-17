@@ -88,7 +88,7 @@ final class TimeUpRequest {
         if (packageName != null) {
             String key = LauncherAccessibilityService.getActiveProfileKey(app);
             String held = Allowance.heldApps(app, Collections.singletonList(packageName)).get(packageName);
-            card = cardGroup(groupId, HaLocks.timeUpGroups(HaAllowance.entryFor(app, key, System.currentTimeMillis())), held);
+            card = cardGroup(groupId, HaLocks.timeUpGroups(HaAllowance.entryFor(app, key, TvClock.now(app))), held);
         }
         Log.i(TAG, "Asked for the time's up card for " + packageName + ": " + (card == null ? "nothing held, the home only"
                 : card.isEmpty() ? "everything held" : "a group out of time"));

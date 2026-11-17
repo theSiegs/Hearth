@@ -528,7 +528,7 @@ final class Household {
         if (sContext == null || !member(sContext)) return;
         HouseholdStore store = store(sContext);
         HouseholdLog log = store.log();
-        long now = System.currentTimeMillis();
+        long now = TvClock.now(sContext);
         String item = HouseholdUsage.item(store.tvId(), UsageToday.day(now));
         int sent = 0;
         for (Map.Entry<String, String> person : local(sContext).profiles().entrySet()) {
@@ -550,7 +550,7 @@ final class Household {
     private static void readOtherUsage() {
         if (sContext == null || !member(sContext)) return;
         HouseholdStore store = store(sContext);
-        String day = UsageToday.day(System.currentTimeMillis());
+        String day = UsageToday.day(TvClock.now(sContext));
         sOtherUsage = HouseholdUsage.others(store.log().all(), store.tvId(), day, local(sContext).profiles());
         sOtherUsageDay = day;
         LocalAllowance.forget();
@@ -1936,7 +1936,7 @@ final class Household {
         // As for a refused status: the bridge checks the pairing (HaIntegration unpairs after lasting refusals)
         if (result.outcome == HaNotices.Outcome.NOT_PAIRED) HaBridgeService.sync(context);
         if (result.outcome == HaNotices.Outcome.WRONG_PIN && result.retryAfterS > 0) {
-            ParentPinPolicy.holdUntil(context, System.currentTimeMillis() + result.retryAfterS * 1000L);
+            ParentPinPolicy.holdUntil(context, TvClock.now(context) + result.retryAfterS * 1000L);
         }
         out.put("result", result.outcome.name().toLowerCase(java.util.Locale.ROOT));
         out.put("retryAfter", result.retryAfterS);

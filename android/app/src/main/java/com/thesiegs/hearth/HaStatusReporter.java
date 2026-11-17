@@ -405,7 +405,7 @@ final class HaStatusReporter {
         status.put("screen_time_event_at", eventAt > 0 ? eventAt : JSONObject.NULL);
         // Today's usage: the active profile's, and every profile's (so Home Assistant needn't keep a profile's last
         // post); cumulative for the TV's local day
-        long now = System.currentTimeMillis();
+        long now = TvClock.now(mContext);
         JSONObject usage = UsageToday.today(mContext, now);
         // Each profile's name beside its key, so Home Assistant can tell who's who without knowing the keys
         for (java.util.Iterator<String> keys = usage.keys(); keys.hasNext(); ) {
@@ -462,7 +462,7 @@ final class HaStatusReporter {
         // be sent more often (a session that only refreshes its position keeps the last one, see MediaPosition)
         MediaPosition position = s.playback == null ? null : MediaPosition.of(mLastPosition, s.mediaPackage,
                 s.playback.getState(), s.playback.getPosition(), s.playback.getPlaybackSpeed(),
-                s.playback.getLastPositionUpdateTime(), SystemClock.elapsedRealtime(), now);
+                s.playback.getLastPositionUpdateTime(), SystemClock.elapsedRealtime(), System.currentTimeMillis());
         mLastPosition = position;
         status.put("media_position_s", position == null ? JSONObject.NULL : position.positionMs / 1000);
         status.put("media_position_at", position == null ? JSONObject.NULL : position.at);

@@ -189,7 +189,7 @@ final class HaAllowance {
         }
         JSONObject profiles = profilesFromDocument(state);
         if (profiles == null) return;
-        long now = System.currentTimeMillis();
+        long now = TvClock.now(context);
         // Each profile's time in front as of this word: counted down from, should Home Assistant go quiet
         for (Iterator<String> keys = profiles.keys(); keys.hasNext(); ) {
             String key = keys.next();

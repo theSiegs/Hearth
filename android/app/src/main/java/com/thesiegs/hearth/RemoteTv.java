@@ -427,7 +427,7 @@ final class RemoteTv implements RemoteSession.Tv {
 
     @Override
     public JSONObject entry(String profileKey) {
-        return profileKey == null ? null : HaAllowance.entryFor(mContext, profileKey, System.currentTimeMillis());
+        return profileKey == null ? null : HaAllowance.entryFor(mContext, profileKey, TvClock.now(mContext));
     }
 
     @Override

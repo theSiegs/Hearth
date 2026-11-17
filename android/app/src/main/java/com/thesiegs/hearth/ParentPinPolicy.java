@@ -7,8 +7,9 @@ import android.os.Bundle;
 /**
  * The one count of wrong Parent PINs on this TV, for every way a PIN is entered: Hearth's own PIN pad, HearthTube
  * here, and a kid's HearthTube through that profile's agent. After {@link #FREE_TRIES} wrong in a row each further
- * one waits, 30 seconds and doubling up to an hour; a right PIN clears it. Kept in the device prefs on wall-clock time,
- * so restarting Hearth, or the TV, gives no fresh tries; a clock set back never stretches a wait past an hour.
+ * one waits, 30 seconds and doubling up to an hour; a right PIN clears it. Kept in the device prefs on Hearth's time
+ * (TvClock: setting the TV's clock forward ends no wait), so restarting Hearth, or the TV, gives no fresh tries; a
+ * clock set back never stretches a wait past an hour.
  */
 final class ParentPinPolicy {
     static final int FREE_TRIES = 5;
@@ -50,7 +51,7 @@ final class ParentPinPolicy {
      * here waits as long, never more than {@link #MAX_MS} from now. A longer wait already set stays.
      */
     static synchronized void holdUntil(Context context, long until) {
-        long now = System.currentTimeMillis();
+        long now = TvClock.now(context);
         long capped = Math.min(until, now + MAX_MS);
         if (capped <= lockedUntil(context, now)) return;
         prefs(context).edit().putLong(PREF_LOCKED_UNTIL, capped).commit();
@@ -68,7 +69,7 @@ final class ParentPinPolicy {
      */
     static synchronized Bundle verify(Context context, String pin) {
         Bundle result = new Bundle();
-        long now = System.currentTimeMillis();
+        long now = TvClock.now(context);
         long until = lockedUntil(context, now);
         if (now < until) {
             result.putBoolean("ok", false);
@@ -80,8 +81,9 @@ final class ParentPinPolicy {
         if (ok) {
             clear(context);
         } else {
-            long next = miss(context, System.currentTimeMillis());
-            if (next > 0) result.putInt("wait_seconds", (int) ((next - System.currentTimeMillis() + 999) / 1000));
+            long after = TvClock.now(context);
+            long next = miss(context, after);
+            if (next > 0) result.putInt("wait_seconds", (int) ((next - after + 999) / 1000));
         }
         result.putBoolean("ok", ok);
         return result;
