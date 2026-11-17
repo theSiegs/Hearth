@@ -500,3 +500,14 @@ async def test_a_limit_reached_stays_held_while_the_sources_settle(
     await hass.async_block_till_done()
     assert int(hass.states.get(left).state) > 0
     assert len(reached) == 1
+
+    # A reload (a setting changed) finds the sources loaded: a bonus opens a reached limit at once
+    await _post(client, secret, body=_tv_status(hearthtube_s=3600))
+    await hass.async_block_till_done()
+    assert hass.states.get(left).state == "0"
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    await hass.services.async_call(DOMAIN, "add_bonus", {"person": SAM, "group": "video", "minutes": 30}, blocking=True)
+    await hass.async_block_till_done()
+    assert int(hass.states.get(left).state) > 0

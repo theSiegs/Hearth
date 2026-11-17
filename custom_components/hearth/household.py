@@ -231,8 +231,9 @@ class Household:
     def __init__(self, hass: HomeAssistant, hub: HearthHub) -> None:
         self.hass = hass
         self.hub = hub
-        # When the sources count as settled after a start (STARTUP_SETTLE); None until Home Assistant is running
-        self._settle_until: datetime | None = None
+        # When the sources count as settled after a start (STARTUP_SETTLE); None until Home Assistant is running. A
+        # reload (a setting changed) finds them loaded: nothing to wait for
+        self._settle_until: datetime | None = dt_util.utcnow() if hass.state is CoreState.running else None
         self.limits = Limits(hass, hub.entry.entry_id)
         self.live = LiveTracker(hass, hub.entry.entry_id)
         self.apps = AppCatalog(hass, hub.entry.entry_id)
@@ -902,7 +903,7 @@ class Household:
         if self.hass.state is not CoreState.running:
             return True
         if self._settle_until is None:
-            self._settle_until = now + STARTUP_SETTLE
+            self._settle_until = dt_util.as_utc(now) + STARTUP_SETTLE
             if STARTUP_SETTLE > timedelta(0):
                 from homeassistant.helpers.event import async_call_later
 
@@ -911,7 +912,7 @@ class Household:
                         self.hass, STARTUP_SETTLE.total_seconds() + 1, callback(lambda _now: self.recompute())
                     )
                 )
-        return now < self._settle_until
+        return dt_util.as_utc(now) < self._settle_until
 
     @callback
     def recompute(self) -> None:

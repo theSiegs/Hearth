@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **Changing a setting doesn't wait for the sources.** The 90-second hold after a start (2026.11.27) is for Home Assistant starting only; a reload after a setting changed finds the sources loaded, so more time given right after opens at once.
+
 ## 2026.11.27
 
 ### Home Assistant integration
