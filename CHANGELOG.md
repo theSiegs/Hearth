@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **A minute counts once it's over.** Daily time used and today's time left both count whole minutes used, so they add up to the day (half a minute in, a kid saw 0 used but a minute gone), and a kid is never held before the last minute is used.
+
 ## 2026.11.26
 
 ### Home Assistant integration

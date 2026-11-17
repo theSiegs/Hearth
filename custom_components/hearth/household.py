@@ -10,6 +10,7 @@ from here.
 from __future__ import annotations
 
 import logging
+import math
 
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
@@ -2276,8 +2277,9 @@ class Household:
 
     @staticmethod
     def used_minutes(day: PersonDay | None) -> int:
-        """Daily time used today in whole minutes, as every view shows it (time.used, the by-category split)."""
-        return int(round(day.groups.get(ALL, 0.0) / 60)) if day else 0
+        """Daily time used today in whole minutes, as every view shows it (time.used, the by-category split): a minute
+        counts once it's over, as today_left takes it (time_model.account)."""
+        return int(math.floor(day.groups.get(ALL, 0.0) / 60)) if day else 0
 
     def by_category(self, person: str) -> tuple[list[dict[str, Any]], int]:
         """Today's counted minutes split by category, each minute once ([{id, name, minutes}] in the household's

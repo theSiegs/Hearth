@@ -140,7 +140,9 @@ def account(
     # Then the general bonus: what's still past daily time or past a limit
     bonus_used = int(math.floor(max(left_of_day, sum(v for g, v in over.items() if g not in closed))))
     bonus_left = max(0, bonus - bonus_used)
-    today_left = None if base is None else max(0, int(base + bonus - counted))
+    # Whole minutes used (a minute counts once it's over), so today_left and the used shown add up to the day, and a
+    # minute begun isn't taken before it's used
+    today_left = None if base is None else max(0, int(base + bonus - math.floor(counted)))
     out = Account(base, bonus, used, bonus_used, bonus_left, today_left, closed=closed)
     for gid in sorted(set(categories) | set(cat_bonuses)):
         cap, spent = categories.get(gid, (None, cat_bonuses.get(gid, (0, 0.0, True))[1]))

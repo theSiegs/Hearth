@@ -146,6 +146,14 @@ def test_a_category_closed_today_stays_closed_to_bonus_time() -> None:
     assert category_text("YouTube", 15, 120, 15, closed=True) == "YouTube: 15 min bonus left"
 
 
+def test_a_minute_counts_once_it_s_over() -> None:
+    """Half a minute used: nothing is taken yet, so the used shown (0) and today's time left (120) add up."""
+    assert account(120, 0, 0.5, {}).today_left == 120
+    assert account(120, 0, 1.0, {}).today_left == 119
+    # Never held before the last minute is used
+    assert account(120, 0, 119.6, {}).today_left == 1 and account(120, 0, 120.0, {}).today_left == 0
+
+
 def test_time_taken_away_lowers_daily_time() -> None:
     assert split_bonus(180, 30) == (180, 30)
     assert split_bonus(180, -30) == (150, 0)
