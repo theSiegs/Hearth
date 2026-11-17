@@ -3,6 +3,13 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **Grant services answer their origin.** `hearth.add_time` (general or a category's), `hearth.raise_cap`, `hearth.unlimited`, `hearth.add_bonus` and `hearth.pause` (Pause screens) answer `origin_id` (and `origin_ids` per person), so a client can link to the grant or end it with `hearth.end_grant`. `hearth.pause` now answers at all.
+- **The time model contract matches the code**: each origin's `end`, `time.by_category` and `time.uncounted`, `never_paused` with the keyboards, and exactly what `hearth.end_grant` and the device API's `end_grant` answer, including when nothing is left to end.
+
 ## 2026.11.23
 
 ### Home Assistant integration

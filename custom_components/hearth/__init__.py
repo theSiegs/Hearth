@@ -6,6 +6,7 @@ See docs/home-assistant-integration.md.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from datetime import datetime, timedelta
 
@@ -181,6 +182,24 @@ WATCH_DIGEST_SCHEMA = vol.Schema(
 )
 
 
+def _origin_ids_now(household, people: list[str]) -> dict[str, set[str]]:
+    """Each person's origin ids so far today (before a grant service runs)."""
+    return {p: {o.get("id") for o in household.limits.data.origins.get(p, [])} for p in people}
+
+
+def _new_origins(household, before: dict[str, set[str]]) -> dict[str, Any]:
+    """The origin each person's call just recorded: {"origin_ids": {person: id or None}, "origin_id": the id when
+    there's one person}. None: the call recorded none (nothing was given)."""
+    ids = {}
+    for person, seen in before.items():
+        new = [o.get("id") for o in household.limits.data.origins.get(person, []) if o.get("id") not in seen]
+        ids[person] = new[-1] if new else None
+    out: dict[str, Any] = {"origin_ids": ids}
+    if len(ids) == 1:
+        out["origin_id"] = next(iter(ids.values()))
+    return out
+
+
 def _place_ends_on(household, people: list[str], given: dict | None) -> dict[str, str] | None:
     """A service's ends_on, checked against each person's places."""
     if not given:
@@ -226,8 +245,9 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             )
             # Its id, so an undo ends just this one (hearth.allow_end {id})
             return {"id": extra.id, "until": dt_util.as_local(extra.until).isoformat()}
+        before = _origin_ids_now(target, [call.data["person"]])
         target.add_bonus(call.data["person"], group, call.data["minutes"], by=target.name_of_user(call.context.user_id))
-        return {}
+        return _new_origins(target, before)
 
     @callback
     def remove_bonus(call: ServiceCall) -> ServiceResponse:
@@ -261,9 +281,10 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         return entries[0].runtime_data.household
 
     @callback
-    def pause(call: ServiceCall) -> None:
+    def pause(call: ServiceCall) -> ServiceResponse:
         """Holds the people (everyone by default) for some minutes or until a time (today's, or tomorrow's if it's
-        passed): their Hearth devices stop and say why."""
+        passed): their Hearth devices stop and say why. Pause screens (the family pause) answers its origins
+        ({origin_id(s)}); a pause of one app or group, nothing."""
         household = loaded_household()
         now = dt_util.now()
         if "minutes" in call.data:
@@ -294,8 +315,9 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             for person in people:
                 household.activity.hold(True, person, app or group, "pause", household.person_of_user(call.context.user_id))
             household.recompute()
-            return
+            return {}
         ends_on = _place_ends_on(household, people, call.data.get("ends_on"))
+        before = _origin_ids_now(household, people)
         set_pause(hass, people, until, call.data.get("reason"), ends_on)
         # Where it came from, for the "?" on the status line
         by = household.name_of_user(call.context.user_id)
@@ -307,6 +329,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             household.note_origin(person, "pause", detail, "hearth", by)
             household.activity.hold(True, person, "all", "pause", household.person_of_user(call.context.user_id))
         household.recompute()
+        return _new_origins(household, before)
 
     @callback
     def pause_end(call: ServiceCall) -> None:
@@ -336,7 +359,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     register_service(
         hass, DOMAIN, "get_activity", get_activity, schema=GET_ACTIVITY_SCHEMA, supports_response=SupportsResponse.ONLY
     )
-    register_service(hass, DOMAIN, "pause", pause, schema=PAUSE_SCHEMA)
+    register_service(hass, DOMAIN, "pause", pause, schema=PAUSE_SCHEMA, supports_response=SupportsResponse.OPTIONAL)
     register_service(hass, DOMAIN, "pause_end", pause_end, schema=PAUSE_END_SCHEMA)
     _register_app_blocks(hass, loaded_household)
     _register_answer_request(hass)
@@ -757,12 +780,15 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         household = loaded_household()
         people = who(household, call.data)
         category = category_of(household, call.data) if call.data.get("category") else None
+        before = _origin_ids_now(household, people)
         for person in people:
             household.add_time(
                 person, call.data["minutes"], call.data.get("reason"), by=household.name_of_user(call.context.user_id),
                 category=category,
             )
-        return {p: household.time_view(p) for p in people}
+        # Each person's time view (as before), with the grant's origin id
+        origins = _new_origins(household, before)
+        return {p: {**household.time_view(p), "origin_id": origins["origin_ids"][p]} for p in people} | origins
 
     @callback
     def remove_time(call: ServiceCall) -> ServiceResponse:
@@ -782,7 +808,8 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         category = category_of(household, call.data)
         now = dt_util.now()
         given = call.data.get("until", END_OF_DAY)
-        out = {}
+        out: dict[str, Any] = {}
+        before = _origin_ids_now(household, people)
         for person in people:
             until = None if given == END_OF_DAY else until_for(household, person, given, now)
             held = household.raise_cap(
@@ -790,7 +817,10 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
                 by=household.name_of_user(call.context.user_id),
             )
             out[person] = {"category": category, **held.view()}
-        return out
+        origins = _new_origins(household, before)
+        for person in people:
+            out[person]["origin_id"] = origins["origin_ids"][person]
+        return out | origins
 
     @callback
     def raise_cap_end(call: ServiceCall) -> ServiceResponse:
@@ -811,11 +841,13 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         until = {
             p: min(end_of_day(now), until_for(household, p, END_OF_DAY if open_ended else given, now)) for p in people
         }
+        before = _origin_ids_now(household, people)
         allowed = household.start_unlimited(
             people, until, call.data["include_bedtime"], open_ended, call.data.get("reason"),
             by=household.name_of_user(call.context.user_id),
         )
         return {
+            **_new_origins(household, before),
             "id": allowed.id,
             "until": {p: dt_util.as_local(u).isoformat() for p, u in until.items()},
             "text": {p: household.time_view(p)["text"] for p in people},

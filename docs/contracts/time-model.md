@@ -13,7 +13,7 @@ those minutes, so the day could run out first. Now:
 - **Daily time** is the one total for the day (school days / other days, or the weekly schedule). Its id stays `all`.
 - **Categories** (Games, YouTube, Streaming, Social, ...) may have a **limit** inside daily time ("Games: 2 h limit").
   A limit never adds time; it only stops one category from taking the whole day.
-- There are three ways to give more:
+- There are four ways to give more:
   1. **Bonus time** (`hearth.add_time`): N minutes added to daily time, with **no category**. The kid may spend it
      anywhere. Minutes past any category's limit come out of the same N (one bonus, shared by every category).
      Chores, approved asks, the day-off bonus and adults all give bonus time. It ends at midnight.
@@ -33,11 +33,13 @@ those minutes, so the day could run out first. Now:
 
 ### The accounting
 
-    bonus_used = max(0, minutes over daily time, sum over categories of minutes over each limit)
+    a category's own bonus pays first, for its minutes past its limit or past daily time (minutes past daily time go
+      to the categories with a bonus first); what it pays counts in neither daily time nor the limit
+    bonus_used = max(0, minutes still over daily time, sum over categories of minutes still over each limit)
     bonus_left = max(0, N - bonus_used)
     today_left = max(0, daily time + N - used today)
-    held_left  = max(0, limit - used in the category) + bonus_left     (0: the category is held)
-    left       = min(held_left, today_left)                            (what a person is shown)
+    held_left  = max(0, limit - used in the category) + bonus_left + its own bonus left   (0: held)
+    left       = min(held_left, today_left + its own bonus left)                         (what a person is shown)
 
 Worked examples are in `ha_tests/test_time_model.py`. Example: daily time 3 h, Games limit 2 h, +30 bonus. After 2 h
 30 of games, the bonus is used, Games is held, and the kid has 1 h left for other things.
@@ -56,15 +58,15 @@ New, under `time` (always present for a person; values may be `null`):
 | `time.bonus` | int | Bonus time given today (adults, asks, chores, day-off). |
 | `time.bonus_left` | int | Bonus time not used yet. |
 | `time.bonus_origin` | string \| null | The id of the latest bonus origin today (its ⓘ). |
-| `time.used` | int | Minutes counted today (Unlimited minutes left out). |
-| `time.unlimited` | object \| null | While Unlimited is on: `{until, open, include_bedtime, text, origin}`. `open`: "until turned off"; `origin`: its origin's id. |
+| `time.used` | int | Daily time used today, whole minutes (rounded), Unlimited minutes left out. |
+| `time.unlimited` | object \| null | While Unlimited is on: `{until, open, include_bedtime, text, origin}`. `until`: local ISO, the latest end of its grants; `open`: "until turned off" (still over at midnight); `origin`: the latest Unlimited origin's id. |
 | `time.unlimited_today` | list | Today's ended windows: `{start, end, minutes, settled, text}`. |
 | `time.text` | string \| null | The kid's line, ready to show (see Words). |
 | `time.adult_text` | string \| null | The adult's line ("... (includes 30 min bonus)"). |
-| `time.by_category[]` | list | Today's counted minutes by category, `{id, name, minutes}`, each minute once (the same split as the page's daily-time bar; `other` for apps in no category): they add up to `time.used`. |
-| `time.uncounted` | int | Minutes not counted in daily time (categories outside it, Unlimited windows), never inside `by_category`. |
-| `time.categories[]` | list | Each category with a limit (or a raised one): `{id, name, limit, limit_today, raised, until, left, used, text, limit_text}`. `limit`: as set for today's kind of day; `limit_today`: in force today (`null`: no limit); `left`: usable (never more than `today_left`); `text`: the kid's line; `limit_text`: the adult's hint. |
-| `time.category_bonuses[]` | list | Categories with their own bonus today: `{id, name, bonus, bonus_left, left, text}` ("Messaging: 15 min bonus left"). Each `time.categories[]` entry also has `bonus`, `bonus_left` and `origin` (the raised limit's origin id, when raised); each `time.category_bonuses[]` entry has `origin` (its bonus's). |
+| `time.by_category[]` | list | Today's counted minutes by category, `{id, name, minutes}` in the household's category order, then `{id: "other", name: "Other"}` for apps in no category. Each minute once, and the minutes add up to `time.used` exactly (largest remainders). Categories with no minutes are left out; empty when nothing is counted. The page's daily-time bar shows the same split. |
+| `time.uncounted` | int | Whole minutes used today but not counted in daily time: categories outside it (and Accessibility) plus Unlimited windows. Never inside `by_category`. |
+| `time.categories[]` | list | Each category with a limit, a raised limit or its own bonus today: `{id, name, limit, limit_today, raised, until, left, used, text, limit_text, bonus, bonus_left, origin}`. `limit`: as set for today's kind of day (`null`: none); `limit_today`: in force today (`null`: no limit); `raised`: bool; `until`: the raises' latest end (`null`: midnight); `left`: usable (its limit, the bonus left and its own bonus left, never more than `today_left` + its own bonus left); `used`: its minutes today; `text`: the kid's line (`null` while Unlimited); `limit_text`: the adult's hint; `bonus`/`bonus_left`: its own bonus today; `origin`: the latest raise's origin id when raised, else `null`. |
+| `time.category_bonuses[]` | list | Categories with their own bonus today, with a limit or not: `{id, name, bonus, bonus_left, origin, left, text}`. `origin`: the latest bonus origin of that category; `text`: `Messaging: 15 min bonus left`, or `Messaging: bonus used` once it's spent. |
 | `time.origins[]` | list | Where today's statuses came from (see Origin), newest first. |
 
 Unchanged: `groups[]` with `{id, name, minutes_left, apps, except}`. A category's `groups[].minutes_left` is
@@ -155,14 +157,15 @@ Each bonus, raised limit, Unlimited window and Pause screens record carries wher
 
 | Field | Meaning |
 |---|---|
-| `kind` | `bonus`, `raise`, `unlimited`, `pause` (and `daily_time` for a today-only daily time override, coming) |
+| `kind` | `bonus` (a category's has `group`), `raise` (with `group`), `unlimited`, `pause` (`daily_time`, a today-only daily time override, is coming) |
 | `source` | `hearth`, `family_link`, `family_safety`, `nintendo`, `chore`, `ask` |
 | `by` | The adult's name when known (the person whose Home Assistant user acted; a chore's: who ticked it) |
 | `at` | ISO time |
 | `detail` | Short text: `Bonus +30`, `Games: limit +30 today`, `Unlimited until 6 PM`, `Pause screens until 7 PM` |
 | `text` | Ready to show: `Bonus +30 · added by Alex in Hearth · 3:05 PM` |
+| `minutes`, `group`, `chore` | When they apply: a bonus's minutes, the category, a chore reward's ledger key |
 | `id` | Stable for the day: status lines link to it (`bonus_origin`, `origin` on categories, category bonuses and Unlimited) |
-| `endable` | Whether something of it can still be ended now (only the latest of each thing) |
+| `endable` | Whether something of it can still be ended now: a bonus grant with unused minutes, an active raise or Unlimited grant, a chore's reward not undone, Pause screens still on |
 | `end` | `{service: "hearth.end_grant", data: {origin_id}}` while something of it can be ended (see Grants), else `null` |
 
 They are in `time.origins[]` (the state document and the household summary, `hearth/summary` and `GET /api/hearth/household`: each person's today's changes, newest first, for adult phones), `hearth.explain`'s `origins`, and `hearth/config`'s `origins` (by person). Today
@@ -170,17 +173,53 @@ They are in `time.origins[]` (the state document and the household summary, `hea
 app) come with the next feature. **Pattern for every client:** a status line stays clean; a small "?" or info
 affordance beside it shows the origin text on a tap. The TV and Glint should follow it.
 
-**Ending one from an adult's phone:** `POST /api/hearth/device/{device_id}/end_grant` (header `X-Hearth-Secret`, a
-device whose person is an adult) with `{"origin_id"}` runs that origin's `end` as the adult's Home Assistant user, as
-every Hearth service (adults only; in the action log, `why: end_grant:<id>`). 200 `{ok, ended: {service, data}}`; 403
-`not_adult`; 404 `not_found` (no such origin, or nothing of it left to end); 400 `bad_request`.
+### Ending a grant: what comes back
+
+`hearth.end_grant {origin_id}` (response optional; adults only) answers `{person, kind, ...}`:
+
+| `kind` | Other fields | What it did |
+|---|---|---|
+| `bonus` | `taken`: int | Took back that grant's unused minutes (spent minutes are put on the oldest givers first) |
+| `raise` | `group` | Ended that raise; the category's other raises stay |
+| `unlimited` | `still_on`: bool | Ended that grant; Unlimited stays on (to the latest end of the others) when `still_on` |
+| `chore` | none | Undid the chore's reward |
+| `pause` | none | Ended Pause screens for the person |
+
+Nothing left to end: a validation error, `Nothing of it is left to end` (an origin that isn't `endable`), or `No such
+grant today` (an unknown id). Nothing changes then.
+
+From an adult's phone: `POST /api/hearth/device/{device_id}/end_grant` (header `X-Hearth-Secret`; the device's person
+must be an adult) with `{"origin_id"}` runs `hearth.end_grant` as that adult's Home Assistant user (in the action log,
+`why: end_grant:<id>`):
+
+- 200 `{"ok": true, "ended": {person, kind, ...}}` (the service's answer above);
+- 404 `{"error": "not_found"}`: no such origin today, or nothing of it left to end;
+- 403 `not_adult` (the device's person isn't an adult) or `not_local`; 401 `not_paired`; 429 `too_often`;
+  400 `bad_request` (no `origin_id`), or `{"error": "failed", "detail": ...}` when the service refused it.
+
+## What the grant services answer
+
+Each service that gives something answers the origin it recorded, so a client can link to it, show its ⓘ or end it
+later (`hearth.end_grant`). For one person: `origin_id`. For every call: `origin_ids` `{person: id or null}` (null: the
+call gave nothing for that person, so no origin was recorded, as with 0 minutes).
+
+| Service | Answer |
+|---|---|
+| `hearth.add_time` (general or `category`) | `{origin_id, origin_ids, <person>: {...time view..., origin_id}}`: each person's `time` as in the state document |
+| `hearth.raise_cap` | `{origin_id, origin_ids, <person>: {category, add, to, no_cap, until, origin_id}}`: the raise in effect after it (all grants together) |
+| `hearth.unlimited` | `{origin_id, origin_ids, id, until: {person: ISO}, text: {person: line}}` (`id`: the allow behind it) |
+| `hearth.add_bonus` (older name) | `{origin_id, origin_ids}`; with `device`, as before: `{id, until}` (extra time on one device has no origin) |
+| `hearth.pause` | Pause screens (the family pause): `{origin_id, origin_ids}`; a pause of one app or group: `{}` |
+
+The device API has no other adult action that gives time; asks are answered by an adult (`hearth.answer_request`, the
+phones' notification buttons), and the bonus they give records an origin with `source: ask`.
 
 ## Unchanged this release
 
 Extra time on one device (`hearth.add_bonus` or `hearth.allow` with `device`, device_extra.py, the summary's
 `device_extras`) is unchanged.
 
-## Deprecated (kept for one release, until the release after the one that ships this)
+## Deprecated (kept for one release: until the release after 2026.11.23)
 
 - `hearth.add_bonus` with a `group`: raises that category's limit (as `hearth.raise_cap` by minutes). Without a group,
   or with `all`: bonus time (as `hearth.add_time`). `hearth.remove_bonus` likewise.
@@ -203,5 +242,6 @@ Extra time on one device (`hearth.add_bonus` or `hearth.allow` with `device`, de
 - `hearth/config`: `+ fl_backstop`, `+ fl_backstop_margin`, `+ origins`.
 - State document, per person: `+ never_paused`; `time.bonus_origin`, `origin` on raised categories, category bonuses and Unlimited; each origin `+ id`, `+ endable`, `+ end`.
 - New: `POST /api/hearth/device/{device_id}/end_grant` (adults' devices) and the service `hearth.end_grant`; an origin's `end` names it.
+- Grant services answer `origin_id` / `origin_ids` (see What the grant services answer); `hearth.pause` now answers.
 - New services: `add_time`, `remove_time`, `raise_cap`, `raise_cap_end`, `unlimited`, `unlimited_end` (adults only).
 - New events: `hearth_unlimited_started {person, until, open}`, `hearth_unlimited_ended {person, id, text}`.

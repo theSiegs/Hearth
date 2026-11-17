@@ -658,6 +658,8 @@ async def test_origins_have_ids_links_and_an_end(
         f"/api/hearth/device/{TV_ID}/end_grant", json={"origin_id": origin["id"]}, headers={"X-Hearth-Secret": secret}
     )
     assert response.status == 200, await response.text()
+    # The service's answer: {person, kind, taken}
+    assert await response.json() == {"ok": True, "ended": {"person": "person.sam", "kind": "bonus", "taken": 30}}
     await hass.async_block_till_done()
     assert household.days["person.sam"].limits["all"].bonus_min == 0
     assert any(r.get("why") == f"end_grant:{origin['id']}" for r in household.activity.records)
@@ -680,6 +682,51 @@ async def _end(hass, origin_id: str):
 def _origin(household, kind: str, nth: int = 0) -> str:
     """The id of the person's [nth] newest origin of [kind]."""
     return [o for o in household.time_view("person.sam")["origins"] if o["kind"] == kind][nth]["id"]
+
+
+async def test_every_grant_service_answers_its_origin_id(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _set(hass, "video", 10)
+    household = _household(hass)
+
+    def latest(kind: str, group: str | None = None) -> str:
+        return household.latest_origin("person.sam", kind, group)
+
+    answer = await _call(hass, "add_time", {"person": "person.sam", "minutes": 30})
+    assert answer["origin_id"] == answer["person.sam"]["origin_id"] == latest("bonus")
+    assert answer["origin_ids"] == {"person.sam": latest("bonus")} and "today_left" in answer["person.sam"]
+    answer = await _call(hass, "add_time", {"person": "person.sam", "minutes": 15, "category": "games"})
+    assert answer["origin_id"] == latest("bonus", "games")
+    answer = await _call(hass, "raise_cap", {"person": "person.sam", "category": "video", "minutes": 20})
+    assert answer["origin_id"] == answer["person.sam"]["origin_id"] == latest("raise", "video")
+    assert answer["person.sam"]["add"] == 20 and answer["person.sam"]["category"] == "video"
+    answer = await _call(hass, "add_bonus", {"person": "person.sam", "group": "video", "minutes": 5})
+    assert answer["origin_id"] == latest("raise", "video")
+    answer = await _call(hass, "add_bonus", {"person": "person.sam", "minutes": 10})
+    assert answer["origin_id"] == latest("bonus")
+    answer = await _call(hass, "unlimited", {"person": "person.sam"})
+    assert answer["origin_id"] == latest("unlimited") and answer["id"]
+    answer = await _call(hass, "pause", {"people": ["person.sam"], "minutes": 10})
+    assert answer["origin_id"] == latest("pause")
+    # Each one ends exactly that grant, and says what it did
+    ended = await _end(hass, latest("raise", "video"))
+    assert ended == {"person": "person.sam", "kind": "raise", "group": "video"}
+    assert household.limits.raise_of("person.sam", "video").add == 20
+    ended = await _end(hass, latest("unlimited"))
+    assert ended == {"person": "person.sam", "kind": "unlimited", "still_on": False}
+    assert (await _end(hass, latest("pause"))) == {"person": "person.sam", "kind": "pause"}
+    # Nothing given: no origin (0 minutes is only a recompute)
+    answer = await _call(hass, "add_time", {"person": "person.sam", "minutes": 1})
+    assert answer["origin_id"]
+    nothing = await _call(hass, "add_bonus", {"person": "person.sam", "minutes": 0})
+    assert nothing == {"origin_ids": {"person.sam": None}, "origin_id": None}
+    # An unknown id, or one with nothing left: refused
+    with pytest.raises(Exception, match="No such grant today"):
+        await _end(hass, "nope")
+    with pytest.raises(Exception, match="Nothing of it is left to end"):
+        await _end(hass, latest("pause"))
 
 
 async def test_ending_the_second_raise_keeps_the_first(
