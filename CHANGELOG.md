@@ -3,12 +3,13 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
-## Unreleased
+## 2026.11.31
 
 ### Home Assistant integration
 
 - **A parent's bonus in Family Link counts after Hearth gave one.** Hearth's own mirrored bonus was taken off twice, so a parent's bonus up to that size never lifted Hearth's hold.
 - **A parent's unlock in Family Safety counts after Hearth's extra time ended.** Extra time Hearth gave earlier in the day, long over, made a parent's unlock of a later lock read as nobody's (a Family Safety without hold attributes).
+- **Extra time Hearth couldn't cancel stays known as Hearth's**, so a later hold never takes it for a parent's.
 
 ## 2026.11.30
 
