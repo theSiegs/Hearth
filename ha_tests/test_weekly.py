@@ -113,6 +113,15 @@ def test_a_half_day_ends_school_early_then_carries_on() -> None:
     assert half_day_changes(base, modes, None, 120)[2] == (795, "free")
     # A School end after the weekday's changes nothing
     assert half_day_changes(base, modes, 16 * 60, None) == base
+    # School split by lunch: a half day ending before lunch ends all of it, the afternoon School included
+    split = [(405, "free"), (465, "school"), (690, "free"), (720, "school"), (915, "free"), (1290, "sleep")]
+    assert half_day_changes(split, modes, 11 * 60, None) == [(405, "free"), (465, "school"), (660, "free"), (1290, "sleep")]
+    # Ending after lunch: the morning, lunch and School until then
+    assert half_day_changes(split, modes, 13 * 60, None) == [
+        (405, "free"), (465, "school"), (690, "free"), (720, "school"), (780, "free"), (1290, "sleep")
+    ]
+    # Hours early counts back from the last School's end
+    assert half_day_changes(split, modes, None, 120)[-2] == (795, "free")
 
 
 async def test_the_night_carries_over_midnight(hass: HomeAssistant) -> None:

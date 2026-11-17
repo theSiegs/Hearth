@@ -251,13 +251,14 @@ def normalize_limits(limits: Any) -> dict[str, int | None]:
 def half_day_changes(
     base: list[tuple[int, str]], modes: dict[str, dict[str, Any]], school_ends: int | None, early: int | None
 ) -> list[tuple[int, str]]:
-    """A half day's changes: the weekday's, with its first School ending at [school_ends] (or [early] minutes before
-    the weekday's School ends), then whatever came after School. A School ending later than the weekday's is left."""
-    index = next((i for i, (_, m) in enumerate(base) if (modes.get(m) or {}).get("allows") == SCHOOL_MODE), None)
-    if index is None:
+    """A half day's changes: the weekday's, with School ending at [school_ends] (or [early] minutes before the
+    weekday's School ends), then whatever came after School. School split by a break (lunch, say) ends at that time
+    too: its later parts go. A School ending later than the weekday's is left."""
+    school = [i for i, (_, m) in enumerate(base) if (modes.get(m) or {}).get("allows") == SCHOOL_MODE]
+    if not school:
         return list(base)
-    start = base[index][0]
-    after = base[index + 1] if index + 1 < len(base) else None
+    start = base[school[0]][0]
+    after = base[school[-1] + 1] if school[-1] + 1 < len(base) else None
     if early:
         if after is None:
             return list(base)
@@ -267,8 +268,9 @@ def half_day_changes(
     if end <= start or (after is not None and end >= after[0]):
         return list(base)
     then = after[1] if after is not None else FREE
-    rest = [c for c in base[index + 2:] if c[0] > end] if after is not None else []
-    return merged([*base[: index + 1], (end, then), *rest])
+    before = [c for c in base if c[0] < end]
+    rest = [c for c in base[school[-1] + 1 :] if c[0] > end]
+    return merged([*before, (end, then), *rest])
 
 
 # The resolved day
