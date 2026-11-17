@@ -8,6 +8,9 @@
 ### Home Assistant integration
 
 - **A minute counts once it's over.** Daily time used and today's time left both count whole minutes used, so they add up to the day (half a minute in, a kid saw 0 used but a minute gone), and a kid is never held before the last minute is used.
+- **A pool that's gone takes its entities with it.** When a pool is removed (the retired built-in Video pool, say), its budgets, bonus, today's time and minutes left go from Home Assistant on the next start instead of staying unavailable for good.
+- **Forgetting a phone.** An administrator can forget any phone from Glint (`hearth/glint/forget`), and a phone paired and never seen can be forgotten too; an adult who isn't an administrator still forgets only their own phones and kids'. The device entry is removed the way Home Assistant 2027.8 expects.
+- **Reloading Hearth no longer leaves a web session behind** (the app lookups' session is let go of on an unload instead of a close Home Assistant refuses).
 
 ## 2026.11.26
 

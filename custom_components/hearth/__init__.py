@@ -53,6 +53,7 @@ from .const import (
 from .profiles import ISSUE_PROFILE_KEYS, legacy_keys
 from .push import new_topic
 from .hub import HearthHub
+from .entity import async_prune_group_entities
 from .attention import ACT_PREFIX
 from .limits import DAY_TYPES, count_messaging, retire_video
 from .asks import EVENT_MORE_TIME_ANSWERED, EVENT_MORE_TIME_REQUESTED, AskError
@@ -1144,6 +1145,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     # Hearth's page in the sidebar, while the household is set up
     await panel.async_register_panel(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    # A pool that's gone (the retired Video pool) leaves its entities behind, unavailable for good: remove them
+    if gone := async_prune_group_entities(hass, hub):
+        _LOGGER.info("Hearth: removed %d entities of pools that are gone: %s", len(gone), ", ".join(gone))
 
     @callback
     def recompute(_now) -> None:

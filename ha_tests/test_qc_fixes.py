@@ -401,3 +401,59 @@ async def test_a_kid_or_someone_who_isn_t_a_hearth_adult_can_t_confirm(
     result = await ws.receive_json()
     assert result["error"]["code"] == "unauthorized"
     assert (await _poll(http, started["pairing_id"]))["status"] == "pending"
+
+
+# 7. A pool that's gone takes its entities with it
+
+
+async def test_a_pool_that_s_gone_takes_its_entities_with_it(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    from homeassistant.helpers import entity_registry as er
+
+    await _household_with_sam(hass, hass_client_no_auth)
+    registry = er.async_get(hass)
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+
+    def sam_entities(pool: str) -> list[str]:
+        return [
+            e.entity_id
+            for e in er.async_entries_for_config_entry(registry, entry.entry_id)
+            if e.unique_id.startswith(f"{entry.entry_id}_{SAM}_") and e.unique_id.endswith(f"_{pool}")
+        ]
+
+    assert len(sam_entities("video")) == 5  # two budgets, the bonus, today's time and the minutes left
+    kept = sam_entities("all")
+    assert kept
+
+    # The Video pool is removed: its entities go on the reload instead of staying unavailable for good
+    groups = [g for g in entry.options.get("groups", []) if g["id"] != "video"]
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "groups": groups})
+    await hass.async_block_till_done()
+    assert sam_entities("video") == []
+    assert sam_entities("all") == kept
+    assert all(hass.states.get(e) is not None for e in kept)
+
+
+# 8. Minutes a phone counted offline count on its first post back
+
+
+async def test_minutes_counted_offline_count_on_the_first_post_back(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    from pytest_homeassistant_custom_component.common import async_fire_time_changed
+
+    from test_client_contract import _household as _phones, _status
+
+    _entry, client, sam, _alex = await _phones(hass, hass_client_no_auth)
+    await _status(client, sam, seconds_today=600, app_seconds_today={"com.example.tube": 600})
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.hearth_sam_screen_time_today").state == "10"
+    # Half an hour offline, counting all along; Hearth hears nothing meanwhile
+    freezer.tick(timedelta(minutes=30))
+    async_fire_time_changed(hass, dt_util.utcnow())
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.hearth_sam_screen_time_today").state == "10"
+    await _status(client, sam, seconds_today=2400, app_seconds_today={"com.example.tube": 2400})
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.hearth_sam_screen_time_today").state == "40"

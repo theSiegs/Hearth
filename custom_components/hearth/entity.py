@@ -101,6 +101,8 @@ class HearthPersonEntity(Entity):
         suffix = f"_{group.id}" if group else ""
         self._attr_unique_id = f"{hub.entry.entry_id}_{person}_{key}{suffix}"
         if group is not None:
+            made_group_entities(hub).add(self._attr_unique_id)
+        if group is not None:
             self._attr_translation_placeholders = {"group": group.name}
         if legacy_name is not None and id_domain is not None:
             # Its name changed (the time model's words: "Daily time", "Games limit on school days"), its entity id
@@ -125,3 +127,37 @@ class HearthPersonEntity(Entity):
     @callback
     def _people_changed(self, _new_day: bool = False) -> None:
         self.async_write_ha_state()
+
+
+# The keys of the entities each pool gets per person (number.py, sensor.py): an entity under one of them that setup
+# didn't make belongs to a pool that's gone (or no longer gets one), e.g. the retired Video pool's
+GROUP_KEYS = ("budget_weekday", "budget_weekend", "bonus_today", "group_today", "minutes_left")
+
+
+def made_group_entities(hub: HearthHub) -> set[str]:
+    """The unique ids of the per-pool entities this setup made."""
+    made = getattr(hub, "_made_group_entities", None)
+    if made is None:
+        made = set()
+        hub._made_group_entities = made  # type: ignore[attr-defined]
+    return made
+
+
+@callback
+def async_prune_group_entities(hass: HomeAssistant, hub: HearthHub) -> list[str]:
+    """Removes the registry entries of per-pool entities this setup didn't make (left unavailable forever
+    otherwise); returns their entity ids. Run after the platforms are set up."""
+    from homeassistant.helpers import entity_registry as er
+
+    registry = er.async_get(hass)
+    made = made_group_entities(hub)
+    prefix = f"{hub.entry.entry_id}_"
+    gone: list[str] = []
+    for entry in er.async_entries_for_config_entry(registry, hub.entry.entry_id):
+        uid = entry.unique_id
+        if not uid.startswith(prefix) or uid in made:
+            continue
+        if any(f"_{key}_" in uid[len(prefix) :] for key in GROUP_KEYS):
+            registry.async_remove(entry.entity_id)
+            gone.append(entry.entity_id)
+    return gone
