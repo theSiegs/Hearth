@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.11.36
+
+### TV
+
+- **Bedtime starts on the TV even without Home Assistant.** The next lock Home Assistant named (bedtime, School time) now holds the apps once its time comes, so unplugging the router before bedtime doesn't keep the TV open; Home Assistant's word replaces it within minutes when it's reachable.
+
 ## 2026.11.35
 
 ### TV
