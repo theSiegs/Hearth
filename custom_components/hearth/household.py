@@ -20,6 +20,7 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import CoreState, HomeAssistant, callback
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
@@ -226,6 +227,22 @@ def _keep_held(state: GroupState) -> None:
         state.counted_min = max(state.counted_min, state.budget_min + state.bonus_min)
 
 
+# A totals source correcting itself down by this much is taken as it is; a bigger drop (its own day ending at
+# another hour, a cloud hiccup reporting 0) never lowers today's count
+TOTALS_CORRECTION_S = 5 * 60
+
+
+def _higher(kept: Reading, new: Reading) -> Reading:
+    """A totals source's reading today, never much lower than it was: a small correction down is taken as it is, a
+    bigger drop keeps the higher total and each app's higher seconds."""
+    if new.total_s >= kept.total_s - TOTALS_CORRECTION_S:
+        return new
+    items = dict(kept.items)
+    for key, seconds in new.items.items():
+        items[key] = max(items.get(key, 0.0), seconds)
+    return Reading(new.source, max(kept.total_s, new.total_s), items, new.rest_group)
+
+
 class Household:
     def __init__(self, hass: HomeAssistant, hub: HearthHub) -> None:
         self.hass = hass
@@ -278,8 +295,11 @@ class Household:
         self._model_logged: dict[str, tuple] = {}
         # The day [days] is of
         self.today: date | None = None
-        # Each totals source's last reading today, which counts while its sensor has no number (unavailable)
+        # Each totals source's highest reading today (each app's, and the total): it counts while the sensor has no
+        # number (unavailable), and a lower one (a cloud hiccup, the source's own day ending at another hour) never
+        # lowers today's count. Kept across a restart (a source still unavailable then loses nothing)
         self._last_totals: dict[str, tuple[date, Reading]] = {}
+        self._totals_store: Store[dict[str, Any]] = Store(hass, 1, f"hearth.totals.{hub.entry.entry_id}")
         self.groups: list[Group] = []
         self.sources: list[Source] = []
         self.titles: list[Title] = []
@@ -293,6 +313,18 @@ class Household:
         self._never_held_for: tuple[Any, frozenset[str]] | None = None
 
     async def async_load(self) -> None:
+        stored = await self._totals_store.async_load() or {}
+        for source_id, kept in stored.items():
+            try:
+                self._last_totals[source_id] = (
+                    date.fromisoformat(kept["day"]),
+                    Reading(
+                        kept["source"], float(kept["total_s"]), {k: float(v) for k, v in (kept.get("items") or {}).items()},
+                        kept.get("rest_group"),
+                    ),
+                )
+            except (KeyError, TypeError, ValueError):
+                continue
         await self.limits.async_load()
         await self.live.async_load()
         await self.apps.async_load()
@@ -316,7 +348,17 @@ class Household:
         await self.week.async_load()
         await self.todos.async_load()
 
+    def _totals_data(self) -> dict[str, Any]:
+        return {
+            source_id: {
+                "day": day.isoformat(), "source": reading.source, "total_s": reading.total_s,
+                "items": dict(reading.items), "rest_group": reading.rest_group,
+            }
+            for source_id, (day, reading) in self._last_totals.items()
+        }
+
     async def async_flush(self) -> None:
+        await self._totals_store.async_save(self._totals_data())
         await self.limits.async_flush()
         await self.categories_book.async_flush()
         await self.live.async_flush()
@@ -1032,10 +1074,16 @@ class Household:
                     )
             else:
                 reading = totals_reading(self.hass, source, today)
+                last = self._last_totals.get(source.id)
+                last = last[1] if last is not None and last[0] == today else None
                 if reading is not None:
-                    self._last_totals[source.id] = (today, reading)
-                elif (last := self._last_totals.get(source.id)) is not None and last[0] == today:
-                    reading = last[1]
+                    higher = _higher(last, reading) if last is not None else reading
+                    if higher != last:
+                        self._last_totals[source.id] = (today, higher)
+                        self._totals_store.async_delay_save(self._totals_data, 30)
+                    reading = higher
+                else:
+                    reading = last
                 if reading is not None:
                     add(source.person, device, reading)
 

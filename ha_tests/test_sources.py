@@ -354,13 +354,13 @@ async def test_screen_time_today_is_kept_over_a_restart(
     await _option(hass, "add_source", {"entity_id": SWITCH_SENSOR, "person": "person.sam", "group": "games"})
     assert _state(hass, "sensor.hearth_sam_screen_time_today") == "45"
 
-    # Back with the Switch's sensor not reporting yet: what was shown today stays
+    # Back with the Switch's sensor not reporting yet: what was counted today stays, for limits too
     hass.states.async_set(SWITCH_SENSOR, "unavailable")
     entry = hass.config_entries.async_entries(DOMAIN)[0]
     assert await hass.config_entries.async_reload(entry.entry_id)
     await hass.async_block_till_done()
     total = hass.states.get("sensor.hearth_sam_screen_time_today")
-    assert total.attributes["groups"]["all"] < 45
+    assert total.attributes["groups"]["all"] == 45
     assert total.state == "45"
 
 
@@ -381,3 +381,21 @@ async def test_share_app_data_is_always_false(
     entry = hass.config_entries.async_entries(DOMAIN)[0]
     result = await hass.config_entries.options.async_init(entry.entry_id)
     assert "share_app_data" not in result["menu_options"]
+
+
+async def test_a_source_dropping_to_nothing_never_lowers_today_s_count(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """A source's own day ending at another hour, or a hiccup reporting 0: today's count (and its holds) stays."""
+    await _household_with_sam(hass, hass_client_no_auth)
+    hass.states.async_set(PHONE_SENSOR, "45", {"unit_of_measurement": "min"})
+    await _option(hass, "add_source", {"entity_id": PHONE_SENSOR, "person": "person.sam", "group": "games"})
+    assert hass.states.get("sensor.hearth_sam_screen_time_today").attributes["groups"]["all"] == 60
+    hass.states.async_set(PHONE_SENSOR, "0", {"unit_of_measurement": "min"})
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.hearth_sam_screen_time_today").attributes["groups"]["all"] == 60
+    # And counting on from there once it's past what it had
+    hass.states.async_set(PHONE_SENSOR, "50", {"unit_of_measurement": "min"})
+    await hass.async_block_till_done()
+    assert hass.states.get("sensor.hearth_sam_screen_time_today").attributes["groups"]["all"] == 65
+

@@ -15,6 +15,7 @@
 - **An app block whose call timed out but went through is Hearth's to lift.** It showed as a parent's block and Hearth's unblock never undid it.
 - **One stray location fix isn't a move.** A Family Link move now needs two fixes of their own (a single one, minutes before the next, ended "until they leave home" exceptions); and a reading too rough to tell home apart no longer puts a kid in a big zone around the house.
 - **Keyboards and home screens are never blocked**, as Hearth and Family Link aren't: either could leave a kid's device unusable.
+- **A source's count dropping never lets a kid back in.** Family Safety's or Nintendo's day ending at another hour, or a cloud hiccup reporting 0, lowered today's count at once and could release a kid over their limit; a small correction (up to 5 minutes) is still taken. What each source counted today is also kept across a restart, so one still unavailable then loses nothing.
 
 ## 2026.11.29
 
