@@ -23,3 +23,15 @@ def no_evening_hold(monkeypatch):
     monkeypatch.setattr(glance, "CUTOFF_HOUR", 24)
     monkeypatch.setattr(glance, "MORNING_HOUR", 0)
     yield
+
+
+@pytest.fixture(autouse=True)
+def settled_sources(monkeypatch):
+    """No wait for the sources after a start (household.STARTUP_SETTLE): a test sets one up in a moment. The tests of
+    the wait itself set it back."""
+    from datetime import timedelta
+
+    from custom_components.hearth import household
+
+    monkeypatch.setattr(household, "STARTUP_SETTLE", timedelta(0))
+    yield

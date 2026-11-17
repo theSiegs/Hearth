@@ -1002,6 +1002,10 @@ class Limits:
         self._save()
         return True
 
+    def is_reached(self, person: str, group: str) -> bool:
+        """Whether the person's group reached 0 today (and nothing reopened it since)."""
+        return group in self.data.reached.get(person, [])
+
     def clear_reached(self, person: str, group: str) -> bool:
         """A bonus reopened the group: reaching 0 again fires again. Says whether it was marked."""
         marks = self.data.reached.get(person, [])

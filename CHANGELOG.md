@@ -12,6 +12,7 @@
 - **Forgetting a phone.** An administrator can forget any phone from Glint (`hearth/glint/forget`), and a phone paired and never seen can be forgotten too; an adult who isn't an administrator still forgets only their own phones and kids'. The device entry is removed the way Home Assistant 2027.8 expects.
 - **Reloading Hearth no longer leaves a web session behind** (the app lookups' session is let go of on an unload instead of a close Home Assistant refuses).
 - **Sharing app data is retired.** No app on the household's devices shares app data any more, so its setting is gone from Hearth's page and Configure, and the people chosen for it are removed from the settings once. Each person's `share_app_data` in the device document stays, always false, so apps that read it keep sharing off.
+- **A restart never lets a kid out of time back in.** Right after Home Assistant starts, the parental controls load one by one and for a few seconds today's count looked short: a kid who was out of time showed an hour or more left and every hold let go and came back. A limit reached today now stays held until the sources have settled (90 seconds after Home Assistant is running), and opens on time after that if an adult gave more meanwhile.
 
 ## 2026.11.26
 

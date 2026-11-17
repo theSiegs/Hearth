@@ -19,7 +19,7 @@ import secrets
 import json
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import CoreState, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
@@ -212,10 +212,27 @@ class PersonDay:
         return self.groups.get(ALL, 0.0)
 
 
+# Right after Home Assistant starts (or Hearth loads), the parental-control sources load one by one: for a few seconds
+# today's count is short and a kid who was out of time looks as if they had some. A limit reached today stays held
+# until the sources have settled this long after Home Assistant is running
+STARTUP_SETTLE = timedelta(seconds=90)
+
+
+def _keep_held(state: GroupState) -> None:
+    """A group reached before a restart stays at 0 left while the sources settle."""
+    if state.modeled:
+        state.held_left = 0
+        state.usable = 0
+    elif state.budget_min is not None:
+        state.counted_min = max(state.counted_min, state.budget_min + state.bonus_min)
+
+
 class Household:
     def __init__(self, hass: HomeAssistant, hub: HearthHub) -> None:
         self.hass = hass
         self.hub = hub
+        # When the sources count as settled after a start (STARTUP_SETTLE); None until Home Assistant is running
+        self._settle_until: datetime | None = None
         self.limits = Limits(hass, hub.entry.entry_id)
         self.live = LiveTracker(hass, hub.entry.entry_id)
         self.apps = AppCatalog(hass, hub.entry.entry_id)
@@ -879,6 +896,23 @@ class Household:
 
         return of
 
+    def _settling(self, now: datetime) -> bool:
+        """Whether the sources may still be loading after a start: until Home Assistant runs, then STARTUP_SETTLE
+        more (a recompute is due once it's over, so a reopened group opens on time)."""
+        if self.hass.state is not CoreState.running:
+            return True
+        if self._settle_until is None:
+            self._settle_until = now + STARTUP_SETTLE
+            if STARTUP_SETTLE > timedelta(0):
+                from homeassistant.helpers.event import async_call_later
+
+                self.hub.entry.async_on_unload(
+                    async_call_later(
+                        self.hass, STARTUP_SETTLE.total_seconds() + 1, callback(lambda _now: self.recompute())
+                    )
+                )
+        return now < self._settle_until
+
     @callback
     def recompute(self) -> None:
         self._known_for = None
@@ -1095,6 +1129,11 @@ class Household:
                 )
             # Today's time, caps and bonus time (time_model.py)
             self.apply_time_model(person, day.limits, now)
+            if self._settling(now):
+                for group in self.groups:
+                    state = day.limits[group.id]
+                    if (state.minutes_left or 0) > 0 and self.limits.is_reached(person, group.id):
+                        _keep_held(state)
             for group in self.groups:
                 state = day.limits[group.id]
                 if state.minutes_left == 0:

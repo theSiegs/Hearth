@@ -457,3 +457,40 @@ async def test_minutes_counted_offline_count_on_the_first_post_back(
     await _status(client, sam, seconds_today=2400, app_seconds_today={"com.example.tube": 2400})
     await hass.async_block_till_done()
     assert hass.states.get("sensor.hearth_sam_screen_time_today").state == "40"
+
+
+# 9. A limit reached before a restart stays held while the sources settle
+
+
+async def test_a_limit_reached_stays_held_while_the_sources_settle(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer, monkeypatch
+) -> None:
+    from pytest_homeassistant_custom_component.common import async_capture_events, async_fire_time_changed
+
+    from custom_components.hearth import household
+    from test_init import _post
+    from test_people import _tv_status
+
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    reached = async_capture_events(hass, "hearth_budget_reached")
+    await hass.services.async_call(DOMAIN, "set_budget", {"person": SAM, "group": "video", "minutes": 30}, blocking=True)
+    await _post(client, secret, body=_tv_status(hearthtube_s=1900))
+    await hass.async_block_till_done()
+    left = "sensor.hearth_sam_video_minutes_left"
+    assert hass.states.get(left).state == "0" and len(reached) == 1
+
+    # Home Assistant starts again: for a moment the count is short (here: an adult's bonus stands in for it), and
+    # the group a kid was out of stays held until the sources have settled
+    monkeypatch.setattr(household, "STARTUP_SETTLE", timedelta(seconds=90))
+    _hub(hass).household._settle_until = None
+    await hass.services.async_call(DOMAIN, "add_bonus", {"person": SAM, "group": "video", "minutes": 15}, blocking=True)
+    await hass.async_block_till_done()
+    assert hass.states.get(left).state == "0"
+    assert _hub(hass).household.limits.is_reached(SAM, "video")
+
+    # Settled: it opens by itself, and reaching 0 again later fires once more
+    freezer.tick(timedelta(seconds=95))
+    async_fire_time_changed(hass, dt_util.utcnow())
+    await hass.async_block_till_done()
+    assert int(hass.states.get(left).state) > 0
+    assert len(reached) == 1
