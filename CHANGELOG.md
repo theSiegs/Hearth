@@ -13,6 +13,8 @@
 - **Reloading Hearth no longer leaves a web session behind** (the app lookups' session is let go of on an unload instead of a close Home Assistant refuses).
 - **Sharing app data is retired.** No app on the household's devices shares app data any more, so its setting is gone from Hearth's page and Configure, and the people chosen for it are removed from the settings once. Each person's `share_app_data` in the device document stays, always false, so apps that read it keep sharing off.
 - **A restart never lets a kid out of time back in.** Right after Home Assistant starts, the parental controls load one by one and for a few seconds today's count looked short: a kid who was out of time showed an hour or more left and every hold let go and came back. A limit reached today now stays held until the sources have settled (90 seconds after Home Assistant is running), and opens on time after that if an adult gave more meanwhile.
+- **Categories count whole minutes too**, as daily time does: a category isn't held half a minute before its limit, and its used and left add up to the limit.
+- **"Until 00:00" set in the evening ends at midnight.** Changing today to Sleep until 00:00 put the kid in Sleep for all of the next day.
 
 ## 2026.11.26
 

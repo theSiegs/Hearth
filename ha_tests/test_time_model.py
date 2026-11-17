@@ -152,6 +152,10 @@ def test_a_minute_counts_once_it_s_over() -> None:
     assert account(120, 0, 1.0, {}).today_left == 119
     # Never held before the last minute is used
     assert account(120, 0, 119.6, {}).today_left == 1 and account(120, 0, 120.0, {}).today_left == 0
+    # A category too: half a minute short of its limit, it isn't held yet
+    games = account(60, 0, 59.5, {"games": (60, 59.5)})
+    assert games.today_left == 1 and games.cap_left["games"] == 1 and games.usable["games"] == 1
+    assert account(120, 0, 10.5, {"games": (30, 10.5)}).cap_left["games"] == 20
 
 
 def test_time_taken_away_lowers_daily_time() -> None:

@@ -115,7 +115,7 @@ async def test_budget_minutes_left_and_reached(
         DOMAIN, "add_bonus", {"person": "person.sam", "group": "video", "minutes": 15}, blocking=True
     )
     await hass.async_block_till_done()
-    assert hass.states.get("sensor.hearth_sam_video_minutes_left").state == "12"
+    assert hass.states.get("sensor.hearth_sam_video_minutes_left").state == "13"  # 45 less the 32 whole minutes watched
     assert hass.states.get("number.hearth_sam_video_bonus_today").state == "15"
 
 

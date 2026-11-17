@@ -155,7 +155,8 @@ def account(
             out.usable[gid] = day
             continue
         general = 0 if gid in closed else bonus_left
-        left = max(0, int(cap - (spent - paid.get(gid, 0.0)))) + general + own_left
+        # Whole minutes, as today_left: a category's minute begun isn't taken before it's used
+        left = max(0, int(cap - math.floor(spent - paid.get(gid, 0.0)))) + general + own_left
         out.cap_left[gid] = left
         out.usable[gid] = left if day is None else min(left, day)
     return out
