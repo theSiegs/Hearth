@@ -227,9 +227,18 @@ def _keep_held(state: GroupState) -> None:
         state.counted_min = max(state.counted_min, state.budget_min + state.bonus_min)
 
 
-# A totals source correcting itself down by this much is taken as it is; a bigger drop (its own day ending at
-# another hour, a cloud hiccup reporting 0) never lowers today's count
+# A totals source correcting itself down by this much is taken as it is; a bigger drop (a cloud hiccup reporting 0)
+# never lowers today's count, from TOTALS_NEW_DAY_BY on (before it, a drop is the source's own day starting)
 TOTALS_CORRECTION_S = 5 * 60
+TOTALS_NEW_DAY_BY = 6
+
+
+def _capped(reading: Reading, limit_s: float) -> Reading:
+    """[reading] scaled down to [limit_s] in all (each app's share kept)."""
+    scale = limit_s / reading.total_s if reading.total_s else 0.0
+    return Reading(
+        reading.source, limit_s, {k: v * scale for k, v in reading.items.items()}, reading.rest_group
+    )
 
 
 def _higher(kept: Reading, new: Reading) -> Reading:
@@ -1077,7 +1086,14 @@ class Household:
                 last = self._last_totals.get(source.id)
                 last = last[1] if last is not None and last[0] == today else None
                 if reading is not None:
-                    higher = _higher(last, reading) if last is not None else reading
+                    # Never more than the day so far: a source still showing yesterday's total just after midnight
+                    since_midnight = (now - dt_util.start_of_local_day(now)).total_seconds()
+                    if reading.total_s > since_midnight:
+                        reading = _capped(reading, since_midnight)
+                    # Early in the morning a drop is the source's own new day (its day may end after midnight):
+                    # taken as it is; later in the day a drop never lowers today's count
+                    early = now.hour < TOTALS_NEW_DAY_BY
+                    higher = _higher(last, reading) if last is not None and not early else reading
                     if higher != last:
                         self._last_totals[source.id] = (today, higher)
                         self._totals_store.async_delay_save(self._totals_data, 30)

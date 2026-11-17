@@ -399,3 +399,22 @@ async def test_a_source_dropping_to_nothing_never_lowers_today_s_count(
     await hass.async_block_till_done()
     assert hass.states.get("sensor.hearth_sam_screen_time_today").attributes["groups"]["all"] == 65
 
+
+
+async def test_a_source_still_on_yesterday_after_midnight_isn_t_kept_all_day(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Just after midnight a source may still show yesterday's total: never more than the day so far, and its own
+    new day (a drop early in the morning) is taken as it is."""
+    from homeassistant.util import dt as dt_util
+
+    freezer.move_to(dt_util.now().replace(hour=0, minute=30, second=0, microsecond=0))
+    await _household_with_sam(hass, hass_client_no_auth)
+    hass.states.async_set(SWITCH_SENSOR, "120", {"unit_of_measurement": "min"})
+    await _option(hass, "add_source", {"entity_id": SWITCH_SENSOR, "person": "person.sam", "group": "games"})
+    games = lambda: hass.states.get("sensor.hearth_sam_screen_time_today").attributes["groups"]["games"]  # noqa: E731
+    assert games() <= 30 + 5  # the Switch's 120 capped at the half hour since midnight (and the TV's 5)
+    freezer.move_to(dt_util.now().replace(hour=3, minute=0))
+    hass.states.async_set(SWITCH_SENSOR, "0", {"unit_of_measurement": "min"})
+    await hass.async_block_till_done()
+    assert games() <= 5
