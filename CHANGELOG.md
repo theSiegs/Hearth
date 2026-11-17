@@ -3,6 +3,13 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **A parent's Family Link bonus lasts while their minutes do.** When Hearth's own mirrored bonus was used first, the parent's grant ended with their minutes still left.
+- A chore saved with a start that isn't a date says so instead of failing; play and profile ids with a trailing newline are refused.
+
 ## 2026.11.33
 
 ### Home Assistant integration

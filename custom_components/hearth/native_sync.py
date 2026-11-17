@@ -190,7 +190,14 @@ class NativeSync:
             for device in fl.devices(self.hass, child):
                 watch.add(device.entity_id)
                 bonus = fl.bonus_left(self.hass, child, device, watch)
-                left = max(left, bonus - own.get(str(device.attributes.get("device_id")), 0))
+                # The parent's share of what's left: never more than what they gave (the device's bonus today less
+                # Hearth's own), whichever part the kid used first
+                mine = own.get(str(device.attributes.get("device_id")), 0)
+                given = _number(device.attributes.get("bonus_minutes"))
+                if given is None:  # an older Family Link: what's left less Hearth's, as before
+                    left = max(left, bonus - mine)
+                else:
+                    left = max(left, min(bonus, max(0.0, given - mine)))
             if left <= 0:
                 _LOGGER.info("%s: the Family Link bonus is over, Hearth holds again", grant.person)
                 self.household.grants.end(grant.id)

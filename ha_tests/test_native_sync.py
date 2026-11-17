@@ -1034,3 +1034,34 @@ async def test_a_parent_s_bonus_counts_after_hearth_mirrored_one(
     _phone(hass, bonus=25)  # a parent's 10
     await hass.async_block_till_done()
     assert [g.data["reason"] for g in grants] == ["bonus time given in the Family Link app"]
+
+
+async def test_a_parent_s_bonus_grant_lasts_while_their_minutes_do(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Hearth's 15 mirrored and used up first; a parent's 30 on top: with 30 left, all theirs, the grant goes on."""
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+    async_mock_service(hass, "familylink", "add_time_bonus")
+    async_mock_service(hass, "familylink", "reset_bonus")
+    await _sam_with_family_link(hass, hass_client_no_auth)
+    _phone(hass)
+    _remaining(hass, 0)
+    await _budget(hass, "all", 30)
+    await _bonus(hass, "all", 20)  # 15 mirrored
+    _phone(hass, bonus=15)
+    await hass.async_block_till_done()
+    await _budget(hass, "all", 10)
+    hass.states.async_set(_weekday_limit(), "0", {"child_id": CHILD})
+    await _settle(hass, freezer)
+    _phone(hass, bonus=45)  # a parent's 30
+    _remaining(hass, 30)
+    await hass.async_block_till_done()
+    household = _household(hass)
+    assert household.grants.of("person.sam")
+    # 35 used: 10 left, all the parent's (Hearth's 15 went first)
+    hass.states.async_set(
+        "sensor.sam_s_phone_active_bonus", "45", {"child_id": CHILD, "device_id": "dev1", "remaining_minutes": 10}
+    )
+    _phone(hass, bonus=45, tick=1)
+    await hass.async_block_till_done()
+    assert household.grants.of("person.sam")
