@@ -80,6 +80,9 @@ class Backstop:
     async def async_load(self) -> None:
         stored = await self._store.async_load() or {}
         self.written = {p: dict(r) for p, r in (stored.get("written") or {}).items() if isinstance(r, dict)}
+        # A whole-device hold still on from before the restart (enforce.py keeps it, and loads first): the limit is
+        # written again once it's let go, as if the hold had started now
+        self._held |= {person for person in self.household.people() if self.holds(person)}
 
     def _save(self) -> None:
         self._store.async_delay_save(lambda: {"written": self.written}, 2)

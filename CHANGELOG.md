@@ -14,6 +14,7 @@
 - **A family pause locks the Xbox too** (and a pause of Games, or another group Family Safety covers), as Sleep does. Before, "Pause screens" held the TVs, phones and the Switch but left the Xbox open.
 - **A let-go that fails half way is remembered as half done.** Letting go of Xbox and Windows when only Windows' unlock went through left both counted as held, so Windows was never locked again that day; the same for Family Link's device lock when resuming apps after it failed.
 - **A pause goes on across a restart.** A family pause, or a pause of an app or a group, ended silently when Home Assistant restarted; it's now kept and read back, those already over left out.
+- **The backstop writes its limit again after a device lock that spanned a restart.** It forgot the lock was on, so the weekday's limit put back after it could stay below the time Hearth gives.
 
 ## 2026.11.27
 
