@@ -226,8 +226,10 @@ async def test_sleep_until_seven_in_the_evening_runs_until_tomorrow_morning(
     await hass.services.async_call(
         DOMAIN, "change_today", {"people": [SAM], "mode": "sleep", "until": "22:00"}, blocking=True, return_response=True
     )
-    assert week.resolve(SAM, today).changes[-1] == (22 * 60, week.resolve(SAM, today).changes[-1][1])
-    assert week.resolve(SAM, tomorrow).changes[:1] != [(0, "sleep")] or not week.data.today[SAM].get("next_morning")
+    changes = week.resolve(SAM, today).changes
+    assert changes[-2] == (21 * 60, "sleep") and changes[-1][0] == 22 * 60
+    assert not week.data.today[SAM].get("next_morning")
+    assert week.resolve(SAM, tomorrow).changes[:1] != [(0, "sleep")]
     with pytest.raises(ServiceValidationError, match="It has to end after it starts"):
         await hass.services.async_call(
             DOMAIN, "change_today", {"people": [SAM], "mode": "sleep", "until": "21:05"}, blocking=True,
