@@ -44,6 +44,11 @@ public class HeldAppsTest {
         assertTrue(!Allowance.lockedNow(new JSONObject(
                 "{\"locks\": {\"lock\": {\"kind\": \"bedtime\", \"until\": \"1970-01-01T00:00:01Z\"}}}"), NOW));
         assertTrue(!Allowance.lockedNow(new JSONObject("{}"), NOW));
+        // The next lock's start has passed with no word since (Home Assistant out of reach): it holds on its own
+        assertTrue(Allowance.lockedNow(new JSONObject(
+                "{\"locks\": {\"next_lock\": {\"at\": \"1970-01-01T00:00:01Z\", \"kind\": \"bedtime\"}}}"), NOW));
+        assertTrue(!Allowance.lockedNow(new JSONObject(
+                "{\"locks\": {\"next_lock\": {\"at\": \"2999-01-01T00:00:00Z\", \"kind\": \"bedtime\"}}}"), NOW));
         assertTrue(!Allowance.lockedNow(null, NOW));
     }
 

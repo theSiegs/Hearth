@@ -121,11 +121,19 @@ final class Allowance {
         return lockedNow(HaAllowance.entryFor(context, profileKey, now), now) ? HELD_ALL : null;
     }
 
-    /** Whether the profile's entry has a lock in force at [now] (bedtime, School time, a pause by name). */
+    /**
+     * Whether the profile's entry has a lock in force at [now] (bedtime, School time, a pause by name), or the next
+     * lock it named has started: Home Assistant sends the lock itself within minutes, but a TV that can't reach it
+     * (the router unplugged before bedtime) must start bedtime on its own.
+     */
     static boolean lockedNow(JSONObject entry, long now) {
-        JSONObject lock = HaLocks.locksOf(entry).optJSONObject("lock");
+        JSONObject locks = HaLocks.locksOf(entry);
+        JSONObject lock = locks.optJSONObject("lock");
         Long lockUntil = lock != null ? HaLocks.parseTime(lock.optString("until", null)) : null;
-        return lock != null && (lockUntil == null || lockUntil > now);
+        if (lock != null && (lockUntil == null || lockUntil > now)) return true;
+        JSONObject next = locks.optJSONObject("next_lock");
+        Long nextAt = next != null ? HaLocks.parseTime(next.optString("at", null)) : null;
+        return nextAt != null && nextAt <= now;
     }
 
     /** In {@link #heldApps}: everything is held (a family pause or a lock), not one group's time. */
