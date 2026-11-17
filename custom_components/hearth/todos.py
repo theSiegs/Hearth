@@ -146,7 +146,7 @@ def _clean_repeat(raw: Any) -> dict[str, Any]:
     if kind not in REPEATS:
         raise ChoreError("invalid", f"Unknown repeat {kind}")
     if kind == WEEKDAYS:
-        days = sorted({int(d) for d in raw.get("days", []) if str(d).isdigit() and 0 <= int(d) <= 6})
+        days = sorted({int(d) for d in raw.get("days", []) if str(d).isascii() and str(d).isdigit() and 0 <= int(d) <= 6})
         if not days:
             raise ChoreError("invalid", "Pick at least one day")
         return {"kind": kind, "days": days}

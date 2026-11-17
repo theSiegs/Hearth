@@ -89,7 +89,8 @@ async def _json_body(request: web.Request, limit: int = MAX_STATUS_BYTES) -> Any
             return None
     try:
         return json.loads(body)
-    except ValueError:
+    except (ValueError, RecursionError):
+        # RecursionError: nesting deep enough ("[" * 60000 fits the size limit) is no body of ours
         return None
 
 
@@ -464,9 +465,22 @@ async def _check_pin(hass: HomeAssistant, device_id: str, stored: dict[str, str]
     """A parent PIN from a device that isn't locked out, counted in its lockout (shared by every endpoint that takes
     one): (whose it is, 0), or (None, the seconds of the lockout this wrong one started, 0 for none)."""
     lock = pin_lockout(hass, device_id)
+    now = dt_util.utcnow()
+    # Locked out meanwhile, or the free tries already taken by guesses still being checked (sent all at once): refused
+    # unchecked, in the same step as the count, so parallel guesses never get past the free tries
+    if wait := parent_pin.retry_in(lock.locked_until, now):
+        return None, wait
+    if lock.checking and parent_pin.lockout(lock.failures):
+        # Past the free tries one guess is checked at a time: the others wait for its answer
+        return None, 1
     # Counted before the slow check, so parallel guesses can't all slip in under the free tries
     lock.failures += 1
-    if person := await hass.async_add_executor_job(parent_pin.whose, stored, pin):
+    lock.checking += 1
+    try:
+        person = await hass.async_add_executor_job(parent_pin.whose, stored, pin)
+    finally:
+        lock.checking -= 1
+    if person:
         lock.failures = 0
         lock.locked_until = None
         hass.bus.async_fire(parent_pin.EVENT_PARENT_PIN_USED, {"device_id": device_id, "person": person})

@@ -90,7 +90,7 @@ async def fetch(hass: HomeAssistant, url: str) -> str:
             if resp.status != 200:
                 raise SiteListError(f"The website list {url} answered HTTP {resp.status}.")
             declared = resp.headers.get("Content-Length", "")
-            if declared.isdigit() and int(declared) > MAX_LIST_BYTES:
+            if declared.isascii() and declared.isdigit() and int(declared) > MAX_LIST_BYTES:
                 raise SiteListError(too_large)
             async for chunk in resp.content.iter_chunked(64 * 1024):
                 body.extend(chunk)

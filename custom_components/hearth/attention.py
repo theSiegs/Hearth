@@ -297,7 +297,7 @@ class Attention:
             return False
         parts = action.split("|")
         item = self.item(parts[1]) if len(parts) == 3 else None
-        if item is None or not parts[2].isdigit() or int(parts[2]) >= len(item.actions):
+        if item is None or not (parts[2].isascii() and parts[2].isdigit()) or int(parts[2]) >= len(item.actions):
             _LOGGER.debug("A Hearth notification button for something gone was ignored")
             return True
         n = int(parts[2])

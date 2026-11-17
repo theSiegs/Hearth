@@ -3,6 +3,14 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **Only an adult answers a switch into an adult's TV profile.** Any Home Assistant user's Allow counted, and the request's id was readable in Home Assistant's notification list, so a kid could allow themselves into an adult's profile from their own phone. Answers now need an adult, and the list no longer shows the id.
+- **Parent PIN guesses sent all at once wait their turn.** Many guesses in parallel were all checked before the lockout started; now no more than the free tries are checked, and past them one at a time.
+- Malformed requests (JSON nested very deep, a Unicode digit in a notification button) are refused instead of raising an error.
+
 ## 2026.11.28
 
 ### Home Assistant integration

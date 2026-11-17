@@ -489,7 +489,7 @@ class Asks:
         if not action.startswith(ACTION_PREFIX):
             return False
         parts = action.split("|")
-        if len(parts) != 3 or not parts[2].isdigit():
+        if len(parts) != 3 or not (parts[2].isascii() and parts[2].isdigit()):
             return True
         try:
             self.answer(parts[1], int(parts[2]) or None, user_id)

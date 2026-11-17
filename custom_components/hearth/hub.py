@@ -159,6 +159,8 @@ class PinLockout:
 
     failures: int = 0
     locked_until: datetime | None = None
+    # Guesses being checked right now (api._check_pin): past the free tries, one at a time
+    checking: int = 0
 
 
 def pin_lockout(hass: HomeAssistant, device_id: str) -> PinLockout:

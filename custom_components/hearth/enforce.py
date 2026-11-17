@@ -1754,7 +1754,7 @@ def family_safety_grant(state: dict[str, Any]) -> dict[str, Any] | None:
 
 def _clock(value: Any) -> str | None:
     """A time entity's state as HH:MM:SS, or None when it's not a time or bedtime is off (00:00)."""
-    if not isinstance(value, str) or len(value) < 5 or not value[:2].isdigit():
+    if not isinstance(value, str) or len(value) < 5 or not (value[:2].isascii() and value[:2].isdigit()):
         return None
     text = value if len(value) == 8 else f"{value[:5]}:00"
     return None if text.startswith("00:00") else text

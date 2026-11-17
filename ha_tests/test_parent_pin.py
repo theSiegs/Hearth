@@ -191,3 +191,39 @@ async def test_a_tv_takes_the_adults_pins_and_reports_its_lockouts(
     body = await (await _post(client, secret, body=status)).json()
     assert body["state"]["parent_pins_version"] != version
     assert parent_pin.matches(body["state"]["parent_pins"][0]["hash"], OTHER_PIN)
+
+
+async def test_guesses_sent_all_at_once_never_get_past_the_free_tries(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    import asyncio
+
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    await _adults(hass, "person.alex")
+    await _option(hass, "parent_pin", {"person": "person.alex", "pin": PIN, "pin_again": PIN})
+    checked: list[str] = []
+    real = parent_pin.whose
+
+    def counting(stored, pin):
+        checked.append(pin)
+        return real(stored, pin)
+
+    parent_pin.whose = counting
+    try:
+        guesses = [f"{n:04d}" for n in range(1000, 1040)] + [PIN]
+        answers = await asyncio.gather(*(_verify(client, secret, g) for g in guesses))
+    finally:
+        parent_pin.whose = real
+    assert len(checked) <= parent_pin.FREE_TRIES
+    bodies = [await a.json() for a in answers if a.status == 200]
+    assert not any(b.get("ok") for b in bodies)
+
+
+async def test_json_nested_too_deep_is_a_bad_request_not_a_crash(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    deep = "[" * 60000
+    for path, headers in (("/api/hearth/pair", {}), (f"/api/hearth/device/{TV_ID}/status", {"X-Hearth-Secret": secret})):
+        response = await client.post(path, data=deep, headers={**headers, "Content-Type": "application/json"})
+        assert response.status < 500
