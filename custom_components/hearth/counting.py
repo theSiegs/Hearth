@@ -58,7 +58,20 @@ def minus(reading: Reading, total_s: float, items: Mapping[str, float]) -> Readi
     return Reading(reading.source, total, kept, reading.rest_group)
 
 
+# A live source's readings (sources.Source.reading_source)
+LIVE_PREFIX = "live:"
+
+
 def merge(readings: Iterable[Reading]) -> DeviceUsage:
+    """One device's day from every source's reading: each item's most seconds, and the most total. A live reading
+    ("now playing", by the title played) beside one that has items of its own (Family Safety's apps, by app id) is
+    the same play under other names: it counts as a total only, or its minutes would be counted twice."""
+    readings = list(readings)
+    itemized = any(r.items and not r.source.startswith(LIVE_PREFIX) for r in readings)
+    if itemized:
+        readings = [
+            Reading(r.source, r.total_s, {}, r.rest_group) if r.source.startswith(LIVE_PREFIX) else r for r in readings
+        ]
     usage = DeviceUsage()
     best: Reading | None = None
     for reading in readings:

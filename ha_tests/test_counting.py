@@ -92,3 +92,18 @@ def test_all_screen_time_never_goes_outside_itself():
     assert all(g.in_all for g in groups if g.id != "interface")
     # System screens is never screen time, whatever the options say
     assert not next(g for g in groups if g.id == "interface").in_all
+
+
+def test_now_playing_beside_family_safety_s_apps_is_one_play() -> None:
+    from custom_components.hearth.counting import Reading, merge
+
+    family_safety = Reading("source:xbox", 25 * 60, {"x:xboxplt:1111": 25 * 60}, "games")
+    live = Reading("live:xbox_now_playing", 10 * 60, {"Racing Game": 10 * 60}, "games")
+    usage = merge([family_safety, live])
+    assert usage.total_s == 25 * 60 and "Racing Game" not in usage.items
+    # Family Safety behind (it reports late): the live total counts, its extra in the source's group
+    behind = Reading("source:xbox", 5 * 60, {"x:xboxplt:1111": 5 * 60}, "games")
+    usage = merge([behind, live])
+    assert usage.total_s == 10 * 60 and usage.rest_s == 5 * 60 and usage.rest_group == "games"
+    # A live source on its own keeps its titles
+    assert merge([live]).items == {"Racing Game": 10 * 60}
