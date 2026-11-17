@@ -648,8 +648,12 @@ class Enforcement:
                 else set()
             )
             if paused_groups_of:
-                # An adult's pause holds the Switch too (a family pause, or a group the enforcer covers)
-                paused |= paused_switch(e, set(paused_groups_of(e.person)), now, playing)
+                # An adult's pause holds the Switch too (a family pause, or a group the enforcer covers), and locks
+                # Family Safety's platforms the same way, as Sleep does
+                paused_groups = set(paused_groups_of(e.person))
+                paused |= paused_switch(e, paused_groups, now, playing)
+                if e.kind == FAMILY_SAFETY and (ALL in paused_groups or paused_groups & set(e.groups)):
+                    paused |= set(e.platforms)
             scheduled = (
                 schedule_wanted(
                     e,
@@ -753,7 +757,7 @@ class Enforcement:
     def _differs(self, key: str) -> bool:
         held = self.held.get(key) or Held()
         want = self._wanted.get(key, set())
-        if want - held.items:
+        if want - (held.items - _ended_locks(held)):
             return True
         return bool(_holding(held) - want) and self._may_let_go()
 
@@ -779,7 +783,8 @@ class Enforcement:
             enforcer = by_key.get(key)
             kind, person = key_parts(key)
             entity_id = enforcer.entity_id if enforcer else held.entity_id
-            hold = want - held.items
+            # A Family Safety lock that ran out (at midnight) while still wanted (Sleep, a pause) is locked again
+            hold = want - (held.items - _ended_locks(held))
             let_go = _holding(held) - want if self._may_let_go() else set()
             if not (hold or let_go) or entity_id is None:
                 continue
@@ -1790,6 +1795,16 @@ def _number(value: Any) -> float | None:
     except (TypeError, ValueError):
         return None
     return number if number == number else None
+
+
+def _ended_locks(held: Held, now: datetime | None = None) -> set[str]:
+    """Family Safety platforms Hearth locked whose lock is over (its end passed, or Hearth ended it at midnight)."""
+    now = now or dt_util.utcnow()
+    ended = set((held.restore.get(FS_LOCK_ENDED) or {}).keys())
+    for platform, at in (held.restore.get("fs_lock_until") or {}).items():
+        if (when := _utc(at)) is not None and when <= now:
+            ended.add(platform)
+    return ended & held.items
 
 
 def next_midnight(now: datetime | None = None) -> datetime:

@@ -1042,3 +1042,46 @@ async def test_a_shared_switch_handed_from_one_kid_to_another_keeps_its_real_lim
     enforcement.held[sam] = Held(entity_id=NINTENDO_LIMIT)
     await enforcement._call(NINTENDO, NINTENDO_LIMIT, {SWITCH}, True, enforcement.held[sam])
     assert enforcement.held[sam].restore["max"] == 120
+
+
+async def test_a_family_safety_lock_still_wanted_after_midnight_is_locked_again(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Family Safety locks end at midnight; Sleep running past it locks the Xbox again for the new day."""
+    freezer.move_to(dt_util.now().replace(hour=23, minute=0, second=0, microsecond=0))
+    locked = async_mock_service(hass, "microsoft_family_safety", "lock_platform")
+    async_mock_service(hass, "microsoft_family_safety", "unlock_platform")
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY})
+    await hass.services.async_call(
+        DOMAIN, "change_today", {"people": ["person.sam"], "mode": "sleep", "until": "07:00"}, blocking=True,
+        return_response=True,
+    )
+    await hass.async_block_till_done()
+    assert len(locked) == 1
+    first_until = dt_util.parse_datetime(locked[0].data["until"])
+
+    freezer.move_to(first_until + timedelta(minutes=30))
+    await _bonus(hass, "games", 0)  # a recompute
+    assert len(locked) == 2
+    assert dt_util.parse_datetime(locked[1].data["until"]) > first_until
+
+
+async def test_a_family_pause_locks_the_xbox_until_it_ends(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=18, minute=0))
+    locked = async_mock_service(hass, "microsoft_family_safety", "lock_platform")
+    unlocked = async_mock_service(hass, "microsoft_family_safety", "unlock_platform")
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY})
+    assert locked == []
+    await _pause(hass, minutes=45, reason="Dinner")
+    assert [c.data["platform"] for c in locked] == ["Xbox"]
+    await _pause_end(hass)
+    assert [c.data["platform"] for c in unlocked] == ["Xbox"]
+    # A pause of Video isn't Family Safety's (its groups are Games and All screen time by default)
+    await _pause(hass, minutes=30, group="video")
+    assert len(locked) == 1

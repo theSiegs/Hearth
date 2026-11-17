@@ -9,6 +9,9 @@
 
 - **Changing a setting doesn't wait for the sources.** The 90-second hold after a start (2026.11.27) is for Home Assistant starting only; a reload after a setting changed finds the sources loaded, so more time given right after opens at once.
 - **A phone on a trip isn't a moved clock.** A device may say its offset from UTC (`utc_offset_minutes` in its status); when its date is right for that time zone, its clock check stays passed and the adults hear once that it "is set to another time zone". Today's time still counts by Hearth's own day.
+- **A shared Switch keeps its real limit when it passes from one kid to another.** When one kid's hold started as another's let go (or right after), Hearth could keep the 0 it had set as the limit to put back, and the Switch stayed at 0 every day after.
+- **The Xbox stays locked past midnight while Sleep or a pause still holds.** Family Safety locks end at midnight; Hearth now locks again for the new day instead of leaving the Xbox open until Sleep ends.
+- **A family pause locks the Xbox too** (and a pause of Games, or another group Family Safety covers), as Sleep does. Before, "Pause screens" held the TVs, phones and the Switch but left the Xbox open.
 
 ## 2026.11.27
 
