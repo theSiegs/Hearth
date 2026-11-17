@@ -30,6 +30,10 @@ and say so in the change. When another part gets the same review-probe-fix-test 
 | `entity.py` | Removes the entities of pools that no longer exist, only for keys that setup made (`test_qc_fixes`) |
 | `media.py` | Rooms whose players have no name (`test_media`) |
 | Settings (`panel.py` `hearth/config/set`, services) | Probed with 34 schema-valid odd values (built-in pool ids, missing entities, ghost people, cycles): none stops the household; keep new option consumers tolerant of missing targets |
+| TV `Allowance.java` (`timeUpGroup`, `heldApps`, `lockedNow`) | A lock holds every app however it's opened; a next lock whose time has come holds without Home Assistant (`HeldAppsTest`) |
+| TV `LauncherAccessibilityService.java` `holdRunningApp` | The app in front is re-checked periodically with Home Assistant too, so apps already open, or relaunched past the hold cap, go home |
+| TV `HaStatusReporter.java` + `hub.py` `_tell_failing_tv_checks` | The TV reports its accessibility service; 5 minutes off is told to the adults once, cleared when back (`test_qc_fixes`) |
+| `ha_tests/test_invariants.py` | Never-break rules over random cases: left values, whole minutes, counting, day scenarios. Keep it green; add a rule when you harden something |
 | `frontend/hearth-panel.js` | Every interpolation of device-supplied text goes through `esc()`. Keep it that way |
 
 Run `ha_tests` before every push and read the result first.
