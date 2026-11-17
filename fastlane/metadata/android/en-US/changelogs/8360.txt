@@ -1,0 +1,1 @@
+Bedtime, School time and a pause now hold apps however they are opened, apps already open are sent home when time runs out, and the TV tells Home Assistant when its accessibility service is off.
