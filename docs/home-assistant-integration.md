@@ -1008,6 +1008,10 @@ counted, then 150 on the phone while Unlimited: after Unlimited it is 180 + the 
 - On by default (Configure > Enforce: "Keep Family Link's daily limit as a backstop"); the margin is 30 minutes by
   default ("Backstop margin"). Off: Family Link's own limits are left as the parent set them.
 - While Unlimited is on: a whole day (1440), and the same sum again as soon as it ends.
+- A kid whose Family Link daily limit is switched off (the child's Daily limit switch is off, or unavailable) is left
+  alone: nothing is written. With the daily limit off, Family Link stores a written limit as the weekday's own limit
+  (every week) rather than today's override, so there's nothing to back up. A child with no such switch (an older Family
+  Link) is backed up as usual.
 - Written with hysteresis: when the value is higher than what Hearth wrote today, or more than 30 minutes lower; never
   below a device's minutes today + 5. Through `familylink.set_daily_limit` with the child's id alone (today's
   override on each of the child's devices that take a daily limit; Family Link's `time_limit_device_ids` skips Google
