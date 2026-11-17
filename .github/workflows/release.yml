@@ -18,10 +18,9 @@ jobs:
   build-and-release:
     runs-on: ubuntu-latest
     env:
-      # Every release is a pre-release while Hearth is in early development (the updater includes pre-releases by
-      # default in them). Once Hearth leaves early development: only tags containing '-' are pre-releases, i.e.
-      # contains(github.event.inputs.tag_name || github.ref_name, '-') as an expression
-      PRERELEASE: 'true'
+      # Only tags containing '-' (v2026.11.24-rc1) are pre-releases. A version tag is a full release, so the Home
+      # Assistant Marketplace offers it by its version (it hides pre-releases unless "Show beta versions" is on)
+      PRERELEASE: ${{ contains(github.event.inputs.tag_name || github.ref_name, '-') }}
 
     steps:
       - name: Checkout Code
