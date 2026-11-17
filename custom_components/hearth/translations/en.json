@@ -1198,6 +1198,24 @@
           "description": "The id of the origin (time.origins[].id)."
         }
       }
+    },
+    "pairing_answer": {
+      "name": "Answer a pairing",
+      "description": "Approves or denies a device waiting to pair (an administrator's Approve or Deny on the phone notification). Administrators only.",
+      "fields": {
+        "pairing_id": {
+          "name": "Pairing id",
+          "description": "The waiting device's pairing id."
+        },
+        "answer": {
+          "name": "Answer",
+          "description": "approve or deny."
+        },
+        "person": {
+          "name": "Person",
+          "description": "Whose phone it is (a phone only)."
+        }
+      }
     }
   },
   "issues": {

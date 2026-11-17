@@ -46,7 +46,8 @@ URGENCIES = (INFO, NOTICE, URGENT)
 
 # Who an item is for. adults: every adult's companion apps, as phones.py finds them (with the chosen phone, once);
 # chosen_phone: the phone chosen in Configure > Watch for new apps (ask_notify); schedule_phone: the schedule's own
-# phone, else the chosen one; admins: the administrators (the bell only, so far); person:<entity id>: that person's
+# phone, else the chosen one; admins: the administrators (the bell, and their companion apps as last looked up:
+# async_note_admins); person:<entity id>: that person's
 # companion apps
 ADULTS = "adults"
 CHOSEN_PHONE = "chosen_phone"
@@ -254,6 +255,8 @@ class Attention:
 
                 service = ScheduleConfig.from_options(options).notify or service
             return [phone] if (phone := self._service_phone(service)) else []
+        if audience == ADMINS:
+            return admin_phones(self.hass)[0]
         if audience.startswith(PERSON):
             person = audience[len(PERSON):]
             return [
@@ -345,6 +348,48 @@ class Attention:
             _LOGGER.warning("A Hearth notification button's %s failed: %s", action.service, err)
             return False
         return True
+
+
+ADMIN_USERS = f"{DOMAIN}_admin_users"
+
+
+async def async_note_admins(hass: HomeAssistant) -> list[dict[str, Any]]:
+    """Looks up the administrators (their phones are found from it, as the ADMINS audience's) and says who they are:
+    [{name (their person's, else their user's), phone (a companion app of theirs will be told)}]."""
+    users = [u for u in await hass.auth.async_get_users() if u.is_admin and u.is_active and not u.system_generated]
+    hass.data[ADMIN_USERS] = {u.id for u in users}
+    by_user = admin_phones(hass)[1]
+    names = {
+        state.attributes.get("user_id"): state.name for state in hass.states.async_all("person")
+    }
+    return sorted(
+        ({"name": names.get(u.id) or u.name or "Administrator", "phone": bool(by_user.get(u.id))} for u in users),
+        key=lambda a: a["name"].casefold(),
+    )
+
+
+def admin_phones(hass: HomeAssistant) -> tuple[list[phones.Phone], dict[str, list[str]]]:
+    """The administrators' companion apps (as last looked up, async_note_admins): the apps their users registered and
+    their persons' (each once, only ones that are there), and each administrator's notify services."""
+    ids = hass.data.get(ADMIN_USERS) or set()
+    found: list[phones.Phone] = []
+    by_user: dict[str, list[str]] = {}
+
+    def add(user_id: str, service: str | None, person: str | None, os: str | None) -> None:
+        if not service or not hass.services.has_service("notify", service):
+            return
+        by_user.setdefault(user_id, []).append(service)
+        if all(p.service != service for p in found):
+            found.append(phones.Phone(service, person, os))
+
+    for state in hass.states.async_all("person"):
+        if (user_id := state.attributes.get("user_id")) in ids:
+            for service, os in phones.person_phones(hass, state.entity_id):
+                add(user_id, service, state.entity_id, os)
+    for entry in hass.config_entries.async_entries(phones.MOBILE_APP):
+        if (user_id := entry.data.get("user_id")) in ids:
+            add(user_id, phones.service_of(entry), None, phones._os(entry))
+    return found, by_user
 
 
 def attention(hass: HomeAssistant) -> Attention:

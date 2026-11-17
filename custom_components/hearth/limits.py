@@ -693,6 +693,17 @@ class Limits:
         del kept[:-MAX_ORIGINS]
         self._save()
 
+    def end_origin(self, person: str, origin_id: str, by: str | None) -> None:
+        """Notes that an origin's change was ended now ([by]: the adult's name when known), once: it stays ended."""
+        from homeassistant.util import dt as dt_util
+
+        record = next((o for o in self.data.origins.get(person, []) if o.get("id") == origin_id), None)
+        if record is None or record.get("ended_at"):
+            return
+        record["ended_at"] = dt_util.now().isoformat()
+        record["ended_by"] = by
+        self._save()
+
     def budget(self, person: str, group: str, kind: str) -> int | None:
         if self.week is not None and self.week.is_set(person):
             return self.week.budget_of_kind(person, group, kind)

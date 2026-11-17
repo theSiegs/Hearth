@@ -814,3 +814,21 @@ end_grant:
       example: 3fa4c1d2e5b6
       selector:
         text:
+
+pairing_answer:
+  fields:
+    pairing_id:
+      required: true
+      selector:
+        text:
+    answer:
+      required: true
+      selector:
+        select:
+          options:
+            - approve
+            - deny
+    person:
+      selector:
+        entity:
+          domain: person

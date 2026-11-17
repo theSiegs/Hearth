@@ -74,6 +74,16 @@ No token, no webhook ID typed.
    address it has (typed; finding it by Zeroconf, `_home-assistant._tcp`, isn't built), asks to pair and shows a 6-digit code.
 3. Home Assistant shows a discovered **Hearth** device with that name. An administrator checks the codes match and
    confirms. For a `mobile` device the confirm step also asks **whose device** it is (a person).
+   - The administrators are told at once: the bell (linking to Hearth's page, where the device waits with its code)
+     and a notification on each administrator's companion app, "Alex's Glint (Pixel 9) wants to pair as an adult.
+     Code 123 456: approve only if the device shows the same code.", with **Approve** and **Deny** that work from the
+     notification (`hearth.pairing_answer`, administrators only). A phone may say who it's for (`person_name`, `role`
+     in the pair body): Approve pairs it as the household's person of that name; with none, whose phone it is is
+     chosen on Hearth's page (the notification has Deny only). The pair answer lists who is asked (`approvers`).
+   - **An adult in Hearth who isn't an administrator** confirms their own phone without one: signed in to Home
+     Assistant as themselves, `hearth/pairing` with the code the phone shows pairs it as their own person. Only a
+     phone, only as themselves, never one paired for someone else; five wrong codes in ten minutes and they wait. A
+     kid, or a user whose person isn't an adult in Hearth, can't.
 4. The device gets its own secret, once. That is the only thing of Home Assistant's it keeps. Pairing again gives a
    new secret and ends the old one; deleting the device in Home Assistant ends it at once.
 
@@ -102,6 +112,13 @@ post carries time from before Hearth had it. That first post after an adult appr
 device's baseline (with the status, across restarts) and taken off every later post that day, per app and in total;
 from the next day its counts are its own. Pairing again (a new approval) takes a new baseline. A TV counts its own
 profiles and has none. Apps in System screens (below) never count either way.
+
+**Hearth's day, not the device's.** A kid can move a phone's clock, so Hearth judges the day by its own clock. A status
+whose `day` isn't Hearth's (the clock moved forward or back) keeps the counts Hearth had: nothing of it counts, the
+device's check `hearth_clock` fails ("Its date differs from Home Assistant's", firing `hearth_device_check_failed`;
+not within 30 minutes of midnight), and the status answer says `"clock_off": true`. Every status answer carries
+Hearth's `day`. Within Hearth's day a device's counts never go down: each app's seconds, the total and each TV
+profile's are the most it has said today.
 
 **Caps.** A device may say what it can be sent: `"caps": [...]`, at most 16 of `commands.play` (`hearth.play_on_tv`),
 `events` (HearthTube's started videos, the Events endpoint), `push` (a ping channel, see [Away from
@@ -1552,8 +1569,10 @@ and doesn't count as the person's open request.
 
 ### Pause and locks
 
-`hearth.pause` (`minutes`, or `until` a time or date-time; `reason`; `people`, everyone by default; `ends_on`, see
-[Exceptions](#exceptions)) holds the people until it ends or `hearth.pause_end` (`people`, everyone by default). A paused person is locked, so a Hearth TV holds
+`hearth.pause` (`minutes`, or `until` a time or date-time; `reason`; `people`, every kid by default; `ends_on`, see
+[Exceptions](#exceptions)) holds the people until it ends or `hearth.pause_end` (`people`, everyone by default).
+Adults are never paused (they have no limits in Hearth): an adult named is left out, and only adults is refused. It
+answers who was paused, `{paused: [...], not_paused: [the adults named]}`. A paused person is locked, so a Hearth TV holds
 their apps as for bedtime, and their state document says `pause` {until, reason}. Every person's document also says,
 while they're locked, `lock` {by: the lock entities and/or "pause", kind: bedtime | school_time | pause | other
 (the first that applies), kinds: all of them, until: when it ends, if known}, and `next_lock`
@@ -1598,7 +1617,7 @@ Extra time of one group only (Games, say) and extra time on one device lift noth
 - Family Safety's own downtime (Microsoft's) isn't moved: only Hearth's hold of the platforms is let go.
 
 **One app or group.** `hearth.pause` with `app` (a package) or `group` (an id or name; `all` is the family pause) pauses
-only that, for the people (everyone by default), for `minutes` or `until` a time (no `ends_on`). Nobody is locked:
+only that, for the people (every kid by default), for `minutes` or `until` a time (no `ends_on`). Nobody is locked:
 the app or group's apps are held as a group out of time is, on every Hearth TV and phone (HearthTube too, in a group
 that lists it), by Family Link and by Family Safety's Xbox and Windows apps, and the person's Switch when their
 Nintendo enforcer covers the group (Games, say). A family pause holds the Switch too (see Enforce, Nintendo). The person's document has it as a group

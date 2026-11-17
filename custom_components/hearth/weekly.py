@@ -451,6 +451,17 @@ class Week:
             if today.get("limits") is not None:
                 out.limits = {**out.limits, **today["limits"]}
             out.changed_today = True
+        morning = (today or {}).get("next_morning") or {}
+        if morning.get("date") == day.isoformat() and morning.get("mode") in modes:
+            # Last night's change ran on past midnight ("Sleep until 7:00" set in the evening): it holds from midnight
+            # until then, and the day's own changes go on from there
+            end = minutes_of(morning["until"])
+            plain = self._carry(person, day, with_today=False) if not any(m <= end for m, _ in out.changes) else None
+            at_end = next((md for m, md in reversed(out.changes) if m <= end), None) or plain or next(
+                (m for m, d in modes.items() if d.get("allows") == EVERYTHING), FREE
+            )
+            out.changes = merged([(0, morning["mode"]), *[c for c in out.changes if c[0] > end], (end, at_end)])
+            out.changed_today = True
         return out
 
     def limits_on(self, person: str, day: date, day_type: str | None = None) -> dict[str, int | None]:
@@ -459,10 +470,10 @@ class Week:
     def limit(self, person: str, group: str, day: date, day_type: str | None = None) -> int | None:
         return self.resolve(person, day, day_type).limits.get(group)
 
-    def _carry(self, person: str, day: date) -> str | None:
+    def _carry(self, person: str, day: date, with_today: bool = True) -> str | None:
         """The mode the night before carries into [day]: the last change of the latest day before it with any."""
         for back in range(1, 8):
-            changes = self.resolve(person, day - timedelta(days=back)).changes
+            changes = self.resolve(person, day - timedelta(days=back), with_today=with_today).changes
             if changes:
                 return changes[-1][1]
         return None
@@ -666,14 +677,20 @@ class Week:
     ) -> str:
         """Today only: a copy of today's day, changed: its changes ([changes]), a later or earlier [bedtime] (the
         day's last Sleep moves, or one is added), or [mode] from [start] (minutes; now by default) [until] a time (the
-        next change by default); limits merge into the day's. Ends at midnight. Returns an undo token."""
+        next change by default; a time earlier than [start] is tomorrow morning's: the mode runs past midnight until
+        then); limits merge into the day's. Ends at midnight. Returns an undo token."""
         undo = self._snapshot([person])
         current = self.resolve(person, day)
         mine = self.data.today.get(person)
         if not mine or mine.get("date") != day.isoformat():
+            carried = bool(mine) and (mine.get("next_morning") or {}).get("date") == day.isoformat()
             mine = {"date": day.isoformat(), "changes": None, "limits": None, "by": by, "reason": None}
+            if carried:
+                # Last night's change that runs on this morning stays in today's own
+                mine["changes"] = [[hhmm(m), md] for m, md in current.changes]
         base = list(current.changes)
         new: list[tuple[int, str]] | None = None
+        morning: int | None = None
         if changes is not None:
             new = as_minutes(normalize_changes(changes, self.data.modes))
         elif bedtime is not None:
@@ -689,6 +706,10 @@ class Week:
                 raise ScheduleError(f"No mode {mode!r}")
             begin = start if start is not None else 0
             end = minutes_of(until) if until not in (None, "") else next((m for m, _ in base if m > begin), None)
+            if end is not None and end < begin and until not in (None, ""):
+                # A clock time earlier than now is tomorrow's ("Sleep until 7:00" in the evening): the mode runs to
+                # midnight today, and from midnight until then tomorrow
+                morning, end = end, None
             if end is not None and end <= begin:
                 raise ScheduleError("It has to end after it starts")
             # What ran at [end] before, so it picks up again there; with no schedule at all, nothing held them, so a
@@ -709,6 +730,12 @@ class Week:
             if len(new) > MAX_CHANGES:
                 raise ScheduleError(f"At most {MAX_CHANGES} changes a day")
             mine["changes"] = [[hhmm(m), md] for m, md in new]
+            # A new change of the day's times replaces one that ran on into tomorrow
+            mine.pop("next_morning", None)
+            if morning is not None:
+                mine["next_morning"] = {
+                    "date": (day + timedelta(days=1)).isoformat(), "mode": mode, "until": hhmm(morning)
+                }
         if limits is not None:
             mine["limits"] = {**(mine.get("limits") or {}), **normalize_limits(limits)}
         if mine.get("changes") is None and mine.get("limits") is None:
@@ -728,7 +755,11 @@ class Week:
 
     def new_day(self, today: date) -> list[str]:
         """Today-only changes of days gone by end (at midnight)."""
-        gone = [p for p, t in self.data.today.items() if t.get("date") != today.isoformat()]
+        # One that runs on into this morning stays until tomorrow (resolve reads it for today only)
+        gone = [
+            p for p, t in self.data.today.items()
+            if today.isoformat() not in (t.get("date"), (t.get("next_morning") or {}).get("date"))
+        ]
         for person in gone:
             self.data.today.pop(person)
         if gone:

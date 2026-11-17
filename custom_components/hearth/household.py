@@ -1902,7 +1902,7 @@ class Household:
                 )
                 ended.append((allow.ends_on, f"their allow ({what}) ended"))
         if (pause := pause_ends_on(self.hass, person)) and matches(pause[0], came_from, went_to):
-            end_pause(self.hass, [person])
+            self.end_pause_now([person])
             ended.append((pause[0], "their pause ended"))
         offs = [
             off
@@ -2426,6 +2426,7 @@ class Household:
             local = dt_util.as_local(at) if at else None
             origin_id = record.get("id") or f"{record.get('kind')}:{record.get('at')}"
             endable = self._endable(person, {**record, "id": origin_id})
+            ended_at, ended_by = (None, None) if endable else self._ended(person, {**record, "id": origin_id})
             out.append(
                 {
                     **record,
@@ -2436,31 +2437,98 @@ class Household:
                     ),
                     "endable": endable,
                     "end": {"service": "hearth.end_grant", "data": {"origin_id": origin_id}} if endable else None,
+                    # Ended (ISO; by: the adult's name when known): a client drops or strikes it. A bonus that was
+                    # only spent isn't ended (spent time stays given)
+                    "ended_at": ended_at,
+                    "ended_by": ended_by,
                 }
             )
         return out
 
     def _endable(self, person: str, record: dict[str, Any]) -> bool:
-        """Whether something of an origin's change can still be ended now (hearth.end_grant)."""
+        """Whether something of an origin's change can still be ended now (hearth.end_grant). An ended one never is
+        again."""
         now = dt_util.now()
+        if record.get("ended_at"):
+            return False
         grant = self.limits.grant(person, record["id"])
         if grant is not None:
+            if grant.get("ended"):
+                return False
             if grant["kind"] == "bonus":
                 return self._bonus_unused(person, grant) > 0
-            return not grant.get("ended") and grant in self.limits.grants(person, grant["kind"], now=now)
+            return grant in self.limits.grants(person, grant["kind"], now=now)
         if record.get("kind") == "bonus" and record.get("source") == "chore" and record.get("chore"):
             entry = next((e for e in self.todos.ledger if e.get("key") == record["chore"]), None)
             return entry is not None and not entry.get("reversed_at")
         if record.get("kind") == "pause":
-            return pause_of(self.hass, person, now) is not None
+            # Only the pause that's on: an earlier one it replaced is over
+            return pause_of(self.hass, person, now) is not None and record["id"] == self.latest_origin(person, "pause")
         return False
 
+    def _ended(self, person: str, record: dict[str, Any]) -> tuple[str | None, str | None]:
+        """When an origin that can't be ended any more was ended (ISO, local) and by whom (an adult's name, None when
+        not known or when its time ran out); (None, None) while its change is still in effect (a bonus spent)."""
+        if record.get("ended_at"):
+            return record["ended_at"], record.get("ended_by")
+        now = dt_util.now()
+
+        def iso(value: str | None) -> str | None:
+            parsed = dt_util.parse_datetime(value or "")
+            return dt_util.as_local(parsed).isoformat() if parsed else None
+
+        grant = self.limits.grant(person, record["id"])
+        if grant is not None:
+            until = dt_util.parse_datetime(grant.get("until") or "")
+            ended = dt_util.parse_datetime(grant.get("ended") or "")
+            if grant["kind"] != "bonus" and until is not None and until <= (ended or now):
+                return iso(grant["until"]), None
+            return (iso(grant["ended"]) if ended else None), None
+        if record.get("kind") == "bonus" and record.get("source") == "chore" and record.get("chore"):
+            entry = next((e for e in self.todos.ledger if e.get("key") == record["chore"]), None)
+            return (iso(entry.get("reversed_at")) if entry and entry.get("reversed_at") else None), None
+        if record.get("kind") == "pause":
+            # Its time ran out, or a later pause took its place
+            until = dt_util.parse_datetime(record.get("until") or "")
+            if until is not None and until <= now:
+                return iso(record["until"]), None
+            later = None
+            seen = False
+            for other in self.limits.data.origins.get(person, []):
+                if seen and other.get("kind") == "pause":
+                    later = other
+                    break
+                seen = seen or other.get("id") == record["id"]
+            return (iso(later.get("at")) if later else now.isoformat()), None
+        return None, None
+
+    def _over(self, person: str, record: dict[str, Any]) -> bool:
+        """An origin whose change was ended (or ran out): a status line no longer links to it."""
+        if record.get("ended_at"):
+            return True
+        grant = self.limits.grant(person, record.get("id") or "")
+        if grant is None:
+            return False
+        if grant.get("ended"):
+            return True
+        return grant["kind"] != "bonus" and grant not in self.limits.grants(person, grant["kind"], now=dt_util.now())
+
     def latest_origin(self, person: str, kind: str, group: str | None = None) -> str | None:
-        """The id of the latest origin of [kind] (and [group]) today, for a status line's link to its origin."""
+        """The id of the latest origin of [kind] (and [group]) today that's still in effect, for a status line's link
+        to its origin (after the latest of two Unlimited grants ends, the one still on)."""
         for record in reversed(self.limits.data.origins.get(person, [])):
             if record.get("kind") == kind and record.get("group") == group and record.get("id"):
+                if self._over(person, record):
+                    continue
                 return record["id"]
         return None
+
+    def end_pause_now(self, people: list[str] | None, by: str | None = None) -> None:
+        """Pause screens end now for the people (None: everyone): the pause that was on is noted as ended (by [by])."""
+        for person in people if people is not None else self.people():
+            if pause_of(self.hass, person) is not None and (origin := self.latest_origin(person, "pause")):
+                self.limits.end_origin(person, origin, by)
+        end_pause(self.hass, people)
 
     def person_of_origin(self, origin_id: str) -> str | None:
         """Whose origin (or grant) [origin_id] is."""
@@ -2679,14 +2747,18 @@ class Household:
         return allowed
 
     @callback
-    def end_unlimited(self, people: list[str] | None) -> list[str]:
+    def end_unlimited(self, people: list[str] | None, by: str | None = None) -> list[str]:
         """The people's unlimited time ends now, every grant of it (hearth.unlimited_end): limits are back on where
         they were when it started. The people it ended for."""
         ended: list[str] = []
         for person in people or self.people():
             grants = self.limits.grants(person, "unlimited")
+            running = [g["id"] for g in self.limits.grants(person, "unlimited", now=dt_util.now())]
             for grant in grants:
                 self.limits.end_grant(person, grant["id"])
+                if grant["id"] in running:
+                    # One whose time had run out ended then, not now
+                    self.limits.end_origin(person, grant["id"], by)
                 if grant.get("allow"):
                     self.allows.end_for(grant["allow"], person)
             window = self.unlimited.end(person)
@@ -2728,10 +2800,20 @@ class Household:
         return 0
 
     @callback
-    def end_time_grant(self, person: str, origin_id: str) -> dict[str, Any] | None:
+    def end_time_grant(self, person: str, origin_id: str, by: str | None = None) -> dict[str, Any] | None:
         """hearth.end_grant: ends exactly the change [origin_id] made (an origin's id): a bonus's unused part goes, a
         raise or an Unlimited grant ends (the others stay in effect), a chore's reward is undone, Pause screens end.
-        What it did, None when there's nothing of it left to end."""
+        What it did, None when there's nothing of it left to end. One ended stays ended ([by]: who ended it): it never
+        takes again, whatever is given after it."""
+        record = next((o for o in self.limits.data.origins.get(person, []) if o.get("id") == origin_id), None)
+        if not self._endable(person, record or {"id": origin_id}):
+            return None
+        done = self._end_time_grant(person, origin_id, by)
+        if done is not None:
+            self.limits.end_origin(person, origin_id, by)
+        return done
+
+    def _end_time_grant(self, person: str, origin_id: str, by: str | None) -> dict[str, Any] | None:
         grant = self.limits.grant(person, origin_id)
         now = dt_util.now()
         if grant is not None:
@@ -2784,7 +2866,7 @@ class Household:
             self.todos.undo(origin["chore"], None)
             return {"kind": "chore"}
         if origin.get("kind") == "pause" and pause_of(self.hass, person, now) is not None:
-            end_pause(self.hass, [person])
+            self.end_pause_now([person], by)
             self.recompute()
             return {"kind": "pause"}
         return None

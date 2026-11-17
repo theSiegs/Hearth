@@ -11,6 +11,8 @@ installed Nintendo integration allows (nintendo.py), and the page shows how each
 
 from __future__ import annotations
 
+from datetime import timedelta
+import hmac
 from pathlib import Path
 from typing import Any
 
@@ -19,10 +21,11 @@ import voluptuous as vol
 from homeassistant.components import frontend, panel_custom, websocket_api
 from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
-from homeassistant.core import HomeAssistant, SupportsResponse, callback
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse, callback
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError, Unauthorized
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
+from homeassistant.util import dt as dt_util
 
 from .app_blocks import CONF_BLOCK_UNSUPPORTED_BROWSERS
 from .backstop import CONF_FL_BACKSTOP, CONF_FL_BACKSTOP_MARGIN
@@ -295,6 +298,10 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
             "expires": p.expires.isoformat(),
             # The client the adult approves along with the device (locked when they do)
             "client": locked(p.client),
+            # Who the phone says it's for (untrusted), and the household's person of that name (the one to choose)
+            "for_name": p.for_name,
+            "for_role": p.for_role,
+            "for_person": p.for_person,
         }
         for p in hub.pending_pairings()
     ]
@@ -589,36 +596,127 @@ def ws_budget(hass: HomeAssistant, connection: websocket_api.ActiveConnection, m
     connection.send_result(msg["id"])
 
 
-@websocket_api.require_admin
-@websocket_api.websocket_command(
-    {
-        vol.Required("type"): "hearth/pairing",
-        vol.Required("pairing_id"): cv.string,
-        vol.Required("answer"): vol.In(("approve", "deny")),
-        vol.Optional("person"): vol.Any(None, _PERSON),
-    }
-)
-@websocket_api.async_response
-async def ws_pairing(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
-    """Approves (the code was checked on the page) or denies a device waiting to pair."""
-    hub = _hub(hass)
-    pairing = hub.pairing(msg["pairing_id"]) if hub else None
-    if pairing is None:
-        connection.send_error(msg["id"], "expired", "That request has expired")
-        return
-    if msg["answer"] == "deny":
-        hub.deny(msg["pairing_id"])
-    elif not await hub.async_approve(msg["pairing_id"], msg.get("person") if pairing.kind == KIND_MOBILE else None):
-        connection.send_error(msg["id"], "expired", "That request has expired")
-        return
-    clear_pairing(hass, msg["pairing_id"])
-    # The discovered device in Settings > Devices & services goes too
+async def async_answer_pairing(hass: HomeAssistant, hub, pairing_id: str, answer: str, person: str | None) -> bool:
+    """Approves (as [person], for a phone) or denies a device waiting to pair; its notifications and its discovered
+    device in Settings > Devices & services go. False when it's gone (expired or answered)."""
+    pairing = hub.pairing(pairing_id) if hub else None
+    if pairing is None or pairing.secret is not None or pairing.denied:
+        return False
+    if answer == "deny":
+        hub.deny(pairing_id)
+    elif not await hub.async_approve(pairing_id, person if pairing.kind == KIND_MOBILE else None):
+        return False
+    clear_pairing(hass, pairing_id)
     for flow in hass.config_entries.flow.async_progress_by_handler(DOMAIN):
         if flow.get("context", {}).get("unique_id") == pairing.device_id or (
             flow.get("context", {}).get("title_placeholders", {}).get("name") == pairing.name
         ):
             hass.config_entries.flow.async_abort(flow["flow_id"])
-    connection.send_result(msg["id"])
+    return True
+
+
+# A user who isn't an administrator gets this many wrong pairing codes in PAIR_TRIES_WINDOW, then waits
+MAX_PAIR_TRIES = 5
+PAIR_TRIES_WINDOW = timedelta(minutes=10)
+
+
+def _own_person(hass: HomeAssistant, user_id: str) -> str | None:
+    return next(
+        (s.entity_id for s in hass.states.async_all("person") if s.attributes.get("user_id") == user_id), None
+    )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hearth/pairing",
+        vol.Optional("pairing_id"): cv.string,
+        vol.Required("answer"): vol.In(("approve", "deny")),
+        vol.Optional("person"): vol.Any(None, _PERSON),
+        # The code the device shows: what someone who isn't an administrator gives
+        vol.Optional("code"): vol.All(cv.string, vol.Match(r"^\d{6}$")),
+    }
+)
+@websocket_api.async_response
+async def ws_pairing(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Approves or denies a device waiting to pair. An administrator, from Hearth's page (they checked the code
+    there): by its pairing_id, as the person they chose. An adult on Hearth's page who isn't an administrator: only a
+    phone, only as themselves, and only with the code it shows (pairing_id optional), which pairs it at once; a wrong
+    code counts, and too many wait. Anyone else (a kid, a user who isn't a Hearth adult) is refused: the
+    administrators got a notice with Approve and Deny when the phone asked."""
+    hub = _hub(hass)
+    user = connection.user
+    if user.is_admin:
+        if not msg.get("pairing_id"):
+            connection.send_error(msg["id"], "invalid_format", "Which device: give its pairing_id")
+            return
+        if not await async_answer_pairing(hass, hub, msg["pairing_id"], msg["answer"], msg.get("person")):
+            connection.send_error(msg["id"], "expired", "That request has expired")
+            return
+        connection.send_result(msg["id"])
+        return
+    person = _own_person(hass, user.id)
+    if hub is None or person is None or hub.entry.options.get(CONF_ROLES, {}).get(person) != "adult":
+        connection.send_error(
+            msg["id"], "unauthorized",
+            "Only an adult in Hearth confirms their own phone: an administrator approves the others",
+        )
+        return
+    now = dt_util.utcnow()
+    tries = hass.data.setdefault(f"{DOMAIN}_pair_tries", {})
+    mine = [t for t in tries.get(user.id, []) if now - t < PAIR_TRIES_WINDOW]
+    tries[user.id] = mine
+    if len(mine) >= MAX_PAIR_TRIES:
+        connection.send_error(msg["id"], "too_many_tries", "Too many wrong codes: try again in a few minutes")
+        return
+    code = msg.get("code") or ""
+    waiting = [
+        p for p in hub.pending_pairings()
+        if p.kind == KIND_MOBILE and (not msg.get("pairing_id") or p.pairing_id == msg["pairing_id"])
+    ]
+    pairing = next((p for p in waiting if code and hmac.compare_digest(p.code, code)), None)
+    if pairing is None:
+        mine.append(now)
+        connection.send_error(msg["id"], "wrong_code", "No phone waiting to pair shows that code")
+        return
+    # Their own phone only: one paired for someone else is an administrator's to pair again
+    paired_for = (hub.devices.get(pairing.device_id) or {}).get(CONF_PERSON)
+    if paired_for not in (None, person):
+        connection.send_error(msg["id"], "unauthorized", "That phone is paired for someone else: an administrator can pair it")
+        return
+    if not await async_answer_pairing(hass, hub, pairing.pairing_id, msg["answer"], person):
+        connection.send_error(msg["id"], "expired", "That request has expired")
+        return
+    connection.send_result(msg["id"], {"answer": msg["answer"], "person": person, "device_id": pairing.device_id})
+
+
+def async_register_pairing_service(hass: HomeAssistant) -> None:
+    """hearth.pairing_answer {pairing_id, answer: approve | deny, person?}: an administrator's Approve or Deny, from
+    the notification on their phone (attention.py runs it as them). Administrators only: an automation, or anyone
+    else, is refused."""
+
+    async def pairing_answer(call: ServiceCall) -> ServiceResponse:
+        user = await hass.auth.async_get_user(call.context.user_id) if call.context.user_id else None
+        if user is None or not user.is_admin:
+            raise Unauthorized(context=call.context)
+        if not await async_answer_pairing(
+            hass, _hub(hass), call.data["pairing_id"], call.data["answer"], call.data.get("person")
+        ):
+            raise ServiceValidationError("That request has expired or was answered")
+        return {"answer": call.data["answer"]}
+
+    hass.services.async_register(
+        DOMAIN,
+        "pairing_answer",
+        pairing_answer,
+        schema=vol.Schema(
+            {
+                vol.Required("pairing_id"): cv.string,
+                vol.Required("answer"): vol.In(("approve", "deny")),
+                vol.Optional("person"): vol.Any(None, _PERSON),
+            }
+        ),
+        supports_response=SupportsResponse.OPTIONAL,
+    )
 
 
 @websocket_api.require_admin

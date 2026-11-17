@@ -950,7 +950,8 @@ def household_glance(people: list[dict[str, Any]], approvals: list[dict[str, Any
         headline = _item(text, URGENT, "asks", ",".join(sorted(a["id"] for a in asks)))
     elif paused:
         until = max(p["pause"]["until"] for p in paused)
-        who = "everyone" if len(paused) == len(people) else (
+        # Everyone is every kid: adults are never paused
+        who = "everyone" if len(paused) >= len([p for p in people if p.get("kind") != "adult"]) else (
             paused[0]["name"].lower() if len(paused) == 1 else f"{len(paused)} people"
         )
         headline = _item(f"{who} paused{_till(until)}", NOTICE, "pause", until)

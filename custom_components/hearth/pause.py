@@ -25,7 +25,7 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import CONF_ROLES, DOMAIN
 
 PAUSE = "pause"
 # The weekly schedule's Sleep or School (weekly.py), in a person's locked_by
@@ -53,6 +53,14 @@ def set_pause(
             "reason": (reason or "").strip()[:MAX_REASON],
             "ends_on": dict(ends_on) if ends_on else None,
         }
+
+
+def pausable(household, named: list[str] | None) -> tuple[list[str], list[str]]:
+    """Who a pause holds: the people named, or every kid with none named; never an adult (adults have no limits in
+    Hearth, so a pause is the kids'). Also the adults named, left out."""
+    roles = household.options.get(CONF_ROLES, {})
+    people = [p for p in (named or household.people()) if roles.get(p) != "adult"]
+    return people, [p for p in named or [] if roles.get(p) == "adult"]
 
 
 def _app_pauses(hass: HomeAssistant) -> dict[str, dict[str, dict[str, Any]]]:

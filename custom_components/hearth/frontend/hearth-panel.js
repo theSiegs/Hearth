@@ -2384,12 +2384,12 @@ class HearthPanel extends HTMLElement {
         (p) => `<div class="card attention">
           <div class="row">
             <ha-icon icon="${p.kind === "tv" ? "mdi:television" : "mdi:cellphone"}"></ha-icon>
-            <div class="grow"><div class="strong">${esc(p.name)} wants to join</div>
+            <div class="grow"><div class="strong">${esc(p.name)} wants to join${p.for_name ? ` (says it's ${esc(p.for_name)}'s${p.for_role ? `, as ${p.for_role === "adult" ? "an adult" : "a kid"}` : ""})` : ""}</div>
               <div class="muted">Check the ${p.kind === "tv" ? "TV" : "phone"} shows this code: <span class="code">${esc(p.code)}</span></div>
               ${p.client ? `<div class="muted small">App: ${esc(p.client.id)}${(p.client.companions || []).length ? ` (and ${p.client.companions.map(esc).join(", ")})` : ""}. Pairing keeps this app from being paused for its person.</div>` : ""}</div>
           </div>
           ${p.kind === "mobile" ? `<label class="field">Whose phone is it?
-            <select id="pair-person-${esc(p.pairing_id)}"><option value="">Choose…</option>${persons.map((x) => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join("")}</select></label>` : ""}
+            <select id="pair-person-${esc(p.pairing_id)}"><option value="">Choose…</option>${persons.map((x) => `<option value="${esc(x.id)}"${x.id === p.for_person ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select></label>` : ""}
           <div class="actions">
             <button class="btn" data-action="deny" data-pairing="${esc(p.pairing_id)}" data-kind="${esc(p.kind)}">Turn away</button>
             <button class="btn primary" data-action="approve" data-pairing="${esc(p.pairing_id)}" data-kind="${esc(p.kind)}">The code matches: pair</button>

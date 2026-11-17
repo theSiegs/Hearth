@@ -43,6 +43,7 @@ from .const import (
 from .hub import HearthHub, collect_secret, find_pairing, pin_lockout
 from .wait import WAIT_MAX
 from .push import clean_server, push_answer
+from .attention import async_note_admins
 from .notifications import notify_pairing
 from . import notices, parent_pin, switch_approval
 from .asks import AskError
@@ -102,9 +103,11 @@ def _pair_client(body: dict[str, Any]) -> tuple[bool, dict[str, Any] | None]:
 
 
 class PairStartView(HomeAssistantView):
-    """POST /api/hearth/pair {device_id, kind, name, model, version, nonce, client?} -> {pairing_id, code, expires_in}.
+    """POST /api/hearth/pair {device_id, kind, name, model, version, nonce, client?, person_name?, role?} ->
+    {pairing_id, code, expires_in, approvers}.
 
-    The device shows the code; an administrator checks it matches in Home Assistant (Settings > Devices & services, a
+    The device shows the code; an administrator checks it matches in Home Assistant (Hearth's page, their phone's
+    notification with Approve and Deny, or Settings > Devices & services, a
     discovered Hearth device) and confirms. `client` ({"id", "version", "contract", "companions"}, client.py) is shown
     to the administrator and locked when they confirm.
     """
@@ -145,10 +148,14 @@ class PairStartView(HomeAssistantView):
             text(body.get("version"), 32),
             nonce,
             client,
+            # Who a phone says it's for, shown to the administrators asked (never trusted further)
+            text(body.get("person_name"), 64) if kind == KIND_MOBILE else None,
+            body.get("role") if kind == KIND_MOBILE and body.get("role") in ("adult", "kid") else None,
         )
         if pairing is None:
             return _error(HTTPStatus.TOO_MANY_REQUESTS, "try_later")
-        notify_pairing(hass, pairing.pairing_id, pairing.name)
+        approvers = await async_note_admins(hass)
+        notify_pairing(hass, pairing.pairing_id, pairing.name, pairing)
         hass.async_create_task(
             hass.config_entries.flow.async_init(
                 DOMAIN,
@@ -161,6 +168,9 @@ class PairStartView(HomeAssistantView):
                 "pairing_id": pairing.pairing_id,
                 "code": pairing.code,
                 "expires_in": int(PAIRING_EXPIRES.total_seconds()),
+                # Who is asked to approve: the administrators, by name, and whether a phone of theirs got the notice
+                # (with Approve and Deny); every one of them also sees it in Home Assistant's bell
+                "approvers": approvers,
             }
         )
 
@@ -341,6 +351,10 @@ class StatusView(HomeAssistantView):
         # What the device is told: each profile's (or the phone's person's) limits today
         state = hub.household.document_for(device_id)
         answer: dict[str, Any] = {"ok": True, "contract": CONTRACT, "state": state}
+        # Hearth's own day: a status for another day (the device's clock moved) doesn't count, and says so
+        answer["day"] = dt_util.now().date().isoformat()
+        if (hub.state(device_id).status or {}).get("clock_off"):
+            answer["clock_off"] = True
         # The TV's own rules each profile had: which are taken (or passed over) for good, so it stops sending them
         if status.get("local_rules"):
             imported = hub.household.limits.data.imported

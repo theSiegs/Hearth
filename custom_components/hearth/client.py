@@ -32,6 +32,8 @@ _CHECK_ID = re.compile(r"^[a-z0-9_]{1,32}$")
 # Checks Hearth adds itself; a device's own with this prefix are dropped
 HEARTH_CHECK_PREFIX = "hearth_"
 CHECK_CLIENT = "hearth_client"
+# The device posted a status for another day than Home Assistant's (its clock moved): its counts stay as they were
+CHECK_CLOCK = "hearth_clock"
 
 
 def client_id(value: Any) -> str | None:
@@ -122,10 +124,12 @@ def client_matches(device: dict[str, Any], status: dict[str, Any] | None) -> boo
 
 def checks_of(device: dict[str, Any], status: dict[str, Any] | None) -> list[dict[str, Any]]:
     """What a device's row shows: its own checks as given, then Hearth's client check when the client it reports isn't
-    the one it paired with."""
+    the one it paired with, and its clock check when its last status was for another day than Hearth's."""
     found = list((status or {}).get("checks") or [])
     if client_matches(device, status) is False:
         found.append({"id": CHECK_CLIENT, "ok": False, "label": "App differs from pairing"})
+    if (status or {}).get("clock_off"):
+        found.append({"id": CHECK_CLOCK, "ok": False, "label": "Its date differs from Home Assistant's"})
     return found
 
 

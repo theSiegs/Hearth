@@ -22,6 +22,50 @@ Daily time, category limits, bonus time and Unlimited add `time` to each person'
 gives (bonus time, no category) and deprecate per-category bonuses for one release. The fields, the exact words kids see
 and the payload changes are in [time-model.md](time-model.md).
 
+## Pairing: who is asked, and confirming your own phone (additive, within contract 3)
+
+The pair body (`POST /api/hearth/pair`) may say who a phone is for, both optional and shown to the administrators only
+(never trusted further): `person_name` (at most 64 characters, "Alex") and `role` (`"adult"` or `"kid"`). The answer
+adds who is asked to approve:
+
+    {"pairing_id", "code", "expires_in", "approvers": [{"name": "Alex", "phone": true}]}
+
+`approvers` are the Home Assistant administrators, by their person's name (else their user's), sorted by name; `phone`
+says a companion app of theirs got the notification with Approve and Deny (every one of them also sees it in Home
+Assistant's bell). An empty list means nobody can approve it from a notification. A client may write "Alex gets a
+notice to approve".
+
+What the administrators see: the companion-app notification titled `A Hearth device wants to pair`, with the text
+`<person_name>'s <name> (<model>) wants to pair as an adult. Code 123 456: approve only if the device shows the same
+code.` (`as a kid` for `role: "kid"`; no role, no "as ..."; no `person_name`, just `<name> (<model>)`; the model is
+left out when it's the same as the name) and the buttons **Approve** and **Deny**. Approve pairs a phone as the
+household's person whose name is `person_name` (exactly one, any case); when none matches, the text adds `Choose whose
+phone it is on Hearth's page.` and only **Deny** is offered. The bell says `**<headline>**. Open Hearth's page, check it
+shows the same code as the device, and confirm. ...` (no code: everyone who uses Home Assistant sees the bell).
+
+The phone learns the answer as before, from its poll (`GET /api/hearth/pair/<id>`): `approved` (with the secret,
+`person`, `role`) or `denied`.
+
+**An adult who isn't an administrator** can confirm their own phone without one: signed in to Home Assistant as
+themselves (their person is an adult on Hearth's page), the WebSocket command
+
+    {"type": "hearth/pairing", "answer": "approve" | "deny", "code": "123456", "pairing_id": optional}
+
+pairs the waiting phone that shows that code as their own person (a `person` given is ignored) and answers
+`{"answer", "person", "device_id"}`. Errors: `wrong_code` (no phone waiting shows it; counts as a try),
+`too_many_tries` (five wrong codes in ten minutes), `unauthorized` (a kid, a user whose person isn't an adult in Hearth,
+or a phone paired for someone else), `expired`. An administrator's `hearth/pairing` is unchanged (`pairing_id`,
+`answer`, `person`; no code).
+
+## Hearth's day (additive, within contract 3)
+
+Every status answer carries `day` (Hearth's own date, `YYYY-MM-DD`). Hearth judges the day by its own clock: a status
+whose `day` isn't Hearth's (the device's clock moved) keeps the counts Hearth had, its answer says `"clock_off": true`,
+and the device gets the check `hearth_clock` (`ok: false`, "Its date differs from Home Assistant's") until it posts for
+Hearth's day again. Within Hearth's day a device's counts never go down (each app's seconds, the total, each TV
+profile's): a client that restarts counting from zero loses nothing, and can't take time back either. A client should
+count from Hearth's `day`, not its own clock's.
+
 ## New in contract 3
 
 ### `client`

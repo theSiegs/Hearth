@@ -716,7 +716,10 @@ async def test_every_grant_service_answers_its_origin_id(
     assert household.limits.raise_of("person.sam", "video").add == 20
     ended = await _end(hass, latest("unlimited"))
     assert ended == {"person": "person.sam", "kind": "unlimited", "still_on": False}
-    assert (await _end(hass, latest("pause"))) == {"person": "person.sam", "kind": "pause"}
+    paused = latest("pause")
+    assert (await _end(hass, paused)) == {"person": "person.sam", "kind": "pause"}
+    # Ended, it's no status line's origin any more
+    assert latest("pause") is None
     # Nothing given: no origin (0 minutes is only a recompute)
     answer = await _call(hass, "add_time", {"person": "person.sam", "minutes": 1})
     assert answer["origin_id"]
@@ -726,7 +729,7 @@ async def test_every_grant_service_answers_its_origin_id(
     with pytest.raises(Exception, match="No such grant today"):
         await _end(hass, "nope")
     with pytest.raises(Exception, match="Nothing of it is left to end"):
-        await _end(hass, latest("pause"))
+        await _end(hass, paused)
 
 
 async def test_ending_the_second_raise_keeps_the_first(

@@ -48,7 +48,7 @@ from .counting import ALL
 from .enforce import FAMILY_SAFETY, enforcers_from_options, fs_account_of
 from .exceptions import end_of_day
 from .history import ACTOR, ASSIST
-from .pause import pause_of
+from .pause import pausable, pause_of
 from .activity import call_service
 
 if TYPE_CHECKING:
@@ -906,12 +906,13 @@ def _what(household: Household, person: str | None, args: dict[str, Any]) -> tup
 class PauseTool(ActionTool):
     name = "hearth_pause"
     description = (
-        "Pause people (everyone by default) now, for some minutes or until a time today: their devices stop and say "
-        "why. With an app or a group, only that is paused. Without minutes or until, until the end of the day."
+        "Pause kids (every kid by default; adults are never paused) now, for some minutes or until a time today: their "
+        "devices stop and say why. With an app or a group, only that is paused. Without minutes or until, until the end "
+        "of the day."
     )
     parameters = vol.Schema(
         {
-            vol.Optional("people", description="Names or entity ids; none: everyone"): [str],
+            vol.Optional("people", description="Names or entity ids of kids; none: every kid"): [str],
             vol.Exclusive("minutes", "how_long", description="For this many minutes, 1 to 720"): vol.All(
                 vol.Coerce(int), vol.Range(min=1, max=720)
             ),
@@ -942,9 +943,9 @@ class PauseTool(ActionTool):
             how_long = "until the end of the day"
         if args.get("reason"):
             data["reason"] = args["reason"]
-        who = ", ".join(household.person_name(p) for p in people) if people else "everyone"
+        who = ", ".join(household.person_name(p) for p in people) if people else "every kid"
         text = f"pause {name + ' for ' if name else ''}{who} {how_long}"
-        everyone = people or household.people()
+        everyone = pausable(household, people)[0]
 
         def after(_response: Any) -> dict[str, Any]:
             current = household.hub.household
@@ -968,7 +969,7 @@ class PauseEndTool(ActionTool):
     )
     parameters = vol.Schema(
         {
-            vol.Optional("people", description="Names or entity ids; none: everyone"): [str],
+            vol.Optional("people", description="Names or entity ids of kids; none: every kid"): [str],
             vol.Exclusive("app", "what", description="That app's pause only"): str,
             vol.Exclusive("group", "what", description="That group's pause only"): str,
         }

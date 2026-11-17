@@ -349,7 +349,7 @@ async def test_a_place_must_be_one_of_theirs(
     await hass.async_block_till_done()
     # (its old entity stays in the registry, unavailable, like any entity an integration stops providing)
     assert hass.states.get("sensor.hearth_alex_place").state == "unavailable"
-    with pytest.raises(ServiceValidationError, match="Alex is an adult"):
+    with pytest.raises(ServiceValidationError, match="Adults aren't paused"):
         await hass.services.async_call(
             DOMAIN, "pause", {"people": ["person.alex"], "ends_on": {"arrive": "home"}}, blocking=True
         )

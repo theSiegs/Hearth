@@ -32,7 +32,7 @@ from .entry_tasks import entry_task
 from .api import async_register_views
 from .auth import is_adult_user, register_service
 from .websocket import async_register_commands
-from .pause import end_app_pause, end_pause, set_app_pause, set_pause
+from .pause import end_app_pause, pausable, set_app_pause, set_pause
 from .places import ARRIVE, LEAVE
 from . import client_settings_ws, glint_api, llm_api, panel, suggest_push, todo_ws, weekly_ws
 from .todos import migrated_options
@@ -282,9 +282,9 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
     @callback
     def pause(call: ServiceCall) -> ServiceResponse:
-        """Holds the people (everyone by default) for some minutes or until a time (today's, or tomorrow's if it's
-        passed): their Hearth devices stop and say why. Pause screens (the family pause) answers its origins
-        ({origin_id(s)}); a pause of one app or group, nothing."""
+        """Holds the people (every kid by default; adults are never paused) for some minutes or until a time (today's,
+        or tomorrow's if it's passed): their Hearth devices stop and say why. Answers who was paused ({paused,
+        not_paused: the adults named}); Pause screens (the family pause) its origins too ({origin_id(s)})."""
         household = loaded_household()
         now = dt_util.now()
         if "minutes" in call.data:
@@ -303,10 +303,16 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
                 until += timedelta(days=1)
         if until <= now:
             raise ServiceValidationError("That time has passed")
-        people = call.data.get("people") or household.people()
-        unknown = [p for p in people if p not in household.people()]
+        named = call.data.get("people") or []
+        unknown = [p for p in named if p not in household.people()]
         if unknown:
             raise ServiceValidationError(f"Not the household's: {', '.join(unknown)}")
+        # Only kids are paused: adults have no limits in Hearth, so everyone is every kid, and an adult named is left
+        # out (the answer says so)
+        people, skipped = pausable(household, named)
+        if not people:
+            raise ServiceValidationError("Adults aren't paused: name a kid" if skipped else "There's no kid to pause")
+        who: dict[str, Any] = {"paused": people, **({"not_paused": skipped} if skipped else {})}
         app, group = _paused_what(household, call.data, group_id)
         if app is not None or group is not None:
             if call.data.get("ends_on"):
@@ -315,7 +321,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             for person in people:
                 household.activity.hold(True, person, app or group, "pause", household.person_of_user(call.context.user_id))
             household.recompute()
-            return {}
+            return who
         ends_on = _place_ends_on(household, people, call.data.get("ends_on"))
         before = _origin_ids_now(household, people)
         set_pause(hass, people, until, call.data.get("reason"), ends_on)
@@ -326,10 +332,10 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
             detail = f"Pause screens until {say_clock(local.hour, local.minute)}" + (
                 f" · {call.data['reason']}" if call.data.get("reason") else ""
             )
-            household.note_origin(person, "pause", detail, "hearth", by)
+            household.note_origin(person, "pause", detail, "hearth", by, until=local.isoformat())
             household.activity.hold(True, person, "all", "pause", household.person_of_user(call.context.user_id))
         household.recompute()
-        return _new_origins(household, before)
+        return {**_new_origins(household, before), **who}
 
     @callback
     def pause_end(call: ServiceCall) -> None:
@@ -337,7 +343,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         app, group = _paused_what(household, call.data, group_id)
         if app is None and group is None:
             # The family pause only: an adult's pause of one app or group ("youtube for homework") stays
-            end_pause(hass, call.data.get("people"))
+            household.end_pause_now(call.data.get("people"), household.name_of_user(call.context.user_id))
         else:
             end_app_pause(hass, call.data.get("people"), app, group)
         for person in call.data.get("people") or household.people():
@@ -368,6 +374,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     _register_watch_services(hass)
     _register_play_on_tv(hass)
     _register_copy_sites(hass, loaded_household)
+    # An administrator's Approve or Deny on a pairing's phone notification
+    panel.async_register_pairing_service(hass)
     # Hearth for assistants: Home Assistant's MCP Server and Assist (llm_api.py)
     llm_api.async_register(hass)
     # Glint agents through Hearth: the "glint" LLM API beside it (glint_api.py)
@@ -858,7 +866,7 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         """Unlimited ends now: limits are back on where they were when it started."""
         household = loaded_household()
         people = who(household, call.data) if (call.data.get("people") or call.data.get("person")) else None
-        ended = household.end_unlimited(people)
+        ended = household.end_unlimited(people, household.name_of_user(call.context.user_id))
         return {"ended": ended, "text": {p: household.unlimited.back_on_text(p) for p in ended}}
 
     @callback
@@ -870,7 +878,7 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         person = household.person_of_origin(origin_id)
         if person is None:
             raise ServiceValidationError("No such grant today")
-        done = household.end_time_grant(person, origin_id)
+        done = household.end_time_grant(person, origin_id, household.name_of_user(call.context.user_id))
         if done is None:
             raise ServiceValidationError("Nothing of it is left to end")
         return {"person": person, **done}

@@ -57,9 +57,9 @@ New, under `time` (always present for a person; values may be `null`):
 | `time.base_minutes` | int \| null | Today's daily time without bonus (after any time an adult took away). |
 | `time.bonus` | int | Bonus time given today (adults, asks, chores, day-off). |
 | `time.bonus_left` | int | Bonus time not used yet. |
-| `time.bonus_origin` | string \| null | The id of the latest bonus origin today (its ⓘ). |
+| `time.bonus_origin` | string \| null | The id of the latest bonus origin today not ended (its ⓘ). |
 | `time.used` | int | Daily time used today, whole minutes (rounded), Unlimited minutes left out. |
-| `time.unlimited` | object \| null | While Unlimited is on: `{until, open, include_bedtime, text, origin}`. `until`: local ISO, the latest end of its grants; `open`: "until turned off" (still over at midnight); `origin`: the latest Unlimited origin's id. |
+| `time.unlimited` | object \| null | While Unlimited is on: `{until, open, include_bedtime, text, origin}`. `until`: local ISO, the latest end of its grants; `open`: "until turned off" (still over at midnight); `origin`: the id of the latest Unlimited origin still on (never one that ended). |
 | `time.unlimited_today` | list | Today's ended windows: `{start, end, minutes, settled, text}`. |
 | `time.text` | string \| null | The kid's line, ready to show (see Words). |
 | `time.adult_text` | string \| null | The adult's line ("... (includes 30 min bonus)"). |
@@ -147,7 +147,8 @@ Also, for the record:
 ## Never paused
 
 The state document (phone and TV, per person) has `never_paused: [packages]`: what Hearth never pauses for any reason,
-the same list Family Link's per-app hold uses (calls: dialer and contacts; Settings, Play services, Family Link and its
+the same list Family Link's per-app hold uses (calls: dialer and contacts; the clock and alarm apps: Google's, AOSP's,
+Samsung's, OnePlus's, OPPO's and LG's, so a kid can always set an alarm; Settings, Play services, Family Link and its
 helper, the Play Store, Hearth's and Glint's apps, `android`, and the keyboards and voice typing: Gboard, Samsung Keyboard, SwiftKey and its beta, Fleksy, Grammarly's keyboard, Google's speech services) with the launchers, keyboards Hearth's categories place in System screens, and accessibility apps. A
 client holds everything else when a group it holds is out of time or paused, Messaging included.
 
@@ -163,10 +164,12 @@ Each bonus, raised limit, Unlimited window and Pause screens record carries wher
 | `at` | ISO time |
 | `detail` | Short text: `Bonus +30`, `Games: limit +30 today`, `Unlimited until 6 PM`, `Pause screens until 7 PM` |
 | `text` | Ready to show: `Bonus +30 · added by Alex in Hearth · 3:05 PM` |
-| `minutes`, `group`, `chore` | When they apply: a bonus's minutes, the category, a chore reward's ledger key |
-| `id` | Stable for the day: status lines link to it (`bonus_origin`, `origin` on categories, category bonuses and Unlimited) |
-| `endable` | Whether something of it can still be ended now: a bonus grant with unused minutes, an active raise or Unlimited grant, a chore's reward not undone, Pause screens still on |
+| `minutes`, `group`, `chore`, `until` | When they apply: a bonus's minutes, the category, a chore reward's ledger key, Pause screens' end (ISO) |
+| `id` | Stable for the day: status lines link to it (`bonus_origin`, `origin` on categories, category bonuses and Unlimited), always to one still in effect: after one of two Unlimited grants ends, `time.unlimited.origin` is the one still on |
+| `endable` | Whether something of it can still be ended now: a bonus grant with unused minutes, an active raise or Unlimited grant, a chore's reward not undone, the Pause screens that are on (not an earlier one it replaced). One that was ended is never endable again, whatever is given after it |
 | `end` | `{service: "hearth.end_grant", data: {origin_id}}` while something of it can be ended (see Grants), else `null` |
+| `ended_at` | ISO (local) when its change was ended: by `hearth.end_grant`, `hearth.unlimited_end` or `hearth.pause_end`, a raise or Unlimited whose time ran out (its end), a chore's reward undone, Pause screens over or replaced by a later one. `null` while it's in effect, and for a bonus that was only spent (spent time stays given). A client drops or strikes an origin with `ended_at` |
+| `ended_by` | The adult's name who ended it, when known (`null` when its time ran out or nobody's name is known) |
 
 They are in `time.origins[]` (the state document and the household summary, `hearth/summary` and `GET /api/hearth/household`: each person's today's changes, newest first, for adult phones), `hearth.explain`'s `origins`, and `hearth/config`'s `origins` (by person). Today
 `hearth`, `chore` and `ask` are recorded; `family_link`, `family_safety` and `nintendo` (a parent's change in their own
@@ -209,7 +212,7 @@ call gave nothing for that person, so no origin was recorded, as with 0 minutes)
 | `hearth.raise_cap` | `{origin_id, origin_ids, <person>: {category, add, to, no_cap, until, origin_id}}`: the raise in effect after it (all grants together) |
 | `hearth.unlimited` | `{origin_id, origin_ids, id, until: {person: ISO}, text: {person: line}}` (`id`: the allow behind it) |
 | `hearth.add_bonus` (older name) | `{origin_id, origin_ids}`; with `device`, as before: `{id, until}` (extra time on one device has no origin) |
-| `hearth.pause` | Pause screens (the family pause): `{origin_id, origin_ids}`; a pause of one app or group: `{}` |
+| `hearth.pause` | Who was paused, `{paused: [person], not_paused: [the adults named]}` (every kid with no `people`; adults are never paused, and only adults is refused); Pause screens (the family pause) adds `{origin_id, origin_ids}` |
 
 The device API has no other adult action that gives time; asks are answered by an adult (`hearth.answer_request`, the
 phones' notification buttons), and the bonus they give records an origin with `source: ask`.
@@ -240,7 +243,7 @@ Extra time on one device (`hearth.add_bonus` or `hearth.allow` with `device`, de
 - `hearth.explain`: `group` is the app's category when called by app; `+ pool`, `+ groups`, `+ today_left`,
   `+ bonus_left`, `+ unlimited`, `+ category_limit`, `+ raised_limits`, `+ origins`.
 - `hearth/config`: `+ fl_backstop`, `+ fl_backstop_margin`, `+ origins`.
-- State document, per person: `+ never_paused`; `time.bonus_origin`, `origin` on raised categories, category bonuses and Unlimited; each origin `+ id`, `+ endable`, `+ end`.
+- State document, per person: `+ never_paused`; `time.bonus_origin`, `origin` on raised categories, category bonuses and Unlimited; each origin `+ id`, `+ endable`, `+ end`, `+ ended_at`, `+ ended_by` (Pause screens' `+ until`).
 - New: `POST /api/hearth/device/{device_id}/end_grant` (adults' devices) and the service `hearth.end_grant`; an origin's `end` names it.
 - Grant services answer `origin_id` / `origin_ids` (see What the grant services answer); `hearth.pause` now answers.
 - New services: `add_time`, `remove_time`, `raise_cap`, `raise_cap_end`, `unlimited`, `unlimited_end` (adults only).

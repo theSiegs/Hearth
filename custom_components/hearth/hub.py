@@ -6,7 +6,8 @@ from dataclasses import dataclass, field
 import hashlib
 import hmac
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
+import logging
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -64,6 +65,31 @@ from .switch_approval import SwitchApprovals
 from .household import Household
 from .parent_pin import EVENT_PARENT_PIN_LOCKED_OUT
 
+_LOGGER = logging.getLogger(__name__)
+
+# A status's counts for its day (what _on_hearth_day keeps when the day isn't Hearth's)
+_COUNTS = ("seconds_today", "app_seconds_today", "playing_seconds_today", "usage_today")
+# A device's day may differ from Hearth's this close to midnight without its clock check failing
+CLOCK_SLACK = timedelta(minutes=30)
+
+
+def _midnight(now: datetime) -> datetime:
+    return now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def _most(a: Any, b: Any) -> Any:
+    """The larger of two counts; None when neither says."""
+    known = [v for v in (a, b) if isinstance(v, (int, float))]
+    return max(known) if known else None
+
+
+def _most_each(a: Any, b: Any) -> dict[str, Any]:
+    """Each item's larger count of two {item: seconds}."""
+    out = dict(a or {})
+    for item, seconds in (b or {}).items():
+        out[item] = _most(out.get(item), seconds)
+    return out
+
 
 def hash_secret(secret: str) -> str:
     return hashlib.sha256(secret.encode()).hexdigest()
@@ -91,6 +117,11 @@ class Pairing:
     denied: bool = False
     # The client app it says it is (client.clean_client), shown to the adult and locked when they approve
     client: dict[str, Any] | None = None
+    # Who a phone says it's for (the pair body's person_name and role, untrusted: shown to the administrators), and the
+    # household's person of that name, when exactly one has it (what Approve on their notification pairs it as)
+    for_name: str | None = None
+    for_role: str | None = None
+    for_person: str | None = None
 
 
 @dataclass
@@ -311,6 +342,7 @@ class HearthHub:
         for kept in ("caps", "client", "checks"):
             if status.get(kept) is None and (state.status or {}).get(kept) is not None:
                 status = {**status, kept: state.status[kept]}
+        status = self._on_hearth_day(device_id, state.status, status)
         self._tell_failed_checks(device_id, state.status, status)
         self._note_baseline(device_id, status)
         state.status = status
@@ -324,6 +356,47 @@ class HearthHub:
         if status.get("local_rules") and self.kind(device_id) == KIND_TV:
             self.household.import_local_rules(device_id, status["local_rules"])
         self.household.recompute()
+
+    def _on_hearth_day(
+        self, device_id: str, before: dict[str, Any] | None, status: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Hearth judges the day by its own clock, never a device's (a kid can move a phone's clock). A status for
+        another day than Hearth's (the clock moved forward or back) keeps the counts Hearth had, and says so
+        (clock_off: the day it said, a failed clock check); one for Hearth's day never counts less than the device's
+        last status that day did (each app's seconds, the total, each TV profile's)."""
+        now = dt_util.now()
+        today = now.date().isoformat()
+        posted = status.get("day")
+        before = before or {}
+        if posted is None:
+            return status
+        if posted != today:
+            # A clock a few minutes off around midnight is no news; its counts are kept all the same
+            to_midnight = min(now - _midnight(now), _midnight(now) + timedelta(days=1) - now)
+            off = posted if to_midnight > CLOCK_SLACK else None
+            if off and not before.get("clock_off"):
+                _LOGGER.warning(
+                    "Hearth device %s posted a status for %s, but Hearth's day is %s: its counts are kept as they were",
+                    device_id, posted, today,
+                )
+            return {**status, **{key: before.get(key) for key in _COUNTS}, "day": before.get("day"), "clock_off": off}
+        status = {**status, "clock_off": None}
+        if before.get("day") != today:
+            return status
+        status["seconds_today"] = _most(before.get("seconds_today"), status.get("seconds_today"))
+        for key in ("app_seconds_today", "playing_seconds_today"):
+            status[key] = _most_each(before.get(key), status.get(key))
+        usage = {**(before.get("usage_today") or {})}
+        for profile_id, mine in (status.get("usage_today") or {}).items():
+            had = usage.get(profile_id) or {}
+            usage[profile_id] = {
+                **mine,
+                "seconds": _most(had.get("seconds"), mine.get("seconds")),
+                "apps": _most_each(had.get("apps"), mine.get("apps")),
+                "playing": _most_each(had.get("playing"), mine.get("playing")),
+            }
+        status["usage_today"] = usage
+        return status
 
     def _note_baseline(self, device_id: str, status: dict[str, Any]) -> None:
         """A phone's or tablet's first post after it paired: on the day it paired, what it counted so far is from
@@ -421,8 +494,13 @@ class HearthHub:
         sw_version: str | None,
         nonce: str,
         client: dict[str, Any] | None = None,
+        for_name: str | None = None,
+        for_role: str | None = None,
     ) -> Pairing | None:
-        """A device asks to pair; None when too many are waiting or this address asked a moment ago."""
+        """A device asks to pair; None when too many are waiting or this address asked a moment ago. A phone may say
+        who it's for ([for_name], [for_role]): shown to the administrators, never trusted further."""
+        from .notifications import clear_pairing
+
         self._drop_expired()
         now = dt_util.utcnow()
         last = self._asked_at.get(address)
@@ -431,10 +509,19 @@ class HearthHub:
         if len(self._pairings) >= MAX_PENDING_PAIRINGS:
             return None
         self._asked_at[address] = now
-        # The same device asking again replaces its earlier request
+        # The same device asking again replaces its earlier request (and its notification)
         for old in [p.pairing_id for p in self._pairings.values() if p.device_id == device_id]:
             del self._pairings[old]
+            clear_pairing(self.hass, old)
+        named = [
+            state.entity_id
+            for state in self.hass.states.async_all("person")
+            if for_name and kind == KIND_MOBILE and state.name.casefold() == for_name.casefold()
+        ]
         pairing = Pairing(
+            for_name=for_name,
+            for_role=for_role,
+            for_person=named[0] if len(named) == 1 else None,
             pairing_id=secrets.token_urlsafe(16),
             code=f"{secrets.randbelow(1_000_000):06d}",
             nonce_hash=hash_secret(nonce),

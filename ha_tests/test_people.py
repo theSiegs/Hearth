@@ -7,7 +7,7 @@ from pytest_homeassistant_custom_component.common import async_capture_events
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
 from custom_components.hearth.const import DOMAIN
-from test_init import NONCE, PHONE_ID, _pair, _post, _set_up
+from test_init import NONCE, PHONE_ID, TV_ID, _pair, _post, _set_up
 
 KID = "user:10"
 SAM = "name:sam"
@@ -207,7 +207,14 @@ async def test_yesterday_s_counts_don_t_count_today(
     stale = {**_tv_status(hearthtube_s=3000), "day": "2000-01-01"}
     await _post(client, secret, body=stale)
     await hass.async_block_till_done()
-    # Counted: nothing (the sensor itself keeps the 15 it showed today until midnight)
+    # Its 3000 s don't count: today stays at the 15 minutes it counted earlier today (Hearth's day, not the device's)
+    total = hass.states.get("sensor.hearth_sam_screen_time_today")
+    assert total.attributes["groups"]["all"] == 15
+    # A device that only ever posted for another day counts nothing today
+    hub = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
+    hub.state(TV_ID).status = {**stale}
+    hub.household.recompute()
+    await hass.async_block_till_done()
     total = hass.states.get("sensor.hearth_sam_screen_time_today")
     assert total.attributes["groups"]["all"] == 0
     assert total.attributes["devices"] == {}

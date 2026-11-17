@@ -170,7 +170,19 @@ MAX_PACKAGES = 150
 # TRANSITION: the phone launcher's two packages stay listed until its phones have re-paired with contract 3 (then
 # they're exempt by their locked client id); remove them in the release after that.
 TRANSITION_CLIENTS = frozenset({"com.thesiegs.glint", "com.thesiegs.glint.phone"})
-ESSENTIAL = TRANSITION_CLIENTS | frozenset(
+# Clock and alarm apps: a kid can always set a morning alarm, even with no time left, at bedtime or in School time.
+# Google's, AOSP's, Samsung's, OnePlus's, OPPO's and realme's, LG's
+CLOCKS = frozenset(
+    {
+        "com.google.android.deskclock",
+        "com.android.deskclock",
+        "com.sec.android.app.clockpackage",
+        "com.oneplus.deskclock",
+        "com.coloros.alarmclock",
+        "com.lge.clock",
+    }
+)
+ESSENTIAL = TRANSITION_CLIENTS | CLOCKS | frozenset(
     {
         "com.thesiegs.hearth",
         "com.thesiegs.hearth.mobile",
@@ -193,7 +205,7 @@ def essential(package: str) -> bool:
 
 
 # Never paused for School time either: what holds the rest, and the system
-NEVER_PAUSED = TRANSITION_CLIENTS | frozenset(
+NEVER_PAUSED = TRANSITION_CLIENTS | CLOCKS | frozenset(
     {
         "com.thesiegs.hearth",
         "com.thesiegs.hearth.mobile",
@@ -221,9 +233,9 @@ KEYBOARDS = frozenset(
         "com.google.android.tts",
     }
 )
-# The explicit system list: never paused, by name (calls, Settings, Play services, Family Link, the Play Store, Hearth
-# and Glint, the keyboards). The per-app path (Enforcement._all_apps_but) and the state document's never_paused both
-# read it
+# The explicit system list: never paused, by name (calls, the clock, Settings, Play services, Family Link, the Play
+# Store, Hearth and Glint, the keyboards). The per-app path (Enforcement._all_apps_but) and the state document's
+# never_paused both read it
 SYSTEM_NEVER_PAUSED = ESSENTIAL | NEVER_PAUSED | KEYBOARDS | frozenset({"android"})
 
 # Family Safety's app ids that pause_app takes, by platform (a: is a phone app: not paused, Family Link has the phone)
