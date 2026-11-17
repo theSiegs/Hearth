@@ -957,7 +957,12 @@ class Scheduler:
         for person, offs in due.items():
             # Taken off for today too (a second day off in a row, or from a time later today): not put back today.
             # Today's off may be applied already (at midnight), so whether it is doesn't matter
-            if any(o.day == today for o in self.offs.values() if o.person == person):
+            # (one ended early today, on arriving at school, is due itself)
+            if any(
+                o.day == today and (o.restore_from is None or o.restore_from > today)
+                for o in self.offs.values()
+                if o.person == person
+            ):
                 continue
             child = self.child(person)
             switch = fl.school_time_switch(self.hass, child) if child else None
