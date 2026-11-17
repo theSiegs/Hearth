@@ -266,6 +266,11 @@ async def test_an_adult_s_undo_takes_the_whole_reward_back(
     assert (await _items(hass))[0]["status"] == "completed"
     await _tick(hass, uid, users["sam"])
     assert _live(hass) == []
+    # Nor can Sam untick it to tick it again for a new reward: the undo is an adult's to change
+    with pytest.raises(Exception):
+        await _tick(hass, uid, users["sam"], done=False)
+    await _tick(hass, uid, users["sam"])
+    assert _live(hass) == []
     ws = await hass_ws_client(hass)
     await ws.send_json({"id": 1, "type": "hearth/todo/give", "item": uid})
     assert (await ws.receive_json())["result"]["key"] == f"{uid}#2"

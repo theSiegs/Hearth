@@ -507,6 +507,9 @@ class ChoreBook:
         if occ.done is None:
             return None
         key = occ.done.get("granted")
+        # A reward an adult undid stays undone: unticking and ticking again would earn it again, so it's an adult's
+        if not key and occ.done.get("undone") and actor.kind != ADULT:
+            raise ChoreError("undone", "An adult undid that reward: only an adult can untick it")
         if key and not self._grants(actor):
             raise ChoreError("granted", f"Only {self.household.person_name(occ.person)} or an adult can untick that")
         del self.done[occ.id]
@@ -663,6 +666,8 @@ class ChoreBook:
         mark = self.done.get(entry["occurrence"])
         if mark is not None and mark.get("granted") == key:
             mark["granted"] = None
+            if why != "untick":
+                mark["undone"] = key
         if minutes and entry["day"] == today:
             self.household.history.log(BONUS, entry["person"], group=entry["pool"], minutes=-minutes, via="chore")
         self._changed(recompute=bool(minutes))

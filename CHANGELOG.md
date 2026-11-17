@@ -3,6 +3,13 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **Two School days off in a row stay off.** On the second day Hearth switched School time back on at the window's start; and the day after a day off, the weekly schedule's School is held again from the start of the day, not only once Family Link has caught up.
+- **A chore reward an adult undid stays undone.** The kid could untick and tick it again to earn it once more; now only an adult can untick it (an adult's Give still grants it again).
+
 ## 2026.11.29
 
 ### Home Assistant integration
