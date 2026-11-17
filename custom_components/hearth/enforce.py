@@ -906,8 +906,12 @@ class Enforcement:
             if DEVICES in items:
                 if hold:
                     await self._lock_devices(entity_id, held)
-                elif (outcome := await self._unlock_devices(held)) is not None:
-                    outcomes[DEVICES] = outcome
+                    held.items.add(DEVICES)
+                else:
+                    if (outcome := await self._unlock_devices(held)) is not None:
+                        outcomes[DEVICES] = outcome
+                    # Let go even if resuming the apps below fails: it's never held again otherwise
+                    held.items.discard(DEVICES)
             packages = items - {DEVICES}
             if packages:
                 service = "pause_app" if hold else "resume_app"
@@ -926,6 +930,11 @@ class Enforcement:
             applied = await self._platform(entity_id, platform, hold, held)
             if not hold and applied is not None:
                 outcomes[platform] = applied
+            # Each platform as it's done: a later one failing mustn't leave this one counted as held (or not)
+            if hold:
+                held.items.add(platform)
+            else:
+                held.items.discard(platform)
         if apps:
             await self._fs_apps(entity_id, apps, hold)
         return outcomes

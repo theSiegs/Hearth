@@ -1085,3 +1085,37 @@ async def test_a_family_pause_locks_the_xbox_until_it_ends(
     # A pause of Video isn't Family Safety's (its groups are Games and All screen time by default)
     await _pause(hass, minutes=30, group="video")
     assert len(locked) == 1
+
+
+async def test_a_let_go_that_fails_half_way_locks_the_let_go_platform_again(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Xbox and Windows held; letting go unlocks Windows, then Xbox's unlock fails. Out of time again, Windows is
+    locked again (it isn't counted as still held)."""
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0))
+    locks: list[str] = []
+
+    async def lock(call: ServiceCall):
+        locks.append(call.data["platform"])
+        return {"prior": None, "applied": {"until": call.data["until"]}}
+
+    async def unlock(call: ServiceCall):
+        if call.data["platform"] == "Xbox":
+            raise HomeAssistantError("Microsoft said no")
+        return {"prior": None, "applied": "unlocked"}
+
+    for name, handler in (("lock_platform", lock), ("unlock_platform", unlock)):
+        hass.services.async_register(
+            "microsoft_family_safety", name, handler, supports_response=SupportsResponse.OPTIONAL
+        )
+    hass.states.async_set(FAMILY_SAFETY, "Sam", {"user_id": 123456})
+    await _household_with_sam(hass, hass_client_no_auth)
+    await _option(
+        hass, "enforce", {"person": "person.sam", "family_safety": FAMILY_SAFETY, "platforms": ["Xbox", "Windows"]}
+    )
+    await _budget(hass, "games", 5)
+    assert sorted(locks) == ["Windows", "Xbox"]
+    await _bonus(hass, "games", 30)  # Windows unlocked, Xbox's unlock fails
+    freezer.tick(timedelta(minutes=10))  # past the retry wait
+    await _bonus(hass, "games", -30)  # out of time again
+    assert locks.count("Windows") == 2

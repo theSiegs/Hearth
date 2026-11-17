@@ -12,6 +12,7 @@
 - **A shared Switch keeps its real limit when it passes from one kid to another.** When one kid's hold started as another's let go (or right after), Hearth could keep the 0 it had set as the limit to put back, and the Switch stayed at 0 every day after.
 - **The Xbox stays locked past midnight while Sleep or a pause still holds.** Family Safety locks end at midnight; Hearth now locks again for the new day instead of leaving the Xbox open until Sleep ends.
 - **A family pause locks the Xbox too** (and a pause of Games, or another group Family Safety covers), as Sleep does. Before, "Pause screens" held the TVs, phones and the Switch but left the Xbox open.
+- **A let-go that fails half way is remembered as half done.** Letting go of Xbox and Windows when only Windows' unlock went through left both counted as held, so Windows was never locked again that day; the same for Family Link's device lock when resuming apps after it failed.
 
 ## 2026.11.27
 
