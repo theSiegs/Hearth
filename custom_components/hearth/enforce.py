@@ -122,7 +122,9 @@ WEEKDAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", 
 # A Switch's limit is put back this long before midnight: after it, "today" is another day's setting
 NINTENDO_LET_GO_BEFORE_MIDNIGHT = timedelta(minutes=2)
 NINTENDO_EACH_DAY = "each_day_of_the_week"
-# Nothing is let go this long after Home Assistant starts (the sources report in first)
+# Nothing is let go this long after Home Assistant starts (the sources report in first)
+# How long a Switch limit Hearth put back may still read 0 (the Nintendo integration polls)
+SWITCH_PUT_BACK_FRESH = timedelta(minutes=5)
 SETTLE = timedelta(minutes=5)
 # A failed call is tried again after this long
 RETRY = timedelta(minutes=5)
@@ -496,6 +498,9 @@ class Enforcement:
         self._why: dict[str, dict[str, str]] = {}
         # The refreshes waiting after a write, by entity: one each at a time
         self._refresh: dict[str, CALLBACK_TYPE] = {}
+        # A Switch's limit Hearth just put back, by entity: its number may still read 0 for a moment, and a hold
+        # right after (another kid's) must keep the real one (when, what was put back)
+        self._switch_put_back: dict[str, tuple[datetime, dict[str, Any]]] = {}
         # When the extra time Hearth last gave on a Family Safety platform today ends: (person, platform) -> datetime
         # or None (native_sync.py sets it). With what Hearth locked, how Hearth tells its own from a parent's
         self.fs_bonus_until = None
@@ -722,6 +727,17 @@ class Enforcement:
             return None
         return any(s.state == "on" for s in known)
 
+    def _switch_holders(self, key: str, entity_id: str | None) -> list[Held]:
+        """Another person's hold on the same Switch, wanted still or not."""
+        return [
+            other
+            for other_key, other in self.held.items()
+            if other_key != key
+            and other_key.startswith(f"{NINTENDO}|")
+            and other.entity_id == entity_id
+            and SWITCH in _holding(other)
+        ]
+
     def _sharing(self, key: str, entity_id: str | None) -> list[Held]:
         """Another person's hold on the same Switch, still wanted."""
         return [
@@ -859,7 +875,18 @@ class Enforcement:
         if kind == NINTENDO:
             # One Switch, two kids: the first hold keeps its limit; letting go while the other is still held hands
             # what to put back over instead of putting it back
-            sharing = self._sharing(next(k for k, v in self.held.items() if v is held), entity_id)
+            key = next(k for k, v in self.held.items() if v is held)
+            sharing = self._sharing(key, entity_id)
+            if hold and not held.restore:
+                # Another kid's hold on this Switch (wanted or about to let go) kept the real limit: the same one is
+                # kept here, never the 0 Hearth set
+                kept = next((o.restore for o in self._switch_holders(key, entity_id) if o.restore), None)
+                if kept is None and (recent := self._switch_put_back.get(entity_id)) is not None:
+                    at, put_back = recent
+                    if dt_util.utcnow() - at < SWITCH_PUT_BACK_FRESH:
+                        kept = put_back
+                if kept is not None:
+                    held.restore = dict(kept)
             if sharing:
                 if not hold and held.restore:
                     sharing[0].restore = sharing[0].restore or held.restore
@@ -1303,6 +1330,7 @@ class Enforcement:
         suspend = restore.get("suspend")
         if suspend and restore.get("suspend_was") == "off":
             await call_service(self.hass, "switch", "turn_off", {"entity_id": suspend}, blocking=True)
+        self._switch_put_back[entity_id] = (dt_util.utcnow(), dict(restore))
         held.restore = {}
         return RESTORED
 

@@ -1001,3 +1001,44 @@ async def test_a_kid_on_two_switches_shows_one_nintendo_line(hass: HomeAssistant
     held.held["nintendo|person.sam|number.b"] = enforce.Held(items=set(), error="Nintendo said no")
     assert held.held_for("person.sam") == {"nintendo": {"held": ["Switch"], "error": "Nintendo said no"}}
     assert held.status_of("person.sam")["nintendo"]["held"] == ["Switch"]
+
+
+async def test_a_shared_switch_handed_from_one_kid_to_another_keeps_its_real_limit(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Alex was held (the Switch reads 0, Suspend on); in one pass Sam is held and Alex lets go, Sam first. Sam's hold
+    keeps Alex's kept limit, never the 0 Hearth set, so letting Sam go puts the real one back."""
+    from custom_components.hearth.enforce import NINTENDO, SWITCH, Held
+
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0))
+    _nintendo_switch(hass, limit="120")
+    await _household_with_sam(hass, hass_client_no_auth)
+    set_value, _turned_on, turned_off = _nintendo_services(hass)
+    enforcement = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household.enforcement
+    alex, sam = f"{NINTENDO}|person.alex|{NINTENDO_LIMIT}", f"{NINTENDO}|person.sam|{NINTENDO_LIMIT}"
+    real = {"max": 120, "suspend": NINTENDO_SUSPEND, "suspend_was": "off"}
+    enforcement.held[alex] = Held(items={SWITCH}, entity_id=NINTENDO_LIMIT, restore=dict(real))
+    hass.states.async_set(NINTENDO_LIMIT, "0")
+    hass.states.async_set(NINTENDO_SUSPEND, "on")
+
+    enforcement.held[sam] = Held(entity_id=NINTENDO_LIMIT)
+    enforcement._wanted = {sam: {SWITCH}}
+    await enforcement._call(NINTENDO, NINTENDO_LIMIT, {SWITCH}, True, enforcement.held[sam])
+    enforcement.held[sam].items = {SWITCH}
+    assert enforcement.held[sam].restore["max"] == 120 and enforcement.held[sam].restore["suspend_was"] == "off"
+    # Alex lets go while Sam holds: handed over, nothing written
+    assert await enforcement._call(NINTENDO, NINTENDO_LIMIT, {SWITCH}, False, enforcement.held[alex]) == {
+        SWITCH: "shared"
+    }
+    enforcement.held.pop(alex)
+    # Sam lets go: the real limit and Suspend off come back
+    enforcement._wanted = {}
+    await enforcement._call(NINTENDO, NINTENDO_LIMIT, {SWITCH}, False, enforcement.held[sam])
+    assert set_value[-1].data == {"entity_id": NINTENDO_LIMIT, "value": 120}
+    assert turned_off and turned_off[-1].data == {"entity_id": NINTENDO_SUSPEND}
+
+    # Held again within minutes while the Switch still reads 0: the limit just put back is kept, not the 0
+    enforcement._wanted = {sam: {SWITCH}}
+    enforcement.held[sam] = Held(entity_id=NINTENDO_LIMIT)
+    await enforcement._call(NINTENDO, NINTENDO_LIMIT, {SWITCH}, True, enforcement.held[sam])
+    assert enforcement.held[sam].restore["max"] == 120
