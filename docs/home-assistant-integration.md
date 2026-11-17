@@ -2558,7 +2558,9 @@ switch into their PIN-locked Google TV profile from their phone, so it needs no 
   mapped to a person who is an adult on Hearth's page. The phones asked are `phone` when Home Assistant has that
   notify service, else the person's companion apps (as `adult_phones`). Each gets "TV: switch to <name>'s profile?"
   with Allow and Deny (action ids `HEARTH_SWITCH_ALLOW_<id>` and `HEARTH_SWITCH_DENY_<id>`, `tag` `hearth-switch-<id>`,
-  sticky, two minutes), and Home Assistant's own list gets the same request. 200 `{"ok": true, "request": {"id",
+  sticky, two minutes), and Home Assistant's own list gets the same request (under an id of its own, never the
+  request's). Only an adult's answer counts (an administrator, or a user whose person is an adult); any other is
+  ignored. 200 `{"ok": true, "request": {"id",
   "status": "pending"}, "phones": n, "expires": 120}`. `id` is 128 random bits (32 hex), used once. A TV's newer request
   withdraws its waiting one. Errors: 404 `no_person` (the profile is nobody's), 403 `not_adult`, 404 `no_phone`, 502
   `not_sent` (no phone took it), 400 `bad_request` (not a TV, no profile, a `phone` that isn't a companion app's), 429

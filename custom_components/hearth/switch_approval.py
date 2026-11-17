@@ -12,9 +12,11 @@ It asks the integration instead (docs/home-assistant-integration.md, "Phone appr
   "pending" (or after <s> seconds): pending, allowed, denied, expired or withdrawn.
 - DELETE the same withdraws it (someone at the TV uses the remote, or the PIN screen went).
 
-The first answer decides; the notification then leaves every phone asked (and Home Assistant's own list). Anyone with
-Home Assistant's app may answer (the household's choice: whoever holds the profile owner's phone); who answered is
-logged and in the hearth_switch_approval event. Only the TV that asked can read or withdraw a request.
+The first answer decides; the notification then leaves every phone asked (and Home Assistant's own list). Only an
+adult answers (an administrator, or a user whose person is an adult on Hearth's page: the profile owner's phone is
+signed in as theirs); an answer from anyone else is ignored, as a kid's own companion app can fire the same event. Home
+Assistant's own list shows the request under an id of its own, never the request's. Who answered is logged and in the
+hearth_switch_approval event. Only the TV that asked can read or withdraw a request.
 """
 
 from __future__ import annotations
@@ -80,6 +82,8 @@ class SwitchRequest:
     answered_by: str | None = None
     changed: asyncio.Event = field(default_factory=asyncio.Event)
     unsub: CALLBACK_TYPE | None = None
+    # Home Assistant's own list shows the request to every user: never under its id (which answers it)
+    notice_id: str = field(default_factory=lambda: "hearth-switch-notice-" + secrets.token_urlsafe(8))
 
     def view(self) -> dict[str, Any]:
         return {"id": self.id, "status": self.status}
@@ -200,6 +204,14 @@ class SwitchApprovals:
         if request is None or request.status != PENDING:
             return
         user_id = event.context.user_id
+        # Only an adult answers: an administrator, or a user whose person is an adult on Hearth's page. A kid's own
+        # companion app can fire the same event, so the answer must come from a user who may open an adult's profile
+        from .auth import is_adult_user
+
+        user = await self.hass.auth.async_get_user(user_id) if user_id else None
+        if not is_adult_user(self.hass, self.hub, user):
+            _LOGGER.warning("A switch approval answer from someone who isn't an adult was ignored")
+            return
         by = _person_of(self.hass, user_id)
         request.answered_by = by or user_id
         _LOGGER.info(
@@ -258,7 +270,7 @@ class SwitchApprovals:
         try:
             from homeassistant.components import persistent_notification
 
-            persistent_notification.async_dismiss(self.hass, TAG_PREFIX + request.id)
+            persistent_notification.async_dismiss(self.hass, request.notice_id)
         except Exception:  # noqa: BLE001
             pass
 
@@ -271,7 +283,7 @@ class SwitchApprovals:
                 f"Someone at {tv} wants to open this profile. Answer from the notification on the phone (Allow or "
                 f"Deny). The request ends by itself after 2 minutes.",
                 title=f"TV: switch to {name}'s profile?",
-                notification_id=TAG_PREFIX + request.id,
+                notification_id=request.notice_id,
             )
         except Exception:  # noqa: BLE001
             pass

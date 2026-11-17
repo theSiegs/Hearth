@@ -52,7 +52,19 @@ async def test_the_adult_s_phone_allows_and_the_tv_reads_it(
     read = await (await client.get(f"{URL}/{request_id}?timeout=0", headers=headers)).json()
     assert read["request"]["status"] == "pending"
 
-    # Any Home Assistant user may answer; who did is told
+    # A kid (or anyone who isn't an adult) can't answer, even firing the same event from their own app; and Home
+    # Assistant's own list, which every user sees, never shows the request's id
+    from homeassistant.components import persistent_notification
+
+    notices = persistent_notification._async_get_or_create_notifications(hass)
+    assert notices and all(request_id not in n for n in notices)
+    kid = await hass.auth.async_create_user("Sam")
+    await _answer(hass, f"HEARTH_SWITCH_ALLOW_{request_id}", kid.id)
+    await _answer(hass, f"HEARTH_SWITCH_ALLOW_{request_id}")
+    read = await (await client.get(f"{URL}/{request_id}?timeout=0", headers=headers)).json()
+    assert read["request"]["status"] == "pending"
+
+    # An adult answers; who did is told
     await _answer(hass, f"HEARTH_SWITCH_ALLOW_{request_id}", hass_admin_user.id)
     read = await (await client.get(f"{URL}/{request_id}?timeout=5", headers=headers)).json()
     assert read["request"]["status"] == "allowed"
@@ -67,11 +79,13 @@ async def test_the_adult_s_phone_allows_and_the_tv_reads_it(
     assert read["request"]["status"] == "allowed" and len(answered) == 1
 
 
-async def test_deny_withdraw_and_expiry(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
+async def test_deny_withdraw_and_expiry(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_admin_user
+) -> None:
     client, headers, alex, _ = await _ready(hass, hass_client_no_auth)
 
     first = (await (await client.post(URL, json={"profile_id": "user:0"}, headers=headers)).json())["request"]["id"]
-    await _answer(hass, f"HEARTH_SWITCH_DENY_{first}")
+    await _answer(hass, f"HEARTH_SWITCH_DENY_{first}", hass_admin_user.id)
     assert (await (await client.get(f"{URL}/{first}", headers=headers)).json())["request"]["status"] == "denied"
 
     # Withdrawn by the TV (the remote is in use): off the phone
@@ -79,7 +93,7 @@ async def test_deny_withdraw_and_expiry(hass: HomeAssistant, hass_client_no_auth
     gone = await client.delete(f"{URL}/{second}", headers=headers)
     assert (await gone.json())["request"]["status"] == "withdrawn"
     assert alex[-1].data["data"] == {"tag": f"hearth-switch-{second}"}
-    await _answer(hass, f"HEARTH_SWITCH_ALLOW_{second}")
+    await _answer(hass, f"HEARTH_SWITCH_ALLOW_{second}", hass_admin_user.id)
     assert (await (await client.get(f"{URL}/{second}", headers=headers)).json())["request"]["status"] == "withdrawn"
 
     # A newer request from the TV replaces its waiting one; no answer in time: expired
