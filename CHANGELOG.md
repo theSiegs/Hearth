@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.11.37
+
+### TV
+
+- **The TV counts minutes down when Home Assistant goes quiet.** With no word from Home Assistant for 10 minutes (the router unplugged, say), each group's minutes left from its last word are counted down by the time spent in front since, and a group that runs out is held as Home Assistant would hold it.
+
 ## 2026.11.36
 
 ### TV

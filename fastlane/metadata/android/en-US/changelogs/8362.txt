@@ -1,0 +1,1 @@
+With no word from Home Assistant for 10 minutes, the TV counts each group's minutes down itself and holds a group that runs out.
