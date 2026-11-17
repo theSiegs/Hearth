@@ -152,12 +152,14 @@ def async_prune_group_entities(hass: HomeAssistant, hub: HearthHub) -> list[str]
     registry = er.async_get(hass)
     made = made_group_entities(hub)
     prefix = f"{hub.entry.entry_id}_"
+    # Only the keys setup made any of: a platform that failed to set up loses nothing
+    keys = [key for key in GROUP_KEYS if any(f"_{key}_" in uid for uid in made)]
     gone: list[str] = []
     for entry in er.async_entries_for_config_entry(registry, hub.entry.entry_id):
         uid = entry.unique_id
         if not uid.startswith(prefix) or uid in made:
             continue
-        if any(f"_{key}_" in uid[len(prefix) :] for key in GROUP_KEYS):
+        if any(f"_{key}_" in uid[len(prefix) :] for key in keys):
             registry.async_remove(entry.entity_id)
             gone.append(entry.entity_id)
     return gone

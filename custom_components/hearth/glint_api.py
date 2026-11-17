@@ -738,7 +738,11 @@ def _may_forget(hub: HearthHub, user, person: str | None, device_id: str) -> boo
     if user is not None and user.is_admin:
         return True
     agent: GlintAgent = hub.glint_agent
-    return agent.is_kid_phone(device_id) or (person is not None and agent.person_of(device_id) == person)
+    owner = agent.person_of(device_id)
+    # A phone with no person is nobody's to say: an administrator's to forget
+    if owner is None:
+        return False
+    return agent.is_kid_phone(device_id) or owner == person
 
 
 @websocket_api.websocket_command(
