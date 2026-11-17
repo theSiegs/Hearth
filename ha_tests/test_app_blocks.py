@@ -384,3 +384,25 @@ def test_supported_browsers_are_never_blocked_by_the_rule() -> None:
     assert app_blocks.SUPPORTED_ANDROID == {CHROME}
     assert not set(app_blocks.OTHER_APP_STORES) & set(app_blocks.BROWSERS)
     assert app_blocks.android_package(FIREFOX) and not app_blocks.android_package("appx:Foo")
+
+
+async def test_a_block_that_timed_out_but_went_through_is_hearth_s_to_lift(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client
+) -> None:
+    from homeassistant.exceptions import HomeAssistantError
+
+    calls = await _sam(hass, hass_client_no_auth, installed=[GAME, FIREFOX])
+    unblocked = calls["unblock"]
+
+    async def timed_out(call):
+        raise HomeAssistantError("timeout")
+
+    hass.services.async_register("familylink", "block_app", timed_out)
+    await _call(hass, "block_app", {"app": FIREFOX}, True)
+    # It went through all the same: Family Link lists it blocked
+    _lists(hass, [GAME, FIREFOX], [FIREFOX])
+    await _recompute(hass)
+    [kid] = (await _page(hass, hass_ws_client))["kids"]
+    assert kid["blocks"][0]["state"] == "blocked"
+    await _call(hass, "unblock_app", {"apps": [FIREFOX], "people": ["person.sam"]})
+    assert _packages(unblocked) == [FIREFOX]

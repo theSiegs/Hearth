@@ -463,6 +463,12 @@ class AppBlocks:
             except Exception as err:  # noqa: BLE001 - one app failing mustn't stop the others
                 _LOGGER.warning("Hearth couldn't %s %s for %s: %s", service.replace("_app", ""), package, person, err)
                 self._errors[key] = (str(err)[:200], dt_util.utcnow())
+                if block:
+                    # It may have gone through all the same (a timeout): kept as Hearth's, unconfirmed, so a block
+                    # Family Link lists later is Hearth's to lift, not a parent's
+                    self.applied.setdefault(person, {}).setdefault(
+                        package, {"at": dt_util.utcnow().isoformat(), "why": sorted(self.why_blocked(person, package))}
+                    )
                 continue
             self._errors.pop(key, None)
             if block:
