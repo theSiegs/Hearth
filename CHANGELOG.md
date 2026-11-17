@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.11.26
+
+### Home Assistant integration
+
+- **The adults hear when a device's clock is changed.** When a kid's phone or tablet posts a status for another day than Hearth's (its clock moved), the adults get a notice once ("Sam's Pixel: its date was changed. Hearth keeps counting today's time by its own clock."), besides the failed clock check on the device's row. Today's counts are kept, as in 2026.11.24.
+
 ## 2026.11.25
 
 ### Home Assistant integration

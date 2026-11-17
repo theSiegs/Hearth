@@ -1,0 +1,1 @@
+No changes on the TV; this release updates the Home Assistant integration.
