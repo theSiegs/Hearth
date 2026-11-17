@@ -54,6 +54,9 @@ _INT_FIELDS = {
     "pin_lockouts": (0, 2**31),
     # The device's contract version (const.CONTRACT)
     "contract": (0, 1000),
+    # The device's offset from UTC now, in minutes (-300 for EST): a day that differs from Hearth's because the
+    # device is in another time zone isn't a moved clock (hub._on_hearth_day). UTC-14:00 to UTC+14:00
+    "utc_offset_minutes": (-14 * 60, 14 * 60),
 }
 
 

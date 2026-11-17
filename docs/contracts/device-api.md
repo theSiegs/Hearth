@@ -66,6 +66,12 @@ Hearth's day again. Within Hearth's day a device's counts never go down (each ap
 profile's): a client that restarts counting from zero loses nothing, and can't take time back either. A client should
 count from Hearth's `day`, not its own clock's.
 
+A client may send `utc_offset_minutes` at the top level of each status post: its offset from UTC now, in whole minutes
+(-300 for EST, -240 for EDT; -840 to 840). When a `day` that isn't Hearth's is the device's own date for that offset
+(a phone on a trip), it isn't a moved clock: the counts are kept as above, but there's no `clock_off` and no failed
+check, and the adults hear once per time zone that the device "is set to another time zone (UTC-8)". A Hearth before
+2026.11.28 ignores the field.
+
 ## New in contract 3
 
 ### `client`

@@ -511,3 +511,42 @@ async def test_a_limit_reached_stays_held_while_the_sources_settle(
     await hass.services.async_call(DOMAIN, "add_bonus", {"person": SAM, "group": "video", "minutes": 30}, blocking=True)
     await hass.async_block_till_done()
     assert int(hass.states.get(left).state) > 0
+
+
+# 10. A phone in another time zone isn't a moved clock
+
+
+async def test_a_phone_in_another_time_zone_isn_t_a_moved_clock(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    freezer.move_to(dt_util.now().replace(hour=1, minute=0, second=0, microsecond=0))
+    _entry, http, sam, _alex = await _phones_household(hass, hass_client_no_auth)
+    hub = _hub(hass)
+    today = dt_util.now().date()
+    here = int(dt_util.now().utcoffset().total_seconds() // 60)
+    await _post(http, sam, seconds_today=780, app_seconds_today={"com.example.tube": 780}, utc_offset_minutes=here)
+    await hass.async_block_till_done()
+    used = _used(hass)
+
+    # Three hours west it's still yesterday evening there: its own date, so no failed clock check; told once
+    west = here - 180
+    yesterday = (today - timedelta(days=1)).isoformat()
+    with patch.object(hub.attention, "notify") as notify:
+        for _ in range(2):
+            answer = await _post(
+                http, sam, day=yesterday, seconds_today=0, app_seconds_today={}, utc_offset_minutes=west
+            )
+            await hass.async_block_till_done()
+    told = [c.args[0] for c in notify.call_args_list if c.args[0].key == f"hearth_clock_{SAM_PHONE}"]
+    assert len(told) == 1 and "another time zone (UTC" in told[0].text
+    assert "clock_off" not in answer
+    assert all(c["id"] != "hearth_clock" for c in hub.checks(SAM_PHONE))
+    assert _used(hass) == used
+
+    # A date its time zone doesn't explain is still a moved clock
+    tomorrow = (today + timedelta(days=1)).isoformat()
+    with patch.object(hub.attention, "notify") as notify:
+        answer = await _post(http, sam, day=tomorrow, seconds_today=0, app_seconds_today={}, utc_offset_minutes=west)
+        await hass.async_block_till_done()
+    assert answer["clock_off"] is True
+    assert any("its date was changed" in c.args[0].text for c in notify.call_args_list)

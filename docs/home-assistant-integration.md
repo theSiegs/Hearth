@@ -116,7 +116,9 @@ profiles and has none. Apps in System screens (below) never count either way.
 **Hearth's day, not the device's.** A kid can move a phone's clock, so Hearth judges the day by its own clock. A status
 whose `day` isn't Hearth's (the clock moved forward or back) keeps the counts Hearth had: nothing of it counts, the
 device's check `hearth_clock` fails ("Its date differs from Home Assistant's", firing `hearth_device_check_failed`;
-not within 30 minutes of midnight), and the status answer says `"clock_off": true`. Every status answer carries
+not within 30 minutes of midnight), and the status answer says `"clock_off": true`. A device that says its offset
+from UTC (`utc_offset_minutes`) and whose `day` is its own date there is in another time zone, not a moved clock: no
+failed check, and the adults hear once per time zone. Every status answer carries
 Hearth's `day`. Within Hearth's day a device's counts never go down: each app's seconds, the total and each TV
 profile's are the most it has said today.
 

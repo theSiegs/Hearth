@@ -73,6 +73,15 @@ _COUNTS = ("seconds_today", "app_seconds_today", "playing_seconds_today", "usage
 CLOCK_SLACK = timedelta(minutes=30)
 
 
+def _its_own_date(posted: str, status: dict[str, Any]) -> bool:
+    """Whether [posted] is today's date where the device is, by the offset from UTC it says (utc_offset_minutes)."""
+    offset = status.get("utc_offset_minutes")
+    if offset is None:
+        return False
+    there = dt_util.utcnow() + timedelta(minutes=offset)
+    return there.date().isoformat() == posted
+
+
 def _midnight(now: datetime) -> datetime:
     return now.replace(hour=0, minute=0, second=0, microsecond=0)
 
@@ -357,19 +366,29 @@ class HearthHub:
             self.household.import_local_rules(device_id, status["local_rules"])
         self.household.recompute()
 
-    def _tell_clock_changed(self, device_id: str) -> None:
+    def _tell_clock_changed(self, device_id: str, zone: int | None = None) -> None:
         """The adults hear once that a device's date was changed (a kid moving a phone's clock to get a new day): its
-        counts are kept, and its row on Hearth's page fails the clock check until its date is Hearth's again."""
+        counts are kept, and its row on Hearth's page fails the clock check until its date is Hearth's again. With
+        [zone] (its offset from UTC in minutes), the date is right for the time zone the device is set to: a trip, or
+        a time zone changed on purpose; no failed check, and it says so."""
         device = self.devices.get(device_id) or {}
         person = device.get(CONF_PERSON)
         whose = self.household.person_name(person) if person else None
         name = device.get("name") or "A device"
         what = f"{whose}'s {name}" if whose else name
+        if zone is not None:
+            hours, minutes = divmod(abs(zone), 60)
+            utc = f"UTC{'-' if zone < 0 else '+'}{hours}" + (f":{minutes:02d}" if minutes else "")
+            text = f"{what} is set to another time zone ({utc}). Hearth keeps counting today's time by its own clock."
+            title = "A device is in another time zone"
+        else:
+            text = f"{what}: its date was changed. Hearth keeps counting today's time by its own clock."
+            title = "A device's clock was changed"
         self.attention.notify(
             Item(
                 f"hearth_clock_{device_id}",
-                f"{what}: its date was changed. Hearth keeps counting today's time by its own clock.",
-                title="A device's clock was changed",
+                text,
+                title=title,
                 urgency="notice",
                 audience=ADULTS,
                 about={"person": person} if person else {},
@@ -390,17 +409,30 @@ class HearthHub:
         if posted is None:
             return status
         if posted != today:
-            # A clock a few minutes off around midnight is no news; its counts are kept all the same
+            # A clock a few minutes off around midnight is no news, nor a device in another time zone whose own date
+            # is the one it says (a phone on a trip); its counts are kept all the same
             to_midnight = min(now - _midnight(now), _midnight(now) + timedelta(days=1) - now)
-            off = posted if to_midnight > CLOCK_SLACK else None
+            zone = status.get("utc_offset_minutes") if _its_own_date(posted, status) else None
+            off = posted if to_midnight > CLOCK_SLACK and zone is None else None
             if off and not before.get("clock_off"):
                 _LOGGER.warning(
                     "Hearth device %s posted a status for %s, but Hearth's day is %s: its counts are kept as they were",
                     device_id, posted, today,
                 )
                 self._tell_clock_changed(device_id)
-            return {**status, **{key: before.get(key) for key in _COUNTS}, "day": before.get("day"), "clock_off": off}
-        status = {**status, "clock_off": None}
+            # Another time zone: told once per zone, and its row's clock check stays passed
+            told = before.get("zone_told")
+            if zone is not None and to_midnight > CLOCK_SLACK and told != zone:
+                self._tell_clock_changed(device_id, zone)
+                told = zone
+            return {
+                **status,
+                **{key: before.get(key) for key in _COUNTS},
+                "day": before.get("day"),
+                "clock_off": off,
+                "zone_told": told,
+            }
+        status = {**status, "clock_off": None, "zone_told": before.get("zone_told")}
         if before.get("day") != today:
             return status
         status["seconds_today"] = _most(before.get("seconds_today"), status.get("seconds_today"))

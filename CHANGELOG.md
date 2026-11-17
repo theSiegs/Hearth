@@ -8,6 +8,7 @@
 ### Home Assistant integration
 
 - **Changing a setting doesn't wait for the sources.** The 90-second hold after a start (2026.11.27) is for Home Assistant starting only; a reload after a setting changed finds the sources loaded, so more time given right after opens at once.
+- **A phone on a trip isn't a moved clock.** A device may say its offset from UTC (`utc_offset_minutes` in its status); when its date is right for that time zone, its clock check stays passed and the adults hear once that it "is set to another time zone". Today's time still counts by Hearth's own day.
 
 ## 2026.11.27
 
