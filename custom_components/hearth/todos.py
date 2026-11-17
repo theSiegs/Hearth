@@ -162,6 +162,17 @@ def _clean_repeat(raw: Any) -> dict[str, Any]:
     return {"kind": kind}
 
 
+def _keep_start(raw: Any, task: dict[str, Any] | None) -> Any:
+    """An edit of an every-N-days task that doesn't say its start (the panel sends kind and n) keeps the start it had,
+    so its days stay where they were."""
+    if not isinstance(raw, dict) or raw.get("kind") != EVERY_N or raw.get("start") or task is None:
+        return raw
+    old = task.get("repeat") or {}
+    if old.get("kind") == EVERY_N and old.get("start"):
+        return {**raw, "start": old["start"]}
+    return raw
+
+
 class ChoreBook:
     """The household's to-do lists: tasks, what's done, what's hidden, and the reward ledger, kept across restarts."""
 
@@ -359,7 +370,7 @@ class ChoreBook:
                 "person": person,
                 "title": _clean_title(data.get("title")),
                 "description": str(data.get("description") or "")[:MAX_DESCRIPTION] or None,
-                "repeat": _clean_repeat(data.get("repeat")),
+                "repeat": _clean_repeat(_keep_start(data.get("repeat"), task)),
                 "due_time": self._clean_time(data.get("due_time")),
                 "due_date": self._clean_date(data.get("due_date")),
                 "reward": self._clean_reward(data.get("reward")),

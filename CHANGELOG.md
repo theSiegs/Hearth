@@ -10,6 +10,7 @@
 - **Two School days off in a row stay off.** On the second day Hearth switched School time back on at the window's start; and the day after a day off, the weekly schedule's School is held again from the start of the day, not only once Family Link has caught up.
 - **A chore reward an adult undid stays undone.** The kid could untick and tick it again to earn it once more; now only an adult can untick it (an adult's Give still grants it again).
 - **A half day ends School split by a break too.** With School, lunch and School again on the weekday, a half day ending before the afternoon kept the whole School day; it now ends at the half day's time.
+- **Editing an every-N-days chore keeps its days.** Saving it from the page started its cycle again from today.
 
 ## 2026.11.29
 

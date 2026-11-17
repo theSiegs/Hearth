@@ -552,3 +552,13 @@ def test_a_kid_s_item_never_carries_a_reward(hass: HomeAssistant) -> None:
     assert task["reward"] is None and task["by"] == "kid"
     with pytest.raises(ChoreError):
         book.save_task({"person": "person.sam", "title": "x"}, Actor("kid", "person.sam"))
+
+
+async def test_editing_an_every_n_days_task_keeps_its_days(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    await _kids(hass, hass_client_no_auth)
+    task = _task(hass, "Every 3", repeat={"kind": "every_n", "n": 3, "start": "2026-11-16"}, reward=None)
+    # The panel's edit sends kind and n only
+    edited = _task(hass, "Every 3 days", id=task["id"], repeat={"kind": "every_n", "n": 3}, reward=None)
+    assert edited["repeat"] == {"kind": "every_n", "n": 3, "start": "2026-11-16"}
