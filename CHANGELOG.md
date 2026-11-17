@@ -11,6 +11,7 @@
 - **A pool that's gone takes its entities with it.** When a pool is removed (the retired built-in Video pool, say), its budgets, bonus, today's time and minutes left go from Home Assistant on the next start instead of staying unavailable for good.
 - **Forgetting a phone.** An administrator can forget any phone from Glint (`hearth/glint/forget`), and a phone paired and never seen can be forgotten too; an adult who isn't an administrator still forgets only their own phones and kids'. The device entry is removed the way Home Assistant 2027.8 expects.
 - **Reloading Hearth no longer leaves a web session behind** (the app lookups' session is let go of on an unload instead of a close Home Assistant refuses).
+- **Sharing app data is retired.** No app on the household's devices shares app data any more, so its setting is gone from Hearth's page and Configure, and the people chosen for it are removed from the settings once. Each person's `share_app_data` in the device document stays, always false, so apps that read it keep sharing off.
 
 ## 2026.11.26
 

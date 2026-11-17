@@ -40,7 +40,6 @@ from .const import (
     CONF_LOCKS,
     CONF_OUTSIDE_ALL,
     CONF_ROLES,
-    CONF_SHARE_APP_DATA,
     CONF_VOICE_ASSISTANTS,
     CONF_PERSON,
     CONF_PROFILES,
@@ -179,7 +178,6 @@ class HearthOptionsFlow(OptionsFlow):
                 "group_apps",
                 "not_screen_time",
                 "remove_group",
-                "share_app_data",
                 "app_categories",
                 "voice_assistants",
                 "parent_pin",
@@ -281,22 +279,6 @@ class HearthOptionsFlow(OptionsFlow):
             }
         )
         return self.async_show_form(step_id="not_screen_time", data_schema=schema)
-
-    async def async_step_share_app_data(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """The people whose devices may share app data with public app datasets (what kind of app something is and,
-        where an app supports it, notification layouts with every word and number blanked out; never content). Off
-        for everyone until chosen here."""
-        options = self._options()
-        if user_input is not None:
-            return self.async_create_entry(data={**options, CONF_SHARE_APP_DATA: list(user_input.get("people", []))})
-        schema = vol.Schema(
-            {
-                vol.Optional("people", default=list(options.get(CONF_SHARE_APP_DATA, []))): EntitySelector(
-                    EntitySelectorConfig(domain="person", multiple=True)
-                )
-            }
-        )
-        return self.async_show_form(step_id="share_app_data", data_schema=schema)
 
     async def async_step_app_categories(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Hearth's settings for app categories (categories.py): looking a new app's genre up in its store (on by

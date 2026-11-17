@@ -838,14 +838,10 @@ test("the App categories card: counts by source, store lookups, the AI Task enti
   assert.doesNotMatch(html, /App facts|catalog|Glint|tile/i);
 });
 
-test("Sharing app data says what it does without naming an app", () => {
+test("Sharing app data is retired: no card for it", () => {
   const p = panel();
-  p._config.share_app_data = ["person.sam"];
-  const sharing = p._sharingCard();
-  assert.match(sharing, /Sharing app data<\/h3>/);
-  assert.match(sharing, /Off here turns it off on their devices/);
-  assert.match(sharing, /data-change="share-app-data" data-person="person.sam" checked/);
-  assert.doesNotMatch(sharing, /Glint|tile/i);
+  assert.equal(p._sharingCard, undefined);
+  assert.doesNotMatch(p._familyTab(), /Sharing app data/);
 });
 
 test("a paired device shows its app, its checks and what's kept for it; a pairing shows the app it brings", () => {

@@ -11,7 +11,7 @@ from pytest_homeassistant_custom_component.common import async_capture_events, a
 from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
 from custom_components.hearth import enforce
-from custom_components.hearth.__init__ import share_app_data_migrated
+from custom_components.hearth.__init__ import share_app_data_retired
 from custom_components.hearth.client import clean_checks, clean_client
 from custom_components.hearth.client_settings import (
     ADULT,
@@ -469,18 +469,20 @@ async def test_adults_read_and_write_on_the_websocket(
 # share_app_data and catalog_categories
 
 
-def test_share_app_data_moves_as_it_was() -> None:
-    assert share_app_data_migrated({"roles": {}}) is None
-    moved = share_app_data_migrated({"tile_exchange_share": ["person.a", "person.b", "person.c"], "roles": {}})
-    assert moved == {"share_app_data": ["person.a", "person.b", "person.c"], "roles": {}}
+def test_share_app_data_is_retired() -> None:
+    assert share_app_data_retired({"roles": {}}) is None
+    assert share_app_data_retired({"share_app_data": ["person.a"], "roles": {}}) == {"roles": {}}
+    assert share_app_data_retired({"tile_exchange_share": ["person.b"], "roles": {}}) == {"roles": {}}
 
 
-async def test_the_old_option_is_moved_at_load(hass: HomeAssistant) -> None:
+async def test_the_sharing_options_go_at_load(hass: HomeAssistant) -> None:
     entry = await _set_up(hass)
-    hass.config_entries.async_update_entry(entry, options={**entry.options, "tile_exchange_share": ["person.sam"]})
+    hass.config_entries.async_update_entry(
+        entry, options={**entry.options, "tile_exchange_share": ["person.sam"], "share_app_data": ["person.sam"]}
+    )
     assert await hass.config_entries.async_reload(entry.entry_id)
     await hass.async_block_till_done()
-    assert entry.options["share_app_data"] == ["person.sam"]
+    assert "share_app_data" not in entry.options
     assert "tile_exchange_share" not in entry.options
 
 

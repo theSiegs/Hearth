@@ -34,7 +34,6 @@ from .const import (
     CONF_PERSON,
     CONF_PROFILES,
     CONF_ROLES,
-    CONF_SHARE_APP_DATA,
     CONTRACT,
     DOMAIN,
     EVENT_BUDGET_REACHED,
@@ -1712,9 +1711,8 @@ class Household:
             "playing": [p.view() for p in (day.playing if day else [])],
             # The weekly schedule now: the mode, the next change, tonight's bedtime (weekly.py)
             **({"schedule": view} if (view := self.schedule_view(person)) else {}),
-            # A parent lets this person's devices share app data with public app datasets (off unless chosen); a
-            # client turns its own sharing off when it's false
-            "share_app_data": person in self.options.get(CONF_SHARE_APP_DATA, []),
+            # Retired: no client shares app data any more, so always false (kept so contract 3 clients read it as off)
+            "share_app_data": False,
             # A kid's to-do list today, counts only (todos.py); the money balance stays on adults' screens
             **({"todo": self.todos.counts(person)} if person in self.todos.kids() else {}),
             # Their latest request for more time and its answer (asks.py), while it's still news

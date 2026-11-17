@@ -364,7 +364,7 @@ async def test_screen_time_today_is_kept_over_a_restart(
     assert total.state == "45"
 
 
-async def test_a_parent_lets_a_person_share_app_data(
+async def test_share_app_data_is_always_false(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
     client, secret = await _household_with_sam(hass, hass_client_no_auth)
@@ -375,6 +375,9 @@ async def test_a_parent_lets_a_person_share_app_data(
     assert body["state"]["profiles"][KID]["share_app_data"] is False
     assert "tile_exchange_share" not in body["state"]["profiles"][KID]
 
-    await _option(hass, "share_app_data", {"people": ["person.sam"]})
-    body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
-    assert body["state"]["profiles"][KID]["share_app_data"] is True
+    # The option is retired: there's no step for it any more
+    from custom_components.hearth.const import DOMAIN
+
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert "share_app_data" not in result["menu_options"]

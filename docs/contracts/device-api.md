@@ -146,11 +146,10 @@ without a client (before contract 3, or with no `client`): its settings calls ge
 
 ### `share_app_data`
 
-In each person's document, in place of `tile_exchange_share` (which is no longer sent): whether a parent lets this
-person's devices share app data with public app datasets (Hearth's page > Sharing app data). Hearth sends it for every
-person; it's an adult's choice only for kids (adults' own apps follow the household's sharing switch), so a client
-may apply it on kids' devices only. `false` turns a client's
-own sharing off for that person. It's in the device path and in `hearth/me` alike.
+**Retired.** In each person's document, in place of `tile_exchange_share` (which is no longer sent), and always
+`false`: no client shares app data any more, so the setting is gone from Hearth's page and Configure, and the old
+choices are removed from the options once. It stays in the document so a contract-3 client keeps reading sharing as
+off; a client should not read it. It's in the device path and in `hearth/me` alike.
 
 ### `catalog_categories` is no longer read
 

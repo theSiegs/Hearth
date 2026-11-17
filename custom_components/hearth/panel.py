@@ -43,7 +43,6 @@ from .const import (
     CONF_PROFILES,
     CONF_PUSH_SERVER,
     CONF_ROLES,
-    CONF_SHARE_APP_DATA,
     CONF_CLIENT,
     CONF_VOICE_ASSISTANTS,
     DOMAIN,
@@ -332,7 +331,6 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
         "app_groups": dict(options.get(CONF_APP_GROUPS, {})),
         "media_players": dict(options.get(CONF_MEDIA_PLAYERS, {})),
         **(overview := household.apps_overview()),
-        "share_app_data": list(options.get(CONF_SHARE_APP_DATA, [])),
         # What's kept for each client (client_settings.py): {client: {"count", "bytes"}}, never the contents
         "client_settings": hub.client_settings.summary(),
         # App categories (categories.py): store lookups and the AI Task entity, how the apps are known (a count per
@@ -428,7 +426,6 @@ OPTION_SCHEMAS: dict[str, Any] = {
     ],
     CONF_GROUP_APPS: vol.Schema({_ID: [cv.string]}),
     CONF_OUTSIDE_ALL: [_ID],
-    CONF_SHARE_APP_DATA: [_PERSON],
     CONF_CATEGORY_POOLS: vol.Schema({vol.In((*DETAIL_VALUES, *CATEGORY_VALUES)): vol.Any(OTHER, _ID)}),
     CONF_CATEGORY_LOOKUP: bool,
     CONF_CATEGORY_AI: vol.Any(AI_DEFAULT, AI_OFF, cv.entity_domain("ai_task")),

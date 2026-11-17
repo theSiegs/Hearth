@@ -1115,7 +1115,7 @@ def _register_watch_services(hass: HomeAssistant) -> None:
 async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bool:
     _check_profile_keys(hass, entry)
     _migrate_offer_more(hass, entry)
-    _migrate_share_app_data(hass, entry)
+    _retire_share_app_data(hass, entry)
     old_chores = _migrate_chores(hass, entry)
     # The retired shared app catalog's options and copy go once; corrections an adult queued become overrides
     await async_migrate_catalog(hass, entry)
@@ -1354,20 +1354,17 @@ def _migrate_offer_more(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
         hass.config_entries.async_update_entry(entry, options=options)
 
 
-def share_app_data_migrated(options: dict) -> dict | None:
-    """The options with tile_exchange_share (the people who share) moved to share_app_data as it was; None when there's
-    nothing to move."""
-    if CONF_SHARE_APP_DATA_OLD not in options:
+def share_app_data_retired(options: dict) -> dict | None:
+    """The options without who shares app data (share_app_data, and tile_exchange_share before it: no client shares
+    any more); None when neither is there."""
+    if CONF_SHARE_APP_DATA not in options and CONF_SHARE_APP_DATA_OLD not in options:
         return None
-    moved = dict(options)
-    old = list(moved.pop(CONF_SHARE_APP_DATA_OLD) or [])
-    moved[CONF_SHARE_APP_DATA] = list(dict.fromkeys([*(moved.get(CONF_SHARE_APP_DATA) or []), *old]))
-    return moved
+    return {k: v for k, v in options.items() if k not in (CONF_SHARE_APP_DATA, CONF_SHARE_APP_DATA_OLD)}
 
 
-def _migrate_share_app_data(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
-    """Who shares app data, once under its old name: before the update listener, so it doesn't reload."""
-    if (options := share_app_data_migrated(dict(entry.options))) is not None:
+def _retire_share_app_data(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
+    """Who shares app data goes, once: before the update listener, so it doesn't reload."""
+    if (options := share_app_data_retired(dict(entry.options))) is not None:
         hass.config_entries.async_update_entry(entry, options=options)
 
 

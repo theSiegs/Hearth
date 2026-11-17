@@ -165,7 +165,6 @@
           "group_apps": "Add apps to Games",
           "not_screen_time": "Not screen time",
           "remove_group": "Remove a category",
-          "share_app_data": "Sharing app data",
           "app_categories": "App categories",
           "voice_assistants": "Voice assistants",
           "parent_pin": "Parent PINs",
@@ -221,13 +220,6 @@
         "description": "An ntfy server (ntfy.sh, or your own) through which Home Assistant tells a paired phone that something changed, so it fetches its state at once instead of at its next check. Each phone listens on its own random topic; the ping only says \"changed\", never a name or a number. Leave it empty for no pings.",
         "data": {
           "server": "ntfy server"
-        }
-      },
-      "share_app_data": {
-        "title": "Sharing app data",
-        "description": "Lets apps on these people's devices help public app lists: what kind of app something is and, where an app supports it, notification layouts with every word and number blanked out. Never chats, health, money or sign-in apps. Off for everyone not chosen here, and off here turns it off on their devices.",
-        "data": {
-          "people": "People"
         }
       },
       "app_categories": {

@@ -1251,13 +1251,6 @@ class HearthPanel extends HTMLElement {
       case "voice-assistants":
         await this._setOption("voice_assistants", el.checked, el.checked ? "Voice assistants on" : "Voice assistants off");
         return;
-      case "share-app-data": {
-        const set = new Set(cfg.share_app_data || []);
-        if (el.checked) set.add(d.person);
-        else set.delete(d.person);
-        await this._setOption("share_app_data", [...set], el.checked ? "Sharing allowed" : "Sharing off");
-        return;
-      }
       case "outside-all": {
         const outside = new Set(cfg.outside_all || []);
         const inside = new Set(cfg.inside_all || []);
@@ -3939,7 +3932,6 @@ class HearthPanel extends HTMLElement {
       ${this._summary ? this._familyPools(this._kids()) : ""}
       ${this._activityCard()}
       ${this._pinsCard()}
-      ${this._sharingCard()}
       ${this._voiceCard()}
       ${this._schoolCard()}
       ${this._placesCard()}
@@ -3972,18 +3964,6 @@ class HearthPanel extends HTMLElement {
       <h3><ha-icon icon="mdi:microphone-outline"></ha-icon>Voice assistants</h3>
       <p class="muted">Lets an Assist voice pipeline with Hearth among its LLM APIs answer questions about screen time. Anything it would change (more time, a pause, an allow) goes to the adults' phones first and runs only when one of you taps Allow. Off: voice gets nothing from Hearth.</p>
       <label class="check"><input type="checkbox" data-change="voice-assistants" ${on ? "checked" : ""}> Let voice assistants use Hearth</label>
-    </section>`;
-  }
-
-  _sharingCard() {
-    const kids = this._kids();
-    const on = new Set(this._config.share_app_data || []);
-    return `<section class="card">
-      <h3><ha-icon icon="mdi:share-variant-outline"></ha-icon>Sharing app data</h3>
-      <p class="muted">Lets apps on a kid's devices help public app lists: what kind of app something is and, where an app supports it, notification layouts with every word and number blanked out. Never chats, health, money or sign-in apps. Off here turns it off on their devices.</p>
-      <div class="checks">${kids
-        .map((k) => `<label class="check"><input type="checkbox" data-change="share-app-data" data-person="${esc(k.id)}" ${on.has(k.id) ? "checked" : ""}> ${esc(k.name)}</label>`)
-        .join("") || `<span class="muted small">No kids yet.</span>`}</div>
     </section>`;
   }
 

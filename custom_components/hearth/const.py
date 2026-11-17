@@ -83,8 +83,9 @@ CONF_GROUPS = "groups"
 CONF_GROUP_APPS = "group_apps"
 # Groups whose time isn't screen time: not counted in All screen time, not held when it runs out
 CONF_OUTSIDE_ALL = "outside_all"
-# People whose devices may share app data with public app datasets (a client's own sharing; Hearth itself sends none
-# since the shared app catalog was retired): a parent's choice, off unless chosen. Was tile_exchange_share, moved once
+# Retired options: the people whose devices could share app data with public app datasets (was tile_exchange_share).
+# No client shares any more; both go from the options once (__init__.py), and each person's `share_app_data` in the
+# device document is always false
 CONF_SHARE_APP_DATA = "share_app_data"
 CONF_SHARE_APP_DATA_OLD = "tile_exchange_share"
 # Options: voice assistants (Assist calls without a Home Assistant user) may use Hearth's LLM API (llm_api.py); off

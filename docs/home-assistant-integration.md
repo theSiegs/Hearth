@@ -1355,9 +1355,8 @@ on); `version`, a hash of the content, lets it skip an unchanged one. This repla
 same meaning, from the integration instead of a template.
 
 A **phone** gets its person's part of the same document, in the answer to each post and pushed when it changes (see
-[Away from home](#away-from-home)). Each person's part also says `share_app_data`: whether a parent lets their devices
-share app data with public app datasets (Configure > Sharing app data, or Hearth's page; false unless chosen; an app
-turns its own sharing off when it's false). It replaced `tile_exchange_share` in contract 3, which is no longer sent.
+[Away from home](#away-from-home)). Each person's part also says `share_app_data`, always false since sharing app data was
+retired (it replaced `tile_exchange_share` in contract 3, which is no longer sent).
 Since contract 3 a device paired with a client also gets `client_settings`, `{"<scope>/<name>": "<etag>"}` for the
 documents it may read ([contracts/client-settings.md](contracts/client-settings.md)): they're part of the document's
 `version`, so a change to one wakes its wait and push ping. And `playing`: what they're
@@ -1406,7 +1405,7 @@ added fields, so nothing of contract 1 changed, but the number went up so an app
 Contract 3 is the generic client contract, written up in [contracts/device-api.md](contracts/device-api.md): a
 device says which app it is (`client`, locked when an adult approves the pairing) and its own `checks`; `verify_pin`
 answers a short-lived grant; paired apps keep small documents of their own in Hearth
-([contracts/client-settings.md](contracts/client-settings.md)); `share_app_data` replaces `tile_exchange_share`; and a
+([contracts/client-settings.md](contracts/client-settings.md)); `share_app_data` replaces `tile_exchange_share` (retired since: always false); and a
 device's `catalog_categories` is no longer read. A paired app's own packages are never paused for its person, so no
 app is named in Hearth's code any more.
 
