@@ -562,3 +562,10 @@ async def test_editing_an_every_n_days_task_keeps_its_days(
     # The panel's edit sends kind and n only
     edited = _task(hass, "Every 3 days", id=task["id"], repeat={"kind": "every_n", "n": 3}, reward=None)
     assert edited["repeat"] == {"kind": "every_n", "n": 3, "start": "2026-11-16"}
+
+
+def test_a_bad_start_is_said_not_raised(hass: HomeAssistant) -> None:
+    from custom_components.hearth.todos import ChoreError, _clean_repeat
+
+    with pytest.raises(ChoreError):
+        _clean_repeat({"kind": "every_n", "n": 3, "start": "x"})

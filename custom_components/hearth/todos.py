@@ -157,7 +157,10 @@ def _clean_repeat(raw: Any) -> dict[str, Any]:
         repeat: dict[str, Any] = {"kind": kind, "n": n}
         if kind == EVERY_N:
             start = raw.get("start") or dt_util.now().date().isoformat()
-            repeat["start"] = date.fromisoformat(str(start)).isoformat()
+            try:
+                repeat["start"] = date.fromisoformat(str(start)).isoformat()
+            except ValueError:
+                raise ChoreError("invalid", "The start isn't a date") from None
         return repeat
     return {"kind": kind}
 
