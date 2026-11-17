@@ -3,6 +3,18 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### TV
+
+- **Bedtime, School time and a pause hold apps however they're opened.** A lock held Hearth's own tiles only; an app opened by voice, from Google TV's home, a link or Continue Watching stayed open. Now it's sent home with "Bedtime until ...".
+- **An app already open when time runs out is sent home**, with Home Assistant too (the periodic check ran with the TV's own rules only), so relaunching quickly past the hold's per-minute cap no longer keeps an app open.
+- The TV tells Home Assistant whether Hearth's accessibility service is on.
+
+### Home Assistant integration
+
+- **A TV whose accessibility service is off for 5 minutes is told to the adults** (apps opened outside Hearth aren't held and their time isn't counted until it's on again); the notice clears once it's back.
+
 ## 2026.11.34
 
 ### Home Assistant integration
