@@ -329,11 +329,24 @@ async def test_the_caller_s_own_phone_seen_last_wins_and_a_stale_one_can_be_forg
     with pytest.raises(HomeAssistantError, match=listed):
         await _call(api, "glint_activity")
 
-    # The stale one forgotten by an adult: gone from Hearth and from the device registry; never another adult's
+    # Never another adult's phone, for an adult who isn't an administrator
+    refresh = await hass.auth.async_create_refresh_token(users["jordan"], "https://hearth.test/")
+    jordan_ws = await hass_ws_client(hass, hass.auth.async_create_access_token(refresh))
+    await jordan_ws.send_json({"id": 1, "type": "hearth/glint/forget", "device_id": ALEX_PHONE})
+    assert not (await jordan_ws.receive_json())["success"]
+    # A device Hearth doesn't know
     ws = await hass_ws_client(hass)
-    await ws.send_json({"id": 1, "type": "hearth/glint/forget", "device_id": JORDAN_PHONE})
+    await ws.send_json({"id": 3, "type": "hearth/glint/forget", "device_id": "no-such-device"})
     assert not (await ws.receive_json())["success"]
-    await ws.send_json({"id": 2, "type": "hearth/glint/forget", "device_id": ALEX_PHONE})
+    # A phone paired and never seen (it never said it runs Glint) goes too, and an administrator may forget any
+    # adult's
+    stub = "firstrun-stub-01"
+    await _pair(hass, client, stub, "person.jordan", "Stand-in phone")
+    await ws.send_json({"id": 4, "type": "hearth/glint/forget", "device_id": stub})
+    assert (await ws.receive_json())["success"]
+    assert stub not in _hub(hass).devices
+    # The stale one forgotten by an adult: gone from Hearth and from the device registry
+    await ws.send_json({"id": 5, "type": "hearth/glint/forget", "device_id": ALEX_PHONE})
     answer = await ws.receive_json()
     assert answer["success"] and answer["result"]["forgotten"].startswith("Alex's phone · Alex · last seen")
     await hass.async_block_till_done()

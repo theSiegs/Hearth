@@ -2708,8 +2708,8 @@ and `data: {intent_package_name: <the phone's client>, intent_action: com.thesie
 intent_class_name: com.thesiegs.glint.start.agent.AgentBellReceiver}`: a hint only, carrying nothing; Glint reads its
 inbox over its own connection.
 
-**Forgetting a stale phone.** `{"type": "hearth/glint/forget", "device_id"}` (an adult, for their own Glint phone or a
-kid's) removes it as deleting its device in Home Assistant does: its secret stops working, its documents and doorbell
+**Forgetting a stale phone.** `{"type": "hearth/glint/forget", "device_id"}` (an adult, for their own phone or a
+kid's; an administrator, for any phone; a phone that was paired and never seen counts, never a TV) removes it as deleting its device in Home Assistant does: its secret stops working, its documents and doorbell
 link go, and its device entry is removed.
 
 ## Security

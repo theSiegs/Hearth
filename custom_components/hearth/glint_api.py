@@ -21,7 +21,8 @@ the changes that loosen it that Hearth can see (do not disturb off, every system
 Each write is logged in Hearth's history as an `assist` event (tool, device, request id, via, user).
 
 Linking a companion app as a phone's doorbell (`hearth/glint/phones`, `hearth/glint/bell`), and forgetting a stale
-phone (`hearth/glint/forget`, the same removal as deleting its device): an adult, for their own phones and kids'.
+phone (`hearth/glint/forget`, the same removal as deleting its device): an adult, for their own phones and kids'
+(an administrator, any phone).
 
 A phone with no `glint-state` document counts as agents off: every tool refuses and nothing is queued (Glint publishes
 `channel: "off"` once it's paired with agents off). Several phones with one name: the caller's own among them (the one
@@ -48,7 +49,7 @@ from homeassistant.util.json import JsonObjectType
 
 from .auth import is_adult_user
 from .client_settings import SettingsError
-from .const import DOMAIN
+from .const import CONF_KIND, DOMAIN, KIND_TV
 from .glint_agent import (
     APPLIED,
     ASKED,
@@ -729,25 +730,37 @@ def ws_bell(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg
     connection.send_result(msg["id"], {"device_id": msg["device_id"], "bell": service})
 
 
+def _may_forget(hub: HearthHub, user, person: str | None, device_id: str) -> bool:
+    """A paired phone (not a TV) that's the caller's own or a kid's, or any phone for an administrator."""
+    device = hub.devices.get(device_id)
+    if device is None or device.get(CONF_KIND) == KIND_TV:
+        return False
+    if user is not None and user.is_admin:
+        return True
+    agent: GlintAgent = hub.glint_agent
+    return agent.is_kid_phone(device_id) or (person is not None and agent.person_of(device_id) == person)
+
+
 @websocket_api.websocket_command(
     {vol.Required("type"): "hearth/glint/forget", vol.Required("device_id"): vol.All(str, vol.Length(min=1, max=64))}
 )
 @websocket_api.async_response
 async def ws_forget(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
-    """Forgets a stale Glint phone (an adult's own, or a kid's): the same removal as deleting its device in Home
-    Assistant (hub.async_remove_device: its secret stops working, its documents and doorbell go), and its device
-    entry goes too. Never another adult's phone."""
+    """Forgets a stale phone (an adult's own, or a kid's; an administrator's any): the same removal as deleting its
+    device in Home Assistant (hub.async_remove_device: its secret stops working, its documents and doorbell go), and
+    its device entry goes too. A phone that never said it runs Glint (paired, then never seen) can go too. Never a TV,
+    and never another adult's phone unless the caller is an administrator (who could delete its device anyway)."""
     if (started := _adult(hass, connection, msg)) is None:
         return
-    hub, reachable = started
+    hub, _reachable = started
     device_id = msg["device_id"]
-    if device_id not in reachable:
-        connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "No such Glint phone of yours or a kid's")
+    if not _may_forget(hub, connection.user, own_person(hass, connection.user), device_id):
+        connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "No such phone of yours or a kid's")
         return
     described = describe(hub, device_id)
     registry = dr.async_get(hass)
     if (device := registry.async_get_device_by_identifier((DOMAIN, device_id), hub.entry.entry_id)) is not None:
-        registry.async_update_device(device.id, remove_config_entry_id=hub.entry.entry_id)
+        registry.async_remove_device(device.id)
     await hub.async_remove_device(device_id)
     connection.send_result(msg["id"], {"device_id": device_id, "forgotten": described})
 
