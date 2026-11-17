@@ -243,6 +243,12 @@ async def test_sleep_until_seven_in_the_evening_runs_until_tomorrow_morning(
             DOMAIN, "change_today", {"people": [SAM], "mode": "sleep", "until": "21:05"}, blocking=True,
             return_response=True,
         )
+    # Until midnight ends at midnight: tomorrow isn't Sleep all day
+    await hass.services.async_call(
+        DOMAIN, "change_today", {"people": [SAM], "mode": "sleep", "until": "00:00"}, blocking=True, return_response=True
+    )
+    assert week.resolve(SAM, today).changes[-1] == (21 * 60, "sleep")
+    assert week.resolve(SAM, tomorrow).changes[:1] != [(0, "sleep")]
 
 
 # 9. Pairing a phone: who's asked, Approve / Deny from the notification, and an adult confirming their own phone

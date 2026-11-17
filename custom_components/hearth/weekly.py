@@ -452,7 +452,8 @@ class Week:
                 out.limits = {**out.limits, **today["limits"]}
             out.changed_today = True
         morning = (today or {}).get("next_morning") or {}
-        if morning.get("date") == day.isoformat() and morning.get("mode") in modes:
+        # "Until 00:00" ends at midnight: nothing runs on into the day
+        if morning.get("date") == day.isoformat() and morning.get("mode") in modes and minutes_of(morning["until"]):
             # Last night's change ran on past midnight ("Sleep until 7:00" set in the evening): it holds from midnight
             # until then, and the day's own changes go on from there
             end = minutes_of(morning["until"])
