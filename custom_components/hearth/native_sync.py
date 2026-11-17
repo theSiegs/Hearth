@@ -861,6 +861,13 @@ class NativeSync:
                 cancelled.append(platform)
             except Exception as err:  # noqa: BLE001 - shown; it ends when it was set to
                 error = str(err)[:200]
+                # Still in force until its end: kept known as Hearth's, or a later hold would read it as a parent's
+                if (until := (record.get("until") or {}).get(platform)) is not None:
+                    self._given[(person, f"uncancelled:{platform}:{until}")] = {
+                        "day": dt_util.now().date().isoformat(), "devices": {}, "platforms": [platform],
+                        "until": {platform: until},
+                    }
+                    self._save()
         self.household.enforcement.note(
             f"{FAMILY_SAFETY}|{person}", extra_time_cancelled=cancelled, extra_time_kept=kept, error=error
         )
