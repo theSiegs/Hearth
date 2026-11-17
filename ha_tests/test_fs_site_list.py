@@ -188,7 +188,7 @@ async def test_a_list_that_can_t_be_used_changes_nothing(
     await _tick(hass, household, freezer, _at(MONDAY, 7, 30))
     assert fs.writes("block_website") == [] and fs.writes("remove_website") == []
     [failed] = [e.data for e in events if e.data["action"] == "site_list_failed"]
-    assert "no usable domains" in failed["error"]
+    assert "came back as a web page" in failed["error"]
 
 
 async def test_a_list_cut_short_or_an_empty_answer_takes_nothing_back(
@@ -265,3 +265,18 @@ def test_the_list_s_text_and_upstream_s_failure_are_read() -> None:
     assert done == ["a.example"] and set(failed) == {"b.example", "c.example"}
     done, failed = fs_site_list.split_failure(HomeAssistantError("Web API not initialized"), ["a.example"])
     assert done == [] and failed == {"a.example": "Web API not initialized"}
+
+
+async def test_a_wrong_download_never_replaces_a_small_list(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer, aioclient_mock: AiohttpClientMocker
+) -> None:
+    sites = [f"site{i}.example" for i in range(5)]
+    fs, household = await _sam(hass, hass_client_no_auth, freezer, aioclient_mock, "\n".join(sites))
+    await _tick(hass, household, freezer, _at(MONDAY, 7, 30))
+    assert len(fs.hosts()) == 5
+    # An error page in plain text with one word that reads as a domain: not the list
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(URL, text="Please try again at status.example.org\n")
+    await _tick(hass, household, freezer, _at(date(2026, 11, 10), 7, 30))
+    assert fs.writes("remove_website") == [] and sorted(fs.hosts()) == sites
+

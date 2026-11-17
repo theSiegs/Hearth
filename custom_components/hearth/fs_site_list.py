@@ -101,7 +101,12 @@ async def fetch(hass: HomeAssistant, url: str) -> str:
     except Exception as err:  # noqa: BLE001 - told as the list's failure
         raise SiteListError(f"Couldn't download the website list {url}: {err}") from err
     # utf-8-sig: a byte order mark would otherwise stick to the first domain
-    return body.decode("utf-8-sig", errors="replace")
+    text = body.decode("utf-8-sig", errors="replace")
+    # A web page (an error page, a Wi-Fi sign-in page) is no list: its words would read as domains
+    head = text[:2048].lower()
+    if "<html" in head or "<!doctype" in head or "<body" in head:
+        raise SiteListError(f"The website list {url} came back as a web page, not a list: nothing was changed.")
+    return text
 
 
 def parse(text: str, ignored: list[str] | None = None) -> list[str]:
@@ -229,6 +234,12 @@ class FsSiteList:
         insert = [d for d in wanted if d not in blocked]
         kept = [d for d in wanted if d in blocked]
         remove = [d for d in sorted(mine - set(wanted)) if d in blocked]
+        # A list that keeps none of the sites it added is more likely a wrong download than a new list
+        if len(mine) > 1 and remove and not set(wanted) & mine:
+            raise SiteListError(
+                f"The website list keeps none of the {len(mine)} sites it added before: it looks like the wrong "
+                "download. Nothing was changed."
+            )
         if len(remove) > max(REMOVE_FLOOR, len(mine) // 2):
             raise SiteListError(
                 f"Hearth won't unblock {len(remove)} of the {len(mine)} sites the list added: it looks cut short. "
