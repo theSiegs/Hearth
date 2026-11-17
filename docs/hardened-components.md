@@ -33,6 +33,7 @@ and say so in the change. When another part gets the same review-probe-fix-test 
 | TV `Allowance.java` (`timeUpGroup`, `heldApps`, `lockedNow`) | A lock holds every app however it's opened; a next lock whose time has come holds without Home Assistant (`HeldAppsTest`) |
 | TV `LauncherAccessibilityService.java` `holdRunningApp` | The app in front is re-checked periodically with Home Assistant too, so apps already open, or relaunched past the hold cap, go home |
 | TV `HaStatusReporter.java` + `hub.py` `_tell_failing_tv_checks` | The TV reports its accessibility service; 5 minutes off is told to the adults once, cleared when back (`test_qc_fixes`) |
+| TV `HaAllowance.java` `staleCountdown` | With no word from Home Assistant for 10 minutes, each group's minutes are counted down by the time in front since its last word (`HaStaleCountdownTest`) |
 | `ha_tests/test_invariants.py` | Never-break rules over random cases: left values, whole minutes, counting, day scenarios. Keep it green; add a rule when you harden something |
 | `frontend/hearth-panel.js` | Every interpolation of device-supplied text goes through `esc()`. Keep it that way |
 
