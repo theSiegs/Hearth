@@ -11,6 +11,9 @@
 - **A chore reward an adult undid stays undone.** The kid could untick and tick it again to earn it once more; now only an adult can untick it (an adult's Give still grants it again).
 - **A half day ends School split by a break too.** With School, lunch and School again on the weekday, a half day ending before the afternoon kept the whole School day; it now ends at the half day's time.
 - **Editing an every-N-days chore keeps its days.** Saving it from the page started its cycle again from today.
+- **A website list download that went wrong changes nothing.** A web page (an error or Wi-Fi sign-in page), or a list keeping none of the sites it added before, is refused instead of unblocking a small list's sites.
+- **An app block whose call timed out but went through is Hearth's to lift.** It showed as a parent's block and Hearth's unblock never undid it.
+- **One stray location fix isn't a move.** A Family Link move now needs two fixes of their own (a single one, minutes before the next, ended "until they leave home" exceptions); and a reading too rough to tell home apart no longer puts a kid in a big zone around the house.
 
 ## 2026.11.29
 

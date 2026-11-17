@@ -470,3 +470,24 @@ async def test_the_family_link_tracker_is_found_by_its_child_without_a_child_id(
         "device_tracker", "familylink", f"familylink_{CHILD}_location", suggested_object_id="sam_fl", config_entry=entry
     )
     assert _household(hass).places.tracker_of("person.sam") == tracker.entity_id
+
+
+async def test_one_stray_fix_is_no_move_and_a_rough_one_near_home_isn_t_a_big_zone(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    await _sam_at(hass, hass_client_no_auth, freezer, HOME)
+    moved = async_capture_events(hass, "hearth_place")
+    # One fix elsewhere, then nothing new for minutes: not a move
+    await _reading(hass, freezer, ELSEWHERE)
+    freezer.tick(timedelta(minutes=5))
+    await _update(hass)
+    assert moved == [] and hass.states.get(PLACE).state == "home"
+
+    # A favorite zone of 2 km around the house, and readings at home too rough for home's 100 m: not sure, so still home
+    hass.states.async_set(
+        "zone.practice", "0", {"latitude": HOME[0], "longitude": HOME[1], "radius": 2000, "friendly_name": "Practice"}
+    )
+    await _reading(hass, freezer, HOME, accuracy=300)
+    await _reading(hass, freezer, HOME, accuracy=300)
+    await _update(hass)
+    assert moved == [] and hass.states.get(PLACE).state == "home"

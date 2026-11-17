@@ -292,7 +292,8 @@ class Places:
             return None, True
         accuracy = _number(state.attributes.get("gps_accuracy"))
         inside: list[tuple[float, str]] = []
-        unsure = False
+        # The smallest zone the reading is too rough for but could be in (None: none)
+        unsure: float | None = None
         for key, (zone_id, _name) in self.config.places_of(person).items():
             zone = self._zone(zone_id)
             if zone is None:
@@ -303,13 +304,14 @@ class Places:
             if accuracy is not None and accuracy > zone[2]:
                 # Too rough to say for this zone: unsure if it could be in it
                 if away - accuracy <= zone[2]:
-                    unsure = True
+                    unsure = zone[2] if unsure is None else min(unsure, zone[2])
                 continue
             if away <= zone[2]:
                 inside.append((zone[2], key))
-        if inside:
+        if inside and (unsure is None or min(inside)[0] <= unsure):
             place = min(inside)[1]  # the smallest zone it's in: the most particular place
-        elif unsure:
+        elif unsure is not None:
+            # Too rough for a smaller zone it could be in (home inside a big favorite zone): not sure where
             return None, True
         else:
             place = AWAY
@@ -402,7 +404,11 @@ class Places:
         elif reading.stamp != where.stamp:
             where.count += 1
             where.stamp = reading.stamp
-        if where.count < READINGS and now - (where.candidate_at or now) < DWELL:
+        # Two fixes of their own, for Family Link's locations (one stray fix, minutes before the next, isn't a move);
+        # a person's state, which has no fixes, after it has held for a while
+        if where.count < READINGS and (
+            reading.source == SOURCE_FAMILY_LINK or now - (where.candidate_at or now) < DWELL
+        ):
             return None
         came_from = where.known
         where.place = where.known = reading.place
