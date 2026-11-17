@@ -155,6 +155,10 @@ async def test_what_may_be_blocked_and_by_whom(
     await _sam(hass, hass_client_no_auth, installed=[GAME])
     with pytest.raises(ServiceValidationError, match="never blocks"):
         await _call(hass, "block_app", {"app": "com.thesiegs.hearth"})
+    # Nor a keyboard or a home screen: either could leave the device unusable
+    for package in ("com.google.android.inputmethod.latin", "com.sec.android.app.launcher"):
+        with pytest.raises(ServiceValidationError, match="never blocks"):
+            await _call(hass, "block_app", {"app": package})
     with pytest.raises(ServiceValidationError, match="Only Android apps"):
         await _call(hass, "block_app", {"app": "x:9NBLGGH4R315"})
     with pytest.raises(ServiceValidationError, match="kids"):

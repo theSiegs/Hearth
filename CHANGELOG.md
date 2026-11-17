@@ -14,6 +14,7 @@
 - **A website list download that went wrong changes nothing.** A web page (an error or Wi-Fi sign-in page), or a list keeping none of the sites it added before, is refused instead of unblocking a small list's sites.
 - **An app block whose call timed out but went through is Hearth's to lift.** It showed as a parent's block and Hearth's unblock never undid it.
 - **One stray location fix isn't a move.** A Family Link move now needs two fixes of their own (a single one, minutes before the next, ended "until they leave home" exceptions); and a reading too rough to tell home apart no longer puts a kid in a big zone around the house.
+- **Keyboards and home screens are never blocked**, as Hearth and Family Link aren't: either could leave a kid's device unusable.
 
 ## 2026.11.29
 

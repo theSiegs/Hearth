@@ -167,12 +167,23 @@ def android_package(app: str) -> bool:
     return bool(re.fullmatch(r"[A-Za-z][\w]*(\.[A-Za-z_][\w]*)+", app)) and not app.startswith(("x:", "appx:", "win32:"))
 
 
-def never_blocked(package: str) -> bool:
-    """What holds the rest (Hearth, Family Link, Google Play services, Settings, the phone and messages): never
-    blocked, by an adult or the rule."""
-    from .enforce import NEVER_PAUSED, essential
+# Home screens: a blocked one can leave a device with nothing to open apps from
+LAUNCHERS = frozenset(
+    {
+        "com.sec.android.app.launcher",
+        "com.google.android.apps.nexuslauncher",
+        "com.google.android.launcher",
+        "com.google.android.apps.tv.launcherx",
+    }
+)
 
-    return package in NEVER_PAUSED or essential(package)
+
+def never_blocked(package: str) -> bool:
+    """What holds the rest (Hearth, Family Link, Google Play services, Settings, the phone and messages, keyboards,
+    the home screen): never blocked, by an adult or the rule."""
+    from .enforce import KEYBOARDS, NEVER_PAUSED, essential
+
+    return package in NEVER_PAUSED or package in KEYBOARDS or package in LAUNCHERS or essential(package)
 
 
 class AppBlocks:
