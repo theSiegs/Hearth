@@ -352,8 +352,17 @@ class Scheduler:
         return what in self.marks.get(who, [])
 
     def off_now(self, person: str, now: datetime | None = None) -> Off | None:
-        """School time is off for the person by Hearth now (taken off, not put back yet)."""
-        return next((o for o in self.offs.values() if o.person == person and o.applied), None)
+        """School time is off for the person by Hearth now: taken off for a day that isn't over (one waiting to be put
+        back is a school day again, whether or not Family Link has caught up)."""
+        today = dt_util.as_local(now or dt_util.now()).date()
+        return next(
+            (
+                o
+                for o in self.offs.values()
+                if o.person == person and o.applied and (o.restore_from is None or today < o.restore_from)
+            ),
+            None,
+        )
 
     def window_today(self, person: str, now: datetime | None = None) -> tuple[datetime, datetime] | None:
         """The person's School time today (a school or half day with a Family Link window), as local datetimes."""
@@ -946,8 +955,9 @@ class Scheduler:
             if off.applied and off.restore_from is not None and off.restore_from <= today:
                 due.setdefault(off.person, []).append(off)
         for person, offs in due.items():
-            # Taken off for today too (from a time): not put back today
-            if any(o.day == today and not o.applied for o in self.offs.values() if o.person == person):
+            # Taken off for today too (a second day off in a row, or from a time later today): not put back today.
+            # Today's off may be applied already (at midnight), so whether it is doesn't matter
+            if any(o.day == today for o in self.offs.values() if o.person == person):
                 continue
             child = self.child(person)
             switch = fl.school_time_switch(self.hass, child) if child else None

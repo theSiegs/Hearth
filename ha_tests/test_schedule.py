@@ -1084,3 +1084,29 @@ async def test_a_day_type_changed_away_from_a_day_off_puts_the_switch_back(
     assert [c.data["value"] for c in set_value] == [150, 120]
     await _tick(hass, household, freezer, _at(day_off, 7, 1))
     assert len(set_value) == 2
+
+
+async def test_two_days_off_in_a_row_keep_school_time_off_on_the_second(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    off = async_mock_service(hass, "switch", "turn_off")
+    on = async_mock_service(hass, "switch", "turn_on")
+    async_mock_service(hass, "familylink", "set_school_time")
+    async_mock_service(hass, "familylink", "set_daily_limit")
+    tue, wed, thu = date(2026, 11, 24), date(2026, 11, 25), date(2026, 11, 26)
+    household = await _set_up(hass, hass_client_no_auth, freezer, _at(date(2026, 11, 23), 20), YEAR, {})
+    for day in (tue, wed):
+        await hass.services.async_call(
+            DOMAIN, "school_time_off", {"people": ["person.sam"], "date": day.isoformat()}, blocking=True
+        )
+    await _tick(hass, household, freezer, _at(tue, 0, 6))
+    assert len(off) == 1
+    hass.states.async_set(SWITCH, "off")
+    await _tick(hass, household, freezer, _at(wed, 0, 6))
+    await _tick(hass, household, freezer, _at(wed, 8, 15))
+    assert on == []  # Wednesday is off too: never put back
+    assert household.scheduler.off_now("person.sam", _at(wed, 9)) is not None
+    # Thursday: back inside the window
+    await _tick(hass, household, freezer, _at(thu, 0, 6))
+    await _tick(hass, household, freezer, _at(thu, 8, 15))
+    assert [c.data for c in on] == [{"entity_id": SWITCH}]
