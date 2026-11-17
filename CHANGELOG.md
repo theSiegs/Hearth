@@ -3,7 +3,13 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
-## Unreleased
+## 2026.11.38
+
+### TV
+
+- **Extra time at bedtime isn't cut short on the TV.** The bedtime the TV starts by itself (2026.11.36) waits until Home Assistant has said nothing for 3 minutes past it; a lift (extra time, Unlimited, School time taken off) said since wins.
+- **The TV's own countdown leaves daily time's exceptions out** (music outside daily time, an allowed app), as Home Assistant does.
+- **A family pause says so on the TV** ("Paused: Dinner, until 7:00 PM"), not a blank "Bedtime until".
 
 ### Home Assistant integration
 
