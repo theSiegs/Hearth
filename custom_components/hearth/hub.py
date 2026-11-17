@@ -670,6 +670,10 @@ class HearthHub:
         held = self._tickets.pop(hash_secret(ticket), None)
         if held is None or held.expires <= now or held.kind != kind or held.minted_by not in self.devices:
             return None
+        # A device already paired as another kind (an adult's phone, say) is never taken over by a ticket: re-pairing
+        # the same TV after a reinstall is fine
+        if device_id in self.devices and self.kind(device_id) != kind:
+            return None
         for old in [p.pairing_id for p in self._pairings.values() if p.device_id == device_id]:
             del self._pairings[old]
         pairing = Pairing(

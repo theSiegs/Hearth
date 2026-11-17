@@ -121,3 +121,14 @@ async def test_pairing_status_still_answers(hass: HomeAssistant, hass_client_no_
     # The redeem address sits beside /api/hearth/pair/<id>: a code pairing still works, and posts are fine
     _, client, secret = await _paired_tv(hass, hass_client_no_auth)
     assert (await _post(client, secret, body=STATUS)).status == 200
+
+
+async def test_a_ticket_never_takes_over_a_device_paired_as_another_kind(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer: FrozenDateTimeFactory
+) -> None:
+    entry, client, secret = await _paired_tv(hass, hass_client_no_auth)
+    freezer.tick(timedelta(minutes=5))  # past pairing's rate limit
+    await _pair(hass, client, device_id=PHONE_ID, kind="mobile", name="Alex's phone")
+    ticket = (await (await _ticket(client, secret, {"kind": "tv"})).json())["ticket"]
+    assert (await _redeem(client, ticket, device_id=PHONE_ID)).status == 404
+    assert entry.data["devices"][PHONE_ID]["kind"] == "mobile"
