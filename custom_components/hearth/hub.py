@@ -201,6 +201,14 @@ class DeviceState:
     # A phone's or tablet's count at its first post after pairing, taken off the rest of that day (_note_baseline):
     # {"paired_at", "day" (None: it first posted on a later day), "seconds", "apps"}
     baseline: dict[str, Any] | None = None
+    # A TV's own checks failing since (check id -> when it first failed), and those the adults were told of
+    failing: dict[str, datetime] = field(default_factory=dict)
+    told_failing: set[str] = field(default_factory=set)
+
+
+# A TV's own check failing this long (its accessibility service off, say) is told to the adults; a moment's (the
+# service connecting just after the TV starts) isn't
+CHECK_FAILING_TELL_AFTER = timedelta(minutes=5)
 
 
 class HearthHub:
@@ -355,6 +363,8 @@ class HearthHub:
                 status = {**status, kept: state.status[kept]}
         status = self._on_hearth_day(device_id, state.status, status)
         self._tell_failed_checks(device_id, state.status, status)
+        if self.kind(device_id) == KIND_TV:
+            self._tell_failing_tv_checks(device_id, state, status)
         self._note_baseline(device_id, status)
         state.status = status
         state.seen = dt_util.utcnow()
@@ -367,6 +377,35 @@ class HearthHub:
         if status.get("local_rules") and self.kind(device_id) == KIND_TV:
             self.household.import_local_rules(device_id, status["local_rules"])
         self.household.recompute()
+
+    def _tell_failing_tv_checks(self, device_id: str, state: DeviceState, status: dict[str, Any]) -> None:
+        """A TV's own check that has failed for CHECK_FAILING_TELL_AFTER (its accessibility service off: apps opened
+        outside Hearth aren't held, and time in them isn't counted) is told to the adults once; it's cleared once it
+        passes again."""
+        now = dt_util.utcnow()
+        name = (self.devices.get(device_id) or {}).get("name") or "A TV"
+        for check in status.get("checks") or []:
+            check_id, key = check["id"], f"hearth_check_{device_id}_{check['id']}"
+            if check["ok"]:
+                state.failing.pop(check_id, None)
+                if check_id in state.told_failing:
+                    state.told_failing.discard(check_id)
+                    self.attention.clear(key)
+                continue
+            since = state.failing.setdefault(check_id, now)
+            if check_id in state.told_failing or now - since < CHECK_FAILING_TELL_AFTER:
+                continue
+            state.told_failing.add(check_id)
+            if check_id == "accessibility":
+                text = (
+                    f"{name}: Hearth's accessibility service is off. Apps opened outside Hearth aren't held and their "
+                    "time isn't counted until it's on again (Settings > Accessibility on the TV)."
+                )
+            else:
+                text = f"{name}: this isn't so any more: {check['label']}."
+            self.attention.notify(
+                Item(key, text, title="A TV needs a look", urgency="notice", audience=ADULTS)
+            )
 
     def _tell_clock_changed(self, device_id: str, zone: int | None = None) -> None:
         """The adults hear once that a device's date was changed (a kid moving a phone's clock to get a new day): its

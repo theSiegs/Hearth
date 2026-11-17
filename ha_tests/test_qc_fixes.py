@@ -617,3 +617,31 @@ async def test_a_phone_filling_its_scope_never_blocks_hearth_or_the_others(
     settings.put(client, ("device", "phone-alex-012345678"), "state", "state/1", big, "adult")
     # A date that looks right but isn't one is no time, not a crash
     assert parse_time("2026-13-45T99:00:00Z") is None
+
+
+# 13. A TV's accessibility service off for a while is told to the adults, once
+
+
+async def test_a_tv_s_accessibility_service_off_is_told_once_after_a_while(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    from test_init import _post as _tv_post
+    from test_people import _tv_status
+
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    hub = _hub(hass)
+    off = [{"id": "accessibility", "ok": False, "label": "Hearth's accessibility service is on"}]
+    with patch.object(hub.attention, "notify") as notify, patch.object(hub.attention, "clear") as clear:
+        await _tv_post(client, secret, body={**_tv_status(hearthtube_s=60), "checks": off})
+        await hass.async_block_till_done()
+        assert not [c for c in notify.call_args_list if "accessibility" in c.args[0].text]  # a moment's isn't told
+        for _ in range(3):
+            freezer.tick(timedelta(minutes=3))
+            await _tv_post(client, secret, body={**_tv_status(hearthtube_s=60), "checks": off})
+            await hass.async_block_till_done()
+        told = [c.args[0] for c in notify.call_args_list if "accessibility service is off" in c.args[0].text]
+        assert len(told) == 1 and told[0].audience == "adults"
+        on = [{**off[0], "ok": True}]
+        await _tv_post(client, secret, body={**_tv_status(hearthtube_s=60), "checks": on})
+        await hass.async_block_till_done()
+        assert clear.call_args_list and clear.call_args_list[-1].args[0] == told[0].key

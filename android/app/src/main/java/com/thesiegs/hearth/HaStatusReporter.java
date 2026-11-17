@@ -376,6 +376,15 @@ final class HaStatusReporter {
         status.put("profile_ref", nullable(ProfileUsers.householdRef(mContext, activeKey)));
         boolean kids = ProfileUsers.isKids(mContext);
         status.put("kids_profile", kids);
+        // Hearth's own checks: without its accessibility service apps opened outside Hearth aren't held, and time in
+        // them isn't counted; Home Assistant tells the adults when one fails
+        JSONArray checks = new JSONArray();
+        JSONObject a11y = new JSONObject();
+        a11y.put("id", "accessibility");
+        a11y.put("ok", LauncherAccessibilityService.isRunning());
+        a11y.put("label", "Hearth's accessibility service is on");
+        checks.put(a11y);
+        status.put("checks", checks);
         status.put("screen_time_up", s.screenTimeLock);
         // Google TV's own Kids daily limit (not Hearth's): Home Assistant can't lift it, so it says so (explain)
         status.put("google_time_up", ScreenTimeScreen.isGoogleLimit(s.screenTimeLock, s.screenTime));
