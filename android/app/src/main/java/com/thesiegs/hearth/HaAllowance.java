@@ -197,6 +197,7 @@ final class HaAllowance {
             if (entry == null) continue;
             try {
                 entry.put(FRONT_AT_KEY, new JSONObject(UsageToday.frontMs(context, key, now)));
+                entry.put(WORD_AT_KEY, now);
             } catch (JSONException e) {
                 Log.w(TAG, "Couldn't keep the time in front for " + key);
             }
@@ -353,6 +354,8 @@ final class HaAllowance {
     static final long STALE_AFTER_MS = 10 * 60_000L;
     /** In an entry: the profile's time in front per app (ms) when Home Assistant's word came. */
     static final String FRONT_AT_KEY = "front_ms_at";
+    /** In an entry: when Home Assistant's word came (ms). */
+    static final String WORD_AT_KEY = "word_at";
 
     /**
      * [entry] with each group's minutes left less the time in front since Home Assistant's word ([frontNow]: each
@@ -385,9 +388,13 @@ final class HaAllowance {
                 JSONArray apps = group.optJSONArray("apps");
                 Set<String> members = new HashSet<>();
                 for (int j = 0; apps != null && j < apps.length(); j++) members.add(apps.optString(j, ""));
+                // All screen time's exceptions (music outside it, an allowed app) never count against it
+                Set<String> notCounted = new HashSet<>();
+                JSONArray spared = all ? group.optJSONArray("except") : null;
+                for (int j = 0; spared != null && j < spared.length(); j++) notCounted.add(spared.optString(j, ""));
                 long spent = 0;
                 for (Map.Entry<String, Long> e : since.entrySet()) {
-                    if (all || members.contains(e.getKey())) spent += e.getValue();
+                    if (all ? !notCounted.contains(e.getKey()) : members.contains(e.getKey())) spent += e.getValue();
                 }
                 if (left <= 0 || spent < left) continue;
                 if (all) {

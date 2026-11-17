@@ -133,8 +133,15 @@ final class Allowance {
         if (lock != null && (lockUntil == null || lockUntil > now)) return true;
         JSONObject next = locks.optJSONObject("next_lock");
         Long nextAt = next != null ? HaLocks.parseTime(next.optString("at", null)) : null;
-        return nextAt != null && nextAt <= now;
+        if (nextAt == null || nextAt > now - NEXT_LOCK_GRACE_MS) return false;
+        // Only while Home Assistant has said nothing since it was due: a word after it (bedtime lifted for extra time,
+        // School time taken off) is the truth
+        long wordAt = entry != null ? entry.optLong(HaAllowance.WORD_AT_KEY, 0) : 0;
+        return wordAt < nextAt;
     }
+
+    /** How long after the next lock was due the TV starts it itself (Home Assistant posts at least every 2 min). */
+    static final long NEXT_LOCK_GRACE_MS = 3 * 60_000L;
 
     /** In {@link #heldApps}: everything is held (a family pause or a lock), not one group's time. */
     static final String HELD_ALL = "";
@@ -234,9 +241,14 @@ final class Allowance {
         if (HELD_ALL.equals(sToldGroup) && now - sToldAt < TELL_AGAIN_AFTER_MS) return;
         sToldGroup = HELD_ALL;
         sToldAt = now;
-        JSONObject lock = HaLocks.locksOf(HaAllowance.entryFor(context,
-                LauncherAccessibilityService.getActiveProfileKey(context), System.currentTimeMillis()))
-                .optJSONObject("lock");
+        JSONObject locks = HaLocks.locksOf(HaAllowance.entryFor(context,
+                LauncherAccessibilityService.getActiveProfileKey(context), System.currentTimeMillis()));
+        // A family pause holds every app too: its own words ("Paused: Dinner, until 7:00 PM")
+        if (locks.optJSONObject("pause") != null && locks.optJSONObject("lock") == null) {
+            Toast.makeText(context, pauseMessage(context), Toast.LENGTH_LONG).show();
+            return;
+        }
+        JSONObject lock = locks.optJSONObject("lock");
         Long until = lock != null ? HaLocks.parseTime(lock.optString("until", null)) : null;
         String time = until != null ? DateFormat.getTimeFormat(context).format(new Date(until)) : "";
         Toast.makeText(context, context.getString(R.string.bedtime_until, time), Toast.LENGTH_LONG).show();
