@@ -112,7 +112,20 @@ final class Allowance {
                 || ProfileUsers.isAdults(context, ProfileUsers.serialOfKey(profileKey))) {
             return null;
         }
-        return HaAllowance.forProfile(context, profileKey, System.currentTimeMillis()).timeUpGroup(packageName);
+        long now = System.currentTimeMillis();
+        String group = HaAllowance.forProfile(context, profileKey, now).timeUpGroup(packageName);
+        if (group != null) return group;
+        // A lock (bedtime, School time, a pause by name) holds every app, however it was opened: HELD_ALL, as for
+        // Hearth's own tiles (heldApps), never the apps Home Assistant never holds
+        if (HaAllowance.NEVER_HELD.contains(packageName) && !CompanionApps.HEARTHTUBE.equals(packageName)) return null;
+        return lockedNow(HaAllowance.entryFor(context, profileKey, now), now) ? HELD_ALL : null;
+    }
+
+    /** Whether the profile's entry has a lock in force at [now] (bedtime, School time, a pause by name). */
+    static boolean lockedNow(JSONObject entry, long now) {
+        JSONObject lock = HaLocks.locksOf(entry).optJSONObject("lock");
+        Long lockUntil = lock != null ? HaLocks.parseTime(lock.optString("until", null)) : null;
+        return lock != null && (lockUntil == null || lockUntil > now);
     }
 
     /** In {@link #heldApps}: everything is held (a family pause or a lock), not one group's time. */
@@ -139,9 +152,7 @@ final class Allowance {
             Integer youtubeMinutesLeft, String youtubeName, long now) {
         java.util.Map<String, String> held = new java.util.HashMap<>();
         HaAllowance.Values ha = HaAllowance.valuesOf(entry, null);
-        JSONObject lock = HaLocks.locksOf(entry).optJSONObject("lock");
-        Long lockUntil = lock != null ? HaLocks.parseTime(lock.optString("until", null)) : null;
-        boolean locked = lock != null && (lockUntil == null || lockUntil > now);
+        boolean locked = lockedNow(entry, now);
         for (String app : packages) {
             if (app == null) continue;
             boolean hearthTube = CompanionApps.HEARTHTUBE.equals(app);
@@ -173,7 +184,11 @@ final class Allowance {
     static boolean holdForTime(Context context, String packageName, boolean inHearth) {
         String group = timeUpGroup(context, packageName);
         if (group == null) return false;
-        showTimeUp(context, group, inHearth);
+        if (HELD_ALL.equals(group)) {
+            showLocked(context);
+        } else {
+            showTimeUp(context, group, inHearth);
+        }
         return true;
     }
 

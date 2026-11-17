@@ -804,23 +804,28 @@ public class LauncherAccessibilityService extends AccessibilityService {
             mHolds = 0;
         }
         if (++mHolds > HOLDS_PER_WINDOW) return;
-        Log.i(TAG, packageName + ": time is up for " + group + " today, back home");
+        Log.i(TAG, packageName + ": " + (Allowance.HELD_ALL.equals(group) ? "a lock holds it" : "time is up for "
+                + group + " today") + ", back home");
         if (autoTakeOverAllowed()) {
             openLauncher();
         } else {
             performGlobalAction(GLOBAL_ACTION_HOME);
         }
-        Allowance.showTimeUp(this, group);
+        if (Allowance.HELD_ALL.equals(group)) {
+            Allowance.showLocked(this);
+        } else {
+            Allowance.showTimeUp(this, group);
+        }
     }
 
     /**
-     * Without Home Assistant nothing else stops an app already open when the kid's minutes run out or bedtime comes
-     * (Home Assistant pauses it through Family Link): Hearth's own rules send the kid home from it, checked with the
-     * periodic check. With Home Assistant this does nothing.
+     * An app already open when the kid's minutes run out or bedtime comes is sent home, checked with the periodic
+     * check: with Hearth's own rules, and with Home Assistant's too (its Family Link pause may not reach the TV, and
+     * an app relaunched past the hold's per-minute cap would otherwise stay).
      */
     private void holdRunningApp() {
         String app = mFrontApp;
-        if (app == null || LocalAllowance.homeAssistantDecides(this) || !ProfileUsers.isKids(this)) return;
+        if (app == null || !ProfileUsers.isKids(this)) return;
         String held = Allowance.heldApps(this, java.util.Collections.singletonList(app)).get(app);
         if (held == null) return;
         if (!Allowance.HELD_ALL.equals(held)) {

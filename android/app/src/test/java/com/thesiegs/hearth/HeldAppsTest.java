@@ -36,6 +36,18 @@ public class HeldAppsTest {
     }
 
     @Test
+    public void aLockInForceIsTheSameForAppsOpenedAnyWay() throws Exception {
+        // timeUpGroup (apps opened outside Hearth's tiles: voice, a link, Google TV's home) holds on the same lock
+        assertTrue(Allowance.lockedNow(new JSONObject("{\"locks\": {\"lock\": {\"kind\": \"bedtime\"}}}"), NOW));
+        assertTrue(Allowance.lockedNow(new JSONObject(
+                "{\"locks\": {\"lock\": {\"kind\": \"school_time\", \"until\": \"2999-01-01T00:00:00Z\"}}}"), NOW));
+        assertTrue(!Allowance.lockedNow(new JSONObject(
+                "{\"locks\": {\"lock\": {\"kind\": \"bedtime\", \"until\": \"1970-01-01T00:00:01Z\"}}}"), NOW));
+        assertTrue(!Allowance.lockedNow(new JSONObject("{}"), NOW));
+        assertTrue(!Allowance.lockedNow(null, NOW));
+    }
+
+    @Test
     public void hearthTubeIsOutWhenItsYouTubeMinutesAre() {
         // Hearth's own limit, without Home Assistant
         assertEquals(Map.of(CompanionApps.HEARTHTUBE, "YouTube"), Allowance.heldApps(APPS, null, 0, "YouTube", NOW));
