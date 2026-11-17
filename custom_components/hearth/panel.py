@@ -792,6 +792,11 @@ async def ws_nintendo_bonus(hass: HomeAssistant, connection: websocket_api.Activ
     if switch["held_by_hearth"]:
         connection.send_error(msg["id"], "held", "Hearth holds this Switch: give Hearth's extra time on it instead")
         return
+    if switch.get("held_for_another"):
+        connection.send_error(
+            msg["id"], "held", "Hearth holds this Switch for another kid now: give extra time when it's let go"
+        )
+        return
     data = {"device_id": msg["device_id"], "bonus_time": msg["minutes"]}
     if not nintendo.accepts(hass, nintendo.ADD_BONUS, data):
         connection.send_error(

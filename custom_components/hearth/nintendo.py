@@ -172,6 +172,20 @@ def _player_ids(nintendo_id: str, entries: list[er.RegistryEntry], chosen: set[s
     return found
 
 
+def _held_for_another(household, limit_entity: str | None, person: str) -> str | None:
+    """Another person Hearth holds this Switch for (a shared Switch): None for none."""
+    if not limit_entity:
+        return None
+    from .enforce import NINTENDO, SWITCH, _holding, key_parts
+
+    for key, held in household.enforcement.held.items():
+        if key.startswith(f"{NINTENDO}|") and held.entity_id == limit_entity and SWITCH in _holding(held):
+            holder = key_parts(key)[1]
+            if holder != person:
+                return holder
+    return None
+
+
 def switches(household: Household, person: str) -> list[dict[str, Any]]:
     """Each Switch of the person's, as its entities say now. Nothing when there's none (or no Nintendo integration)."""
     hass = household.hass
@@ -240,6 +254,9 @@ def switches(household: Household, person: str) -> list[dict[str, Any]]:
                 if _state(hass, by_key[LAST_SYNC]) not in (None, "unknown", "unavailable")
                 else None,
                 "held_by_hearth": held,
+                # A shared Switch Hearth holds for another kid: Nintendo's extra on it would read as a parent's grant
+                # for that kid
+                "held_for_another": _held_for_another(household, by_key[LIMIT], person),
                 # The Switch's own limit stops it now, not a hold of Hearth's
                 "blocking": bool(limited and left is not None and left <= 0 and not held and not (extra or 0)),
                 "entities": {key: entity_id for key, entity_id in by_key.items() if entity_id},

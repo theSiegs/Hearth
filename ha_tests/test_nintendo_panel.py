@@ -307,3 +307,20 @@ def test_a_switch_s_own_limit_is_a_line_of_its_own() -> None:
     }
     glance = person_glance(person, [], [], [], dt_util.now(), [], [])
     assert any(i["text"] == "sam's switch · nintendo's own limit" for i in [glance["headline"], *glance["lines"]])
+
+
+def test_a_shared_switch_held_for_another_kid_takes_no_nintendo_bonus() -> None:
+    from types import SimpleNamespace
+
+    from custom_components.hearth.enforce import NINTENDO, SWITCH, Held
+    from custom_components.hearth.nintendo import _held_for_another
+
+    limit = "number.shared_switch_max_screentime_today"
+    household = SimpleNamespace(
+        enforcement=SimpleNamespace(
+            held={f"{NINTENDO}|person.alex|{limit}": Held(items={SWITCH}, entity_id=limit)}
+        )
+    )
+    assert _held_for_another(household, limit, "person.sam") == "person.alex"
+    assert _held_for_another(household, limit, "person.alex") is None
+    assert _held_for_another(household, "number.other_switch_max_screentime_today", "person.sam") is None

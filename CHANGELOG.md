@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **Nintendo's own extra time isn't given on a shared Switch Hearth holds for another kid** (it would have read as a parent's grant for that kid); Hearth's page says to give it once the Switch is let go.
+
 ## 2026.11.31
 
 ### Home Assistant integration
