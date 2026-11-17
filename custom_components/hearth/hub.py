@@ -52,7 +52,7 @@ from .const import (
 )
 from .asks import Asks
 from .fs_requests import RequestTracker
-from .attention import ADMINS, Attention, Item
+from .attention import ADMINS, ADULTS, Attention, Item
 from .client import checks_of, locked
 from .client_settings import ClientSettings
 from .glint_agent import GlintAgent
@@ -357,6 +357,25 @@ class HearthHub:
             self.household.import_local_rules(device_id, status["local_rules"])
         self.household.recompute()
 
+    def _tell_clock_changed(self, device_id: str) -> None:
+        """The adults hear once that a device's date was changed (a kid moving a phone's clock to get a new day): its
+        counts are kept, and its row on Hearth's page fails the clock check until its date is Hearth's again."""
+        device = self.devices.get(device_id) or {}
+        person = device.get(CONF_PERSON)
+        whose = self.household.person_name(person) if person else None
+        name = device.get("name") or "A device"
+        what = f"{whose}'s {name}" if whose else name
+        self.attention.notify(
+            Item(
+                f"hearth_clock_{device_id}",
+                f"{what}: its date was changed. Hearth keeps counting today's time by its own clock.",
+                title="A device's clock was changed",
+                urgency="notice",
+                audience=ADULTS,
+                about={"person": person} if person else {},
+            )
+        )
+
     def _on_hearth_day(
         self, device_id: str, before: dict[str, Any] | None, status: dict[str, Any]
     ) -> dict[str, Any]:
@@ -379,6 +398,7 @@ class HearthHub:
                     "Hearth device %s posted a status for %s, but Hearth's day is %s: its counts are kept as they were",
                     device_id, posted, today,
                 )
+                self._tell_clock_changed(device_id)
             return {**status, **{key: before.get(key) for key in _COUNTS}, "day": before.get("day"), "clock_off": off}
         status = {**status, "clock_off": None}
         if before.get("day") != today:

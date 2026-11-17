@@ -4,6 +4,8 @@ you."""
 
 from datetime import timedelta
 
+from unittest.mock import patch
+
 import pytest
 
 from homeassistant.components import persistent_notification
@@ -162,8 +164,14 @@ async def test_a_moved_clock_never_wipes_today_s_count(
 
     # The phone's clock moved to tomorrow: a fresh day there, but not here
     tomorrow = (today + timedelta(days=1)).isoformat()
-    answer = await _post(http, sam, day=tomorrow, seconds_today=0, app_seconds_today={})
-    await hass.async_block_till_done()
+    with patch.object(hub.attention, "notify") as notify:
+        answer = await _post(http, sam, day=tomorrow, seconds_today=0, app_seconds_today={})
+        await hass.async_block_till_done()
+        # The adults hear of it once, not at every status
+        await _post(http, sam, day=tomorrow, seconds_today=0, app_seconds_today={})
+        await hass.async_block_till_done()
+    told = [c.args[0] for c in notify.call_args_list if c.args[0].key == f"hearth_clock_{SAM_PHONE}"]
+    assert len(told) == 1 and "its date was changed" in told[0].text and told[0].audience == "adults"
     assert answer["clock_off"] is True and answer["day"] == today.isoformat()
     assert _used(hass) == used
     assert {"id": "hearth_clock", "ok": False, "label": "Its date differs from Home Assistant's"} in hub.checks(SAM_PHONE)
