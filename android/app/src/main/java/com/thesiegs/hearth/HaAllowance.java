@@ -190,6 +190,17 @@ final class HaAllowance {
         JSONObject profiles = profilesFromDocument(state);
         if (profiles == null) return;
         long now = System.currentTimeMillis();
+        // Each profile's time in front as of this word: counted down from, should Home Assistant go quiet
+        for (Iterator<String> keys = profiles.keys(); keys.hasNext(); ) {
+            String key = keys.next();
+            JSONObject entry = profiles.optJSONObject(key);
+            if (entry == null) continue;
+            try {
+                entry.put(FRONT_AT_KEY, new JSONObject(UsageToday.frontMs(context, key, now)));
+            } catch (JSONException e) {
+                Log.w(TAG, "Couldn't keep the time in front for " + key);
+            }
+        }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
                 .putString(DAY_KEY, UsageToday.day(now))
                 .putString(PROFILES_KEY, profiles.toString())
@@ -327,10 +338,72 @@ final class HaAllowance {
         } catch (JSONException e) {
             return null;
         }
-        if (UsageToday.day(now).equals(prefs.getString(DAY_KEY, null))) return entry;
+        if (UsageToday.day(now).equals(prefs.getString(DAY_KEY, null))) {
+            long checkedAt = prefs.getLong(CHECKED_KEY, now);
+            // Home Assistant quiet for a while (the router unplugged, say): its minutes are counted down here
+            if (now - checkedAt > STALE_AFTER_MS) return staleCountdown(entry, UsageToday.frontMs(context, profileKey, now));
+            return entry;
+        }
         // Home Assistant hasn't answered since the day changed (it may be away): its last word still counts for what
         // runs past midnight, never for yesterday's minutes
         return carriedOver(entry, now);
+    }
+
+    /** Home Assistant's word this old: the TV counts its minutes down itself (staleCountdown). */
+    static final long STALE_AFTER_MS = 10 * 60_000L;
+    /** In an entry: the profile's time in front per app (ms) when Home Assistant's word came. */
+    static final String FRONT_AT_KEY = "front_ms_at";
+
+    /**
+     * [entry] with each group's minutes left less the time in front since Home Assistant's word ([frontNow]: each
+     * app's ms today, against the entry's FRONT_AT_KEY): a group that runs out is held as Home Assistant would hold
+     * it (its apps out of time; All screen time: every app but its exceptions). Unchanged without a snapshot.
+     */
+    static JSONObject staleCountdown(JSONObject entry, Map<String, Long> frontNow) {
+        JSONObject at = entry != null ? entry.optJSONObject(FRONT_AT_KEY) : null;
+        JSONArray groups = entry != null ? entry.optJSONArray(GROUPS_KEY) : null;
+        if (at == null || groups == null || frontNow == null) return entry;
+        try {
+            JSONObject out = new JSONObject(entry.toString());
+            JSONObject outOfTime = out.optJSONObject("out_of_time");
+            if (outOfTime == null) {
+                outOfTime = new JSONObject();
+                out.put("out_of_time", outOfTime);
+            }
+            Map<String, Long> since = new HashMap<>();
+            for (Map.Entry<String, Long> e : frontNow.entrySet()) {
+                long used = e.getValue() - at.optLong(e.getKey(), 0);
+                if (used > 0 && !NEVER_HELD.contains(e.getKey())) since.put(e.getKey(), used);
+            }
+            for (int i = 0; i < groups.length(); i++) {
+                JSONObject group = groups.optJSONObject(i);
+                if (group == null || group.isNull("minutes_left")) continue;
+                long left = group.optLong("minutes_left", 0) * 60_000L;
+                String name = group.optString("name", "");
+                if (name.trim().isEmpty()) name = group.optString("id", "");
+                boolean all = ALL_GROUP.equals(group.optString("id"));
+                JSONArray apps = group.optJSONArray("apps");
+                Set<String> members = new HashSet<>();
+                for (int j = 0; apps != null && j < apps.length(); j++) members.add(apps.optString(j, ""));
+                long spent = 0;
+                for (Map.Entry<String, Long> e : since.entrySet()) {
+                    if (all || members.contains(e.getKey())) spent += e.getValue();
+                }
+                if (left <= 0 || spent < left) continue;
+                if (all) {
+                    if (out.isNull("all_out_of_time") || !out.has("all_out_of_time")) out.put("all_out_of_time", name);
+                    JSONArray except = group.optJSONArray("except");
+                    if (except != null && !out.has("all_except")) out.put("all_except", except);
+                } else {
+                    for (String app : members) {
+                        if (!app.isEmpty() && !NEVER_HELD.contains(app) && !outOfTime.has(app)) outOfTime.put(app, name);
+                    }
+                }
+            }
+            return out;
+        } catch (JSONException e) {
+            return entry;
+        }
     }
 
     /**
