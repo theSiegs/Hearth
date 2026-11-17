@@ -31,10 +31,10 @@ COMMAND_EXPIRES = timedelta(minutes=3)
 # A new play replaces one still waiting for the TV: only the last ask is played
 MAX_URL = 2048
 
-_PACKAGE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+$")
-_VIDEO_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
-_URL = re.compile(r"^https?://[^\s/]+\S*$", re.IGNORECASE)
-_PROFILE = re.compile(r"^user:\d+(:[a-z0-9._-]+)?$")
+_PACKAGE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+\Z")
+_VIDEO_ID = re.compile(r"^[A-Za-z0-9_-]{11}\Z")
+_URL = re.compile(r"^https?://[^\s/]+\S*\Z", re.IGNORECASE)
+_PROFILE = re.compile(r"^user:\d+(:[a-z0-9._-]+)?\Z")
 
 
 def what_to_play(what: str) -> dict[str, str] | None:
