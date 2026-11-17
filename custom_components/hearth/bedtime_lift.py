@@ -36,7 +36,6 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
-from . import family_link as fl
 from .entry_tasks import entry_task
 from .activity import call_service
 

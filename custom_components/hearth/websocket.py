@@ -27,7 +27,6 @@ from homeassistant.util import dt as dt_util
 
 from .const import CONF_KIND, CONF_MEDIA_PLAYERS, CONF_PERSON, CONF_ROLES, CONTRACT, DOMAIN, SIGNAL_DEVICE_ADDED, KIND_TV, SIGNAL_PAIRINGS, SIGNAL_PEOPLE, SIGNAL_STATUS, SIGNAL_WATCH
 from .counting import ALL
-from . import parent_pin
 from .asks import AMOUNTS, VIA_HOME_ASSISTANT, AskError
 from .limits import GAMES, OTHER
 from .media import media_rooms

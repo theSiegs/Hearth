@@ -46,7 +46,6 @@ from .apps import (
     EVENT_NEW_APP,
     AppCatalog,
     observed_from_entities,
-    options_with_app_in_group,
     phone_actions,
     update_notification,
 )

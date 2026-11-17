@@ -20,7 +20,6 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, SIGNAL_COMMANDS
-from .status import text
 from .watch import video_id_of
 from .activity import TV_COMMAND, _log_of
 
