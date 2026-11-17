@@ -3,13 +3,14 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
-## Unreleased
+## 2026.11.33
 
 ### Home Assistant integration
 
 - **A phone filling its own documents can't block Hearth's requests to it or crowd out the other phones.** Hearth's own documents (a phone's inbox) don't count against a scope's 16 documents or the client's bytes, and one device's own scope keeps to a quarter of them.
 - **What a kid's phone says it can change isn't put in an adult's assistant tools.** The change-start-screen tool describes adults' phones' options only (a kid's phone writes its own state).
 - A phone's state with a date that isn't one no longer breaks the assistant's read tools.
+- **A media player with no name no longer breaks every phone's state document** (a room with two unnamed speakers stopped the phones getting their limits).
 
 ## 2026.11.32
 
