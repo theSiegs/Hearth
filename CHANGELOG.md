@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **An arrival with one precise location fix counts after 10 minutes.** A phone sitting still keeps the same fix for 20 minutes and more, so the two-fix rule (2026.11.28) could hold an arrival back that long; one fix within 50 m that nothing contradicts for 10 minutes is a move again.
+
 ## 2026.11.38
 
 ### TV

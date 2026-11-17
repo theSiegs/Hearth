@@ -67,6 +67,9 @@ SIGNAL_PLACES = "hearth_places"
 FRESH_FOR = timedelta(minutes=20)
 DWELL = timedelta(minutes=3)
 READINGS = 2
+# One Family Link fix this precise (metres), held this long with nothing against it, is a move too
+PRECISE_FIX_M = 50
+SINGLE_FIX_DWELL = timedelta(minutes=10)
 MAX_FAVORITES = 20
 MAX_NAME = 40
 FL_DOMAIN = "familylink"
@@ -404,12 +407,16 @@ class Places:
         elif reading.stamp != where.stamp:
             where.count += 1
             where.stamp = reading.stamp
-        # Two fixes of their own, for Family Link's locations (one stray fix, minutes before the next, isn't a move);
-        # a person's state, which has no fixes, after it has held for a while
-        if where.count < READINGS and (
-            reading.source == SOURCE_FAMILY_LINK or now - (where.candidate_at or now) < DWELL
-        ):
-            return None
+        # Two fixes of their own for Family Link's locations (one stray fix isn't a move), or one precise fix nothing
+        # has contradicted for a while (a phone sitting still keeps the same fix for 20 minutes and more); a person's
+        # state, which has no fixes, after it has held for a while
+        held_for = now - (where.candidate_at or now)
+        if where.count < READINGS:
+            if reading.source != SOURCE_FAMILY_LINK and held_for < DWELL:
+                return None
+            precise = reading.accuracy is not None and reading.accuracy <= PRECISE_FIX_M
+            if reading.source == SOURCE_FAMILY_LINK and not (precise and held_for >= SINGLE_FIX_DWELL):
+                return None
         came_from = where.known
         where.place = where.known = reading.place
         where.since = where.candidate_as_of or reading.as_of
