@@ -3,11 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
-## Unreleased
+## 2026.11.32
 
 ### Home Assistant integration
 
 - **Nintendo's own extra time isn't given on a shared Switch Hearth holds for another kid** (it would have read as a parent's grant for that kid); Hearth's page says to give it once the Switch is let go.
+- **A source still on yesterday's total after midnight isn't charged into today.** A source's count is never more than the time since midnight, and before 6 AM a drop is the source's own new day, taken as it is (from 2026.11.31, a drop otherwise never lowers today's count).
 
 ## 2026.11.31
 
