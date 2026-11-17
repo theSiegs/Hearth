@@ -550,3 +550,43 @@ async def test_a_phone_in_another_time_zone_isn_t_a_moved_clock(
         await hass.async_block_till_done()
     assert answer["clock_off"] is True
     assert any("its date was changed" in c.args[0].text for c in notify.call_args_list)
+
+
+# 11. A pause goes on across a restart
+
+
+async def test_a_pause_goes_on_across_a_restart(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_storage, freezer
+) -> None:
+    from custom_components.hearth.pause import app_pauses_of
+
+    now = dt_util.utcnow()
+    hass_storage["hearth.pauses"] = {
+        "version": 1,
+        "key": "hearth.pauses",
+        "data": {
+            "pauses": {SAM: {"until": (now + timedelta(hours=1)).isoformat(), "reason": "Dinner", "ends_on": None}},
+            "app_pauses": {
+                SAM: {
+                    "group:games": {"app": None, "group": "games", "until": (now + timedelta(hours=2)).isoformat(),
+                                    "reason": ""},
+                    "app:com.example.old": {"app": "com.example.old", "group": None,
+                                            "until": (now - timedelta(minutes=1)).isoformat(), "reason": ""},
+                }
+            },
+        },
+    }
+    await _household_with_sam(hass, hass_client_no_auth)
+    assert pause_of(hass, SAM)["reason"] == "Dinner"
+    assert [p["group"] for p in app_pauses_of(hass, SAM)] == ["games"]
+    assert hass.states.get(f"binary_sensor.hearth_sam_locked").state == "on"
+
+    # A new pause is saved for the next start
+    await hass.services.async_call(DOMAIN, "pause_end", {"people": [SAM]}, blocking=True)
+    await hass.services.async_call(DOMAIN, "pause", {"people": [SAM], "minutes": 30, "reason": "Homework"}, blocking=True)
+    freezer.tick(timedelta(seconds=5))
+    from pytest_homeassistant_custom_component.common import async_fire_time_changed
+
+    async_fire_time_changed(hass, dt_util.utcnow())
+    await hass.async_block_till_done()
+    assert hass_storage["hearth.pauses"]["data"]["pauses"][SAM]["reason"] == "Homework"

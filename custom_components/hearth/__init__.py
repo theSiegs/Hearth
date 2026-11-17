@@ -32,7 +32,7 @@ from .entry_tasks import entry_task
 from .api import async_register_views
 from .auth import is_adult_user, register_service
 from .websocket import async_register_commands
-from .pause import end_app_pause, pausable, set_app_pause, set_pause
+from .pause import async_load_pauses, end_app_pause, pausable, set_app_pause, set_pause
 from .places import ARRIVE, LEAVE
 from . import client_settings_ws, glint_api, llm_api, panel, suggest_push, todo_ws, weekly_ws
 from .todos import migrated_options
@@ -1129,6 +1129,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     if (counted := count_messaging(dict(entry.options))) is not None:
         hass.config_entries.async_update_entry(entry, options=counted)
     entry.runtime_data = hub
+    # A pause running when Home Assistant stopped goes on (pause.py)
+    await async_load_pauses(hass)
     await hub.household.school.async_refresh()
     hub.household.recompute()
     # The views stay registered for Home Assistant's lifetime (aiohttp can't take one away); with no entry

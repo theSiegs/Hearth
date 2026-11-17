@@ -4,7 +4,8 @@ Pause and Locks).
 hearth.pause holds the chosen people (everyone in the household by default) for some minutes or until a time;
 hearth.pause_end lets them go. While paused a person is locked, so a Hearth TV holds their apps as for bedtime, and
 their state document says why ("pause": {until, reason}). Their Switch is held too, by the Nintendo enforcer's own
-hold (enforce.py). Pauses are kept outside the entry (an options change reloads it), not across a restart.
+hold (enforce.py). Pauses are kept outside the entry (an options change reloads it) and in a store of their own, so
+a restart doesn't end one: they're read back once when Home Assistant starts, those already over left out.
 
 hearth.pause with an app or a group pauses only that, for the chosen people (YouTube and HearthTube, say): its apps
 are held as a group out of time is (a Hearth TV and phone, Family Link, Family Safety's Xbox and Windows apps, the
@@ -22,7 +23,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import CONF_ROLES, DOMAIN
@@ -39,6 +41,57 @@ def _pauses(hass: HomeAssistant) -> dict[str, dict[str, Any]]:
     return hass.data.setdefault(f"{DOMAIN}_pauses", {})
 
 
+def _store(hass: HomeAssistant) -> Store[dict[str, Any]]:
+    key = f"{DOMAIN}_pauses_store"
+    if key not in hass.data:
+        hass.data[key] = Store(hass, 1, f"{DOMAIN}.pauses")
+    return hass.data[key]
+
+
+def _iso(value: datetime) -> str:
+    return dt_util.as_utc(value).isoformat()
+
+
+@callback
+def _save(hass: HomeAssistant) -> None:
+    """What's paused now, saved a moment later (a restart reads it back)."""
+
+    def data() -> dict[str, Any]:
+        return {
+            "pauses": {p: {**v, "until": _iso(v["until"])} for p, v in _pauses(hass).items()},
+            "app_pauses": {
+                p: {k: {**v, "until": _iso(v["until"])} for k, v in mine.items()}
+                for p, mine in _app_pauses(hass).items()
+                if mine
+            },
+        }
+
+    _store(hass).async_delay_save(data, 1)
+
+
+async def async_load_pauses(hass: HomeAssistant) -> None:
+    """The pauses saved before Home Assistant stopped, once per start (a reload keeps them in memory); those over are
+    left out."""
+    flag = f"{DOMAIN}_pauses_loaded"
+    if hass.data.get(flag):
+        return
+    hass.data[flag] = True
+    stored = await _store(hass).async_load() or {}
+    now = dt_util.utcnow()
+
+    def until_of(value: Any) -> datetime | None:
+        parsed = dt_util.parse_datetime(value) if isinstance(value, str) else None
+        return parsed if parsed is not None and parsed > now else None
+
+    for person, pause in (stored.get("pauses") or {}).items():
+        if isinstance(pause, dict) and (until := until_of(pause.get("until"))) is not None:
+            _pauses(hass).setdefault(person, {**pause, "until": until})
+    for person, mine in (stored.get("app_pauses") or {}).items():
+        for key, pause in (mine or {}).items() if isinstance(mine, dict) else ():
+            if isinstance(pause, dict) and (until := until_of(pause.get("until"))) is not None:
+                _app_pauses(hass).setdefault(person, {}).setdefault(key, {**pause, "until": until})
+
+
 def set_pause(
     hass: HomeAssistant,
     people: list[str],
@@ -53,6 +106,7 @@ def set_pause(
             "reason": (reason or "").strip()[:MAX_REASON],
             "ends_on": dict(ends_on) if ends_on else None,
         }
+    _save(hass)
 
 
 def pausable(household, named: list[str] | None) -> tuple[list[str], list[str]]:
@@ -82,6 +136,7 @@ def set_app_pause(
             "until": until,
             "reason": (reason or "").strip()[:MAX_REASON],
         }
+    _save(hass)
 
 
 def end_app_pause(hass: HomeAssistant, people: list[str] | None, app: str | None = None, group: str | None = None) -> None:
@@ -95,6 +150,7 @@ def end_app_pause(hass: HomeAssistant, people: list[str] | None, app: str | None
             mine.clear()
         else:
             mine.pop(_what_key(app, group), None)
+    _save(hass)
 
 
 def app_pauses_of(hass: HomeAssistant, person: str, now: datetime | None = None) -> list[dict[str, Any]]:
@@ -118,6 +174,7 @@ def end_pause(hass: HomeAssistant, people: list[str] | None) -> None:
     pauses = _pauses(hass)
     for person in list(pauses) if people is None else people:
         pauses.pop(person, None)
+    _save(hass)
 
 
 def pause_of(hass: HomeAssistant, person: str, now: datetime | None = None) -> dict[str, Any] | None:

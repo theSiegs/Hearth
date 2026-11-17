@@ -1571,7 +1571,8 @@ and doesn't count as the person's open request.
 ### Pause and locks
 
 `hearth.pause` (`minutes`, or `until` a time or date-time; `reason`; `people`, every kid by default; `ends_on`, see
-[Exceptions](#exceptions)) holds the people until it ends or `hearth.pause_end` (`people`, everyone by default).
+[Exceptions](#exceptions)) holds the people until it ends or `hearth.pause_end` (`people`, everyone by default); a restart of Home Assistant
+doesn't end it.
 Adults are never paused (they have no limits in Hearth): an adult named is left out, and only adults is refused. It
 answers who was paused, `{paused: [...], not_paused: [the adults named]}`. A paused person is locked, so a Hearth TV holds
 their apps as for bedtime, and their state document says `pause` {until, reason}. Every person's document also says,
