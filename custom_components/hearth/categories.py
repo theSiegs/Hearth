@@ -505,7 +505,8 @@ class CategoryBook:
             self._unsubs.pop()()
         if self._session is not None:
             session, self._session = self._session, None
-            self.hass.async_create_task(session.close(), eager_start=True)
+            # Home Assistant's connector is shared: let go of it, never close it
+            session.detach()
 
     def _http(self):
         """A session of its own that keeps no cookies: a store sees an id, never a returning visitor."""
@@ -514,7 +515,7 @@ class CategoryBook:
 
             from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
-            # Closed by stop() (an unload or reload), else when Home Assistant closes
+            # Let go of by stop() (an unload or reload), else when Home Assistant stops
             self._session = async_create_clientsession(self.hass, cookie_jar=aiohttp.DummyCookieJar())
         return self._session
 
