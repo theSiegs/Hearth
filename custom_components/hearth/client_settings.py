@@ -52,6 +52,11 @@ SIGNAL_CLIENT_SETTINGS = "hearth_client_settings"
 MAX_DATA_BYTES = 64 * 1024
 MAX_DOCS = 16
 MAX_CLIENT_BYTES = 1024 * 1024
+# One device's own scope, of the client's bytes: one phone never crowds out the others (or the household's)
+MAX_DEVICE_BYTES = 256 * 1024
+# Hearth's own documents (a phone's inbox) never count against a scope's documents or the client's bytes: a device
+# filling its scope can't refuse what Hearth must put there
+WRITER_HEARTH = "hearth"
 MAX_SCHEMA = 64
 MAX_LABEL = 40
 _CONTROL = re.compile(r"[\x00-\x1f\x7f-\x9f]")
@@ -283,16 +288,20 @@ class ClientSettings:
         size = data_size(data)
         if size > MAX_DATA_BYTES:
             raise SettingsError("too_large")
-        if current is None and len(scopes.get(key, {})) >= MAX_DOCS:
-            raise SettingsError("too_many")
-        others = sum(
-            data_size(doc.get("data"))
-            for k, named in scopes.items()
-            for n, doc in named.items()
-            if (k, n) != (key, name)
-        )
-        if others + size > MAX_CLIENT_BYTES:
-            raise SettingsError("too_large")
+        if updated_by != WRITER_HEARTH:
+            theirs = [n for n, doc in scopes.get(key, {}).items() if doc.get("updated_by") != WRITER_HEARTH]
+            if current is None and len(theirs) >= MAX_DOCS:
+                raise SettingsError("too_many")
+            counted = [
+                (k, data_size(doc.get("data")))
+                for k, named in scopes.items()
+                for n, doc in named.items()
+                if (k, n) != (key, name) and doc.get("updated_by") != WRITER_HEARTH
+            ]
+            if sum(s for _, s in counted) + size > MAX_CLIENT_BYTES:
+                raise SettingsError("too_large")
+            if key.startswith("device:") and sum(s for k, s in counted if k == key) + size > MAX_DEVICE_BYTES:
+                raise SettingsError("too_large")
         doc = {
             "format": FORMAT,
             "client": client,

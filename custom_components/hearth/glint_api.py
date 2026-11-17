@@ -645,7 +645,17 @@ class GlintAPI(llm.API):
             api_prompt=PROMPT + (VOICE_PROMPT if who.origin == ORIGIN_VOICE else ""),
             llm_context=llm_context,
             tools=[
-                tool(start_ops_text([hub.glint_agent.state(d) for d in hub.glint_agent.reachable(who.person, voice=who.voice_only)]))
+                # What Glint says it can change, from adults' phones only: a kid's phone writes its own state, and its
+                # words in a tool's description would read as more trusted than a tool's answer
+                tool(
+                    start_ops_text(
+                        [
+                            hub.glint_agent.state(d)
+                            for d in hub.glint_agent.reachable(who.person, voice=who.voice_only)
+                            if not hub.glint_agent.is_kid_phone(d)
+                        ]
+                    )
+                )
                 if tool is ChangeStartTool
                 else tool()
                 for tool in TOOLS

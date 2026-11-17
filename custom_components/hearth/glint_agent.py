@@ -117,7 +117,10 @@ def iso(when: datetime) -> str:
 def parse_time(value: Any) -> datetime | None:
     if not isinstance(value, str):
         return None
-    parsed = dt_util.parse_datetime(value)
+    try:
+        parsed = dt_util.parse_datetime(value)
+    except ValueError:  # a date that looks right but isn't one (month 13): no time
+        return None
     if parsed is None:
         return None
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=dt_util.UTC)

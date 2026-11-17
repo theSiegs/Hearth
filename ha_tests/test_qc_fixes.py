@@ -590,3 +590,30 @@ async def test_a_pause_goes_on_across_a_restart(
     async_fire_time_changed(hass, dt_util.utcnow())
     await hass.async_block_till_done()
     assert hass_storage["hearth.pauses"]["data"]["pauses"][SAM]["reason"] == "Homework"
+
+
+# 12. A phone filling its own documents never blocks Hearth's inbox, nor the other phones
+
+
+async def test_a_phone_filling_its_scope_never_blocks_hearth_or_the_others(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    from custom_components.hearth.client_settings import MAX_DOCS, SettingsError
+    from custom_components.hearth.glint_agent import parse_time
+
+    await _phones_household(hass, hass_client_no_auth)
+    settings = _hub(hass).client_settings
+    client = "com.example.launcher"
+    big = {"x": "a" * 60000}
+    for n in range(MAX_DOCS):
+        try:
+            settings.put(client, ("device", SAM_PHONE), f"junk{n}", "junk/1", big if n < 4 else {"n": n}, "kid")
+        except SettingsError as err:
+            # Its own scope stops at a quarter of the client's bytes
+            assert err.args[0] == "too_large" and n >= 4
+    # Hearth's inbox still goes in
+    settings.put(client, ("device", SAM_PHONE), "agent-inbox", "inbox/1", {"requests": []}, "hearth")
+    # And another phone still has room
+    settings.put(client, ("device", "phone-alex-012345678"), "state", "state/1", big, "adult")
+    # A date that looks right but isn't one is no time, not a crash
+    assert parse_time("2026-13-45T99:00:00Z") is None
