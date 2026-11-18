@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **Holds come back within a minute of a restart.** Hearth starts before Family Link and the Nintendo integration have loaded, so its first holds failed and waited the usual 5 minutes; a call that failed only because the integration wasn't there yet is tried again after 30 seconds, without a warning in the log.
+
 ## 2026.11.41
 
 ### TV

@@ -79,7 +79,7 @@ from typing import TYPE_CHECKING, Any
 import voluptuous as vol
 
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, SupportsResponse, callback
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import ServiceNotFound, ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_call_later
@@ -128,6 +128,10 @@ SWITCH_PUT_BACK_FRESH = timedelta(minutes=5)
 SETTLE = timedelta(minutes=5)
 # A failed call is tried again after this long
 RETRY = timedelta(minutes=5)
+# ... or this soon when the parental control wasn't there yet (its integration still loading after a start)
+RETRY_NOT_LOADED = timedelta(seconds=30)
+# How long after Hearth starts an unavailable entity counts as still loading (later: a real outage, tried every 5 min)
+LOADING_WINDOW = timedelta(minutes=10)
 # Family Link's lock_override_code of a device a parent unlocked
 FL_UNLOCK_CODE = 4
 # Family Safety's hold attribute (Allowed Now sensors, platform lock switches): who decides the lock now
@@ -512,6 +516,8 @@ class Enforcement:
 
     def __init__(self, hass: HomeAssistant, entry_id: str) -> None:
         self.hass = hass
+        # When this started: an entity with no state yet in the first minutes is still loading, not broken
+        self._started = dt_util.utcnow()
         self._entry_id = entry_id
         # Set by async_flush (the entry is unloading): no new enforcement pass starts after it
         self._closed = False
@@ -872,8 +878,14 @@ class Enforcement:
                     if let_go:
                         self.activity.hold(False, person, let_go, None, kind)
             except Exception as err:  # noqa: BLE001 - one parental control failing mustn't stop the others
-                _LOGGER.warning("Hearth couldn't %s for %s through %s: %s", "hold" if hold else "let go", person, kind, err)
-                held.error, held.failed_at = str(err)[:200], now
+                loading = _not_loaded_yet(
+                    self.hass, err, held.entity_id or entity_id, now - self._started < LOADING_WINDOW
+                )
+                (_LOGGER.debug if loading else _LOGGER.warning)(
+                    "Hearth couldn't %s for %s through %s: %s", "hold" if hold else "let go", person, kind, err
+                )
+                # Not loaded yet: tried again in 30 s rather than 5 minutes
+                held.error, held.failed_at = str(err)[:200], (now - RETRY + RETRY_NOT_LOADED) if loading else now
                 self.note(key, held=sorted(hold), let_go=sorted(let_go), error=held.error)
             finally:
                 self._busy.discard(key)
@@ -1950,6 +1962,17 @@ def _forget_pauses(held: Held, packages: set[str]) -> None:
         held.restore[PAUSES_NOT_TAKEN] = not_taken
     else:
         held.restore.pop(PAUSES_NOT_TAKEN, None)
+
+
+def _not_loaded_yet(hass: HomeAssistant, err: Exception, entity_id: str | None, starting: bool) -> bool:
+    """Whether a failed call failed only because the parental control's integration hasn't loaded yet (just after
+    Home Assistant starts): its action isn't registered, or ([starting]) its entity has no state yet."""
+    if isinstance(err, ServiceNotFound):
+        return True
+    if not starting:
+        return False
+    state = hass.states.get(entity_id) if entity_id else None
+    return state is None or state.state in ("unavailable", "unknown")
 
 
 def _number(value: Any) -> float | None:

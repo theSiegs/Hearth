@@ -389,6 +389,26 @@ async def test_a_failure_is_shown_and_tried_again(
     assert len(calls) == 2
 
 
+async def test_a_parental_control_still_loading_is_tried_again_in_30_seconds(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Just after Home Assistant starts, Family Link's actions may not be there yet: Hearth tries again in 30 s, not
+    5 minutes, and doesn't warn about it."""
+    await _household_with_sam(hass, hass_client_no_auth)
+    async_mock_service(hass, "familylink", "resume_app")
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
+    await _budget(hass, "video", 10)
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    assert "not found" in household.enforcement.status_of("person.sam")["family_link"]["error"]
+
+    paused = async_mock_service(hass, "familylink", "pause_app")  # Family Link has loaded
+    freezer.tick(enforce.RETRY_NOT_LOADED)
+    household.recompute()
+    await hass.async_block_till_done()
+    assert len(paused) == 1
+    assert household.enforcement.status_of("person.sam")["family_link"]["error"] is None
+
+
 async def test_a_sync_error_clears_once_there_s_nothing_to_hold(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:
