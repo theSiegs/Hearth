@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **Sleep in Hearth's weekly schedule locks a kid's phone and tablet** when Family Link has no bedtime of its own for them. Sleep locked the Xbox and the Switch, but left Family Link devices to Family Link's own bedtime, so a kid whose bedtime is only in Hearth's schedule kept their phone. A Family Link bedtime that's on still does it itself (with its calls and alarms).
+
 ## 2026.11.45
 
 ### Home Assistant integration

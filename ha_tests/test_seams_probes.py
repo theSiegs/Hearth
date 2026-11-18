@@ -220,6 +220,31 @@ async def test_pause_screens_holds_a_family_link_only_phone(
     assert limits or paused, "the phone is open through Pause screens"
 
 
+async def test_the_schedule_s_sleep_locks_a_family_link_phone_without_a_bedtime_of_its_own(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Hearth's weekly schedule says Sleep at 9 and Family Link has no bedtime for Sam: the phone is locked whole (it
+    used to be left open, Family Link's own bedtime being expected to do it). With a Family Link bedtime on, Family
+    Link locks it itself and Hearth doesn't."""
+    freezer.move_to(_at(21, 30))
+    paused = async_mock_service(hass, "familylink", "pause_app")
+    async_mock_service(hass, "familylink", "resume_app")
+    limits = await _sam_with_family_link(hass, hass_client_no_auth)
+    _installed(hass, ["com.example.chat", HEARTHTUBE])
+    await _schedule(hass, days=["every_day"], changes=[{"at": "07:00", "mode": "free"}, {"at": "21:00", "mode": "sleep"}])
+    await hass.async_block_till_done()
+    household = _household(hass)
+    assert "Devices" in household.enforcement.status_of(SAM)["family_link"]["held"]
+    assert limits or paused
+
+    # Family Link's own bedtime is on: Hearth lets its lock go
+    hass.states.async_set("binary_sensor.sam_phone_bedtime_active", "on", {"child_id": CHILD})
+    freezer.tick(timedelta(minutes=2))
+    household.recompute()
+    await hass.async_block_till_done()
+    assert household.sleep_locks_devices(SAM) is False
+
+
 # 6. Chrome is "com.android.*", which Hearth's per-app holds treat as the system (enforce.essential)
 
 

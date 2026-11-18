@@ -103,7 +103,7 @@ from .native_sync import NativeSync
 from .backstop import Backstop
 from .unlimited import Unlimited
 from .activity import RULE, ActivityLog
-from .bedtime_lift import BedtimeLifts, in_family_link_bedtime, lift_minutes
+from .bedtime_lift import BedtimeLifts, bedtime_sensors, in_family_link_bedtime, lift_minutes
 from . import family_link as fl
 from .todos import ChoreBook
 from .schedule import Scheduler
@@ -644,6 +644,20 @@ class Household:
         if lock is not None and not (lock == "bedtime" and self.bedtime_lift.until(person) is not None):
             found.add(ALL)
         return found
+
+    def sleep_locks_devices(self, person: str) -> bool:
+        """Whether the weekly schedule's Sleep locks the person's Family Link devices whole now: it's Sleep, extra time
+        doesn't lift it, and Family Link has no bedtime of its own for them: none of their devices' Bedtime active
+        sensors names a window (one set in Family Link locks the devices itself, with its calls and alarms; its sensor
+        can read off for a poll or two after extra time ends, which mustn't lock and unlock the phone)."""
+        if self.schedule_lock(person) != "bedtime" or self.bedtime_lift.until(person) is not None:
+            return False
+        child = self.family_link_child(person)
+        if child is None:
+            return False
+        return not any(
+            s.state == "on" or s.attributes.get("bedtime_start") for s in bedtime_sensors(self.hass, child)
+        )
 
     def week_people(self) -> list[str]:
         """The people with a weekly schedule of their own: the kids."""
@@ -1346,6 +1360,7 @@ class Household:
             device_lifted_of=self._device_lifted,
             paused_groups_of=lambda person: self.paused_groups(person, now),
             closed_of=self.schedule_holds,
+            sleep_locks_devices_of=self.sleep_locks_devices,
             exempt_of=self.client_exempt(),
             blocked_of=self.blocks.blocked_packages,
         )

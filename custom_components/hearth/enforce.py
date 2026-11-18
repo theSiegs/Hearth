@@ -652,6 +652,7 @@ class Enforcement:
         exempt_of=None,
         blocked_of=None,
         budget_lifted_of=None,
+        sleep_locks_devices_of=None,
     ) -> None:
         """[apps_of]: a group id's packages for a person (for All screen time, every app of theirs). [lifted_of]: what
         a person's allows lift (Lifted); [school_time_of]: whether an enforcer's child is in School time now;
@@ -663,7 +664,9 @@ class Enforcement:
         [spared]: packages never paused, for any reason (the accessibility apps: household.never_held);
         [exempt_of]: the packages Family Link never pauses for a person (their paired devices' clients);
         [blocked_of]: the packages Hearth's blocks hold for a person (app_blocks.py): never paused or resumed, so one
-        paused when it was blocked stays as held (Family Link's resume_app skips a blocked app anyway)."""
+        paused when it was blocked stays as held (Family Link's resume_app skips a blocked app anyway);
+        [sleep_locks_devices_of]: whether the weekly schedule's Sleep locks a person's Family Link devices whole (no
+        Family Link bedtime of their own: household.sleep_locks_devices)."""
         self.enforcers = enforcers
         now = dt_util.now()
         wanted_now: dict[str, set[str]] = {}
@@ -719,6 +722,10 @@ class Enforcement:
             )
             if e.kind == FAMILY_LINK:
                 scheduled -= self._always_allowed(e.entity_id)
+                # The schedule's Sleep for a kid without a Family Link bedtime: their devices are locked whole, as a
+                # family pause does (nothing else would hold a phone or tablet without a Hearth app)
+                if sleep_locks_devices_of and sleep_locks_devices_of(e.person):
+                    scheduled.add(DEVICES)
             device_lifted = device_lifted_of(e) if device_lifted_of else set()
             wanted_now[e.key] = (budget | school | paused | scheduled) - granted - device_lifted - set(spared)
             if e.kind == FAMILY_LINK and exempt_of:
