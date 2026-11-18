@@ -378,13 +378,14 @@ async def test_an_empty_app_list_without_apps_still_tells_what_s_installed(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
     """Family Link's sensor for an empty list (no always-allowed apps, say) has state 0 and no "apps" at all: that's
-    an empty list, so apps the kid doesn't have are still left out of a pause."""
+    an empty list (whose sensor has no child_id either: it's the kid's by its name), so apps the kid doesn't have are
+    still left out of a pause."""
     paused = async_mock_service(hass, "familylink", "pause_app")
     async_mock_service(hass, "familylink", "resume_app")
     await _household_with_sam(hass, hass_client_no_auth)
     hass.states.async_set(FAMILY_LINK, "0", {"unit_of_measurement": "min", "child_id": CHILD})
     _installed(hass, ["com.thesiegs.hearthtube"])
-    hass.states.async_set("sensor.sam_family_link_always_allowed_apps", "0", {"child_id": CHILD})
+    hass.states.async_set("sensor.sam_family_link_always_allowed_apps", "0", {"friendly_name": "Always allowed apps"})
     await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
     await _budget(hass, "video", 10)
     assert paused[0].data["packages"] == ["com.thesiegs.hearthtube"]

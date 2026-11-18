@@ -214,6 +214,26 @@ def app_limits(hass: HomeAssistant, child: str) -> list[dict[str, Any]]:
 INSTALLED_LISTS = ("_blocked_apps", "_apps_with_time_limits", "_apps_without_limits", "_always_allowed_apps")
 
 
+def _child_lists(hass: HomeAssistant, child: str) -> list[tuple[str, Any]]:
+    """(suffix, state) of the child's Family Link app list sensors. An empty list's sensor carries no attributes at
+    all, not even child_id: it is the child's when its entity id has the same name as one of their other lists."""
+    lists: list[tuple[str, Any]] = []
+    prefixes: set[str] = set()
+    unclaimed: list[tuple[str, Any]] = []
+    for state in hass.states.async_all("sensor"):
+        suffix = next((s for s in INSTALLED_LISTS if state.entity_id.endswith(s)), None)
+        if suffix is None:
+            continue
+        owner = state.attributes.get("child_id")
+        if owner is None:
+            unclaimed.append((suffix, state))
+        elif str(owner) == child:
+            lists.append((suffix, state))
+            prefixes.add(state.entity_id[: -len(suffix)])
+    lists.extend((suffix, state) for suffix, state in unclaimed if state.entity_id[: -len(suffix)] in prefixes)
+    return lists
+
+
 def _apps_of(state) -> list | None:
     """A Family Link app list sensor's apps; an empty list carries no "apps" at all (state 0), which is none, not
     unknown."""
@@ -228,10 +248,7 @@ def installed_apps(hass: HomeAssistant, child: str) -> set[str] | None:
     (a list missing, or cut short to fit Home Assistant's attribute limit)."""
     found: set[str] = set()
     seen: set[str] = set()
-    for state in hass.states.async_all("sensor"):
-        suffix = next((s for s in INSTALLED_LISTS if state.entity_id.endswith(s)), None)
-        if suffix is None or str(state.attributes.get("child_id")) != child:
-            continue
+    for suffix, state in _child_lists(hass, child):
         apps = _apps_of(state)
         if not isinstance(apps, list) or state.attributes.get("truncated"):
             return None
@@ -249,10 +266,7 @@ def app_lists(hass: HomeAssistant, child: str) -> tuple[set[str], set[str] | Non
     was cut short: whether an app is blocked can't be told then)."""
     listed: set[str] = set()
     blocked: set[str] | None = None
-    for state in hass.states.async_all("sensor"):
-        suffix = next((s for s in INSTALLED_LISTS if state.entity_id.endswith(s)), None)
-        if suffix is None or str(state.attributes.get("child_id")) != child:
-            continue
+    for suffix, state in _child_lists(hass, child):
         apps = _apps_of(state)
         packages = {
             package

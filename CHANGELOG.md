@@ -15,6 +15,8 @@
 
 - **Each kid's state document says tomorrow's minutes and first lock** (`tomorrow`: each group's base minutes for tomorrow's kind of day, no bonus time, and the schedule's School time), **each extra time's end with the minutes left after it** (`lifts`), and **the next lock's end** (`next_lock.until`), so a TV that loses Home Assistant goes on by its last word.
 
+- **The empty-list fix of 2026.11.43 works with Family Link as it is.** The empty list's sensor has no `child_id` either, so it wasn't seen as the kid's; it is now, by its name beside the kid's other lists.
+
 ## 2026.11.43
 
 ### Home Assistant integration
