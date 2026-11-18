@@ -241,4 +241,6 @@ async def test_a_lifted_bedtime_is_the_next_lock_when_its_extra_time_ends(
     sam = await _sam_state(hass, client, secret)
     assert sam["locked"] is False
     back = dt_util.now().replace(hour=22, minute=15, second=0, microsecond=0)
-    assert sam["next_lock"] == {"at": back.isoformat(), "by": BEDTIME, "kind": "bedtime"}
+    # With the bedtime's own end (Family Link's bedtime_end) for a TV that starts it by itself
+    wake = (back + timedelta(days=1)).replace(hour=7, minute=0)
+    assert sam["next_lock"] == {"at": back.isoformat(), "by": BEDTIME, "kind": "bedtime", "until": wake.isoformat()}

@@ -90,7 +90,7 @@ async def test_family_safety_downtime_is_a_bedtime(
 
     body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
     upcoming = body["state"]["profiles"][KID]["next_lock"]
-    assert upcoming == {"at": start.isoformat(), "by": downtime, "kind": "bedtime"}
+    assert upcoming == {"at": start.isoformat(), "by": downtime, "kind": "bedtime", "until": end.isoformat()}
 
     hass.states.async_set(downtime, "on", attributes)
     await hass.async_block_till_done()

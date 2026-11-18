@@ -760,25 +760,49 @@ class Household:
                 "kinds": kinds,
                 "until": dt_util.as_local(until).isoformat() if until else None,
             }
+        # Each with its end ("until") where it's known, for a device that starts it by itself: a lock entity's own end
+        # time, the schedule's next change (wake for Sleep)
         upcoming = next_lock(self.hass, self._lock_entities(person))
         if scheduled is not None and scheduled.next_lock is not None:
             at, kind = scheduled.next_lock
+            ends = scheduled.next_lock_until
             if kind == "school_time" and self.scheduler.off_now(person, at) is not None:
                 # School time taken off isn't coming (schedule_lock): a device that locks at next_lock by itself
                 # mustn't. Tonight's Sleep is the next one then
                 later = scheduled.bedtime
                 at, kind = (later if later is not None and later > dt_util.now() else None), "bedtime"
+                ends = scheduled.wake
             if at is not None and (upcoming is None or at < dt_util.parse_datetime(upcoming["at"])):
                 upcoming = {"at": dt_util.as_local(at).isoformat(), "by": SCHEDULE, "kind": kind}
+                if ends is not None and ends > at:
+                    upcoming["until"] = dt_util.as_local(ends).isoformat()
         # A lifted bedtime comes back when its extra time ends: said as the next lock, so a device that loses Home
         # Assistant meanwhile brings bedtime back itself
         if (back := self._bedtime_back(person)) is not None and (
             upcoming is None or back[0] < dt_util.parse_datetime(upcoming["at"])
         ):
             upcoming = {"at": dt_util.as_local(back[0]).isoformat(), "by": back[1], "kind": "bedtime"}
+            if (ends := self._bedtime_end(person, back[1])) is not None and ends > back[0]:
+                upcoming["until"] = dt_util.as_local(ends).isoformat()
         if upcoming:
             out["next_lock"] = upcoming
         return out
+
+    def _bedtime_end(self, person: str, by: str) -> datetime | None:
+        """When a bedtime held by [by] ends: the schedule's (its Sleep's end now, else the next wake), else the lock
+        entity's own end time (Family Link's bedtime_end, Family Safety's downtime_end)."""
+        if by == SCHEDULE:
+            scheduled = self.schedule_now.get(person)
+            if scheduled is None:
+                return None
+            if self.schedule_lock(person) == "bedtime" and scheduled.until is not None:
+                return scheduled.until
+            return scheduled.wake
+        if (end := lock_until(self.hass, [by])) is not None:
+            return end
+        tonight = self._locks_bedtime(person)
+        wake = dt_util.parse_datetime(tonight["end"]) if tonight else None
+        return wake + timedelta(days=1) if wake else None
 
     def _bedtime_back(self, person: str) -> tuple[datetime, str] | None:
         """While extra time lifts the person's bedtime: when it ends and which bedtime is back then (a lock entity
@@ -1870,9 +1894,13 @@ class Household:
                 if spared:
                     entry["except"] = sorted(spared)
             groups.append(entry)
+        sent = {g["id"]: g for g in groups}
         groups += self._paused_groups_document(person, membership)
         groups += self._closed_groups_document(person, membership, self.allows.lifted(person))
         return {
+            # For a device that loses Home Assistant: each lift's end and the minutes after it, and tomorrow's minutes
+            **({"lifts": lifts} if (lifts := self._lifts_document(person, day, membership, lifted)) else {}),
+            **({"tomorrow": ahead} if (ahead := self._tomorrow_document(person, sent, membership)) else {}),
             "person": person,
             "groups": groups,
             # Today's time, bonus time and category limits as a person is shown them (docs/contracts/time-model.md)
@@ -1900,6 +1928,85 @@ class Household:
             # Their own allows that end on a place: "ends when you get home". Never where they are
             **({"allow_ends": ends} if (ends := self._allow_ends(person)) else {}),
         }
+
+    def _lifts_document(self, person: str, day: PersonDay | None, membership, lifted: Lifted) -> list[dict[str, Any]]:
+        """Each group with a limit that's left out of the document because something lifts it for a while, with what
+        holds it again after, for a device that loses Home Assistant meanwhile: [{group, name, until (an allow's or
+        Unlimited's end, before midnight), minutes (its own bonus left, spent first), minutes_after, apps (a category)
+        or except (daily time), in_daily (its apps count in daily time again after)}]. A lift that lasts until
+        midnight isn't listed (the new day starts over)."""
+        if not lifted or day is None:
+            return []
+        now = dt_util.now()
+        midnight = end_of_day(now)
+        allows = self.allows.of(person)
+        outside = self.outside_all()
+        out = []
+        for group in self.groups:
+            state = day.limits.get(group.id)
+            if state is None or state.budget_min is None or not lifted.group(group.id):
+                continue
+            ends = [
+                a.until[person]
+                for a in allows
+                if (a.group == ALL or (a.group == group.id and group.id != ALL)) and person in a.until
+            ]
+            until = max(ends) if ends else None
+            if until is not None and until >= midnight:
+                continue
+            bonus = state.cat_bonus_left if group.id != ALL and group.id in lifted.groups else 0
+            if until is None and bonus <= 0:
+                continue
+            entry: dict[str, Any] = {"group": group.id, "name": group.name}
+            if until is not None:
+                entry["until"] = dt_util.as_local(until).isoformat()
+            if bonus > 0:
+                entry["minutes"] = int(bonus)
+            # A category's minutes left count its own bonus too: what's left of its limit once that's spent
+            entry["minutes_after"] = max(0, int(state.minutes_left or 0) - bonus)
+            if group.id == ALL:
+                entry["except"] = sorted(self._spared(membership))
+            else:
+                entry["apps"] = self._held_apps(group, membership)
+                entry["in_daily"] = group.id not in outside
+            out.append(entry)
+        return out
+
+    def _tomorrow_document(
+        self, person: str, sent: dict[str, dict[str, Any]], membership
+    ) -> dict[str, Any] | None:
+        """Tomorrow's base minutes per group (its kind of day, no bonus time), for a device that starts the day without
+        Home Assistant: {date, groups [{id, minutes, name, apps or except where they differ from today's [sent]}],
+        daily_minutes, next_lock {at, by, kind, until} (the weekly schedule's first Sleep or School after waking)}."""
+        tomorrow = (self.today or dt_util.now().date()) + timedelta(days=1)
+        budget = self.budget_on(person, tomorrow)
+        groups = []
+        for group in self.groups:
+            minutes = budget.get(group.id)
+            if minutes is None:
+                continue
+            entry: dict[str, Any] = {"id": group.id, "minutes": int(minutes)}
+            today = sent.get(group.id)
+            if group.id == ALL:
+                spared = sorted(self._spared(membership))
+                if today is None or sorted(today.get("except") or []) != spared:
+                    entry.update(name=group.name, apps=[], **({"except": spared} if spared else {}))
+            else:
+                apps = self._held_apps(group, membership)
+                if today is None or today.get("apps") != apps:
+                    entry.update(name=group.name, apps=apps)
+            groups.append(entry)
+        if not groups:
+            return None
+        out: dict[str, Any] = {"date": tomorrow.isoformat(), "groups": groups, "daily_minutes": budget.get(ALL)}
+        zone = dt_util.get_default_time_zone()
+        if (first := self.week.first_lock_on(person, tomorrow, zone)) is not None:
+            at, kind, until = first
+            if not (kind == "school_time" and self.scheduler.off_now(person, at) is not None):
+                out["next_lock"] = {"at": dt_util.as_local(at).isoformat(), "by": SCHEDULE, "kind": kind}
+                if until is not None and until > at:
+                    out["next_lock"]["until"] = dt_util.as_local(until).isoformat()
+        return out
 
     def _allow_ends(self, person: str) -> list[dict[str, Any]]:
         return [

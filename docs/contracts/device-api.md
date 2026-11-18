@@ -72,6 +72,30 @@ A client may send `utc_offset_minutes` at the top level of each status post: its
 check, and the adults hear once per time zone that the device "is set to another time zone (UTC-8)". A Hearth before
 2026.11.28 ignores the field.
 
+## Without Home Assistant for a while (additive, within contract 3)
+
+A device that loses Home Assistant keeps its last word (Home Assistant's rules win while paired). Each person's state
+document carries what that word needs to go on, and an older Hearth leaves it out:
+
+- `next_lock.until`: when the next lock would end if the device starts it itself: a lock entity's own end
+  (Family Link's `bedtime_end` or `schooltime_end`, Family Safety's `downtime_end`), the weekly schedule's next change
+  (wake for Sleep), or for a lifted bedtime the bedtime's own end. Missing when nothing says; a device then takes the
+  weekly schedule's wake time (`schedule.bedtime.wake`).
+- `tomorrow`: `{date, groups: [{id, minutes}], daily_minutes, next_lock}`. Each group's base minutes for tomorrow's kind
+  of day (its day type and the weekly schedule, no bonus time), daily time's as `daily_minutes` (null without a
+  limit). A group whose apps tomorrow aren't today's group's in `groups` (left out today, or its `apps`/`except`
+  changed by an allow) carries `name` and `apps` (daily time: `except`). `next_lock` is the weekly schedule's first Sleep
+  or School after waking `{at, by: "schedule", kind, until}`, missing when there's none or School time is off. A
+  device that starts a new day before Home Assistant answers counts each group down from these minutes, and holds the
+  new day's `next_lock` once the night's lock is over.
+- `lifts`: `[{group, name, until, minutes, minutes_after, apps or except, in_daily}]`, one per group with a limit that
+  something lifts for a while and is left out of `groups` for it: an allow of the group or Unlimited with an end
+  before midnight (`until`), a category's own bonus (`minutes`: its bonus left, spent first). `minutes_after` is what's
+  left of the group's limit once the lift is over; `in_daily` says its apps count in daily time again then (daily
+  time's `except` loses them). A lift that lasts until midnight isn't listed. A device that hasn't heard from Home
+  Assistant since `until` (3 minutes on), or whose group's apps have been in front for `minutes` since the last word,
+  holds the group again with `minutes_after`, counted down by its own time in front.
+
 ## New in contract 3
 
 ### `client`

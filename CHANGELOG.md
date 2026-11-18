@@ -3,6 +3,18 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### TV
+
+- **A new day with Home Assistant away keeps its limits.** At midnight the TV dropped every minute, so a kid had no limits at all until Home Assistant came back; it now starts each group from the minutes Home Assistant gave for tomorrow (from today's base minutes with an older Home Assistant) and counts them down itself, and holds the new day's School time.
+- **Extra time ends with Home Assistant away.** An allow or Unlimited with an end, or a category's own bonus, kept its group open until midnight once Home Assistant was unreachable; the group is held again when it ends, with the minutes Home Assistant said are left after it.
+- **A bedtime the TV starts itself ends when Home Assistant says**, Family Link's or Family Safety's own end time where it's known; the weekly schedule's wake time is kept for an older Home Assistant.
+
+### Home Assistant integration
+
+- **Each kid's state document says tomorrow's minutes and first lock** (`tomorrow`: each group's base minutes for tomorrow's kind of day, no bonus time, and the schedule's School time), **each extra time's end with the minutes left after it** (`lifts`), and **the next lock's end** (`next_lock.until`), so a TV that loses Home Assistant goes on by its last word.
+
 ## 2026.11.43
 
 ### Home Assistant integration

@@ -263,7 +263,7 @@ async def test_family_safety_downtime_says_when_it_starts_and_ends(
     await _option(hass, "locks", {"person": SAM, "entities": [downtime]})
 
     sam = await _document(client, secret, hearthtube_s=60)
-    assert sam.get("next_lock") == {"at": start.isoformat(), "by": downtime, "kind": "bedtime"}
+    assert sam.get("next_lock") == {"at": start.isoformat(), "by": downtime, "kind": "bedtime", "until": end.isoformat()}
     assert _household(hass).bedtime_tonight(SAM) is not None
 
     hass.states.async_set(downtime, "on", attributes)

@@ -21,7 +21,7 @@ a bedtime here.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from homeassistant.core import HomeAssistant, callback
@@ -239,17 +239,25 @@ def lock_kinds(hass: HomeAssistant, by: list[str], schedule_kind: str | None = N
 
 
 def next_lock(hass: HomeAssistant, entity_ids: list[str], now: datetime | None = None) -> dict[str, Any] | None:
-    """The next lock to start, of those that are off: {at (ISO), by (entity), kind (bedtime / school_time)}."""
+    """The next lock to start, of those that are off: {at (ISO), by (entity), kind (bedtime / school_time), until (ISO,
+    the entity's own end of it: bedtime_end, downtime_end, schooltime_end, when it says one)}."""
     now = now or dt_util.now()
-    best: tuple[datetime, str, str] | None = None
+    best: tuple[datetime, str, str, datetime | None] | None = None
     for entity_id in entity_ids:
         state = hass.states.get(entity_id)
         if state is None or state.state == "on":
             continue
-        for key in _STARTS:
+        for key, end_key in zip(_STARTS, _ENDS, strict=True):
             start = _local(state.attributes.get(key))
             if start is not None and start > now and (best is None or start < best[0]):
-                best = (start, entity_id, "school_time" if key.startswith("school") else "bedtime")
+                end = _local(state.attributes.get(end_key))
+                # A bedtime's end is a morning's time: the morning after its start
+                while end is not None and end <= start:
+                    end += timedelta(days=1)
+                best = (start, entity_id, "school_time" if key.startswith("school") else "bedtime", end)
     if best is None:
         return None
-    return {"at": dt_util.as_local(best[0]).isoformat(), "by": best[1], "kind": best[2]}
+    out = {"at": dt_util.as_local(best[0]).isoformat(), "by": best[1], "kind": best[2]}
+    if best[3] is not None:
+        out["until"] = dt_util.as_local(best[3]).isoformat()
+    return out
