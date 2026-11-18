@@ -1,12 +1,38 @@
-# Device API, contract 3
+# Device API, contract 4
 
 Owner: Hearth (the Home Assistant integration). This is what any app paired with Hearth (a "client") may rely on:
 Hearth TV, a phone launcher, or any other app. The full endpoint reference is
 [home-assistant-integration.md, The device's side of the API](../home-assistant-integration.md#the-devices-side-of-the-api);
-this page says what contract 3 adds, and what Hearth reads and doesn't.
+this page says what contracts 3 and 4 add, and what Hearth reads and doesn't.
 
-Contract 3 is additive: a contract-2 client keeps working. Every answer carries `contract` (now `3`). A reader
+Contract 3 is additive: a contract-2 client keeps working. Every answer carries `contract` (now `4`). A reader
 ignores fields it doesn't know.
+
+## New in contract 4: parent PINs are no longer sent to TVs
+
+Contract 4 takes a field away, so the number went up. A TV's state document no longer carries `parent_pins` (the
+adults' Parent PIN hashes) for a TV that speaks contract 4. A Parent PIN has 10,000 possible values, so anyone who
+got that list (on the home network, from plain HTTP) could try them all in under a minute, with no lockout.
+
+- `parent_pins_version` stays: it changes whenever an adult's Parent PIN is set, changed or removed, and is gone when
+  Home Assistant has none.
+- A contract-4 TV asks `verify_pin` for every PIN, and Home Assistant's answer and lockout are final. It keeps,
+  sealed with an Android Keystore key, only the PINs typed on it that `verify_pin` confirmed, tagged with the
+  version they were confirmed under. A `{"ok": false}` drops a kept PIN that matches; a new version drops them all;
+  a 429 (locked out) counts as a no that keeps what was learned.
+- With Home Assistant unreachable, only a PIN kept on that TV works (or one another TV of the household learned
+  from Home Assistant and vouches for, see [household-sync.md, Parent PIN](../household-sync.md#parent-pin)).
+- Which contract a TV speaks: the higher of the `client.contract` locked at pairing and the one in its latest status.
+  So a post that names an older contract can't take a TV back to being sent the hashes.
+
+**Staged migration.** This integration release still sends `parent_pins` to a TV that reports a contract below 4
+(it has no other way to check a PIN offline). The next integration release stops sending them to anyone. Hashes
+an older integration sent are never read by a contract-4 TV; ones it kept before the update still work until the
+version changes. The hashes stay in Home Assistant's config entry (and so in its backups): this change doesn't
+protect them there. Once every TV is updated, each adult sets a new Parent PIN, since an old hash may already have
+been copied.
+
+A phone was never sent hashes: nothing changes for a phone, and a contract-3 client keeps working.
 
 ## Already there, unchanged
 
@@ -139,8 +165,8 @@ A right PIN at `POST /api/hearth/device/<id>/verify_pin` now answers:
 - For this device only, for 120 seconds, for at most 8 client-settings writes it couldn't make on its own. Each such
   write is kept with `updated_by: "pin"`.
 - A device holds one grant at a time: a new one replaces it.
-- Only Home Assistant's check of an adult's Parent PIN mints one. A PIN a device checks itself (a TV's copy of the
-  hashes, a phone's own PIN) never does.
+- Only Home Assistant's check of an adult's Parent PIN mints one. A PIN a device checks itself (one a TV learned,
+  a phone's own PIN) never does.
 - Give it as `"grant"` in the write's body, or in the `X-Hearth-Grant` header.
 
 ### Client settings

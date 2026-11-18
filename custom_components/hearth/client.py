@@ -122,6 +122,16 @@ def client_matches(device: dict[str, Any], status: dict[str, Any] | None) -> boo
     return reported.get("id") == pinned.get("id")
 
 
+def device_contract(device: dict[str, Any], status: dict[str, Any] | None) -> int:
+    """The highest device contract a device has spoken: the one it reports in its status or the one locked at
+    pairing, so a post that names an older contract can't take a device back below what it paired with. 0 when
+    neither says one."""
+    return max(
+        int(((device or {}).get("client") or {}).get("contract") or 0),
+        int(((status or {}).get("client") or {}).get("contract") or 0),
+    )
+
+
 def checks_of(device: dict[str, Any], status: dict[str, Any] | None) -> list[dict[str, Any]]:
     """What a device's row shows: its own checks as given, then Hearth's client check when the client it reports isn't
     the one it paired with, and its clock check when its last status was for another day than Hearth's."""

@@ -193,6 +193,71 @@ async def test_a_tv_takes_the_adults_pins_and_reports_its_lockouts(
     assert parent_pin.matches(body["state"]["parent_pins"][0]["hash"], OTHER_PIN)
 
 
+async def test_a_contract_4_tv_is_sent_no_hashes_only_the_version(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """Contract 4: a TV asks verify_pin and keeps only PINs confirmed on it, so it is never sent the hashes. The
+    version still comes, so it can drop what it learned when an adult's PIN changes."""
+    from test_people import _tv_status
+    from test_init import _post
+
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    await _adults(hass, "person.alex")
+    await _option(hass, "parent_pin", {"person": "person.alex", "pin": PIN, "pin_again": PIN})
+    tv = {"id": "com.thesiegs.hearth", "version": "2026.11.41", "contract": 4}
+    status = {**_tv_status(hearthtube_s=60), "client": tv}
+    body = await (await _post(client, secret, body=status)).json()
+    assert "parent_pins" not in body["state"]
+    version = body["state"]["parent_pins_version"]
+    assert body["contract"] == 4
+
+    # Even a TV that says it holds an older version (or none) gets no hashes
+    for said in (None, "0" * 16):
+        body = await (await _post(client, secret, body={**status, "parent_pins_version": said})).json()
+        assert "parent_pins" not in body["state"] and body["state"]["parent_pins_version"] == version
+
+    # A changed PIN changes the version (the TV drops what it learned), still with no hash
+    await _option(hass, "parent_pin", {"person": "person.alex", "pin": OTHER_PIN, "pin_again": OTHER_PIN})
+    body = await (await _post(client, secret, body={**status, "parent_pins_version": version})).json()
+    assert "parent_pins" not in body["state"] and body["state"]["parent_pins_version"] != version
+    changed = body["state"]["parent_pins_version"]
+
+    # Removed: no version either (a TV keeps what it learned, as when unpaired)
+    await _option(hass, "parent_pin", {"person": "person.alex", "remove": True})
+    body = await (await _post(client, secret, body={**status, "parent_pins_version": changed})).json()
+    assert "parent_pins" not in body["state"] and "parent_pins_version" not in body["state"]
+
+    # The PIN is still checked for it
+    await _option(hass, "parent_pin", {"person": "person.alex", "pin": PIN, "pin_again": PIN})
+    assert (await (await _verify(client, secret, PIN)).json())["ok"] is True
+    assert await (await _verify(client, secret, OTHER_PIN)).json() == {"ok": False}
+
+
+async def test_an_older_tv_is_still_sent_the_hashes_until_it_updates(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """Staged migration: a TV below contract 4 can't learn PINs, so it still gets the hashes; once it reports
+    contract 4 (or paired with it) it gets none, and naming an older contract later doesn't bring them back."""
+    from test_people import _tv_status
+    from test_init import _post
+
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    await _adults(hass, "person.alex")
+    await _option(hass, "parent_pin", {"person": "person.alex", "pin": PIN, "pin_again": PIN})
+    old = {**_tv_status(hearthtube_s=60), "client": {"id": "com.thesiegs.hearth", "contract": 3}}
+    body = await (await _post(client, secret, body=old)).json()
+    assert parent_pin.matches(body["state"]["parent_pins"][0]["hash"], PIN)
+
+    # Paired with contract 4 (the client locked at pairing): a post naming 3 gets no hashes
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    devices = {**entry.data["devices"]}
+    devices[TV_ID] = {**devices[TV_ID], "client": {"id": "com.thesiegs.hearth", "contract": 4, "companions": []}}
+    hass.config_entries.async_update_entry(entry, data={**entry.data, "devices": devices})
+    await hass.async_block_till_done()
+    body = await (await _post(client, secret, body=old)).json()
+    assert "parent_pins" not in body["state"] and body["state"]["parent_pins_version"]
+
+
 async def test_guesses_sent_all_at_once_never_get_past_the_free_tries(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:

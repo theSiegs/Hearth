@@ -29,7 +29,7 @@ async def test_the_household_at_a_glance(
     body = answer["result"]
     people = {p["id"]: p for p in body["people"]}
     assert people["person.alex"]["kind"] == "adult" and people["person.alex"]["kind_set"] is True
-    assert body["contract"] == 3
+    assert body["contract"] == 4
     sam = people["person.sam"]
     assert sam["name"] == "Sam"
     assert sam["tv_profiles"] == ["name:sam"]

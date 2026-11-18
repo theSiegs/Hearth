@@ -1340,7 +1340,7 @@ The answer to each status post carries the person's (or, on a TV, each profile's
   "adult_phones": {"user:0:alex": ["mobile_app_alex_phone"]},
   "parent_pins_version": "…",
   "version": "3f9c1a0b2d4e5f60",
-  "contract": 3
+  "contract": 4
 }
 ```
 
@@ -1396,8 +1396,8 @@ directly on the home network; the mailbox is for devices that are rarely on at t
 
 ### Contract
 
-`contract` (an integer, now 3) says which shape of the device API and the household summary this is: in the approved
-pair answer, every status answer (`{"ok": true, "contract": 3, "state": {...}}`), every state document and the
+`contract` (an integer, now 4) says which shape of the device API and the household summary this is: in the approved
+pair answer, every status answer (`{"ok": true, "contract": 4, "state": {...}}`), every state document and the
 summary. A device may send its own in its status (`contract`). It goes up only when a field changes meaning or type,
 becomes required, or goes away; an added field doesn't change it, so a reader ignores fields it doesn't know. It's
 apart from `version`, which changes with the content. A phone's person document also says `kind` (`kid`, `adult` or
@@ -1413,6 +1413,10 @@ answers a short-lived grant; paired apps keep small documents of their own in He
 ([contracts/client-settings.md](contracts/client-settings.md)); `share_app_data` replaces `tile_exchange_share` (retired since: always false); and a
 device's `catalog_categories` is no longer read. A paired app's own packages are never paused for its person, so no
 app is named in Hearth's code any more.
+
+Contract 4 takes `parent_pins` (the adults' Parent PIN hashes) out of a TV's state document: a TV asks `verify_pin`
+and keeps only PINs confirmed on it ([Parent PINs](#which-parent-pin-works-when),
+[contracts/device-api.md](contracts/device-api.md#new-in-contract-4-parent-pins-are-no-longer-sent-to-tvs)).
 
 ### Ask for more
 
@@ -1533,7 +1537,7 @@ commands takes a person or any other key: an extra key gets Home Assistant's `in
   },
   "media_rooms": [],
   "version": "3f1c2a9b0d4e5f67",
-  "contract": 3
+  "contract": 4
 }
 ```
 
@@ -1881,7 +1885,7 @@ whole summary, from a test (with a grant of Sam's from the Nintendo app added by
 
 ```json
 {
-  "contract": 3,
+  "contract": 4,
   "people": [
     {
       "id": "person.alex",
@@ -2477,7 +2481,7 @@ notification.
 (see [Device status](#device-status)), at most 64 KB. 200 (below); 401 `not_paired` for an unknown device or
 wrong secret (it was removed: stop posting and offer to pair again); 429 `too_often` past 20 posts a minute; 400
 `bad_request`. A refused secret is a plain 401, never a failed Home Assistant login, so it doesn't count toward Home
-Assistant's IP ban. The 200 answer carries the device's state document, `{"ok": true, "contract": 3, "state": {...}}` (see
+Assistant's IP ban. The 200 answer carries the device's state document, `{"ok": true, "contract": 4, "state": {...}}` (see
 [What a device gets](#what-a-device-gets)). Every device endpoint answers 503 `not_set_up` while the integration is
 loading: try again, don't unpair. A TV with screen-time rules of its own (set before it was paired, household-sync.md "Screen time without Home
 Assistant") sends them as `local_rules`, `{"<profile_id>": {"all": {"weekday", "weekend"}, "groups": [{"id",
@@ -2527,14 +2531,38 @@ up to an hour: the wrong answer that starts a wait says `retry_in` (seconds), an
 `hearth_parent_pin_locked_out` (`device_id`, `failures`, `retry_in`) for an automation to tell the adults. 404 `no_pin`
 when none is set (the device uses its own); 400 for a `pin` that isn't a string. A phone never gets a hash.
 
-A **TV** asks `verify_pin` too, and Home Assistant's answer (its lockout included) is final whenever it's reachable. To
-check PINs with Home Assistant down, its state document carries `parent_pins`, `[{"person", "name", "hash",
-"profiles"}]` (`profiles`: that adult's TV profiles), which replace the TV's own Parent PIN while it's paired; the TV keeps
-them sealed with an Android Keystore key. They're sent only when they changed: the document always says
-`parent_pins_version`, and the TV posts the version it keeps in its status (`parent_pins_version`); a document with the
-version alone means its copy is current, and one with neither means Home Assistant has none (the TV keeps its last
-ones, no longer managed). The TV keeps its own lockout too and posts `pin_lockouts` (how many it has had, only going up)
-in its status; each rise fires `hearth_parent_pin_locked_out` (`device_id`, `lockouts`: how many new, `retry_in`: null).
+A **TV** asks `verify_pin` too, and Home Assistant's answer (its lockout included) is final whenever it's reachable.
+While Home Assistant has parent PINs they replace the TV's own Parent PIN. Since contract 4 a TV is **never sent the
+hashes**: it keeps, sealed with an Android Keystore key, only the PINs typed on it that `verify_pin` confirmed, so
+with Home Assistant down only a PIN already used on that TV works ([contracts/device-api.md, contract
+4](contracts/device-api.md#new-in-contract-4-parent-pins-are-no-longer-sent-to-tvs)). The state document says
+`parent_pins_version`, which changes whenever an adult's PIN is set, changed or removed: the TV then drops every PIN
+it learned. A document without it means Home Assistant has none (the TV keeps what it learned, no longer managed).
+A TV that reports a contract below 4 (the higher of its pairing's and its status's `client.contract`) still gets
+`parent_pins`, `[{"person", "name", "hash", "profiles"}]`, when its posted `parent_pins_version` differs: a staged
+migration, removed in the next integration release. The TV keeps its own lockout too and posts `pin_lockouts` (how
+many it has had, only going up) in its status; each rise fires `hearth_parent_pin_locked_out` (`device_id`,
+`lockouts`: how many new, `retry_in`: null).
+
+#### Which Parent PIN works when
+
+The TV works without Home Assistant, so it has its own Parent PIN logic either way. Learning is the same everywhere:
+a PIN typed on the TV that whoever decides confirmed is kept on that TV only, as a salted hash sealed with an Android
+Keystore key, for the version it was confirmed under. Nothing that lets a PIN be guessed leaves the TV.
+
+| # | Where the TV is | Which Parent PIN works | When whoever decides can't be reached | Tests |
+|---|---|---|---|---|
+| 1 | No Home Assistant, the TV on its own | Its own | Its own (it is checked on the TV) | `ParentPinLearnTest` `row1_*`; `household_parent_pin_test` "no Home Assistant, no household" |
+| 2 | No Home Assistant, in a household | The household's. Set on another TV, it is learned the first time it's typed here: another TV that knows it says yes or no | A PIN set or typed here before works. Never typed here: refused, with "Can't reach your other TVs. Only a PIN used on this TV before works." | `row2_*`, `HouseholdPinQuestionTest`; `household_parent_pin_test` "joined without a Parent PIN", `parent_pin_dialog_test` (both messages) |
+| 3 | The household's PIN changed | Only the new one: what this TV kept for the old one is dropped | As row 2, for the new one | `row3_*`; "the household's PIN changed on another TV" |
+| 4 | Joined with a different PIN of its own | Its own, until an adult enters the household's here (Settings > Family > Use your other TVs' Parent PIN), checked with the other TVs; then the household's | Its own; the household's can't be taken | `row4_*`; "joined with its own", "the household's PIN can't be checked" |
+| 5 | Removed from the household (or left it) | A PIN typed here stays. One set on another TV and never typed here goes, so the TV isn't left with a PIN nobody can check | As row 1 | `row5_*`; "removed from the household" (both) |
+| 6 | Paired with Home Assistant, which has parent PINs | Home Assistant's only (any adult's). A yes is learned; a no drops a matching learned PIN; a new `parent_pins_version` drops them all; a lockout (429) is a no that keeps what was learned | Only PINs learned here (or one another TV of the household learned from Home Assistant and vouches for; a TV never says no for Home Assistant). Otherwise refused, with "Can't reach Home Assistant. Only a PIN used on this TV before works." | `row6_*`; "paired with PINs in Home Assistant"; `test_parent_pin` `test_a_contract_4_tv_is_sent_no_hashes_only_the_version` |
+| 7 | Home Assistant has no parent PINs, or the TV is unpaired | PINs learned here stay (until a Parent PIN of the TV's own is set here); with none learned, its own or the household's (rows 1 to 5) | As those rows | `row7_*`; "Home Assistant has no PINs any more"; `test_parent_pin` (removed: no version) |
+
+`row6_*` and `row7_*` are in `android/app/src/test/java/com/thesiegs/hearth/ParentPinLearnTest.java`; the quoted
+names are in `test/providers/household_parent_pin_test.dart`. `migration_*` there covers a TV that kept hashes from
+an older integration: they still work until the version changes, and new ones aren't read.
 
 **A notice's button** (a TV that shows notices). `POST /api/hearth/device/<device_id>/notice` with the same header and
 `{"key": "<a notice's key>", "action": <its button's id as a number>, "pin": "<digits>"}` or `{..., "approval":

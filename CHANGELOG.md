@@ -3,6 +3,33 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### What an adult must do
+
+Update Hearth TV on **every TV** and the integration in Home Assistant. Then each adult **sets a new Parent PIN**
+(Hearth's page or Configure > Parent PINs; a TV's own in Settings > Family), since an old PIN's hash may already
+have been copied, and **types it once on each TV** while Home Assistant (or, without it, another TV of the
+household) can be reached. Until then, with Home Assistant or the other TVs unreachable, that PIN isn't taken on a
+TV where it wasn't used before.
+
+### TV
+
+- **Parent PINs are learned, never sent.** A TV no longer gets the adults' Parent PIN hashes from Home Assistant, nor
+  the household's from the other TVs: it keeps, sealed, only PINs typed on it that Home Assistant (or, without it,
+  another TV of the household) confirmed. A wrong answer drops a matching kept PIN, and a changed PIN drops them all.
+  Offline, the pad says why a PIN wasn't taken: "Can't reach Home Assistant. Only a PIN used on this TV before
+  works." or "Can't reach your other TVs. ...". The TVs of a household check a PIN for each other inside their
+  encrypted exchange, each with its own count of wrong tries.
+- **The old unsalted PIN form is gone.** A PIN still kept that way is moved to the salted form once at start-up.
+- The TV reports contract 4.
+
+### Home Assistant integration
+
+- **Contract 4: no Parent PIN hashes for TVs.** A TV that reports contract 4 gets only `parent_pins_version`, so it
+  can drop what it learned when a PIN changes. A TV on an older build still gets the hashes until the next release.
+  See docs/contracts/device-api.md.
+
 ## 2026.11.40
 
 ### TV

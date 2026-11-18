@@ -40,6 +40,7 @@ from .const import (
     EVENT_BUDGET_REACHED,
     EVENT_PLAYING_TOGETHER,
     KIND_TV,
+    PIN_LEARN_CONTRACT,
     SIGNAL_PEOPLE,
 )
 from .apps import (
@@ -52,7 +53,7 @@ from .apps import (
 )
 from .counting import ALL, DeviceUsage, Reading, group_seconds, merge, minus, without
 from .categories import CategoryBook
-from .client import exempt_packages
+from .client import device_contract, exempt_packages
 from .limits import (
     CONF_APP_GROUPS,
     CONF_CATEGORY_POOLS,
@@ -1884,9 +1885,10 @@ class Household:
             # says it shows them; it shows each in its adult profiles only ("for" names one person, else every adult)
             if self.hub.has_cap(device_id, CAP_NOTICES):
                 body["notices"] = self.hub.attention.tv_notices({p for p in profiles.values() if p})
-            # The adults' parent PINs (hashes, never a PIN): a paired TV asks verify_pin, and keeps these (sealed) to
-            # check PINs with Home Assistant down. Sent only when they changed since the TV's copy (its
-            # parent_pins_version); the version alone says its copy is current. Each says the TV profiles of its adult.
+            # The adults' parent PINs: a paired TV asks verify_pin. parent_pins_version says when they changed, and a
+            # contract 4 TV then drops the PINs it learned (it keeps, sealed, only PINs typed on it that verify_pin
+            # confirmed). Only a TV below contract 4 is still sent the hashes (staged migration, docs/contracts/
+            # device-api.md), and only when they changed since its copy. Each says the TV profiles of its adult.
             if pins := parent_pin.stored_pins(self.options):
                 listed = [
                     {
@@ -1899,7 +1901,9 @@ class Household:
                 ]
                 pins_version = hashlib.sha256(json.dumps(listed, sort_keys=True).encode()).hexdigest()[:16]
                 body["parent_pins_version"] = pins_version
-                if status.get("parent_pins_version") != pins_version:
+                if device_contract(device, status) < PIN_LEARN_CONTRACT and (
+                    status.get("parent_pins_version") != pins_version
+                ):
                     body["parent_pins"] = listed
         else:
             body = self._phone_body(device.get(CONF_PERSON), device_id)

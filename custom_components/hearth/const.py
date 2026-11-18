@@ -8,7 +8,11 @@ DOMAIN = "hearth"
 # headline, lines and actions (glance.py): added fields, but the bump tells an app they are there. 3: the generic client
 # contract (docs/contracts/device-api.md): `client` and `checks` from devices, a grant from verify_pin, client settings
 # (client_settings.py), `share_app_data` in place of `tile_exchange_share`, and `catalog_categories` no longer read
-CONTRACT = 3
+# 4: a TV is no longer sent the adults' parent PIN hashes (`parent_pins`); it asks verify_pin and keeps only PINs
+# confirmed on it (docs/contracts/device-api.md, Contract 4)
+CONTRACT = 4
+# The device contract from which a TV learns parent PINs instead of being sent their hashes (household.py)
+PIN_LEARN_CONTRACT = 4
 
 # Config entry data: the household's Hearth devices (TVs, phones), by the device's own stable id
 CONF_DEVICES = "devices"

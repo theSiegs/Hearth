@@ -35,6 +35,8 @@ and say so in the change. When another part gets the same review-probe-fix-test 
 | TV `HaStatusReporter.java` + `hub.py` `_tell_failing_tv_checks` | The TV reports its accessibility service; 5 minutes off is told to the adults once, cleared when back (`test_qc_fixes`) |
 | TV `HaAllowance.java` `staleCountdown` | With no word from Home Assistant for 10 minutes, each group's minutes are counted down by the time in front since its last word (`HaStaleCountdownTest`) |
 | `ha_tests/test_invariants.py` | Never-break rules over random cases: left values, whole minutes, counting, day scenarios. Keep it green; add a rule when you harden something |
+| `household.py` `document_for` parent PINs, `client.py` `device_contract` | A contract-4 TV (the higher of its pairing's and its status's contract) is never sent the adults' PIN hashes, only their version; a post naming an older contract can't get them back. Staged: TVs below 4 still get them until the next release (`test_parent_pin`, `test_client_contract`) |
+| TV `HaParentPins.java`, `HouseholdSync` `pin_ask` | A TV keeps only PINs confirmed on it, sealed, per version; a no drops a matching one, a new version drops all, a 429 keeps them. Another TV answers only for that version, never says no for Home Assistant, and counts each asking TV's wrong tries across restarts (`ParentPinLearnTest`, `HouseholdPinQuestionTest`) |
 | `frontend/hearth-panel.js` | Every interpolation of device-supplied text goes through `esc()`. Keep it that way |
 
 Run `ha_tests` before every push and read the result first.

@@ -32,7 +32,7 @@ async def test_a_kid_reads_only_their_own_document(
     assert answer["success"], answer
     me = answer["result"]
     assert set(me) == {"person", "media_rooms", "version", "contract"}
-    assert me["contract"] == 3
+    assert me["contract"] == 4
     assert me["person"]["person"] == "person.sam" and me["person"]["kind"] == "kid" and me["person"]["kind_set"]
     # The same document a paired phone of Sam's would get
     hub = hass.config_entries.async_entries("hearth")[0].runtime_data

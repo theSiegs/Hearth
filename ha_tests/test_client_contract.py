@@ -12,7 +12,7 @@ from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
 
 from custom_components.hearth import enforce
 from custom_components.hearth.__init__ import share_app_data_retired
-from custom_components.hearth.client import clean_checks, clean_client
+from custom_components.hearth.client import clean_checks, clean_client, device_contract
 from custom_components.hearth.client_settings import (
     ADULT,
     ADULT_DEVICE,
@@ -59,6 +59,17 @@ def test_a_client_names_only_its_own_family() -> None:
         assert clean_client(bad) is None
 
 
+def test_a_device_s_contract_is_the_highest_it_spoke() -> None:
+    """Contract 4 decides whether a TV is sent parent PIN hashes (household.py): the pairing's contract or the
+    status's, whichever is higher, so a post can't name an older one to get them."""
+    pinned = {"client": {"id": LAUNCHER, "contract": 4}}
+    assert device_contract(pinned, {"client": {"id": LAUNCHER, "contract": 3}}) == 4
+    assert device_contract({"client": {"id": LAUNCHER, "contract": 3}}, {"client": {"id": LAUNCHER, "contract": 4}}) == 4
+    assert device_contract({}, {"client": {"id": LAUNCHER, "contract": None}}) == 0
+    assert device_contract({}, None) == 0
+    assert device_contract({"client": None}, {}) == 0
+
+
 def test_checks_are_kept_as_given_within_limits() -> None:
     checks = clean_checks(
         [
@@ -99,7 +110,7 @@ async def _pair_phone(hass, client, device_id: str, person: str, body_client=CLI
     await hass.async_block_till_done()
     answer = await (await client.get(f"/api/hearth/pair/{pairing_id}", headers={"X-Hearth-Nonce": NONCE})).json()
     assert answer["status"] == "approved"
-    assert answer["contract"] == 3
+    assert answer["contract"] == 4
     return answer["secret"]
 
 
