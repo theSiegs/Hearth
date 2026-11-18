@@ -36,25 +36,36 @@ final class StartedLog {
         final String title;
         final String channel;
         final String channelId;
+        /** A parent's PIN let this video play past the time limit or a lock (contract 8's {@code parent_approved}) */
+        final boolean parentApproved;
 
         Entry(long timeMs, String videoId, String title, String channel, String channelId) {
+            this(timeMs, videoId, title, channel, channelId, false);
+        }
+
+        Entry(long timeMs, String videoId, String title, String channel, String channelId, boolean parentApproved) {
             this.timeMs = timeMs;
             this.videoId = videoId;
             this.title = clean(title);
             this.channel = clean(channel);
             this.channelId = clean(channelId);
+            this.parentApproved = parentApproved;
         }
 
         JSONObject toJson() throws JSONException {
-            return new JSONObject().put("t", timeMs).put("v", videoId).put("title", title).put("ch", channel)
-                    .put("cid", channelId);
+            JSONObject json = new JSONObject().put("t", timeMs).put("v", videoId).put("title", title)
+                    .put("ch", channel).put("cid", channelId);
+            // Only when set: an older Home Assistant and older kept logs read the same as before
+            if (parentApproved) json.put("pa", true);
+            return json;
         }
 
         static Entry of(JSONObject json) {
             if (json == null) return null;
             return valid(json.optLong("t", -1), json.optString("v", null))
                     ? new Entry(json.optLong("t"), json.optString("v"), json.optString("title", ""),
-                            json.optString("ch", ""), json.optString("cid", "")) : null;
+                            json.optString("ch", ""), json.optString("cid", ""), json.optBoolean("pa", false))
+                    : null;
         }
     }
 
@@ -86,11 +97,11 @@ final class StartedLog {
 
     /** Records a start for a profile. False when it was refused (not valid) or already known. */
     static synchronized boolean record(Context context, String profile, long timeMs, String videoId, String title,
-            String channel, String channelId) {
+            String channel, String channelId, boolean parentApproved) {
         profile = ParentBlocks.userKey(profile);
         if (profile == null || !valid(timeMs, videoId)) return false;
         List<Entry> entries = read(context, profile);
-        if (!add(entries, new Entry(timeMs, videoId, title, channel, channelId))) return true;
+        if (!add(entries, new Entry(timeMs, videoId, title, channel, channelId, parentApproved))) return true;
         write(context, profile, entries);
         return true;
     }
