@@ -17,18 +17,29 @@ TV where it wasn't used before.
 
 - **Parent PINs are learned, never sent.** A TV no longer gets the adults' Parent PIN hashes from Home Assistant, nor
   the household's from the other TVs: it keeps, sealed, only PINs typed on it that Home Assistant (or, without it,
-  another TV of the household) confirmed. A wrong answer drops a matching kept PIN, and a changed PIN drops them all.
+  another TV of the household) confirmed. A wrong answer drops a matching kept PIN, and a changed PIN drops what was
+  kept for it.
   Offline, the pad says why a PIN wasn't taken: "Can't reach Home Assistant. Only a PIN used on this TV before
   works." or "Can't reach your other TVs. ...". The TVs of a household check a PIN for each other inside their
   encrypted exchange, each with its own count of wrong tries.
 - **The old unsalted PIN form is gone.** A PIN still kept that way is moved to the salted form once at start-up.
 - The TV reports contract 4.
+- **One adult's PIN change no longer locks out the others.** Each PIN learned from Home Assistant is kept with whose it
+  is, and a change drops only that adult's, so with Home Assistant down after one adult changed theirs the others'
+  still work. With none working, unpair the TV from an adult profile (Settings > Home Assistant), which needs no PIN.
+- **A household PIN nobody can confirm is dropped.** When the TV that set the household's Parent PIN is removed
+  before another TV had it typed, those TVs stop following it and fall back to the PIN typed on them before (else
+  none), as a TV removed from the household does. An adult profile can remove a TV that hasn't been on for 30 days
+  without the Parent PIN, so a lost TV that alone knew the PIN can't lock the others.
 
 ### Home Assistant integration
 
 - **Contract 4: no Parent PIN hashes for TVs.** A TV that reports contract 4 gets only `parent_pins_version`, so it
   can drop what it learned when a PIN changes. A TV on an older build still gets the hashes until the next release.
   See docs/contracts/device-api.md.
+- **Each adult's PIN version** (`parent_pins_versions`, by a key worked out from the person entity id, never a name)
+  goes to TVs with `parent_pins_version`, so a TV drops only the learned PIN of the adult who changed theirs.
+  Additive, within contract 4.
 
 ## 2026.11.43
 

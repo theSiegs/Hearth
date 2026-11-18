@@ -1970,6 +1970,13 @@ class Household:
                 ]
                 pins_version = hashlib.sha256(json.dumps(listed, sort_keys=True).encode()).hexdigest()[:16]
                 body["parent_pins_version"] = pins_version
+                # Each adult's own version, by a key that names nobody (parent_pin.adult_key), which changes only with
+                # their PIN: a contract 4 TV then drops only the learned PIN of an adult whose PIN changed (or who
+                # went), so the others' still work with Home Assistant down. parent_pins_version stays for TVs that
+                # don't read this.
+                body["parent_pins_versions"] = {
+                    parent_pin.adult_key(person): parent_pin.version_of(stored) for person, stored in pins.items()
+                }
                 if device_contract(device, status) < PIN_LEARN_CONTRACT and (
                     status.get("parent_pins_version") != pins_version
                 ):

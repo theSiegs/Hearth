@@ -22,6 +22,16 @@ got that list (on the home network, from plain HTTP) could try them all in under
   a 429 (locked out) counts as a no that keeps what was learned.
 - With Home Assistant unreachable, only a PIN kept on that TV works (or one another TV of the household learned
   from Home Assistant and vouches for, see [household-sync.md, Parent PIN](../household-sync.md#parent-pin)).
+- **Each adult's version (additive, within contract 4).** The state document also carries `parent_pins_versions`:
+  `{"<adult key>": "<version>"}`, one entry per adult with a Parent PIN. An adult's version changes only when their
+  own PIN is set again (it is worked out from their salted hash and says nothing of the PIN), and their entry goes
+  when their PIN is removed. The key names nobody: the first 16 hex digits of SHA-256 of `hearth-adult:` followed by
+  the person entity id (`parent_pin.adult_key`). `verify_pin`'s yes already names the `person`, so a TV works out
+  the same key and tags what it learns with that adult's key and version. On a new `parent_pins_version` it then
+  drops only the PINs of adults whose version changed or went, so one adult changing their PIN while Home Assistant
+  then stays down leaves the others' PINs working on every TV. A PIN learned without saying whose (another TV
+  vouched for it, a notice's button, or a build before this field) and a document without the field still drop on
+  any change, as before. `parent_pins_version` stays, for TVs that don't read the map.
 - Which contract a TV speaks: the higher of the `client.contract` locked at pairing and the one in its latest status.
   So a post that names an older contract can't take a TV back to being sent the hashes.
 

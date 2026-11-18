@@ -233,6 +233,46 @@ async def test_a_contract_4_tv_is_sent_no_hashes_only_the_version(
     assert await (await _verify(client, secret, OTHER_PIN)).json() == {"ok": False}
 
 
+async def test_each_adults_version_comes_by_a_key_that_names_nobody(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """Which-PIN table, row 8: an adult changing their PIN changes only their own entry of `parent_pins_versions`,
+    so a TV keeps the other adults' learned PINs (working with Home Assistant down). The key is worked out from the
+    person entity id (as the TV does from verify_pin's `person`) and never shows a name or the id."""
+    from test_people import _tv_status
+    from test_init import _post
+
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    await _adults(hass, "person.alex", "person.sam")
+    await _option(hass, "parent_pin", {"person": "person.alex", "pin": PIN, "pin_again": PIN})
+    await _option(hass, "parent_pin", {"person": "person.sam", "pin": OTHER_PIN, "pin_again": OTHER_PIN})
+    status = {**_tv_status(hearthtube_s=60), "client": {"id": "com.thesiegs.hearth", "contract": 4}}
+    state = (await (await _post(client, secret, body=status)).json())["state"]
+    versions = state["parent_pins_versions"]
+    alex, sam = parent_pin.adult_key("person.alex"), parent_pin.adult_key("person.sam")
+    assert set(versions) == {alex, sam}
+    assert all(len(key) == 16 and "alex" not in key and "sam" not in key for key in versions)
+    assert "person." not in str(versions)
+    # verify_pin names the person, from which the TV works out the same key
+    assert (await (await _verify(client, secret, PIN)).json())["person"] == "person.alex"
+    # The overall version is still sent for TVs that don't read the map
+    version = state["parent_pins_version"]
+
+    # Alex changes theirs: only Alex's entry changes, and the overall version with it
+    await _option(hass, "parent_pin", {"person": "person.alex", "pin": "1593", "pin_again": "1593"})
+    state = (await (await _post(client, secret, body=status)).json())["state"]
+    assert state["parent_pins_version"] != version
+    assert state["parent_pins_versions"][sam] == versions[sam]
+    assert state["parent_pins_versions"][alex] != versions[alex]
+    assert "parent_pins" not in state
+
+    # Sam's PIN is removed: Sam's entry goes, Alex's stays
+    after = state["parent_pins_versions"]
+    await _option(hass, "parent_pin", {"person": "person.sam", "remove": True})
+    state = (await (await _post(client, secret, body=status)).json())["state"]
+    assert state["parent_pins_versions"] == {alex: after[alex]}
+
+
 async def test_an_older_tv_is_still_sent_the_hashes_until_it_updates(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:

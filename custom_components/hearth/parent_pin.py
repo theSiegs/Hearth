@@ -73,6 +73,19 @@ def whose(pins: dict[str, str], pin: object) -> str | None:
     return found
 
 
+def adult_key(person: str) -> str:
+    """The key an adult goes by in a TV's `parent_pins_versions`: from their person entity id, so no name is sent
+    (the first 16 hex digits of SHA-256 of "hearth-adult:" and the id). A TV works out the same from verify_pin's
+    `person` (HaParentPins.adultKey)."""
+    return hashlib.sha256(f"hearth-adult:{person}".encode()).hexdigest()[:16]
+
+
+def version_of(stored: str) -> str:
+    """One adult's version for a TV: changes whenever their PIN is set (each hash has a fresh salt), and says nothing
+    of the PIN."""
+    return hashlib.sha256(f"hearth-pin-version:{stored}".encode()).hexdigest()[:16]
+
+
 def lockout(failures: int) -> timedelta | None:
     """How long a device waits after its [failures]th wrong PIN in a row (none while tries are free)."""
     if failures < FREE_TRIES:

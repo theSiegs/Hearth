@@ -2666,8 +2666,14 @@ While Home Assistant has parent PINs they replace the TV's own Parent PIN. Since
 hashes**: it keeps, sealed with an Android Keystore key, only the PINs typed on it that `verify_pin` confirmed, so
 with Home Assistant down only a PIN already used on that TV works ([contracts/device-api.md, contract
 4](contracts/device-api.md#new-in-contract-4-parent-pins-are-no-longer-sent-to-tvs)). The state document says
-`parent_pins_version`, which changes whenever an adult's PIN is set, changed or removed: the TV then drops every PIN
-it learned. A document without it means Home Assistant has none (the TV keeps what it learned, no longer managed).
+`parent_pins_version`, which changes whenever an adult's PIN is set, changed or removed, and `parent_pins_versions`,
+each adult's own version by a key that names nobody (`{"<adult key>": "<version>"}`, the key worked out from the
+person entity id): the TV then drops only the learned PIN of the adult whose version changed or went, so the other
+adults' PINs keep working on it with Home Assistant down (a PIN learned without saying whose drops on any change). A
+document without them means Home Assistant has none (the TV keeps what it learned, no longer managed). With Home
+Assistant down and no PIN learned, the way out is to unpair the TV from an adult profile (Settings > Home Assistant >
+Pair with Home Assistant > Unpair, which asks for no PIN there): the TV's own or the household's PIN then applies
+(row 7 below).
 A TV that reports a contract below 4 (the higher of its pairing's and its status's `client.contract`) still gets
 `parent_pins`, `[{"person", "name", "hash", "profiles"}]`, when its posted `parent_pins_version` differs: a staged
 migration, removed in the next integration release. The TV keeps its own lockout too and posts `pin_lockouts` (how
@@ -2689,8 +2695,10 @@ Keystore key, for the version it was confirmed under. Nothing that lets a PIN be
 | 5 | Removed from the household (or left it) | A PIN typed here stays. One set on another TV and never typed here goes, so the TV isn't left with a PIN nobody can check | As row 1 | `row5_*`; "removed from the household" (both) |
 | 6 | Paired with Home Assistant, which has parent PINs | Home Assistant's only (any adult's). A yes is learned; a no drops a matching learned PIN; a new `parent_pins_version` drops them all; a lockout (429) is a no that keeps what was learned | Only PINs learned here (or one another TV of the household learned from Home Assistant and vouches for; a TV never says no for Home Assistant). Otherwise refused, with "Can't reach Home Assistant. Only a PIN used on this TV before works." | `row6_*`; "paired with PINs in Home Assistant"; `test_parent_pin` `test_a_contract_4_tv_is_sent_no_hashes_only_the_version` |
 | 7 | Home Assistant has no parent PINs, or the TV is unpaired | PINs learned here stay (until a Parent PIN of the TV's own is set here); with none learned, its own or the household's (rows 1 to 5) | As those rows | `row7_*`; "Home Assistant has no PINs any more"; `test_parent_pin` (removed: no version) |
+| 8 | Paired with Home Assistant, and one adult changes (or removes) their PIN there | Home Assistant's, as row 6. Each learned PIN is kept with whose it is (`parent_pins_versions`), so only that adult's learned PIN goes; the other adults' stay | The other adults' learned PINs still work, and the changed one is refused ("Can't reach Home Assistant. ..."). The way out with nobody's PIN learned: **unpair the TV from an adult profile** (Settings > Home Assistant > Pair with Home Assistant > Unpair), which needs no PIN there; the TV then takes row 7 | `row8_*`; `test_parent_pin` `test_each_adults_version_comes_by_a_key_that_names_nobody` |
+| 9 | No Home Assistant, in a household, and the TV that set the household's PIN is removed (or left) before this TV confirmed that PIN | Not that one: a TV that never confirmed it drops it, as nobody may be left who can say what it is, and falls back as row 5 does: the PIN typed here before (the one it had before, else the household's earlier one learned here), else none of its own. Nothing goes out, so a TV that did confirm it keeps it; a newer PIN set on a TV still in the household is followed again | As row 5. The TV that was lost can be removed from an **adult profile without the Parent PIN once it hasn't been on for 30 days** (Household sync, its card), which is what lets this row happen when no TV knows the PIN | `row9_*`; "the TV that set the household's PIN was removed" (three tests); `household_page_test` "removing a TV not seen for a month" |
 
-`row6_*` and `row7_*` are in `android/app/src/test/java/com/thesiegs/hearth/ParentPinLearnTest.java`; the quoted
+`row1_*` to `row9_*` are in `android/app/src/test/java/com/thesiegs/hearth/ParentPinLearnTest.java`; the quoted
 names are in `test/providers/household_parent_pin_test.dart`. `migration_*` there covers a TV that kept hashes from
 an older integration: they still work until the version changes, and new ones aren't read.
 
