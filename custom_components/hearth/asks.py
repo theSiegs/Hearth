@@ -227,7 +227,12 @@ class Asks:
         app: str | None = None,
     ) -> Ask:
         """A new request; one open per person, none during a cooldown after "not now". A kid asks for bonus time,
-        which has no category: an older device's group is taken as "all"."""
+        which has no category: an older device's group is taken as "all". An ask for a category that's off today is
+        refused (closed): bonus time wouldn't open it."""
+        day = self.hub.household.days.get(person)
+        state = day.limits.get(group) if day is not None and group != "all" else None
+        if state is not None and state.closed:
+            raise AskError("closed")
         group = "all"
         if minutes not in AMOUNTS:
             raise AskError("bad_request")

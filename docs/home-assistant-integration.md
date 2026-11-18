@@ -571,7 +571,11 @@ that is left out of today's minutes. This works the same for a live source (a TV
 total-only one (Family Link's and Family Safety's daily totals, which only give a day's sum): the window's minutes are
 the total's growth between the two notes. Totals arrive a few minutes late, so the end note is taken after the 10-minute
 settle, and what is counted in the settle goes to the kid. Approximation: a minute a total reports late from just
-before the window (or one played during the settle) is left out too; never one the other way. Each window is
+before the window (or one played during the settle) is left out too; never one the other way. A total can report
+later than the settle (Family Link lags up to about 40 minutes): after it, no source can have gained more than the
+time since, so what one gains beyond that is the window's too and is left out (per source, never less than before;
+only the day's last window looks). Unlimited started again while the last window is still settling opens that window
+again, so no minute is left out twice. Each window is
 recorded in the history (`unlimited`: start, end, minutes not counted; "Unlimited 2:00–5:10 PM · 3 h 10 min not
 counted") and fires `hearth_unlimited_started` {person, until, open} and `hearth_unlimited_ended` {person, id, text}.
 
@@ -1352,7 +1356,9 @@ The answer to each status post carries the person's (or, on a TV, each profile's
 
 `groups` lists only groups with a budget, and an adult's pauses of one app or group as groups with no time left and
 `paused` (see [Pause and locks](#pause-and-locks)): hold them like any group out of time, but say it's paused and
-**never offer to ask for more time for one**; `minutes_left` null is no limit; All screen time may carry `except`, the apps
+**never offer to ask for more time for one**; a category that's off today (its limit 0, `time.categories` `closed`)
+has `closed: true`: bonus time doesn't open it, so offer no ask for it either (an ask for it is refused, 400 `closed`);
+`minutes_left` null is no limit; All screen time may carry `except`, the apps
 it never holds (a Not screen time group's, and the accessibility apps). `never_held` (only when there are any) lists
 the accessibility apps, which no group's `apps` holds: a device may spare them from a lock or a pause too. Each person's part is described under [Ask for more](#ask-for-more) and
 [Pause and locks](#pause-and-locks); an allow of theirs that ends on a place is in `allow_ends` [{id, app, group,

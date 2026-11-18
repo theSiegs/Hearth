@@ -1235,7 +1235,15 @@ class Household:
                 )
             raw = group_seconds(devices, membership, self.outside_all())
             # Minutes used while unlimited aren't counted (unlimited.py)
-            seconds = self.unlimited.exclude(person, raw, now)
+            # Per device too, while a window of today's is there: a total's minutes of a window that arrive after its
+            # settle are told from that device's growth since
+            outside = self.outside_all()
+            by_device = (
+                {device: group_seconds({device: usage}, membership, outside) for device, usage in devices.items()}
+                if self.unlimited.windows.get(person)
+                else None
+            )
+            seconds = self.unlimited.exclude(person, raw, now, by_device)
             day = PersonDay(person, devices, seconds, playing=playing.get(person, []),
                             together_s=self.live.together_s.get(person, 0.0), raw_groups=raw)
             for group in self.groups:
@@ -1843,6 +1851,9 @@ class Household:
                 "minutes_left": max(state.minutes_left, bonus_here.get(group.id, 0)),
                 "apps": [p for p in apps if not lifted.app(p, membership(p))] if lifted else apps,
             }
+            # A category that's off today (its limit 0): bonus time doesn't open it, so a device offers no ask for it
+            if state.closed and group.id != ALL:
+                entry["closed"] = True
             # All screen time holds every app but these (a group outside it: music, say; what an allow lifts)
             if group.id == ALL:
                 spared = self._spared(membership)
@@ -2052,6 +2063,7 @@ class Household:
         """A confirmed change of the person's place: what ends on it ends for them, as allow_end, pause_end and
         school_time_off_cancel would, and the adults are told."""
         ended: list[tuple[dict[str, str], str]] = []
+        behind = {p: ids for p, ids in self.unlimited_allows().items() if p == person}
         for allow in list(self.allows.of(person)):
             if matches(allow.ends_on, came_from, went_to) and self.allows.end_for(allow.id, person):
                 group = self.group(allow.group) if allow.group else None
@@ -2059,6 +2071,8 @@ class Household:
                     "screen time" if allow.group == "all" else group.name if group else allow.group or allow.app
                 )
                 ended.append((allow.ends_on, f"their allow ({what}) ended"))
+        # The allow behind Unlimited ends Unlimited with it
+        self.end_unlimited_behind(behind)
         if (pause := pause_ends_on(self.hass, person)) and matches(pause[0], came_from, went_to):
             self.end_pause_now([person])
             ended.append((pause[0], "their pause ended"))
@@ -2907,6 +2921,30 @@ class Household:
             self.note_origin(person, "unlimited", detail, "hearth", by, id=grant["id"])
         self.recompute()
         return allowed
+
+    def unlimited_allows(self) -> dict[str, set[str]]:
+        """The allows of daily time behind each person's Unlimited now (its running grants' and its window's): ending
+        one of them is ending Unlimited."""
+        found: dict[str, set[str]] = {}
+        now = dt_util.now()
+        for person in self.people():
+            ids = {g["allow"] for g in self.limits.grants(person, "unlimited", now=now) if g.get("allow")}
+            if (window := self.unlimited.active(person, now)) is not None and window.get("allow"):
+                ids.add(window["allow"])
+            if ids:
+                found[person] = ids
+        return found
+
+    @callback
+    def end_unlimited_behind(self, before: dict[str, set[str]], by: str | None = None) -> list[str]:
+        """Unlimited ends for each person whose allow behind it ([before]: unlimited_allows) was just ended (allow_end,
+        a place): every screen would still say Unlimited, and the minutes go uncounted, while they're held again."""
+        gone = [
+            person
+            for person, ids in before.items()
+            if any(person not in (a.until if (a := self.allows.allows.get(i)) else {}) for i in ids)
+        ]
+        return self.end_unlimited(gone, by) if gone else []
 
     @callback
     def end_unlimited(self, people: list[str] | None, by: str | None = None) -> list[str]:

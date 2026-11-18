@@ -728,7 +728,10 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
             )
             if call.data.get("device"):
                 return {"ended": ended}
+        behind = household.unlimited_allows()
         ended += household.allows.end(call.data.get("id"), call.data.get("people"), app, group)
+        # The allow behind Unlimited ends Unlimited with it
+        household.end_unlimited_behind(behind)
         household.recompute()
         # Extra time Hearth gave in Family Link or Family Safety for an allow that ended goes too
         household.sync.allow_ended()

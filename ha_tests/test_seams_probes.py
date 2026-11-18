@@ -1,16 +1,12 @@
 """Probes from the 2026-11-17 seams review: bugs that only show where two parts of Hearth meet.
 
-Each probe states what should happen and FAILS on the code as reviewed. They are probes, not regression tests yet: a
-fix makes its probe pass, and the probe then moves next to the tests of the part that was fixed. Until then each is
-marked xfail (strict), so the suite stays green and a fix that lands shows up as an unexpected pass. Run them as plain
-failures with `pytest test_seams_probes.py --runxfail`.
+Each probe states what should happen and failed on the code as reviewed (2026.11.39). All of them are fixed now and
+run as regression tests; they stay together here, as the seams they pin.
 
 The TV's side of the same review is in android/app/src/test/java/com/thesiegs/hearth/Seams*Test.java.
 """
 
 from datetime import timedelta
-
-import pytest
 
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
@@ -125,7 +121,6 @@ async def test_apps_paused_before_a_failed_pause_are_resumed_when_time_comes_bac
 # 3. Unlimited: a total's minutes that arrive after the 10-minute settle are counted after all (unlimited.py exclude)
 
 
-@pytest.mark.xfail(strict=True, reason="seams 3: Unlimited minutes a total reports late are counted")
 async def test_minutes_a_total_reports_late_from_an_unlimited_window_are_not_counted(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:
@@ -151,10 +146,32 @@ async def test_minutes_a_total_reports_late_from_an_unlimited_window_are_not_cou
     assert household.days[SAM].limits["all"].minutes_left >= before - 25, "the Unlimited hour was counted"
 
 
+async def test_minutes_played_after_an_unlimited_window_still_count(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """The late minutes are only what a total gained beyond the time since the settle: real play after it counts."""
+    freezer.move_to(_at(14))
+    await _household_with_sam(hass, hass_client_no_auth)
+    hass.states.async_set(FAMILY_LINK, "20", {"unit_of_measurement": "min", "child_id": CHILD})
+    await _option(hass, "add_source", {"entity_id": FAMILY_LINK, "person": SAM})
+    await _set(hass, "all", 120)
+    household = _household(hass)
+    before = household.days[SAM].limits["all"].minutes_left
+    await _call(hass, "unlimited", {"person": SAM, "until": "15:00"})
+    freezer.move_to(_at(15, 25))
+    household.recompute()
+    await hass.async_block_till_done()
+
+    # 20 minutes later Sam has played 20 minutes more on the phone (the window itself had no minutes)
+    freezer.move_to(_at(15, 45))
+    hass.states.async_set(FAMILY_LINK, "40", {"unit_of_measurement": "min", "child_id": CHILD})
+    await hass.async_block_till_done()
+    assert household.days[SAM].limits["all"].minutes_left == before - 20
+
+
 # 4. Unlimited started again within the settle of the last one: the overlap is left out twice (unlimited.py start)
 
 
-@pytest.mark.xfail(strict=True, reason="seams 4: two Unlimited windows within the settle exclude the overlap twice")
 async def test_unlimited_started_again_within_the_settle_leaves_no_minute_out_twice(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:
@@ -258,7 +275,6 @@ async def test_family_safety_downtime_says_when_it_starts_and_ends(
 # 8. Ending the allow behind Unlimited leaves Unlimited on (the page's and the phones' "end allow": hearth.allow_end)
 
 
-@pytest.mark.xfail(strict=True, reason="seams 8: allow_end ends Unlimited's allow, not Unlimited")
 async def test_ending_the_allow_behind_unlimited_ends_unlimited(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:
@@ -283,7 +299,6 @@ async def test_ending_the_allow_behind_unlimited_ends_unlimited(
 # 9. A category that's off today: bonus time can't open it, yet the device is told nothing that stops the ask
 
 
-@pytest.mark.xfail(strict=True, reason="seams 9: a closed category's group looks like any group out of time")
 async def test_a_category_that_is_off_today_is_marked_so_in_its_group(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
@@ -301,8 +316,9 @@ async def test_a_category_that_is_off_today_is_marked_so_in_its_group(
         json={"profile_id": KID, "group": "games", "minutes": 30},
         headers={"X-Hearth-Secret": secret},
     )
-    # Either the group says it can't be asked for (as a paused group does), or the ask is refused
-    assert games.get("closed") or games.get("paused") or asked.status != 200
+    # The group says it can't be asked for, and the ask is refused
+    assert games.get("closed") is True
+    assert asked.status == 400 and (await asked.json())["error"] == "closed"
 
 
 # 10. School time taken off today is still announced as the next lock (household.py _locks_document, weekly.py now)

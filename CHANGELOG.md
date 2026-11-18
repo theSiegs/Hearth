@@ -14,6 +14,10 @@
 - **Family Safety's downtime times are read again** (`downtime_start` / `downtime_end`, as the installed Family Safety names them): the next bedtime, the heads-up on the TV, bedtime on Hearth's page and the lock's end are back for a kid whose bedtime is a downtime sensor.
 - **School time taken off today isn't announced as the next lock**, so a TV doesn't show its heads-up or lock at it by itself.
 - **A lifted bedtime is the TV's next lock when its extra time ends**, so a TV that loses Home Assistant during the lift still brings bedtime back.
+- **Minutes a total reports late from an Unlimited window aren't counted.** Family Link can report the window's play up to about 40 minutes late, after the 10-minute settle; now no source counts more after the settle than the time since, and the rest is left out.
+- **Unlimited turned on again within 10 minutes of ending** opens the same window again, so its minutes aren't given back twice.
+- **Ending the allow behind Unlimited ends Unlimited** (the page's or the phones' "end", or a place it ends on), instead of holding the kid while every screen still says Unlimited.
+- **A category that's off today says so to the devices** (`closed: true` on its group) and an ask for it is refused, since bonus time can't open it.
 
 ## 2026.11.40
 
