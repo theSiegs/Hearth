@@ -410,11 +410,13 @@ class PersonLastVideoStarted(HearthPersonEntity, SensorEntity):
 class PersonPlace(HearthPersonEntity, SensorEntity):
     """Where the person is: a place key (home, school, a favorite place's), away, or unknown. Hearth keeps no
     coordinates: its attributes are the place's name, since when, where it came from (family_link or person), the
-    reading's accuracy, whether it's fresh and as of when."""
+    reading's accuracy, whether it's fresh and as of when, and who they're with (people's ids) and whether they're out
+    without an adult (presence.py)."""
 
     _attr_translation_key = "person_place"
-    # The state (a place key) is history enough: when it changed and how good each reading was isn't kept
-    _unrecorded_attributes = frozenset({"since", "source", "accuracy", "fresh", "as_of"})
+    # The state (a place key) is history enough: when it changed, how good each reading was, and who they were with
+    # aren't kept
+    _unrecorded_attributes = frozenset({"since", "source", "accuracy", "fresh", "as_of", "with", "apart_from_adults"})
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -429,7 +431,10 @@ class PersonPlace(HearthPersonEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         view = self.hub.household.places.view(self.person)
-        return {k: view[k] for k in ("name", "since", "source", "accuracy", "fresh", "as_of")}
+        return {
+            **{k: view[k] for k in ("name", "since", "source", "accuracy", "fresh", "as_of")},
+            **self.hub.household.presence.view(self.person),
+        }
 
 
 class AppsToSort(SensorEntity):

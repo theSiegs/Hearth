@@ -120,6 +120,7 @@ class Backstop:
             and state.minutes_left == 0
             and self.household.no_limits_until(person) is None
             and not self.household.open_groups(person)
+            and not self.household.open_apps(person)
         )
 
     def _open_limit(self, person: str, open_groups: set[str]) -> int:
@@ -150,7 +151,8 @@ class Backstop:
             return None
         unlimited = self.household.no_limits_until(person) is not None
         if not unlimited and state.minutes_left == 0:
-            return self._open_limit(person, self.household.open_groups(person))
+            # A standing rule's open apps (presence_rules.py) count as open too, OPEN_LEFT minutes each
+            return self._open_limit(person, self.household.open_groups(person) | self.household.open_apps(person))
         self._opened.pop(person, None)
         # Daily time left, and each category's own bonus left (usable there past daily time)
         left = (state.minutes_left or 0) + sum(s.cat_bonus_left for g, s in day.limits.items() if g != ALL)

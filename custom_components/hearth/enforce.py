@@ -404,7 +404,7 @@ def wanted(
         if near_midnight(now):
             held = set()
         else:
-            held = {ALL_APPS} if lifted is not None and lifted.open else {DEVICES}
+            held = {ALL_APPS} if lifted is not None and (lifted.open or lifted.open_apps) else {DEVICES}
     else:
         held = set()
     for group_id in closed:
@@ -1110,7 +1110,8 @@ class Enforcement:
         installed = fl.installed_apps(self.hass, child) if child else None
         if not installed:
             return {DEVICES}
-        open_apps: set[str] = set()
+        # A standing rule's apps (Messages while out without an adult) stay open too
+        open_apps: set[str] = set(lifted.open_apps)
         for group_id in lifted.open:
             open_apps |= set(apps_of(group_id, enforcer.person))
         return {

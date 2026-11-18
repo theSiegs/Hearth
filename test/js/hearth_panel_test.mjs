@@ -1155,3 +1155,43 @@ test("Activity: plain lines from hearth/activity, a kid filter, failures marked 
   await p._act("activity-who", { value: "person.sam", dataset: {} });
   assert.deepEqual(asked.at(-1), { type: "hearth/activity", limit: 200, person: "person.sam" });
 });
+
+test("Messages when away: the kid's line says where they are by name, the setting sits under Places", async () => {
+  const away = today(16, {
+    sam: { presence: { away: true, place: "Away", apart: true, apart_since: iso(15, 47), with_adults: [], open: ["Messages"] } },
+  });
+  const kids = away._page().split('class="card kid').slice(1);
+  assert.match(kids[0], /class="line muted small presence">Away · apart from adults since 3:47 pm · Messages open</);
+  const together = today(16, { sam: { presence: { away: true, place: "Practice", apart: false, with_adults: ["Robin"], open: [] } } });
+  assert.match(together._page(), /presence">Practice · with Robin</);
+  // At home: no line
+  const home = today(16, { sam: { presence: { away: false, place: "Home", apart: false, with_adults: ["Robin"], open: [] } } });
+  assert.doesNotMatch(home._page(), /class="line muted small presence"/);
+
+  const p = today(16);
+  p._config.away_messages_apps = { "person.sam": ["com.whatsapp"] };
+  p._config.away_messages_choices = {
+    "person.sam": [{ package: "com.whatsapp", name: "WhatsApp" }, { package: "org.thoughtcrime.securesms", name: "Signal" }],
+  };
+  const card = p._placesCard();
+  assert.match(card, /Messages when away from adults/);
+  assert.match(card, /data-change="away-messages" checked/);
+  assert.match(card, /WhatsApp <button class="lnk" data-action="away-app-remove" data-person="person.sam" data-package="com.whatsapp"/);
+  assert.match(card, /<option value="org.thoughtcrime.securesms"[^>]*>Signal<\/option>/);
+  const set = [];
+  p._setOption = async (key, value) => set.push([key, value]);
+  p._value = () => "org.thoughtcrime.securesms";
+  await p._act("away-app-add", { dataset: { person: "person.sam" } });
+  assert.deepEqual(set.at(-1), ["away_messages_apps", { "person.sam": ["com.whatsapp", "org.thoughtcrime.securesms"] }]);
+  await p._act("away-app-remove", { dataset: { person: "person.sam", package: "com.whatsapp" } });
+  assert.deepEqual(set.at(-1), ["away_messages_apps", {}]);
+  await p._act("away-messages", { checked: false, dataset: {} });
+  assert.deepEqual(set.at(-1), ["away_messages", false]);
+  // Off: the per-kid list is hidden
+  p._config.away_messages = false;
+  assert.doesNotMatch(p._placesCard(), /away-app-add/);
+  // The activity line
+  p._activity = [{ at: "2026-11-16T21:05:00Z", kind: "rule", person: "person.sam", target: ["com.google.android.apps.messaging"], reason: "away_messages", result: "opened" }];
+  p._activityOpen = true;
+  assert.match(p._activityCard(), /Messages when away: open · com\.google\.android\.apps\.messaging/);
+});

@@ -18,6 +18,9 @@
 
 ### Home Assistant integration
 
+- **Messages opens when a kid is out without an adult.** Away from home and more than 300 m from every adult for 5 minutes, a kid's text app (Google Messages, else Samsung Messages, plus any app you add for them) isn't held by daily time or Messaging's limit, so they can arrange a ride home. It goes back after 10 minutes with an adult or at home. School time, the schedule, bedtime, a pause and a block still hold it, and a kid home alone keeps their limits. On by default; switch it off or add apps in Family > Places.
+- **Hearth knows who each kid is with.** Each kid's Place sensor gains `with` and `apart_from_adults`, a `hearth_presence` event fires when one changes, and a kid who's out shows on their row ("Away · apart from adults since 6:47 PM · Messages open"). Positions stay in memory only: nothing Hearth keeps, fires or logs has a coordinate.
+- **The activity log notes Messages when away** opening and going back (`kind: rule`).
 - **A Family Link app pause that never took isn't a parent's change any more.** Google takes some apps' 1-minute limit and never shows it; Hearth read that as "the app's limit was changed in the Family Link app" and let those apps go until midnight. Only a pause Family Link has once shown in force counts as changed now. One that never shows is said on the kid's Family Link line ("Family Link didn't take the pause of …") and tried again after 5 minutes, then less and less often (up to once an hour). The grants the older reading made are dropped once on the update, so those apps are held again.
 - **Apps paused before a Family Link pause failed part-way are resumed.** Family Link pauses a list app by app and stops at the first one Google refuses; Hearth now treats the whole list as possibly paused, so time back resumes them all.
 - **Pause screens locks a phone or tablet only Family Link holds**, as daily time used up does; it's let go when the pause ends.
