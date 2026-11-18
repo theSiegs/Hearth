@@ -1,0 +1,1 @@
+Home Assistant: a bedtime device lock lasts past midnight.
