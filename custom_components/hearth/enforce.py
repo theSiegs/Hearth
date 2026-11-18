@@ -44,7 +44,8 @@ add, per person, the parental controls of other integrations (Configure > Enforc
 
 - The weekly schedule (weekly.py): a mode that closes groups (Homework) holds them through the same holds as a group
   out of time (Family Link's app pauses, Family Safety's platform lock and app pauses, the Switch), and Sleep and School
-  hold Family Safety's platforms and the Switch (schedule_wanted). Family Link keeps its own bedtime and School time.
+  hold Family Safety's platforms and the Switch (schedule_wanted). Family Link keeps its own School time; its bedtime
+  follows the schedule's through bedtime_sync.py, and Sleep locks its devices whole where it has none running.
 
 - Extra time at bedtime (bedtime_lift.py): an adult's extra time of All screen time given in bedtime lifts the
   schedule's Sleep and the bedtime locks while it lasts, so Sleep's holds above are let go; Family Link's bedtime
@@ -122,7 +123,7 @@ WEEKDAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", 
 # A Switch's limit is put back this long before midnight: after it, "today" is another day's setting
 NINTENDO_LET_GO_BEFORE_MIDNIGHT = timedelta(minutes=2)
 NINTENDO_EACH_DAY = "each_day_of_the_week"
-# Nothing is let go this long after Home Assistant starts (the sources report in first)
+# Nothing is let go this long after Home Assistant starts (the sources report in first)
 # How long a Switch limit Hearth put back may still read 0 (the Nintendo integration polls)
 SWITCH_PUT_BACK_FRESH = timedelta(minutes=5)
 SETTLE = timedelta(minutes=5)

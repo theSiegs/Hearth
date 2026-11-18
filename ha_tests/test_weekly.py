@@ -254,6 +254,71 @@ async def test_today_mode_until_keeps_its_end_without_a_schedule(hass: HomeAssis
     assert week.resolve("person.sam", tuesday).changes == [(0, "sleep"), (7 * 60, "free")]
 
 
+# Bedtime and wake (bedtime_sync.py's lanes)
+
+
+async def test_set_bedtime_moves_a_day_s_bedtime_and_wake_for_good(hass: HomeAssistant) -> None:
+    week = _week(hass)
+    week.set_days(["person.sam"], ["school_days"], SCHOOL_DAY)
+    week.set_bedtime(["person.sam"], ["wed"], bedtime="21:00")
+    days = week.schedule_of("person.sam")["days"]
+    assert days["wed"]["changes"][-1] == ["21:00", "sleep"]
+    assert days["tue"]["changes"] == days["thu"]["changes"] == normalize_changes(SCHOOL_DAY, week.data.modes)
+    # A wake moves the day's first change; School is kept
+    week.set_bedtime(["person.sam"], ["wed"], wake="07:15")
+    assert days["wed"]["changes"][:2] == [["07:15", "free"], ["07:45", "school"]]
+    # Both, on a day with no changes yet
+    token = week.set_bedtime(["person.sam"], ["sat"], bedtime="22:00", wake="08:30")
+    assert week.schedule_of("person.sam")["days"]["sat"]["changes"] == [["08:30", "free"], ["22:00", "sleep"]]
+    week.undo(token)
+    assert week.schedule_of("person.sam")["days"]["sat"]["changes"] == []
+    # A wake past School starts the day in School; a bedtime before wake is refused whole
+    week.set_bedtime(["person.sam"], ["thu"], wake="08:00")
+    assert week.schedule_of("person.sam")["days"]["thu"]["changes"][0] == ["08:00", "school"]
+    with pytest.raises(ScheduleError):
+        week.set_bedtime(["person.sam"], ["mon", "fri"], bedtime="06:00")
+    assert week.schedule_of("person.sam")["days"]["mon"]["changes"][-1] == ["21:30", "sleep"]
+
+
+async def test_the_night_sets(hass: HomeAssistant) -> None:
+    week = _week(hass)
+    week.set_bedtime(["person.sam"], ["school_nights"], bedtime="21:00", wake="07:00")
+    week.set_bedtime(["person.sam"], ["weekend_nights"], bedtime="22:30")
+    days = week.schedule_of("person.sam")["days"]
+    assert [k for k in ("mon", "tue", "wed", "thu", "fri", "sat", "sun", "day_off") if days[k]["changes"]] == [
+        "mon", "tue", "wed", "thu", "fri", "sat", "sun"
+    ]
+    assert days["sun"]["changes"][-1] == ["21:00", "sleep"] and days["fri"]["changes"] == [["22:30", "sleep"]]
+    assert days["day_off"]["changes"] == []
+
+
+async def test_a_tonight_only_wake_earlier_and_later_than_usual(hass: HomeAssistant) -> None:
+    week = _week(hass)
+    week.set_days(["person.sam"], ["every_day"], [["07:00", "free"], ["21:00", "sleep"]])
+    monday, tuesday = MONDAY, MONDAY + timedelta(days=1)
+    week.change_today("person.sam", monday, wake="08:30")
+    # Tonight is unchanged; tomorrow's Sleep runs until 8:30
+    assert week.resolve("person.sam", monday).changes == [(420, "free"), (1260, "sleep")]
+    assert week.resolve("person.sam", tuesday).changes == [(0, "sleep"), (510, "free"), (1260, "sleep")]
+    # Earlier than usual: from 6:00 it's the day's first awake mode, not the night carried on
+    week.change_today("person.sam", monday, wake="06:00")
+    assert week.resolve("person.sam", tuesday).changes == [(0, "sleep"), (360, "free"), (1260, "sleep")]
+    zone = dt_util.get_default_time_zone()
+    assert week.now("person.sam", datetime(2026, 11, 23, 22, 0, tzinfo=zone)).until == datetime(
+        2026, 11, 24, 6, 0, tzinfo=zone
+    )
+    # With a bedtime too; the morning after it's gone
+    week.change_today("person.sam", monday, bedtime="22:00", wake="08:00")
+    assert week.resolve("person.sam", monday).changes[-1] == (1320, "sleep")
+    assert week.resolve("person.sam", tuesday).changes[1] == (480, "free")
+    assert week.new_day(tuesday) == []
+    assert week.new_day(tuesday + timedelta(days=1)) == ["person.sam"]
+    # No bedtime tonight: no wake to move
+    week.set_days(["person.sam"], ["wed"], [["07:00", "free"]])
+    with pytest.raises(ScheduleError):
+        week.change_today("person.sam", tuesday + timedelta(days=1), wake="08:00")
+
+
 async def test_modes_are_the_family_s(hass: HomeAssistant) -> None:
     week = _week(hass)
     week.set_days(["person.sam"], ["mon"], SCHOOL_DAY)

@@ -127,6 +127,9 @@ def summary(hub) -> dict[str, Any]:
             }
         )
         # A kid's to-do list today and their money balance (todos.py)
+        # Bedtime kept in step in Family Link and Family Safety (bedtime_sync.py), for a kid it's for
+        if person in household.bedtime_sync.kids():
+            people[-1]["bedtime_sync"] = household.bedtime_sync.view(person)
         if person in household.todos.kids():
             people[-1]["todo"] = household.todos.counts(person)
             people[-1]["balance_cents"] = household.todos.balance_cents(person)

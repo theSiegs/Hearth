@@ -85,6 +85,45 @@ def weekly_window(hass: HomeAssistant, child: str, day: date) -> tuple[time, tim
     return None
 
 
+def bedtime_slot(hass: HomeAssistant, child: str, iso_day: int) -> tuple[str, str] | None:
+    """The child's weekly bedtime of a weekday (1 Monday to 7 Sunday) as ("HH:MM" start, "HH:MM" end the next
+    morning), from its start and end time entities (unique id familylink_<child>_bedtime_<day>_<start|end>, else a time
+    entity of the child's named for the weekday); None when it can't be read."""
+    found: dict[str, str] = {}
+    for bound in ("start", "end"):
+        entity_id = _by_unique_id(hass, "time", f"{FL_DOMAIN}_{child}_bedtime_{iso_day}_{bound}")
+        if entity_id is None:
+            suffix = f"_{WEEKDAYS[iso_day - 1]}_bedtime_{bound}"
+            entity_id = next(
+                (
+                    s.entity_id
+                    for s in hass.states.async_all("time")
+                    if s.entity_id.endswith(suffix) and str(s.attributes.get("child_id")) == child
+                ),
+                None,
+            )
+        state = hass.states.get(entity_id) if entity_id else None
+        clock = _clock(state.state if state else None)
+        if clock is not None:
+            found[bound] = f"{clock.hour:02d}:{clock.minute:02d}"
+    if "start" in found and "end" in found:
+        return found["start"], found["end"]
+    return None
+
+
+def bedtime_switch(hass: HomeAssistant, child: str) -> str | None:
+    """The child's Bedtime switch (on: Family Link's bedtime is on), by unique id, else the switch named like the
+    child's bedtime time entities."""
+    if (found := _by_unique_id(hass, "switch", f"{FL_DOMAIN}_{child}_bedtime")) is not None:
+        return found
+    for state in hass.states.async_all("time"):
+        if str(state.attributes.get("child_id")) == child and state.entity_id.endswith("_monday_bedtime_start"):
+            candidate = "switch." + state.entity_id[len("time."):-len("monday_bedtime_start")] + "bedtime"
+            if hass.states.get(candidate) is not None:
+                return candidate
+    return None
+
+
 def school_time_sensors(hass: HomeAssistant, child: str) -> list[Any]:
     """The child's School time sensors, one per device (binary_sensor.<device>_school_time_active, maybe _2)."""
     return [

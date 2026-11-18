@@ -26,8 +26,8 @@ School time come from the lock entities (Family Link's) as before. The first edi
 The two budgets stay in step with Monday's and Saturday's limits (hearth.set_budget and the old numbers write
 Monday to Friday, or Saturday, Sunday and the Day off).
 
-Phase 1: Hearth enforces the schedule with its own holds only; nothing is written to Family Link's, Family Safety's
-or Nintendo's own schedules.
+Hearth enforces the schedule with its own holds. Bedtime and wake are also kept in step in Family Link's bedtime and
+Family Safety's allowed hours once an adult starts that (bedtime_sync.py); Nintendo's schedule isn't written.
 """
 
 from __future__ import annotations
@@ -56,6 +56,9 @@ DAY_SETS: dict[str, tuple[str, ...]] = {
     "school_days": DAYS[:5],
     "weekend": DAYS[5:],
     "every_day": DAY_KEYS,
+    # Bedtimes: a school night is the night before a school day
+    "school_nights": ("sun", "mon", "tue", "wed", "thu"),
+    "weekend_nights": ("fri", "sat"),
 }
 LONG_DAYS = {
     "mon": "Monday", "tue": "Tuesday", "wed": "Wednesday", "thu": "Thursday", "fri": "Friday", "sat": "Saturday",
@@ -273,6 +276,34 @@ def half_day_changes(
     return merged([*before, (end, then), *rest])
 
 
+def with_bedtime(changes: list[tuple[int, str]], at: int, modes: dict[str, dict[str, Any]]) -> list[tuple[int, str]]:
+    """A day's changes with its bedtime at [at]: the day's last Sleep moves there, or one is added (changes after it
+    go)."""
+    sleep = next((m for m in modes if modes[m]["allows"] == NOTHING), SLEEP)
+    kept = list(changes)
+    if kept and modes.get(kept[-1][1], {}).get("allows") == NOTHING:
+        kept = kept[:-1]
+    kept = [c for c in kept if c[0] < at]
+    return merged([*kept, (at, sleep)])
+
+
+def with_wake(changes: list[tuple[int, str]], at: int, modes: dict[str, dict[str, Any]]) -> list[tuple[int, str]]:
+    """A day's changes with its wake at [at]: the day's first change moves there (the mode in force then, else the
+    first change's), dropping the changes it passes. A day with no changes gets Free time from then."""
+    def asleep(mode: str) -> bool:
+        return (modes.get(mode) or {}).get("allows") == NOTHING
+
+    free = next((m for m, d in modes.items() if d.get("allows") == EVERYTHING), FREE)
+    passed = [c for c in changes if c[0] <= at]
+    if passed and passed[-1] == changes[-1] and asleep(passed[-1][1]):
+        raise ScheduleError("Wake has to be before bedtime")
+    if passed and not asleep(passed[-1][1]):
+        mode = passed[-1][1]
+    else:
+        mode = next((m for _, m in changes if not asleep(m)), free)
+    return merged([(at, mode), *[c for c in changes if c[0] > at]])
+
+
 # The resolved day
 
 
@@ -462,6 +493,11 @@ class Week:
             # until then, and the day's own changes go on from there
             end = minutes_of(morning["until"])
             plain = self._carry(person, day, with_today=False) if not any(m <= end for m, _ in out.changes) else None
+            if plain is not None and morning.get("wake"):
+                # A tonight-only wake earlier than usual: from then, the day's first change that allows something
+                plain = next(
+                    (md for _, md in out.changes if (modes.get(md) or {}).get("allows") != NOTHING), None
+                ) or next((m for m, d in modes.items() if d.get("allows") == EVERYTHING), FREE)
             at_end = next((md for m, md in reversed(out.changes) if m <= end), None) or plain or next(
                 (m for m, d in modes.items() if d.get("allows") == EVERYTHING), FREE
             )
@@ -697,11 +733,19 @@ class Week:
         until: Any = None,
         by: str = "service",
         reason: str | None = None,
+        wake: Any = None,
     ) -> str:
         """Today only: a copy of today's day, changed: its changes ([changes]), a later or earlier [bedtime] (the
         day's last Sleep moves, or one is added), or [mode] from [start] (minutes; now by default) [until] a time (the
         next change by default; a time earlier than [start] is tomorrow morning's: the mode runs past midnight until
-        then); limits merge into the day's. Ends at midnight. Returns an undo token."""
+        then); limits merge into the day's; [wake] tomorrow morning only (tonight's Sleep runs until then, with or
+        without [bedtime]). Ends at midnight (a wake the morning after). Returns an undo token."""
+        if wake not in (None, ""):
+            if changes is not None or mode is not None:
+                raise ScheduleError("A wake goes with a bedtime, not with a mode or the day's changes")
+            ends = self.resolve(person, day).changes
+            if bedtime in (None, "") and not (ends and self.data.modes.get(ends[-1][1], {}).get("allows") == NOTHING):
+                raise ScheduleError("No bedtime tonight")
         undo = self._snapshot([person])
         current = self.resolve(person, day)
         mine = self.data.today.get(person)
@@ -717,13 +761,7 @@ class Week:
         if changes is not None:
             new = as_minutes(normalize_changes(changes, self.data.modes))
         elif bedtime is not None:
-            at = minutes_of(bedtime)
-            sleep = next((m for m in self.data.modes if self.data.modes[m]["allows"] == NOTHING), SLEEP)
-            kept = list(base)
-            if kept and self.data.modes.get(kept[-1][1], {}).get("allows") == NOTHING:
-                kept = kept[:-1]
-            kept = [c for c in kept if c[0] < at]
-            new = merged([*kept, (at, sleep)])
+            new = with_bedtime(base, minutes_of(bedtime), self.data.modes)
         elif mode is not None:
             if mode not in self.data.modes:
                 raise ScheduleError(f"No mode {mode!r}")
@@ -759,13 +797,60 @@ class Week:
                 mine["next_morning"] = {
                     "date": (day + timedelta(days=1)).isoformat(), "mode": mode, "until": hhmm(morning)
                 }
+        if wake not in (None, ""):
+            ends = as_minutes(mine["changes"]) if mine.get("changes") is not None else base
+            mine["next_morning"] = {
+                "date": (day + timedelta(days=1)).isoformat(),
+                "mode": ends[-1][1] if ends else SLEEP,
+                "until": hhmm(minutes_of(wake)),
+                "wake": True,
+            }
         if limits is not None:
             mine["limits"] = {**(mine.get("limits") or {}), **normalize_limits(limits)}
-        if mine.get("changes") is None and mine.get("limits") is None:
+        if mine.get("changes") is None and mine.get("limits") is None and not mine.get("next_morning"):
             raise ScheduleError("Say what changes today")
         mine["by"] = by
         mine["reason"] = (reason or "").strip()[:80] or mine.get("reason")
         self.data.today[person] = mine
+        self._save()
+        return undo.token
+
+    def set_bedtime(self, people: list[str], days: list[str], bedtime: Any = None, wake: Any = None) -> str:
+        """Each person's [days] get their bedtime (the day's last Sleep moves, or one is added) and/or wake (the day's
+        first change moves) for good; no other day is touched. Returns an undo token."""
+        if bedtime in (None, "") and wake in (None, ""):
+            raise ScheduleError("Give a bedtime, a wake or both")
+        keys = expand_days(days)
+        return self.set_nights({p: {k: (wake, bedtime) for k in keys} for p in people})
+
+    def set_nights(self, by_person: dict[str, dict[str, tuple[Any, Any]]]) -> str:
+        """Per person and day key: (wake, bedtime), either None to leave it. Every day is worked out before anything
+        changes (one that can't be refuses the whole edit). Returns one undo token."""
+        modes = self.data.modes
+        new: dict[str, dict[str, list[list[str]]]] = {}
+        for person, days in by_person.items():
+            sched = self.schedule_of(person)
+            for key, (wake, bedtime) in days.items():
+                if key not in DAY_KEYS:
+                    raise ScheduleError(f"No day {key!r}")
+                own = (sched["days"].get(key) or {}).get("changes") or []
+                changes = [(m, md) for m, md in as_minutes(own) if md in modes]
+                if wake not in (None, ""):
+                    changes = with_wake(changes, minutes_of(wake), modes)
+                if bedtime not in (None, ""):
+                    at = minutes_of(bedtime)
+                    awake = next((m for m, md in changes if modes[md]["allows"] != NOTHING), None)
+                    if awake is not None and at <= awake:
+                        raise ScheduleError("Bedtime has to be after wake")
+                    changes = with_bedtime(changes, at, modes)
+                if len(changes) > MAX_CHANGES:
+                    raise ScheduleError(f"At most {MAX_CHANGES} changes a day")
+                new.setdefault(person, {})[key] = [[hhmm(m), md] for m, md in changes]
+        undo = self._snapshot(list(new))
+        for person, days in new.items():
+            own_sched = self._own(person)
+            for key, changes in days.items():
+                own_sched["days"].setdefault(key, {"changes": [], "limits": {}})["changes"] = changes
         self._save()
         return undo.token
 
@@ -899,7 +984,10 @@ def expand_days(days: list[str] | str | None) -> list[str]:
     for given in [days] if isinstance(days, str) else days or []:
         for key in DAY_SETS.get(given, (given,)):
             if key not in DAY_KEYS:
-                raise ScheduleError(f"No day {given!r} (mon to sun, day_off, school_days, weekend, every_day)")
+                raise ScheduleError(
+                    f"No day {given!r} (mon to sun, day_off, school_days, weekend, every_day, school_nights, "
+                    "weekend_nights)"
+                )
             if key not in out:
                 out.append(key)
     if not out:

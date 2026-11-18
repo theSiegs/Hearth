@@ -76,6 +76,7 @@ from .sources import CONF_SOURCES, CONF_TITLES
 from .suggest_push import CONF_SUGGEST_PUSH, pairs as suggest_pairs
 from .profiles import OPTION_KEY
 from . import fs_capabilities, nintendo, parent_pin, phones
+from .bedtime_sync import fl_capabilities
 from .push import clean_server
 from .activity import call_service
 
@@ -383,6 +384,8 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
             "nintendo": nintendo.capabilities(hass),
             # The Family Safety version's features (today_only, hold_attributes, ...): fs_capabilities.py
             "family_safety": fs_capabilities.capabilities(hass),
+            # Family Link's bedtime: weekly slots, and tonight-only overrides (bedtime_sync.py)
+            "family_link": fl_capabilities(hass),
         },
         "parental_controls": _parental_controls(hass),
     }

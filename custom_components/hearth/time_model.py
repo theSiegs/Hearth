@@ -262,11 +262,12 @@ _ORIGIN_WHERE = {
 }
 
 
-def origin_text(detail: str, source: str, by: str | None, clock: str | None) -> str:
-    """Where a status came from, for the "?" on a status line: "Bonus +30 · added by Alex in Hearth · 3:05 PM"."""
+def origin_text(detail: str, source: str, by: str | None, clock: str | None, verb: str = "added") -> str:
+    """Where a status came from, for the "?" on a status line: "Bonus +30 · added by Alex in Hearth · 3:05 PM"
+    (a bedtime: "changed in Family Link")."""
     parts = [detail]
     where = _ORIGIN_WHERE.get(source, f"in {source}")
-    parts.append(f"added by {by} {where}" if by else f"added {where}")
+    parts.append(f"{verb} by {by} {where}" if by else f"{verb} {where}")
     if clock:
         parts.append(clock)
     return " · ".join(parts)

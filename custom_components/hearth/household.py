@@ -104,6 +104,7 @@ from .backstop import Backstop
 from .unlimited import Unlimited
 from .activity import RULE, ActivityLog
 from .bedtime_lift import BedtimeLifts, bedtime_sensors, in_family_link_bedtime, lift_minutes
+from .bedtime_sync import BedtimeSync
 from . import family_link as fl
 from .todos import ChoreBook
 from .schedule import Scheduler
@@ -230,6 +231,9 @@ class PersonDay:
 # today's count is short and a kid who was out of time looks as if they had some. A limit reached today stays held
 # until the sources have settled this long after Home Assistant is running
 STARTUP_SETTLE = timedelta(seconds=90)
+# How long the schedule's Sleep (or the end of a bedtime lift) waits for a Family Link bedtime that names a window to
+# come on before Hearth locks the devices whole itself (sleep_locks_devices)
+SLEEP_GAP_GRACE = timedelta(minutes=10)
 
 
 def _keep_held(state: GroupState) -> None:
@@ -305,6 +309,8 @@ class Household:
         self.week = Week(hass, hub.entry.entry_id, lambda: self.limits.data.budgets, lambda: self.options)
         self.week.type_of = self.day_type_on
         self.limits.week = self.week
+        # The schedule's bedtime kept in step in Family Link and Family Safety (bedtime_sync.py)
+        self.bedtime_sync = BedtimeSync(hass, self, hub.entry.entry_id)
         # Each person's schedule now (weekly.Now, None without one), as of the last recompute; the mode last told
         # (hearth_mode fires when it changes)
         self.schedule_now: dict[str, Now | None] = {}
@@ -373,6 +379,7 @@ class Household:
         await self.bedtime_lift.async_load()
         await self.scheduler.async_load()
         await self.week.async_load()
+        await self.bedtime_sync.async_load()
         await self.todos.async_load()
         await self.presence.async_load()
 
@@ -404,6 +411,7 @@ class Household:
         await self.bedtime_lift.async_flush()
         await self.scheduler.async_flush()
         await self.week.async_flush()
+        await self.bedtime_sync.async_flush()
         await self.todos.async_flush()
         await self.presence.async_flush()
 
@@ -636,8 +644,8 @@ class Household:
 
     def schedule_holds(self, person: str) -> set[str]:
         """What the schedule closes now for the other parental controls: the mode's groups, and All screen time in
-        Sleep and School (Family Safety's platforms and the Switch are held then; Family Link keeps its own bedtime and
-        School time in phase 1)."""
+        Sleep and School (Family Safety's platforms and the Switch are held then; Family Link's bedtime follows through
+        bedtime_sync.py, and sleep_locks_devices covers where it has none running)."""
         found = set(self.schedule_closed(person))
         lock = self.schedule_lock(person)
         # Extra time at bedtime lifts Sleep's hold while it lasts (bedtime_lift.py)
@@ -649,14 +657,25 @@ class Household:
         """Whether the weekly schedule's Sleep locks the person's Family Link devices whole now: it's Sleep, extra time
         doesn't lift it, and Family Link has no bedtime of its own for them: none of their devices' Bedtime active
         sensors names a window (one set in Family Link locks the devices itself, with its calls and alarms; its sensor
-        can read off for a poll or two after extra time ends, which mustn't lock and unlock the phone)."""
+        can read off for a poll or two after extra time ends, which mustn't lock and unlock the phone). Also when a
+        sensor names a window but none is on once the schedule's Sleep has been on for SLEEP_GAP_GRACE: Family Link
+        didn't follow tonight (a sync that didn't take, a day off learned that morning), and Hearth covers the gap."""
         if self.schedule_lock(person) != "bedtime" or self.bedtime_lift.until(person) is not None:
             return False
         child = self.family_link_child(person)
         if child is None:
             return False
-        return not any(
-            s.state == "on" or s.attributes.get("bedtime_start") for s in bedtime_sensors(self.hass, child)
+        sensors = bedtime_sensors(self.hass, child)
+        if not any(s.state == "on" or s.attributes.get("bedtime_start") for s in sensors):
+            return True
+        found = self.schedule_now.get(person)
+        since = found.since if found is not None else None
+        if since is not None and (ended := self.bedtime_lift.ended_at.get(person)) is not None:
+            since = max(since, ended)
+        return (
+            not any(s.state == "on" for s in sensors)
+            and since is not None
+            and dt_util.now() - since >= SLEEP_GAP_GRACE
         )
 
     def week_people(self) -> list[str]:
@@ -2420,6 +2439,8 @@ class Household:
             "device_extras": [
                 v for v in self.device_extra_views(person) if v["group"] == ALL or v["group"] in groups
             ],
+            # The parents' apps whose bedtime isn't in step with Hearth's schedule (bedtime_sync.py), when any
+            **({"bedtime_sync": lines} if (lines := self.bedtime_sync.explain_lines(person)) else {}),
         }
 
     # Extra time on one device (device_extra.py)
@@ -2774,6 +2795,7 @@ class Household:
                     "text": origin_text(
                         record.get("detail") or "", record.get("source") or "hearth", record.get("by"),
                         say_clock(local.hour, local.minute) if local else None,
+                        verb="changed" if record.get("kind") == "bedtime" else "added",
                     ),
                     "endable": endable,
                     "end": {"service": "hearth.end_grant", "data": {"origin_id": origin_id}} if endable else None,
