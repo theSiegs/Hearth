@@ -229,3 +229,16 @@ def test_the_moved_start_is_never_past_midnight() -> None:
     assert moved_start(now + timedelta(minutes=10), now) == "23:50"
     assert moved_start(now + timedelta(minutes=10, seconds=5), now) == "23:51"
     assert moved_start(now + timedelta(minutes=30), now) == "23:59"
+
+
+async def test_a_lifted_bedtime_is_the_next_lock_when_its_extra_time_ends(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """While extra time lifts bedtime, the TV is told bedtime comes back when it ends (next_lock), so a TV that loses
+    Home Assistant meanwhile brings bedtime back by itself."""
+    client, secret, _set_bedtime = await _sam(hass, hass_client_no_auth, freezer, 21, 45)
+    await _bonus(hass, 30)
+    sam = await _sam_state(hass, client, secret)
+    assert sam["locked"] is False
+    back = dt_util.now().replace(hour=22, minute=15, second=0, microsecond=0)
+    assert sam["next_lock"] == {"at": back.isoformat(), "by": BEDTIME, "kind": "bedtime"}

@@ -109,7 +109,19 @@ from .todos import ChoreBook
 from .schedule import Scheduler
 from .weekly import EVENT_MODE, Now, Week, mode_closed, mode_lock
 from .watch import WatchLog
-from .pause import PAUSE, SCHEDULE, app_pauses_of, end_pause, lock_kinds, lock_until, next_lock, pause_ends_on, pause_of
+from .pause import (
+    BEDTIME_ENDS,
+    BEDTIME_STARTS,
+    PAUSE,
+    SCHEDULE,
+    app_pauses_of,
+    end_pause,
+    lock_kinds,
+    lock_until,
+    next_lock,
+    pause_ends_on,
+    pause_of,
+)
 from .places import Places, happened, matches
 from . import parent_pin
 from .media import media_rooms
@@ -571,9 +583,10 @@ class Household:
             state = self.hass.states.get(entity_id)
             if state is None:
                 continue
-            for key, into in (("bedtime_start", starts), ("bedtime_end", ends)):
-                if (clock := _clock_of(state.attributes.get(key))) is not None:
-                    into.append(clock)
+            # Family Link's bedtime_start / bedtime_end, Family Safety's downtime_start / downtime_end
+            for keys, into in ((BEDTIME_STARTS, starts), (BEDTIME_ENDS, ends)):
+                clocks = [c for key in keys if (c := _clock_of(state.attributes.get(key))) is not None]
+                into.extend(clocks[:1])
         if not starts or not ends:
             return None
         zone = dt_util.get_default_time_zone()
@@ -742,11 +755,48 @@ class Household:
         upcoming = next_lock(self.hass, self._lock_entities(person))
         if scheduled is not None and scheduled.next_lock is not None:
             at, kind = scheduled.next_lock
-            if upcoming is None or at < dt_util.parse_datetime(upcoming["at"]):
+            if kind == "school_time" and self.scheduler.off_now(person, at) is not None:
+                # School time taken off isn't coming (schedule_lock): a device that locks at next_lock by itself
+                # mustn't. Tonight's Sleep is the next one then
+                later = scheduled.bedtime
+                at, kind = (later if later is not None and later > dt_util.now() else None), "bedtime"
+            if at is not None and (upcoming is None or at < dt_util.parse_datetime(upcoming["at"])):
                 upcoming = {"at": dt_util.as_local(at).isoformat(), "by": SCHEDULE, "kind": kind}
+        # A lifted bedtime comes back when its extra time ends: said as the next lock, so a device that loses Home
+        # Assistant meanwhile brings bedtime back itself
+        if (back := self._bedtime_back(person)) is not None and (
+            upcoming is None or back[0] < dt_util.parse_datetime(upcoming["at"])
+        ):
+            upcoming = {"at": dt_util.as_local(back[0]).isoformat(), "by": back[1], "kind": "bedtime"}
         if upcoming:
             out["next_lock"] = upcoming
         return out
+
+    def _bedtime_back(self, person: str) -> tuple[datetime, str] | None:
+        """While extra time lifts the person's bedtime: when it ends and which bedtime is back then (a lock entity
+        of theirs that's on, else the schedule's Sleep). None without a lift, or when its end isn't in bedtime (Unlimited
+        with bedtime included that ends before bedtime starts)."""
+        until = self.bedtime_lift.until(person)
+        if until is None:
+            return None
+        by = next((e for e in self._locked_by(person) if lock_kinds(self.hass, [e]) == ["bedtime"]), None)
+        if by is None and self.schedule_lock(person) == "bedtime":
+            by = SCHEDULE
+        if by is not None:
+            # A lift that lasts past the bedtime's own end (a morning's extra time) brings no bedtime back
+            scheduled = self.schedule_now.get(person)
+            end = (scheduled.until if scheduled else None) if by == SCHEDULE else lock_until(self.hass, [by])
+            if end is not None and end <= until:
+                return None
+        if by is None:
+            # Not in bedtime by a lock of Hearth's now (Family Link's own bedtime, moved to the lift's end, or a
+            # lift that started before bedtime): back when the lift ends past tonight's bedtime
+            tonight = self.bedtime_tonight(person)
+            start = dt_util.parse_datetime(tonight["at"]) if tonight else None
+            if not self.in_bedtime(person) and (start is None or until < start):
+                return None
+            by = SCHEDULE if tonight and tonight["source"] == "schedule" else next(iter(self._lock_entities(person)), SCHEDULE)
+        return until, by
 
     def seen_profiles(self) -> dict[str, str]:
         """The TV profiles to map, for the options: option key -> how to show it. A profile a TV reports with its
@@ -1185,7 +1235,15 @@ class Household:
                 )
             raw = group_seconds(devices, membership, self.outside_all())
             # Minutes used while unlimited aren't counted (unlimited.py)
-            seconds = self.unlimited.exclude(person, raw, now)
+            # Per device too, while a window of today's is there: a total's minutes of a window that arrive after its
+            # settle are told from that device's growth since
+            outside = self.outside_all()
+            by_device = (
+                {device: group_seconds({device: usage}, membership, outside) for device, usage in devices.items()}
+                if self.unlimited.windows.get(person)
+                else None
+            )
+            seconds = self.unlimited.exclude(person, raw, now, by_device)
             day = PersonDay(person, devices, seconds, playing=playing.get(person, []),
                             together_s=self.live.together_s.get(person, 0.0), raw_groups=raw)
             for group in self.groups:
@@ -1793,6 +1851,9 @@ class Household:
                 "minutes_left": max(state.minutes_left, bonus_here.get(group.id, 0)),
                 "apps": [p for p in apps if not lifted.app(p, membership(p))] if lifted else apps,
             }
+            # A category that's off today (its limit 0): bonus time doesn't open it, so a device offers no ask for it
+            if state.closed and group.id != ALL:
+                entry["closed"] = True
             # All screen time holds every app but these (a group outside it: music, say; what an allow lifts)
             if group.id == ALL:
                 spared = self._spared(membership)
@@ -2002,6 +2063,7 @@ class Household:
         """A confirmed change of the person's place: what ends on it ends for them, as allow_end, pause_end and
         school_time_off_cancel would, and the adults are told."""
         ended: list[tuple[dict[str, str], str]] = []
+        behind = {p: ids for p, ids in self.unlimited_allows().items() if p == person}
         for allow in list(self.allows.of(person)):
             if matches(allow.ends_on, came_from, went_to) and self.allows.end_for(allow.id, person):
                 group = self.group(allow.group) if allow.group else None
@@ -2009,6 +2071,8 @@ class Household:
                     "screen time" if allow.group == "all" else group.name if group else allow.group or allow.app
                 )
                 ended.append((allow.ends_on, f"their allow ({what}) ended"))
+        # The allow behind Unlimited ends Unlimited with it
+        self.end_unlimited_behind(behind)
         if (pause := pause_ends_on(self.hass, person)) and matches(pause[0], came_from, went_to):
             self.end_pause_now([person])
             ended.append((pause[0], "their pause ended"))
@@ -2857,6 +2921,30 @@ class Household:
             self.note_origin(person, "unlimited", detail, "hearth", by, id=grant["id"])
         self.recompute()
         return allowed
+
+    def unlimited_allows(self) -> dict[str, set[str]]:
+        """The allows of daily time behind each person's Unlimited now (its running grants' and its window's): ending
+        one of them is ending Unlimited."""
+        found: dict[str, set[str]] = {}
+        now = dt_util.now()
+        for person in self.people():
+            ids = {g["allow"] for g in self.limits.grants(person, "unlimited", now=now) if g.get("allow")}
+            if (window := self.unlimited.active(person, now)) is not None and window.get("allow"):
+                ids.add(window["allow"])
+            if ids:
+                found[person] = ids
+        return found
+
+    @callback
+    def end_unlimited_behind(self, before: dict[str, set[str]], by: str | None = None) -> list[str]:
+        """Unlimited ends for each person whose allow behind it ([before]: unlimited_allows) was just ended (allow_end,
+        a place): every screen would still say Unlimited, and the minutes go uncounted, while they're held again."""
+        gone = [
+            person
+            for person, ids in before.items()
+            if any(person not in (a.until if (a := self.allows.allows.get(i)) else {}) for i in ids)
+        ]
+        return self.end_unlimited(gone, by) if gone else []
 
     @callback
     def end_unlimited(self, people: list[str] | None, by: str | None = None) -> list[str]:

@@ -164,6 +164,20 @@ QUIET_AFTER_CALL = timedelta(minutes=1)
 # polling is a minute to five): what Hearth locked or let go shows within seconds
 REFRESH_AFTER_WRITE = timedelta(seconds=10)
 MAX_PACKAGES = 150
+# held.restore keys of a Family Link enforcer's app pauses. Apps whose pause call failed or never showed (they may be
+# paused all the same: let go like held ones); apps whose pause Family Link has shown intact once (only those can
+# later be "changed by a parent"); and apps whose pause never showed: {package: {tries, at}} (said as an error and
+# tried again, each time after a longer wait)
+MAYBE_PAUSED = "maybe_paused"
+PAUSES_INTACT = "pauses_intact"
+PAUSES_NOT_TAKEN = "pauses_not_taken"
+# A pause Family Link doesn't show intact this long after Hearth's last call didn't take (its lists follow within a
+# poll or two)
+PAUSE_SHOWS_WITHIN = timedelta(minutes=3)
+# The longest wait between tries of a pause that doesn't take (RETRY, doubled each time, up to this)
+PAUSE_RETRY_MAX = timedelta(hours=1)
+# How held.error starts while a pause didn't take
+PAUSE_NOT_TAKEN = "Family Link didn't take the pause"
 
 # Never paused, whatever category they're in: calls (the dialer and contacts, so an emergency call always works), the
 # system, and the apps that hold the rest. Messages apps are NOT here: daily time, a limit, bedtime
@@ -184,7 +198,31 @@ CLOCKS = frozenset(
         "com.lge.clock",
     }
 )
-ESSENTIAL = TRANSITION_CLIENTS | CLOCKS | frozenset(
+# Android's own parts and the home screens, by name: the system UI, the phone and its calls, contacts, the stock
+# launcher and keyboard, and what installs apps and grants permissions. Never the whole com.android.* prefix: real
+# apps live there too (Chrome is com.android.chrome), and those are paused and blocked like any app
+SYSTEM_PARTS = frozenset(
+    {
+        "com.android.systemui",
+        "com.android.phone",
+        "com.android.server.telecom",
+        "com.android.incallui",
+        "com.android.dialer",
+        "com.android.contacts",
+        "com.android.emergency",
+        "com.android.inputmethod.latin",
+        "com.android.permissioncontroller",
+        "com.android.packageinstaller",
+        "com.google.android.permissioncontroller",
+        "com.google.android.packageinstaller",
+        "com.android.launcher3",
+        "com.sec.android.app.launcher",
+        "com.google.android.apps.nexuslauncher",
+        "com.google.android.launcher",
+        "com.google.android.apps.tv.launcherx",
+    }
+)
+ESSENTIAL = TRANSITION_CLIENTS | CLOCKS | SYSTEM_PARTS | frozenset(
     {
         "com.thesiegs.hearth",
         "com.thesiegs.hearth.mobile",
@@ -203,7 +241,9 @@ ESSENTIAL = TRANSITION_CLIENTS | CLOCKS | frozenset(
 
 
 def essential(package: str) -> bool:
-    return package in ESSENTIAL or package.startswith("com.android.") or package == "android"
+    """Never paused or blocked: the explicit system list (SYSTEM_NEVER_PAUSED), the same one the whole-device path
+    reads (Enforcement._all_apps_but). No com.android.* prefix rule: Chrome and other real apps there are held."""
+    return package in SYSTEM_NEVER_PAUSED
 
 
 # Never paused for School time either: what holds the rest, and the system
@@ -368,8 +408,7 @@ def wanted(
     else:
         held = set()
     for group_id in closed:
-        # essential() spares com.android.* here: a category's own apps are never Android's system packages but by
-        # a misfiled sort, and those mustn't be paused; the whole-device path below names its exceptions instead
+        # essential() is the explicit system list, as the whole-device path reads it (no com.android.* prefix)
         packages |= {p for p in apps_of(group_id, enforcer.person) if not essential(p) and not fs_app(p)}
     if lifted:
         packages = {p for p in packages if not lifted.app(p, groups_of_app(p) if groups_of_app else None)}
@@ -654,6 +693,10 @@ class Enforcement:
                 paused |= paused_switch(e, paused_groups, now, playing)
                 if e.kind == FAMILY_SAFETY and (ALL in paused_groups or paused_groups & set(e.groups)):
                     paused |= set(e.platforms)
+                # A family pause locks a Family Link child's devices whole, as daily time running out does (a
+                # phone or tablet without a Hearth app has nothing else holding it); let go before midnight
+                if e.kind == FAMILY_LINK and ALL in paused_groups and not near_midnight(now):
+                    paused.add(DEVICES)
             scheduled = (
                 schedule_wanted(
                     e,
@@ -915,6 +958,12 @@ class Enforcement:
             packages = items - {DEVICES}
             if packages:
                 service = "pause_app" if hold else "resume_app"
+                if hold:
+                    # Kept before the call: Family Link pauses a list one app after the other and raises at the
+                    # first one refused (or times out), so any of them may be paused by now. Possibly held until a
+                    # pause of them goes through or they're resumed, so letting go resumes them (_holding)
+                    _maybe_paused(held, packages)
+                    self._save()
                 response = await call_service(self.hass,
                     "familylink",
                     service,
@@ -922,8 +971,10 @@ class Enforcement:
                     blocking=True,
                     return_response=self._responds("familylink", service),
                 )
+                _maybe_paused(held, packages, False)
                 if not hold:
                     outcomes.update(_resume_outcomes(response))
+                    _forget_pauses(held, packages)
             return outcomes
         apps = {item for item in items if fs_app(item)}
         for platform in sorted(items - apps):
@@ -1492,14 +1543,82 @@ class Enforcement:
             installed = fl.installed_apps(self.hass, str(child))
             if installed is not None:
                 packages &= installed
+            # Only a pause Hearth has once seen intact can later be "changed by a parent" (as seen_zero for a
+            # Switch, lock_seen_zero for the daily limit). Google takes some apps' 1-minute limit (the call
+            # succeeds) and never shows it: that pause didn't take, nobody changed it
+            intact = set(restore.get(PAUSES_INTACT) or ())
+            seen = set(intact)
+            never: set[str] = set()
+            called = self._quiet_until.get(e.key)
+            # Family Link's lists have had the time to show Hearth's last call (not known after a restart: long ago)
+            shown = not quiet and (
+                called is None or dt_util.utcnow() >= called - QUIET_AFTER_CALL + PAUSE_SHOWS_WITHIN
+            )
             for state in self.hass.states.async_all("sensor"):
                 paused = state.attributes.get("paused_apps")
                 if str(state.attributes.get("child_id")) != str(child) or not isinstance(paused, list):
                     continue
                 watch.add(state.entity_id)
                 for app in paused:
-                    if isinstance(app, dict) and app.get("package") in packages and app.get("pause_intact") is False:
-                        grant(g.APP, app["package"], "the app's limit was changed in the Family Link app")
+                    if not isinstance(app, dict) or app.get("package") not in packages:
+                        continue
+                    if app.get("pause_intact") is True:
+                        seen.add(app["package"])
+                    elif app.get("pause_intact") is False:
+                        if app["package"] in intact:
+                            grant(g.APP, app["package"], g.APP_CHANGED)
+                        elif shown:
+                            never.add(app["package"])
+            self._pauses_not_taken(e, held, seen, never - seen)
+
+    def _pauses_not_taken(self, e: Enforcer, held: Held, intact: set[str], never: set[str]) -> None:
+        """Keeps which app pauses Family Link has shown intact ([intact]) and handles those it never showed ([never]):
+        said once as an error (the kid's Family Link line, the action log), and paused again after RETRY, then after
+        twice as long each time (up to PAUSE_RETRY_MAX). Until then the app stays as held; for the next try it becomes
+        possibly held, so the hold pauses it again and letting go still resumes it."""
+        restore = held.restore
+        was = (restore.get(PAUSES_INTACT) or [], restore.get(PAUSES_NOT_TAKEN) or {})
+        # Of what's held still (an app waiting for its next try is possibly held)
+        holding = _holding(held)
+        intact = intact & holding
+        records = {p: r for p, r in was[1].items() if p in holding and p not in intact}
+        now = dt_util.utcnow()
+        new: set[str] = set()
+        again: set[str] = set()
+        for package in sorted(never):
+            record = records.get(package)
+            if record is None:
+                records[package] = {"tries": 1, "at": now.isoformat()}
+                new.add(package)
+                continue
+            tries = max(1, int(record.get("tries") or 1))
+            wait = min(RETRY * 2 ** min(tries - 1, 8), PAUSE_RETRY_MAX)
+            if (at := _utc(record.get("at"))) is None or now - at >= wait:
+                records[package] = {"tries": tries + 1, "at": now.isoformat()}
+                again.add(package)
+        if again:
+            held.items -= again
+            _maybe_paused(held, again)
+        if (sorted(intact), records) != (sorted(was[0]), was[1]):
+            restore[PAUSES_INTACT] = sorted(intact)
+            restore[PAUSES_NOT_TAKEN] = records
+            for key in (PAUSES_INTACT, PAUSES_NOT_TAKEN):
+                if not restore[key]:
+                    del restore[key]
+            self._save()
+        if records:
+            names = sorted(records)
+            text = f"{PAUSE_NOT_TAKEN} of {', '.join(names[:3])}" + (f" and {len(names) - 3} more" if len(names) > 3 else "")
+            # A failed call's own error stays (it's being retried)
+            if held.failed_at is None:
+                held.error = f"{text}; Hearth tries again"[:200]
+            if new:
+                _LOGGER.warning("Family Link never showed Hearth's pause of %s for %s", sorted(new), e.person)
+                self.note(e.key, not_taken=sorted(new), error=held.error)
+                if self.activity is not None:
+                    self.activity.hold(False, e.person, new, "pause_not_taken", e.kind)
+        elif held.failed_at is None and (held.error or "").startswith(PAUSE_NOT_TAKEN):
+            held.error = None
 
     def fs_mine(self, e: Enforcer, platform: str) -> dict[str, Any]:
         """What Hearth itself asked of a Family Safety platform of the enforcer's: whether it holds it, when its lock
@@ -1802,7 +1921,34 @@ def _holding(held: Held) -> set[str]:
         started.add(SWITCH)
     if "lock_minutes" in held.restore:
         started.add(DEVICES)
+    # Family Link apps whose pause call failed part-way, or never showed: they may be paused all the same
+    started |= set(held.restore.get(MAYBE_PAUSED) or ())
     return held.items | started
+
+
+def _maybe_paused(held: Held, packages: set[str], add: bool = True) -> None:
+    """Family Link apps that may be paused without Hearth holding them for sure (held.restore, kept over a restart):
+    added before a pause call, taken out when a pause or a resume of them went through."""
+    was = set(held.restore.get(MAYBE_PAUSED) or ())
+    now = was | packages if add else was - packages
+    if now:
+        held.restore[MAYBE_PAUSED] = sorted(now)
+    else:
+        held.restore.pop(MAYBE_PAUSED, None)
+
+
+def _forget_pauses(held: Held, packages: set[str]) -> None:
+    """Apps let go: whether their pause was seen intact, and whether it never took, is over with the pause."""
+    intact = set(held.restore.get(PAUSES_INTACT) or ()) - packages
+    if intact:
+        held.restore[PAUSES_INTACT] = sorted(intact)
+    else:
+        held.restore.pop(PAUSES_INTACT, None)
+    not_taken = {p: r for p, r in (held.restore.get(PAUSES_NOT_TAKEN) or {}).items() if p not in packages}
+    if not_taken:
+        held.restore[PAUSES_NOT_TAKEN] = not_taken
+    else:
+        held.restore.pop(PAUSES_NOT_TAKEN, None)
 
 
 def _number(value: Any) -> float | None:

@@ -318,15 +318,18 @@ async def test_an_app_a_parent_changed_in_family_link_is_a_grant(
     assert "com.thesiegs.hearthtube" in paused[0].data["packages"]
     await _settle(hass, freezer)
 
-    hass.states.async_set(
-        "sensor.sam_family_link_apps_with_time_limits",
-        "3",
-        {
-            "child_id": CHILD,
-            "paused_apps": [{"package": "com.thesiegs.hearthtube", "pause_intact": False, "prior": -1}],
-        },
-    )
-    await _bonus(hass, "video", 0)
+    # Family Link shows Hearth's pause in force first: only a pause seen intact can be a parent's change later
+    for intact in (True, False):
+        hass.states.async_set(
+            "sensor.sam_family_link_apps_with_time_limits",
+            "3",
+            {
+                "child_id": CHILD,
+                "paused_apps": [{"package": "com.thesiegs.hearthtube", "pause_intact": intact, "prior": -1}],
+            },
+        )
+        await _bonus(hass, "video", 0)
+        assert (grants == []) is intact
     assert grants[0].data["target"] == {"kind": "app", "value": "com.thesiegs.hearthtube"}
     assert resumed[-1].data["packages"] == ["com.thesiegs.hearthtube"]
 
@@ -403,6 +406,133 @@ async def test_an_app_the_kid_doesn_t_have_is_never_a_parent_s_grant(
     # Hearth lets go of what it shouldn't have held, its own resume no grant either
     assert "com.thesiegs.hearthtube" in resumed[-1].data["packages"]
     assert _household(hass).grants.of("person.sam") == []
+
+
+def _paused_apps(hass: HomeAssistant, intact: bool) -> None:
+    hass.states.async_set(
+        "sensor.sam_family_link_apps_with_time_limits",
+        "0",
+        {
+            "child_id": CHILD,
+            "apps": [],
+            "paused_apps": [{"package": "com.thesiegs.hearthtube", "pause_intact": intact, "prior": -1}],
+        },
+    )
+
+
+async def _minutes_on(hass: HomeAssistant, freezer, minutes: int) -> None:
+    freezer.tick(timedelta(minutes=minutes))
+    _household(hass).recompute()
+    await hass.async_block_till_done()
+
+
+async def test_a_pause_family_link_never_shows_is_said_and_tried_again_less_often(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Google takes some apps' 1-minute limit (the call succeeds) and never shows it. Not a parent's change: said once
+    on Sam's Family Link line, and paused again after 5 minutes, then 10, 20, ... (up to an hour), until it shows."""
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0))
+    paused = async_mock_service(hass, "familylink", "pause_app")
+    async_mock_service(hass, "familylink", "resume_app")
+    await _household_with_sam(hass, hass_client_no_auth)
+    hass.states.async_set(FAMILY_LINK, "0", {"unit_of_measurement": "min", "child_id": CHILD})
+    _installed(hass, ["com.thesiegs.hearthtube"])
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
+    grants = async_capture_events(hass, "hearth_parent_grant")
+    await _budget(hass, "video", 10)
+    assert [c.data["packages"] for c in paused] == [["com.thesiegs.hearthtube"]]
+    household = _household(hass)
+
+    # Family Link's lists after the write: the pause isn't in force. Not yet a pause that didn't take (its lists
+    # follow within a poll or two)
+    _paused_apps(hass, False)
+    await _minutes_on(hass, freezer, 2)
+    status = household.enforcement.status_of("person.sam")["family_link"]
+    assert status["error"] is None and status["held"] == ["com.thesiegs.hearthtube"]
+
+    # Still not shown 4 minutes after the call: said once, still held, no grant
+    await _minutes_on(hass, freezer, 2)
+    status = household.enforcement.status_of("person.sam")["family_link"]
+    assert status["error"] == "Family Link didn't take the pause of com.thesiegs.hearthtube; Hearth tries again"
+    assert status["last"]["not_taken"] == ["com.thesiegs.hearthtube"] and not status["last"]["ok"]
+    assert status["held"] == ["com.thesiegs.hearthtube"]
+    assert grants == [] and household.grants.of("person.sam") == []
+    assert len(paused) == 1
+
+    # Tried again after 5 minutes, then only after 10 more
+    await _minutes_on(hass, freezer, 5)
+    assert len(paused) == 2 and paused[-1].data["packages"] == ["com.thesiegs.hearthtube"]
+    await _minutes_on(hass, freezer, 5)
+    assert len(paused) == 2
+    await _minutes_on(hass, freezer, 6)
+    assert len(paused) == 3
+    await _minutes_on(hass, freezer, 1)
+    assert household.enforcement.status_of("person.sam")["family_link"]["error"].startswith("Family Link didn't take")
+
+    # It shows at last: the error is over, and from now on a change of it is a parent's
+    _paused_apps(hass, True)
+    await _minutes_on(hass, freezer, 4)
+    status = household.enforcement.status_of("person.sam")["family_link"]
+    assert status["error"] is None and status["held"] == ["com.thesiegs.hearthtube"]
+    held = household.enforcement.held["family_link|person.sam"]
+    assert held.restore.get(enforce.PAUSES_INTACT) == ["com.thesiegs.hearthtube"]
+    assert enforce.PAUSES_NOT_TAKEN not in held.restore and enforce.MAYBE_PAUSED not in held.restore
+    _paused_apps(hass, False)
+    await _minutes_on(hass, freezer, 1)
+    assert grants[0].data["target"] == {"kind": "app", "value": "com.thesiegs.hearthtube"}
+
+
+async def test_a_pause_that_never_took_is_resumed_when_time_comes_back(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Waiting for its next try the app is possibly paused (Google may show it late): time back resumes it all the
+    same, and what was kept of it goes."""
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0))
+    async_mock_service(hass, "familylink", "pause_app")
+    resumed = async_mock_service(hass, "familylink", "resume_app")
+    await _household_with_sam(hass, hass_client_no_auth)
+    hass.states.async_set(FAMILY_LINK, "0", {"unit_of_measurement": "min", "child_id": CHILD})
+    _installed(hass, ["com.thesiegs.hearthtube"])
+    await _option(hass, "enforce", {"person": "person.sam", "family_link": FAMILY_LINK, "fl_backstop": False})
+    await _budget(hass, "video", 10)
+    _paused_apps(hass, False)
+    await _minutes_on(hass, freezer, 4)
+    household = _household(hass)
+    held = household.enforcement.held["family_link|person.sam"]
+    assert enforce.PAUSES_NOT_TAKEN in held.restore
+
+    await _bonus(hass, "video", 30)
+    assert resumed[-1].data["packages"] == ["com.thesiegs.hearthtube"]
+    assert held.items == set() and held.restore == {}
+    assert household.enforcement.status_of("person.sam")["family_link"]["error"] is None
+
+
+async def test_grants_from_pauses_that_never_took_are_dropped_once(hass: HomeAssistant, hass_storage) -> None:
+    """A release before this one made a grant of each pause Family Link never showed: those are dropped once on
+    loading. A later one (from a pause seen intact) stays."""
+    from custom_components.hearth import grants as g
+
+    until = (dt_util.utcnow() + timedelta(hours=3)).isoformat()
+
+    def stored(intact_only: bool) -> dict:
+        grants = [
+            {"id": "a1", "person": "person.sam", "via": g.FAMILY_LINK, "kind": g.APP, "value": "com.example.game",
+             "until": until, "reason": g.APP_CHANGED},
+            {"id": "d1", "person": "person.sam", "via": g.FAMILY_LINK, "kind": g.DEVICE, "value": "Devices",
+             "until": until, "reason": "bonus time given in the Family Link app"},
+        ]
+        return {"version": 1, "key": "hearth.grants.x", "data": {"grants": grants, **({g.INTACT_ONLY: True} if intact_only else {})}}
+
+    hass_storage["hearth.grants.x"] = stored(False)
+    grants = g.Grants(hass, "x")
+    await grants.async_load()
+    assert sorted(grants.grants) == ["d1"]
+    assert grants._data()[g.INTACT_ONLY] is True
+
+    hass_storage["hearth.grants.x"] = stored(True)
+    grants = g.Grants(hass, "x")
+    await grants.async_load()
+    assert sorted(grants.grants) == ["a1", "d1"]
 
 
 async def test_extra_time_from_family_safety_is_a_grant_until_it_ends(

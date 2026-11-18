@@ -571,7 +571,11 @@ that is left out of today's minutes. This works the same for a live source (a TV
 total-only one (Family Link's and Family Safety's daily totals, which only give a day's sum): the window's minutes are
 the total's growth between the two notes. Totals arrive a few minutes late, so the end note is taken after the 10-minute
 settle, and what is counted in the settle goes to the kid. Approximation: a minute a total reports late from just
-before the window (or one played during the settle) is left out too; never one the other way. Each window is
+before the window (or one played during the settle) is left out too; never one the other way. A total can report
+later than the settle (Family Link lags up to about 40 minutes): after it, no source can have gained more than the
+time since, so what one gains beyond that is the window's too and is left out (per source, never less than before;
+only the day's last window looks). Unlimited started again while the last window is still settling opens that window
+again, so no minute is left out twice. Each window is
 recorded in the history (`unlimited`: start, end, minutes not counted; "Unlimited 2:00–5:10 PM · 3 h 10 min not
 counted") and fires `hearth_unlimited_started` {person, until, open} and `hearth_unlimited_ended` {person, id, text}.
 
@@ -908,8 +912,14 @@ all. It's not a problem to fix.
     device (its `bonus_minutes` beyond what Hearth itself added), until the bonus is used up (the Active bonus sensor's
     `remaining_minutes` reaches 0 or it clears) or midnight; a device unlocked (`lock_override_code` 4), until midnight;
     an app a parent changed after Hearth paused it (the Apps with time limits sensor's `paused_apps`, `pause_intact`
-    false), until midnight. An app the child doesn't have (not in their app lists) never shows its pause, so its
-    `pause_intact` is false too: that's never a grant.
+    false), until midnight. Only a pause Family Link has once shown intact (`pause_intact` true) can be changed by a
+    parent: Google takes some apps' 1-minute limit (the call succeeds) and never shows it. A pause still not shown 3
+    minutes after Hearth's call didn't take: it's no grant, the kid's Family Link line says "Family Link didn't take
+    the pause of …" (with the action log, once), the app stays as held and is paused again after 5 minutes, then
+    after twice as long each time, up to an hour, until it shows. An app the child doesn't have (not in their app
+    lists) never shows its pause, so its `pause_intact` is false too: that's never a grant. A `pause_app` that fails
+    part-way (Family Link pauses the list app by app and stops at the first refusal) leaves its apps possibly paused:
+    letting go resumes them too.
   - Nintendo: the Switch's Max screentime today raised, or bonus time (`time_extended`), until midnight (adopted).
   - Family Safety (its Allowed Now sensors' and lock switches' `hold`, `override`, `allow_until`): `hold: parent` with
     extra time (`allowUntil`) is a grant until `allow_until`; with no override left (a parent cancelled Hearth's lock),
@@ -1157,7 +1167,7 @@ or Nintendo's own schedules yet.
   Switch is held when one of its groups is closed. `hearth.allow` for the group or an app lifts it. More minutes don't
   open it; its end does. Why: `schedule` in the summary's `sync`.
 - **`next_lock`** is the schedule's next Sleep or School (`{at, by: "schedule", kind}`) when it comes before the lock
-  entities' own; a kid's Today line and the suggestions' cutoff use the schedule's bedtime.
+  entities' own (not a School that School time taken off today covers); a kid's Today line and the suggestions' cutoff use the schedule's bedtime.
 - A **family pause** still locks everything, whatever the mode.
 
 **Each kid's schedule now** is in the household summary and their state document as `schedule` (only while their
@@ -1346,7 +1356,9 @@ The answer to each status post carries the person's (or, on a TV, each profile's
 
 `groups` lists only groups with a budget, and an adult's pauses of one app or group as groups with no time left and
 `paused` (see [Pause and locks](#pause-and-locks)): hold them like any group out of time, but say it's paused and
-**never offer to ask for more time for one**; `minutes_left` null is no limit; All screen time may carry `except`, the apps
+**never offer to ask for more time for one**; a category that's off today (its limit 0, `time.categories` `closed`)
+has `closed: true`: bonus time doesn't open it, so offer no ask for it either (an ask for it is refused, 400 `closed`);
+`minutes_left` null is no limit; All screen time may carry `except`, the apps
 it never holds (a Not screen time group's, and the accessibility apps). `never_held` (only when there are any) lists
 the accessibility apps, which no group's `apps` holds: a device may spare them from a lock or a pause too. Each person's part is described under [Ask for more](#ask-for-more) and
 [Pause and locks](#pause-and-locks); an allow of theirs that ends on a place is in `allow_ends` [{id, app, group,
@@ -1583,7 +1595,12 @@ while they're locked, `lock` {by: the lock entities and/or "pause", kind: bedtim
 (the first that applies), kinds: all of them, until: when it ends, if known}, and `next_lock`
 {at, by, kind: bedtime | school_time} for the next bedtime or school time today, from the lock entities' own
 `bedtime_start`/`bedtime_end`/`schooltime_start`/`schooltime_end` (Family Link's; Family Safety's Downtime Active
-sensors carry `bedtime_start`/`bedtime_end` too and are a bedtime), so a device can wind down. Without
+sensors carry `downtime_start`/`downtime_end`, an older one `bedtime_start`/`bedtime_end`, and are a bedtime), so a
+device can wind down. School time taken off today is never the `next_lock` (tonight's Sleep is, then). While extra
+time lifts bedtime, `next_lock` is bedtime coming back when the lift ends (`{at: the lift's end, by: the bedtime lock
+or "schedule", kind: bedtime}`), so a device that loses Home Assistant meanwhile brings bedtime back itself; not when
+the lift lasts past the bedtime's own end. A family pause also locks a kid's Family Link devices whole, as daily
+time used up does (a phone without a Hearth app has nothing else holding it), let go when it ends. Without
 a push, a device learns of a pause with its next status answer: a TV within 2 minutes (it posts at least that often
 while on), a phone at its next post.
 
