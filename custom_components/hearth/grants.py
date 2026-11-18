@@ -15,12 +15,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+import logging
 import secrets
 from typing import Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
+
+_LOGGER = logging.getLogger(__name__)
 
 # Where a grant came from (the enforcer kinds of enforce.py)
 FAMILY_LINK = "family_link"
@@ -43,6 +46,10 @@ END_CANCEL_BONUS = "family_safety_cancel_bonus"
 # Ends when the Family Link bonus it came from is over (as well as by [until])
 WHILE_BONUS = "family_link_bonus"
 MAX_GRANTS = 100
+# The reason of a grant from an app's pause a parent changed (enforce.py: only a pause Hearth had seen intact)
+APP_CHANGED = "the app's limit was changed in the Family Link app"
+# In the store once every app grant in it is of a pause that was seen intact (async_load drops older ones once)
+INTACT_ONLY = "app_grants_intact_only"
 
 
 @dataclass
@@ -102,9 +109,21 @@ class Grants:
                 raw.get("end_with"),
                 raw.get("ends_with"),
             )
+        if stored and not stored.get(INTACT_ONLY):
+            # Kept by a release that took a pause Family Link never showed for a parent's change: those grants were
+            # nobody's decision, and none of them is of a pause seen intact. Dropped once, so Hearth holds again
+            wrong = [
+                g.id for g in self.grants.values() if g.via == FAMILY_LINK and g.kind == APP and g.reason == APP_CHANGED
+            ]
+            for grant_id in wrong:
+                del self.grants[grant_id]
+            if wrong:
+                _LOGGER.info("Dropped %d Family Link app grants made from pauses that never took", len(wrong))
+            self._save()
 
     def _data(self) -> dict[str, Any]:
         return {
+            INTACT_ONLY: True,
             "grants": [
                 {
                     "id": g.id,

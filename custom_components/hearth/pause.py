@@ -15,7 +15,8 @@ group ends that one, and pause_end without either ends only the family pause.
 A lock entity of Family Link's says when bedtime or school time starts and ends (bedtime_start / bedtime_end,
 schooltime_start / schooltime_end, local times): that's "lock" {by, until} while one is on, and "next_lock" {at, by}
 for the next one today, so a device can wind down before it. Family Safety's Downtime Active sensors (one per child and
-platform) say the same with bedtime_start / bedtime_end, so they are a bedtime here.
+platform) say the same with downtime_start / downtime_end (an older one: bedtime_start / bedtime_end too), so they are
+a bedtime here.
 """
 
 from __future__ import annotations
@@ -33,8 +34,11 @@ PAUSE = "pause"
 # The weekly schedule's Sleep or School (weekly.py), in a person's locked_by
 SCHEDULE = "schedule"
 MAX_REASON = 80
-_STARTS = ("bedtime_start", "schooltime_start")
-_ENDS = ("bedtime_end", "schooltime_end")
+# Family Safety's Downtime Active sensors say downtime_start / downtime_end (an older one said bedtime_* too)
+BEDTIME_STARTS = ("bedtime_start", "downtime_start")
+BEDTIME_ENDS = ("bedtime_end", "downtime_end")
+_STARTS = (*BEDTIME_STARTS, "schooltime_start")
+_ENDS = (*BEDTIME_ENDS, "schooltime_end")
 
 
 def _pauses(hass: HomeAssistant) -> dict[str, dict[str, Any]]:
@@ -223,7 +227,7 @@ def lock_kinds(hass: HomeAssistant, by: list[str], schedule_kind: str | None = N
         else:
             state = hass.states.get(item)
             attrs = state.attributes if state else {}
-            if "bedtime_end" in attrs or "bedtime_start" in attrs or "bedtime" in item or "downtime" in item:
+            if any(k in attrs for k in BEDTIME_STARTS + BEDTIME_ENDS) or "bedtime" in item or "downtime" in item:
                 kind = "bedtime"
             elif "schooltime_end" in attrs or "schooltime_start" in attrs or "school" in item:
                 kind = "school_time"
@@ -245,7 +249,7 @@ def next_lock(hass: HomeAssistant, entity_ids: list[str], now: datetime | None =
         for key in _STARTS:
             start = _local(state.attributes.get(key))
             if start is not None and start > now and (best is None or start < best[0]):
-                best = (start, entity_id, "bedtime" if key.startswith("bed") else "school_time")
+                best = (start, entity_id, "school_time" if key.startswith("school") else "bedtime")
     if best is None:
         return None
     return {"at": dt_util.as_local(best[0]).isoformat(), "by": best[1], "kind": best[2]}
