@@ -76,6 +76,18 @@ public class ParentChannelTest {
     }
 
     @Test
+    public void aParentApprovedStartIsKeptAndSentOnlyWhenSet() throws Exception {
+        StartedLog.Entry approved = new StartedLog.Entry(8_000, "video8", "T", "C", "UCchannel1", true);
+        JSONObject json = approved.toJson();
+
+        assertTrue(json.getBoolean("pa"));
+        assertTrue(StartedLog.Entry.of(json).parentApproved);
+        // A plain start carries no "pa": an older Home Assistant and kept logs read the same as before
+        assertFalse(entry(9_000, "video9").toJson().has("pa"));
+        assertFalse(StartedLog.Entry.of(entry(9_000, "video9").toJson()).parentApproved);
+    }
+
+    @Test
     public void blockedListsKeepOnlyWhatIsValid() throws Exception {
         ParentBlocks.Lists lists = ParentBlocks.parse(new JSONObject(
                 "{\"videos\":[\"abc123\",\"bad id\",\"abc123\"],\"channels\":[\"UCchannel1\",\"\"],\"words\":[\" Foo \",\"\",\"BAR\"]}"));

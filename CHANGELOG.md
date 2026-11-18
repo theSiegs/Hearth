@@ -3,6 +3,16 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### TV
+
+- **A video a parent's PIN let play past the limit is marked so.** HearthTube says which video a Parent PIN approved (the first one opened in the PIN's window); the TV keeps that in the profile's log of started videos and sends it on.
+
+### Home Assistant integration
+
+- **A logbook note when a Parent PIN lets a video play past the limit**, with its title, on the kid. `hearth_video_started` and the Last video started log carry `parent_approved`, so an automation can tell the adults' phones.
+
 ## 2026.11.39
 
 ### Home Assistant integration

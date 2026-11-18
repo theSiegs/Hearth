@@ -16,7 +16,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
-from .const import EVENT_VIDEO_STARTED, SIGNAL_WATCH
+from .const import DOMAIN, EVENT_VIDEO_STARTED, SIGNAL_WATCH
 from .status import number, text
 
 # The newest this many per person, like HearthTube and Hearth
@@ -90,6 +90,8 @@ def clean_started(raw: Any, now_ms: int) -> dict[str, Any] | None:
         "title": text(raw.get("title")) or "",
         "ch": text(raw.get("ch")) or "",
         "cid": channel_id if isinstance(channel_id, str) and _ID.match(channel_id) else "",
+        # A parent's PIN let it play past the time limit or a lock (contract 8, optional)
+        "pa": raw.get("pa") is True,
     }
 
 
@@ -103,6 +105,7 @@ def _readable(entry: dict[str, Any]) -> dict[str, Any]:
         "channel_id": entry.get("cid", ""),
         "url": video_url(entry["v"]),
         "device": entry.get("device", ""),
+        "parent_approved": entry.get("pa") is True,
     }
 
 
@@ -144,6 +147,8 @@ class WatchLog:
             if have["t"] == entry["t"] and have["v"] == entry["v"]:
                 return False
         kept = {key: entry[key] for key in ("t", "v", "title", "ch", "cid")}
+        if entry.get("pa") is True:
+            kept["pa"] = True
         kept["device"] = device
         at = len(entries)
         while at > 0 and entries[at - 1]["t"] > entry["t"]:
@@ -152,6 +157,19 @@ class WatchLog:
         del entries[: max(0, len(entries) - MAX_LOG)]
         self._save()
         self.hass.bus.async_fire(EVENT_VIDEO_STARTED, {"person": person, **_readable(kept)})
+        if kept.get("pa"):
+            # A note in the logbook (on the person) for the adults: which video a parent's PIN let play
+            state = self.hass.states.get(person)
+            title = kept.get("title") or kept["v"]
+            self.hass.bus.async_fire(
+                "logbook_entry",
+                {
+                    "name": state.name if state else person,
+                    "message": f"was let play “{title}” past the limit with a Parent PIN",
+                    "domain": DOMAIN,
+                    "entity_id": person,
+                },
+            )
         return True
 
     def changed(self) -> None:
