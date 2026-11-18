@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **A bedtime device lock lasts past midnight.** Family Link's device lock is one weekday's daily limit at 0; Sleep running past midnight left the old weekday at 0 (for next week too) while the new day's limit opened the phone. At midnight Hearth now puts yesterday's limit back and locks today's.
+
 ## 2026.11.47
 
 ### Home Assistant integration

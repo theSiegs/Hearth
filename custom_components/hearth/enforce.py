@@ -1180,7 +1180,11 @@ class Enforcement:
 
     async def _lock_devices(self, entity_id: str, held: Held) -> None:
         """Today's daily limit to 0 on every device of the child. The limit it had is kept first (once: a retry after
-        a half-done hold mustn't keep the 0)."""
+        a half-done hold mustn't keep the 0). A lock of an earlier day (Sleep past midnight) first puts that weekday's
+        limit back, then locks today's."""
+        if "lock_minutes" in held.restore and held.restore.get("lock_day") != dt_util.now().date().isoformat():
+            await self._unlock_devices(held)
+            self._save()
         if "lock_minutes" not in held.restore:
             child, limit_entity = self._family_link_child(entity_id)
             state = self.hass.states.get(limit_entity) if limit_entity else None
@@ -1992,9 +1996,14 @@ def _number(value: Any) -> float | None:
 
 
 def _ended_locks(held: Held, now: datetime | None = None) -> set[str]:
-    """Family Safety platforms Hearth locked whose lock is over (its end passed, or Hearth ended it at midnight)."""
+    """Family Safety platforms Hearth locked whose lock is over (its end passed, or Hearth ended it at midnight), and
+    Family Link's device lock of a day that's over: it's that weekday's daily limit at 0, so on the next day the
+    devices are open again (a hold still wanted past midnight, Sleep, is made again on the new weekday)."""
     now = now or dt_util.utcnow()
     ended = set((held.restore.get(FS_LOCK_ENDED) or {}).keys())
+    day = held.restore.get("lock_day")
+    if DEVICES in held.items and day and day != dt_util.as_local(now).date().isoformat():
+        ended.add(DEVICES)
     for platform, at in (held.restore.get("fs_lock_until") or {}).items():
         if (when := _utc(at)) is not None and when <= now:
             ended.add(platform)

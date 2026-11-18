@@ -245,6 +245,41 @@ async def test_the_schedule_s_sleep_locks_a_family_link_phone_without_a_bedtime_
     assert household.sleep_locks_devices(SAM) is False
 
 
+async def test_a_sleep_device_lock_moves_to_the_new_weekday_at_midnight(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Family Link's device lock is one weekday's daily limit at 0: Sleep past midnight must put that weekday's limit
+    back and lock the new weekday's, or the phone opens at midnight (and last week's day stays at 0 for good)."""
+    from custom_components.hearth import enforce as enf
+
+    freezer.move_to(_at(21, 30))
+    async_mock_service(hass, "familylink", "pause_app")
+    async_mock_service(hass, "familylink", "resume_app")
+    limits = await _sam_with_family_link(hass, hass_client_no_auth)
+    _installed(hass, ["com.example.chat", HEARTHTUBE])
+    await _schedule(hass, days=["every_day"], changes=[{"at": "07:00", "mode": "free"}, {"at": "21:00", "mode": "sleep"}])
+    await hass.async_block_till_done()
+    first_day = dt_util.now().isoweekday()
+    assert [c.data["daily_minutes"] for c in limits if c.data.get("day") == first_day] == [0]
+    for day in range(1, 8):
+        hass.states.async_set(
+            f"number.sam_family_link_{enf.WEEKDAYS[day - 1]}_limit",
+            "0" if day == first_day else "120",
+            {"child_id": CHILD, "weekly_minutes": 0 if day == first_day else 120},
+        )
+
+    freezer.move_to(_at(21, 30) + timedelta(hours=2, minutes=40))  # 00:10 the next day, still Sleep
+    household = _household(hass)
+    household.recompute()
+    await hass.async_block_till_done()
+    next_day = dt_util.now().isoweekday()
+    assert next_day != first_day
+    calls = [(c.data["day"], c.data["daily_minutes"]) for c in limits if "day" in c.data]
+    assert (first_day, 120) in calls, "yesterday's weekday limit put back"
+    assert calls[-1] == (next_day, 0), "today's weekday locked"
+    assert "Devices" in household.enforcement.status_of(SAM)["family_link"]["held"]
+
+
 # 6. Chrome is "com.android.*", which Hearth's per-app holds treat as the system (enforce.essential)
 
 
