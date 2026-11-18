@@ -390,7 +390,7 @@ async def test_a_failure_is_shown_and_tried_again(
 
 
 async def test_a_sync_error_clears_once_there_s_nothing_to_hold(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:
     async def failing(call: ServiceCall) -> None:
         raise HomeAssistantError("Google said no")
@@ -403,7 +403,11 @@ async def test_a_sync_error_clears_once_there_s_nothing_to_hold(
     household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
     assert household.enforcement.status_of("person.sam")["family_link"]["last"]["error"] == "Google said no"
 
-    await _bonus(hass, "video", 30)  # time again: nothing to hold, nothing to retry
+    await _bonus(hass, "video", 30)  # time again: nothing to hold
+    # The failed pause may have paused some apps all the same: they're resumed at the retry, and then nothing's left
+    freezer.tick(enforce.RETRY)
+    household.recompute()
+    await hass.async_block_till_done()
     status = household.enforcement.status_of("person.sam")["family_link"]
     assert status["error"] is None and "error" not in status["last"]
     assert "error" not in hass.states.get("sensor.hearth_sam_held_by_parental_controls").attributes.get("family_link", {})

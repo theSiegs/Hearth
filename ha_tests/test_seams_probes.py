@@ -56,7 +56,6 @@ async def _document(client, secret, **usage) -> dict:
 # detect). Seen live: 17 of 64 games, every day the Games limit runs out
 
 
-@pytest.mark.xfail(strict=True, reason="seams 1: a pause Family Link never showed becomes a parent's grant")
 async def test_a_pause_family_link_never_showed_is_not_a_parent_s_grant(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:
@@ -92,7 +91,6 @@ async def test_a_pause_family_link_never_showed_is_not_a_parent_s_grant(
 # _async_apply and _call). Seen live once on 2026-11-17 ("Family Link did not take the app limit for ...")
 
 
-@pytest.mark.xfail(strict=True, reason="seams 2: apps paused before a failed pause are never resumed")
 async def test_apps_paused_before_a_failed_pause_are_resumed_when_time_comes_back(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:

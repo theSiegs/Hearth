@@ -908,8 +908,14 @@ all. It's not a problem to fix.
     device (its `bonus_minutes` beyond what Hearth itself added), until the bonus is used up (the Active bonus sensor's
     `remaining_minutes` reaches 0 or it clears) or midnight; a device unlocked (`lock_override_code` 4), until midnight;
     an app a parent changed after Hearth paused it (the Apps with time limits sensor's `paused_apps`, `pause_intact`
-    false), until midnight. An app the child doesn't have (not in their app lists) never shows its pause, so its
-    `pause_intact` is false too: that's never a grant.
+    false), until midnight. Only a pause Family Link has once shown intact (`pause_intact` true) can be changed by a
+    parent: Google takes some apps' 1-minute limit (the call succeeds) and never shows it. A pause still not shown 3
+    minutes after Hearth's call didn't take: it's no grant, the kid's Family Link line says "Family Link didn't take
+    the pause of …" (with the action log, once), the app stays as held and is paused again after 5 minutes, then
+    after twice as long each time, up to an hour, until it shows. An app the child doesn't have (not in their app
+    lists) never shows its pause, so its `pause_intact` is false too: that's never a grant. A `pause_app` that fails
+    part-way (Family Link pauses the list app by app and stops at the first refusal) leaves its apps possibly paused:
+    letting go resumes them too.
   - Nintendo: the Switch's Max screentime today raised, or bonus time (`time_extended`), until midnight (adopted).
   - Family Safety (its Allowed Now sensors' and lock switches' `hold`, `override`, `allow_until`): `hold: parent` with
     extra time (`allowUntil`) is a grant until `allow_until`; with no override left (a parent cancelled Hearth's lock),
