@@ -33,7 +33,8 @@ from test_wait import _wait
 # Suggestions show at any hour here: in the evening they would be held back (glance.hold_back)
 pytestmark = pytest.mark.usefixtures("no_evening_hold")
 
-CAPS = ["commands.play", "events", "notices"]
+# As Hearth on a TV declares them (HaStatusReporter.CAPS): it doesn't take plays
+CAPS = ["events", "notices"]
 
 
 def _tv(caps: list[str] = CAPS) -> dict:
@@ -80,7 +81,7 @@ async def test_a_tv_without_the_cap_gets_none(hass: HomeAssistant, hass_client_n
     client, secret, _users, _sent = await _suggested(hass, hass_client_no_auth)
     # A TV from before caps (its kind's defaults), or one that declares caps without notices
     assert "notices" not in await _state(client, secret, body=_tv_status(hearthtube_s=600, game_s=300))
-    assert "notices" not in await _state(client, secret, body=_tv(["commands.play", "events"]))
+    assert "notices" not in await _state(client, secret, body=_tv(["events"]))
 
 
 async def test_a_phone_never_gets_the_adults_notices(
@@ -274,7 +275,7 @@ async def test_only_a_tv_that_shows_notices_can_press(
 ) -> None:
     client, secret, _users, _sent = await _on_tv(hass, hass_client_no_auth)
     # The TV now says it doesn't show notices: they're gone for it
-    await _state(client, secret, body=_tv(["commands.play", "events"]))
+    await _state(client, secret, body=_tv(["events"]))
     assert (await _notice(client, secret, {"key": KEY, "action": 0, "pin": PIN})).status == 404
     hass.data[f"{DOMAIN}_pairing"]["asked_at"].clear()
     phone_secret = await _pair(hass, client, PHONE_ID, "mobile", "Phone")

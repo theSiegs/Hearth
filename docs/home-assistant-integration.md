@@ -2264,6 +2264,9 @@ id, or its device in Home Assistant: a device selector gives that), `what` and, 
   with its next status answer: within about 2 seconds after it posts, at least every 2 minutes while it's on. The
   service answers (when asked for a response) `{"id", "device_id", "expires"}`. A TV that hasn't posted in 15 minutes
   (not connected) is refused; a phone isn't a TV (a device whose caps say `commands.play` is played on as a TV is).
+- **Hearth on a TV doesn't take plays yet**: it declares its caps without `commands.play` (`events` and `notices`), so
+  the service refuses it at once ("its Hearth doesn't take plays") rather than queueing a command that would expire
+  unanswered. A TV from before caps gets its kind's default, which still includes `commands.play`.
 - A new play for the same TV replaces one still waiting (only the last ask is played). A command waits 3 minutes,
   then it's dropped. Commands are kept while the household reloads (an options change), not over a restart.
 - `hearth_command_done` (`device_id`, `id`, `type: "play"`, `result`, `error`) tells how it went, once: `ok`, `failed`

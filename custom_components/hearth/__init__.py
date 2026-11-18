@@ -49,6 +49,7 @@ from .const import (
     CONF_SHARE_APP_DATA,
     CONF_SHARE_APP_DATA_OLD,
     DOMAIN,
+    KIND_TV,
 )
 from .profiles import ISSUE_PROFILE_KEYS, legacy_keys
 from .push import new_topic
@@ -985,7 +986,11 @@ def _register_play_on_tv(hass: HomeAssistant) -> None:
         if device_id is None:
             raise ServiceValidationError(f"{given} isn't one of the household's Hearth devices")
         if not hub.has_cap(device_id, CAP_PLAY):
-            raise ServiceValidationError(f"{hub.devices[device_id].get('name') or device_id} isn't a TV")
+            name = hub.devices[device_id].get("name") or device_id
+            # A TV whose Hearth doesn't take plays yet says so in its caps: refused now, not left to expire unanswered
+            if hub.kind(device_id) == KIND_TV:
+                raise ServiceValidationError(f"{name} can't be sent something to play: its Hearth doesn't take plays")
+            raise ServiceValidationError(f"{name} isn't a TV")
         return device_id
 
     def profile_of(hub: HearthHub, device_id: str, given: str | None) -> str | None:

@@ -3,6 +3,23 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### TV
+
+- **An allowed YouTube plays on the TV once daily time is out.** An allow or a YouTube bonus lists HearthTube among daily time's exceptions; HearthTube no longer gets daily time's minutes (0, or the few left) all the same.
+- **With Home Assistant away, bedtime lasts the night.** A bedtime the TV started itself, or a lock that names no end, no longer ends at midnight; a bedtime the TV started itself ends at the weekly schedule's wake time.
+- **A lifted bedtime comes back with Home Assistant away.** When extra time at bedtime ends, the TV starts bedtime again by itself if it hasn't heard from Home Assistant since.
+- **The TV's own countdown counts HearthTube** against daily time, and lowers HearthTube's minutes as other apps use daily time up.
+- **HearthTube unlocks when a lock ends**, together with the other apps, with Home Assistant away.
+- **The lock message names the lock**: "School time until 3:00 PM", "Locked until …", not "Bedtime until" for every lock.
+- **Minutes used** in the TV's remote API come from Home Assistant's `time`, which is what it sends.
+- **The TV no longer offers to take plays** it doesn't carry out: `hearth.play_on_tv` refuses it at once instead of waiting 3 minutes for nothing.
+
+### Home Assistant integration
+
+- **`hearth.play_on_tv` says why a TV is refused** when its Hearth doesn't take plays, instead of "isn't a TV".
+
 ## 2026.11.40
 
 ### TV
