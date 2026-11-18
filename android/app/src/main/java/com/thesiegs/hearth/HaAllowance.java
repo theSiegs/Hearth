@@ -285,6 +285,14 @@ final class HaAllowance {
                 }
                 if (person != null) nextLockFromDocument(person, locks);
                 if (locks.length() > 0) entry.put(LOCKS_KEY, locks);
+                // For a stretch without Home Assistant: each lift's end (liftsEnded), tomorrow's minutes and first lock
+                // (carriedOver), else today's base minutes from an older Home Assistant's time
+                JSONArray lifts = person != null ? person.optJSONArray(LIFTS_KEY) : null;
+                if (lifts != null && lifts.length() > 0) entry.put(LIFTS_KEY, lifts);
+                JSONObject tomorrow = person != null ? person.optJSONObject(TOMORROW_KEY) : null;
+                if (tomorrow != null) entry.put(TOMORROW_KEY, tomorrow);
+                JSONObject base = tomorrow == null ? baseMinutes(time) : null;
+                if (base != null) entry.put(BASE_KEY, base);
                 profiles.put(profileId, entry);
             }
         } catch (JSONException e) {
@@ -352,6 +360,27 @@ final class HaAllowance {
         return limit;
     }
 
+    /**
+     * Today's base minutes per group from the document's time, without bonus time: daily time's "base_minutes" and
+     * each category's "limit". Null when it says none.
+     */
+    private static JSONObject baseMinutes(JSONObject time) throws JSONException {
+        if (time == null) return null;
+        JSONObject out = new JSONObject();
+        if (time.has("base_minutes") && !time.isNull("base_minutes")) {
+            out.put(ALL_GROUP, Math.max(0, time.optInt("base_minutes", 0)));
+        }
+        JSONArray categories = time.optJSONArray("categories");
+        for (int i = 0; categories != null && i < categories.length(); i++) {
+            JSONObject category = categories.optJSONObject(i);
+            String id = category != null ? category.optString("id", "") : "";
+            if (!id.isEmpty() && category.has("limit") && !category.isNull("limit")) {
+                out.put(id, Math.max(0, category.optInt("limit", 0)));
+            }
+        }
+        return out.length() > 0 ? out : null;
+    }
+
     private static boolean holdsHearthTube(JSONArray apps) {
         for (int i = 0; apps != null && i < apps.length(); i++) {
             if (isHearthTube(apps.optString(i))) return true;
@@ -395,13 +424,24 @@ final class HaAllowance {
         }
         if (UsageToday.day(now).equals(prefs.getString(DAY_KEY, null))) {
             long checkedAt = prefs.getLong(CHECKED_KEY, now);
+            // Read only when a lift may have ended (Home Assistant quiet past the grace)
+            Map<String, Long> front = entry != null && entry.has(LIFTS_KEY)
+                    && now - entry.optLong(WORD_AT_KEY, now) >= Allowance.NEXT_LOCK_GRACE_MS
+                    ? UsageToday.frontMs(context, profileKey, now) : null;
+            // Extra time ended with Home Assistant away: its group is held again, counted down from here
+            JSONObject lifted = liftsEnded(entry, now, front);
+            if (lifted != null) return staleCountdown(lifted, front);
             // Home Assistant quiet for a while (the router unplugged, say): its minutes are counted down here
-            if (now - checkedAt > STALE_AFTER_MS) return staleCountdown(entry, UsageToday.frontMs(context, profileKey, now));
+            if (now - checkedAt > STALE_AFTER_MS) {
+                return staleCountdown(entry, front != null ? front : UsageToday.frontMs(context, profileKey, now));
+            }
             return entry;
         }
         // Home Assistant hasn't answered since the day changed (it may be away): its last word still counts for what
-        // runs past midnight, never for yesterday's minutes
-        return carriedOver(entry, now);
+        // runs past midnight, and the new day's minutes are tomorrow's as it last said them, counted down here
+        JSONObject carried = carriedOver(entry, now);
+        if (carried == null || !carried.has(GROUPS_KEY)) return carried;
+        return staleCountdown(carried, UsageToday.frontMs(context, profileKey, now));
     }
 
     /** Home Assistant's word this old: the TV counts its minutes down itself (staleCountdown). */
@@ -442,8 +482,6 @@ final class HaAllowance {
                 JSONObject group = groups.optJSONObject(i);
                 if (group == null || group.isNull("minutes_left")) continue;
                 long left = group.optLong("minutes_left", 0) * 60_000L;
-                String name = group.optString("name", "");
-                if (name.trim().isEmpty()) name = group.optString("id", "");
                 boolean all = ALL_GROUP.equals(group.optString("id"));
                 JSONArray apps = group.optJSONArray("apps");
                 Set<String> members = new HashSet<>();
@@ -466,15 +504,7 @@ final class HaAllowance {
                     tubeLeft = tubeLeft == null ? minutes : Math.min(tubeLeft, minutes);
                 }
                 if (left <= 0 || spent < left) continue;
-                if (all) {
-                    if (out.isNull("all_out_of_time") || !out.has("all_out_of_time")) out.put("all_out_of_time", name);
-                    JSONArray except = group.optJSONArray("except");
-                    if (except != null && !out.has("all_except")) out.put("all_except", except);
-                } else {
-                    for (String app : members) {
-                        if (!app.isEmpty() && !NEVER_HELD.contains(app) && !outOfTime.has(app)) outOfTime.put(app, name);
-                    }
-                }
+                hold(out, group);
             }
             // Only ever down, and only where Home Assistant gave HearthTube minutes at all
             if (tubeLeft != null && !out.isNull("youtube_minutes_left")
@@ -488,14 +518,235 @@ final class HaAllowance {
     }
 
     /**
+     * Holds [group] (an entry's group, as GROUPS_KEY keeps it) in [out] as Home Assistant would hold it once its time
+     * is up: its apps out of time, or for All screen time every app but its exceptions.
+     */
+    private static void hold(JSONObject out, JSONObject group) throws JSONException {
+        String name = group.optString("name", "");
+        if (name.trim().isEmpty()) name = group.optString("id", "");
+        if (ALL_GROUP.equals(group.optString("id"))) {
+            if (out.isNull("all_out_of_time") || !out.has("all_out_of_time")) out.put("all_out_of_time", name);
+            JSONArray except = group.optJSONArray("except");
+            if (except != null && !out.has("all_except")) out.put("all_except", except);
+            return;
+        }
+        JSONObject outOfTime = out.optJSONObject("out_of_time");
+        if (outOfTime == null) {
+            outOfTime = new JSONObject();
+            out.put("out_of_time", outOfTime);
+        }
+        JSONArray apps = group.optJSONArray("apps");
+        for (int j = 0; apps != null && j < apps.length(); j++) {
+            String app = apps.optString(j, "");
+            if (!app.isEmpty() && !NEVER_HELD.contains(app) && !outOfTime.has(app)) outOfTime.put(app, name);
+        }
+    }
+
+    /** In an entry: the document's lifts, [{group, until, minutes, minutes_after, apps, except, in_daily}]. */
+    static final String LIFTS_KEY = "lifts";
+    /** In an entry: the document's "tomorrow" {date, groups [{id, minutes, name, apps, except}], next_lock}. */
+    static final String TOMORROW_KEY = "tomorrow";
+    /** In an entry: today's base minutes per group ({id: minutes}) from the document's time, for an older Home Assistant. */
+    static final String BASE_KEY = "base_minutes";
+
+    /**
+     * [entry] with the lifts that have ended with no word from Home Assistant since (Allowance.NEXT_LOCK_GRACE_MS, as
+     * for a next lock): an allow's or Unlimited's end ("until") once that's past, a category's own bonus ("minutes")
+     * once its apps have been in front that long since the word ([frontNow]: each app's ms today, against the entry's
+     * FRONT_AT_KEY). Each such group is held again as a group of the entry, with its "minutes_after" left once the
+     * lift is over: its bonus (spent first) and the time from the word to the lift's end (not counted by Home
+     * Assistant, though staleCountdown counts the time in front from the word) are added, so staleCountdown holds it
+     * no sooner than Home Assistant would. Its apps count in daily time again ("in_daily"). Null when no lift has ended.
+     */
+    static JSONObject liftsEnded(JSONObject entry, long now, Map<String, Long> frontNow) {
+        JSONArray lifts = entry != null ? entry.optJSONArray(LIFTS_KEY) : null;
+        if (lifts == null || lifts.length() == 0) return null;
+        long wordAt = entry.optLong(WORD_AT_KEY, 0);
+        if (now - wordAt < Allowance.NEXT_LOCK_GRACE_MS) return null;
+        JSONObject frontAt = entry.optJSONObject(FRONT_AT_KEY);
+        try {
+            JSONObject out = null;
+            // The time All screen time didn't count of what's been in front since the word (a lift's own time, its
+            // bonus): added to its minutes when its apps count in it again, as staleCountdown counts all of it
+            long allFree = 0;
+            boolean allLifted = false;
+            // All screen time first, so the others' apps come out of its exceptions
+            for (int pass = 0; pass < 2; pass++) {
+                for (int i = 0; i < lifts.length(); i++) {
+                    JSONObject lift = lifts.optJSONObject(i);
+                    String id = lift != null ? lift.optString("group", "") : "";
+                    if (id.isEmpty() || ALL_GROUP.equals(id) != (pass == 0)) continue;
+                    Long until = HaLocks.parseTime(lift.optString("until", null));
+                    int bonus = Math.max(0, lift.optInt("minutes", 0));
+                    if (until == null && bonus <= 0) continue;
+                    if (until != null && (now < until + Allowance.NEXT_LOCK_GRACE_MS || wordAt >= until)) continue;
+                    if (bonus > 0 && spentSince(lift.optJSONArray("apps"), frontAt, frontNow) < bonus * 60_000L) continue;
+                    if (out == null) out = new JSONObject(entry.toString());
+                    long free = until != null ? Math.max(0, until - wordAt) / 60_000L : 0;
+                    int left = (int) Math.min(24 * 60, Math.max(0, lift.optInt("minutes_after", 0)) + bonus + free);
+                    JSONObject group = new JSONObject().put("id", id).put("name", lift.optString("name", id))
+                            .put("minutes_left", left);
+                    for (String list : new String[]{"apps", "except"}) {
+                        JSONArray value = lift.optJSONArray(list);
+                        if (value != null) group.put(list, value);
+                    }
+                    if (!ALL_GROUP.equals(id) && !group.has("apps")) group.put("apps", new JSONArray());
+                    putGroup(out, group);
+                    if (ALL_GROUP.equals(id)) {
+                        allLifted = true;
+                    } else if (lift.optBoolean("in_daily", true)) {
+                        countInDaily(out, group.optJSONArray("apps"));
+                        allFree = Math.max(allFree, free + bonus);
+                    }
+                    if (left <= 0) hold(out, group);
+                }
+            }
+            JSONArray groups = out != null && !allLifted && allFree > 0 ? out.optJSONArray(GROUPS_KEY) : null;
+            for (int i = 0; groups != null && i < groups.length(); i++) {
+                JSONObject group = groups.optJSONObject(i);
+                if (group == null || !ALL_GROUP.equals(group.optString("id"))) continue;
+                int left = group.optInt("minutes_left", 0);
+                if (left > 0) group.put("minutes_left", (int) Math.min(24 * 60, left + allFree));
+            }
+            if (out != null) out.put("youtube_minutes_left", tubeMinutes(out, out.opt("youtube_minutes_left")));
+            return out;
+        } catch (JSONException e) {
+            return null;
+        }
+    }
+
+    /** The ms [apps] were in front since the word ([at], as FRONT_AT_KEY keeps it) until [frontNow]. */
+    private static long spentSince(JSONArray apps, JSONObject at, Map<String, Long> frontNow) {
+        if (apps == null || at == null || frontNow == null) return 0;
+        long spent = 0;
+        for (int i = 0; i < apps.length(); i++) {
+            Long front = frontNow.get(apps.optString(i, ""));
+            if (front != null) spent += Math.max(0, front - at.optLong(apps.optString(i, ""), 0));
+        }
+        return spent;
+    }
+
+    /** [group] in the entry's groups, in place of one with its id. */
+    private static void putGroup(JSONObject out, JSONObject group) throws JSONException {
+        JSONArray groups = out.optJSONArray(GROUPS_KEY);
+        JSONArray kept = new JSONArray();
+        for (int i = 0; groups != null && i < groups.length(); i++) {
+            JSONObject other = groups.optJSONObject(i);
+            if (other != null && !group.optString("id").equals(other.optString("id"))) kept.put(other);
+        }
+        kept.put(group);
+        out.put(GROUPS_KEY, kept);
+    }
+
+    /** [apps] are no longer exceptions of All screen time (in its group and, while it's out, the entry's all_except). */
+    private static void countInDaily(JSONObject out, JSONArray apps) throws JSONException {
+        Set<String> back = new HashSet<>();
+        for (int i = 0; apps != null && i < apps.length(); i++) back.add(apps.optString(i, ""));
+        if (back.isEmpty()) return;
+        JSONArray groups = out.optJSONArray(GROUPS_KEY);
+        for (int i = 0; groups != null && i < groups.length(); i++) {
+            JSONObject group = groups.optJSONObject(i);
+            if (group != null && ALL_GROUP.equals(group.optString("id")) && group.has("except")) {
+                group.put("except", without(group.optJSONArray("except"), back));
+            }
+        }
+        if (out.has("all_except")) out.put("all_except", without(out.optJSONArray("all_except"), back));
+    }
+
+    private static JSONArray without(JSONArray list, Set<String> leave) {
+        JSONArray out = new JSONArray();
+        for (int i = 0; list != null && i < list.length(); i++) {
+            if (!leave.contains(list.optString(i, ""))) out.put(list.opt(i));
+        }
+        return out;
+    }
+
+    /**
+     * HearthTube's minutes from the entry's groups: the fewest left in a group holding it (All screen time holds it
+     * unless it's one of its exceptions), and never more than [before] (a number) says. JSON null when none holds it.
+     */
+    private static Object tubeMinutes(JSONObject out, Object before) {
+        JSONArray groups = out.optJSONArray(GROUPS_KEY);
+        Integer least = before instanceof Number ? ((Number) before).intValue() : null;
+        for (int i = 0; groups != null && i < groups.length(); i++) {
+            JSONObject group = groups.optJSONObject(i);
+            if (group == null || group.isNull("minutes_left")) continue;
+            boolean holds = ALL_GROUP.equals(group.optString("id")) ? !holdsHearthTube(group.optJSONArray("except"))
+                    : holdsHearthTube(group.optJSONArray("apps"));
+            if (!holds) continue;
+            int left = Math.max(0, group.optInt("minutes_left", 0));
+            least = least == null ? left : Math.min(least, left);
+        }
+        return least == null ? JSONObject.NULL : least;
+    }
+
+    /**
+     * Today's groups for a new day Home Assistant hasn't spoken of yet: yesterday's groups (their apps and exceptions)
+     * with the minutes "tomorrow" gave for them, and those of tomorrow's groups that came with their own apps; without
+     * "tomorrow" (an older Home Assistant), yesterday's base minutes (BASE_KEY). Null when neither says.
+     */
+    static JSONArray newDayGroups(JSONObject entry) throws JSONException {
+        JSONObject tomorrow = entry.optJSONObject(TOMORROW_KEY);
+        JSONArray ahead = tomorrow != null ? tomorrow.optJSONArray("groups") : null;
+        JSONObject minutes = new JSONObject();
+        JSONObject own = new JSONObject();
+        if (ahead != null) {
+            for (int i = 0; i < ahead.length(); i++) {
+                JSONObject group = ahead.optJSONObject(i);
+                if (group == null || group.isNull("minutes") || !group.has("minutes")) continue;
+                String id = group.optString("id", "");
+                if (id.isEmpty()) continue;
+                minutes.put(id, Math.max(0, group.optInt("minutes", 0)));
+                if (group.has("apps") || group.has("except")) own.put(id, group);
+            }
+        } else {
+            JSONObject base = entry.optJSONObject(BASE_KEY);
+            if (base == null) return null;
+            minutes = base;
+        }
+        JSONArray out = new JSONArray();
+        Set<String> done = new HashSet<>();
+        JSONArray yesterday = entry.optJSONArray(GROUPS_KEY);
+        for (int i = 0; yesterday != null && i < yesterday.length(); i++) {
+            JSONObject group = yesterday.optJSONObject(i);
+            String id = group != null ? group.optString("id", "") : "";
+            if (id.isEmpty() || !minutes.has(id) || own.has(id) || !done.add(id)) continue;
+            JSONObject today = new JSONObject().put("id", id).put("name", group.optString("name", id))
+                    .put("minutes_left", Math.max(0, minutes.optInt(id, 0)));
+            for (String list : new String[]{"apps", "except"}) {
+                JSONArray value = group.optJSONArray(list);
+                if (value != null) today.put(list, value);
+            }
+            out.put(today);
+        }
+        for (Iterator<String> keys = own.keys(); keys.hasNext(); ) {
+            String id = keys.next();
+            if (!done.add(id)) continue;
+            JSONObject group = own.getJSONObject(id);
+            JSONObject today = new JSONObject().put("id", id).put("name", group.optString("name", id))
+                    .put("minutes_left", Math.max(0, minutes.optInt(id, 0)));
+            for (String list : new String[]{"apps", "except"}) {
+                JSONArray value = group.optJSONArray(list);
+                if (value != null) today.put(list, value);
+            }
+            if (!ALL_GROUP.equals(id) && !today.has("apps")) today.put("apps", new JSONArray());
+            out.put(today);
+        }
+        return out.length() > 0 ? out : null;
+    }
+
+    /**
      * What of yesterday's entry still holds today: a lock (bedtime) or a pause that hasn't ended, a lock that names no
      * end (it holds until Home Assistant says otherwise), and the next lock it named, with when the word came, so a
-     * bedtime the TV started itself goes on past midnight (Allowance.lockedNow). Nothing else (no minutes, no group
-     * out of time). Null when nothing does.
+     * bedtime the TV started itself goes on past midnight (Allowance.lockedNow); once that one's over, the first lock
+     * of the new day "tomorrow" named (School time), while it hasn't ended. And the new day's minutes (newDayGroups),
+     * from the start of the day (an empty FRONT_AT_KEY: entryFor counts them down with staleCountdown), a group with
+     * none held at once. No group yesterday's time held. Null when nothing does.
      */
     static JSONObject carriedOver(JSONObject entry, long now) {
-        JSONObject locks = entry != null ? entry.optJSONObject(LOCKS_KEY) : null;
-        if (locks == null) return null;
+        if (entry == null) return null;
+        JSONObject locks = entry.optJSONObject(LOCKS_KEY);
+        if (locks == null) locks = new JSONObject();
         JSONObject kept = new JSONObject();
         try {
             for (String field : new String[]{"lock", "pause"}) {
@@ -513,13 +764,32 @@ final class HaAllowance {
                     && (nextUntil == null || nextUntil > now)) {
                 kept.put("next_lock", next);
             }
-            if (kept.length() == 0) return null;
+            JSONObject tomorrow = entry.optJSONObject(TOMORROW_KEY);
+            JSONObject first = tomorrow != null ? tomorrow.optJSONObject("next_lock") : null;
+            // Only one that says when it ends: an old one with no end would hold for good
+            Long firstAt = first != null ? HaLocks.parseTime(first.optString("at", null)) : null;
+            Long firstUntil = first != null ? HaLocks.parseTime(first.optString("until", null)) : null;
+            if (!kept.has("next_lock") && firstAt != null && firstUntil != null && firstUntil > now) {
+                kept.put("next_lock", first);
+            }
+            JSONArray groups = newDayGroups(entry);
+            if (kept.length() == 0 && groups == null) return null;
             JSONObject out = new JSONObject();
             out.put("youtube_minutes_left", JSONObject.NULL);
             out.put("out_of_time", new JSONObject());
             out.put("schedule_locked", kept.has("lock"));
-            out.put(LOCKS_KEY, kept);
+            if (kept.length() > 0) out.put(LOCKS_KEY, kept);
             if (entry.has(WORD_AT_KEY)) out.put(WORD_AT_KEY, entry.optLong(WORD_AT_KEY));
+            if (groups != null) {
+                out.put(GROUPS_KEY, groups);
+                out.put(FRONT_AT_KEY, new JSONObject());
+                for (int i = 0; i < groups.length(); i++) {
+                    JSONObject group = groups.getJSONObject(i);
+                    if (group.optInt("minutes_left", 0) <= 0) hold(out, group);
+                    if (ALL_GROUP.equals(group.optString("id"))) out.put(DAY_LEFT_KEY, group.optInt("minutes_left"));
+                }
+                out.put("youtube_minutes_left", tubeMinutes(out, null));
+            }
             return out;
         } catch (JSONException e) {
             return null;
