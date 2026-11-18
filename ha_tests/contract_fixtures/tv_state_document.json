@@ -51,7 +51,7 @@
       ],
       "time": {"used": 15, "today_left": 75, "bonus": 30, "bonus_left": 30, "categories": []},
       "bedtime_lifted": {"since": "2026-11-17T21:45:00-08:00", "until": "2026-11-17T22:15:00-08:00"},
-      "next_lock": {"at": "2026-11-18T07:45:00-08:00", "by": "schedule", "kind": "school_time"},
+      "next_lock": {"at": "2026-11-17T22:15:00-08:00", "by": "binary_sensor.sam_phone_bedtime_active", "kind": "bedtime"},
       "schedule": {"bedtime": {"at": "2026-11-17T21:30:00-08:00", "wake": "2026-11-18T06:45:00-08:00"}}
     },
     "paused": {
