@@ -135,7 +135,7 @@ PAUSE_SCHEMA = vol.All(
 GET_ACTIVITY_SCHEMA = vol.Schema(
     {
         vol.Optional("person"): cv.entity_id,
-        vol.Optional("kind"): vol.In(("call", "hold_start", "hold_end", "tv_command", "glint_inbox")),
+        vol.Optional("kind"): vol.In(("call", "hold_start", "hold_end", "tv_command", "glint_inbox", "rule")),
         vol.Optional("since"): cv.datetime,
         vol.Optional("until"): cv.datetime,
         vol.Optional("limit", default=200): vol.All(vol.Coerce(int), vol.Range(min=1, max=2000)),
@@ -1172,13 +1172,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     entry.async_on_unload(async_track_time_interval(hass, recompute, timedelta(minutes=1)))
 
     # Where the kids are (places.py): whenever a tracker, a person or a place's zone changes, and every minute (a
-    # reading goes stale without a change)
+    # reading goes stale without a change). Then who they're with and the standing rules (presence.py): the adults'
+    # person entities are watched too
     @callback
     def places_update(_event_or_now=None) -> None:
         hub.household.places.update()
+        hub.household.presence.update()
 
     entry.async_on_unload(async_track_time_interval(hass, places_update, timedelta(minutes=1)))
-    if watched := hub.household.places.watched_entities():
+    watched = sorted(set(hub.household.places.watched_entities()) | set(hub.household.presence.watched_entities()))
+    if watched:
         entry.async_on_unload(async_track_state_change_event(hass, watched, places_update))
     places_update()
 

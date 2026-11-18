@@ -3,6 +3,14 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **Messages opens when a kid is out without an adult.** Away from home and more than 300 m from every adult for 5 minutes, a kid's text app (Google Messages, else Samsung Messages, plus any app you add for them) isn't held by daily time or Messaging's limit, so they can arrange a ride home. It goes back after 10 minutes with an adult or at home. School time, the schedule, bedtime, a pause and a block still hold it, and a kid home alone keeps their limits. On by default; switch it off or add apps in Family > Places.
+- **Hearth knows who each kid is with.** Each kid's Place sensor gains `with` and `apart_from_adults`, a `hearth_presence` event fires when one changes, and a kid who's out shows on their row ("Away · apart from adults since 6:47 PM · Messages open"). Positions stay in memory only: nothing Hearth keeps, fires or logs has a coordinate.
+- **The activity log notes Messages when away** opening and going back (`kind: rule`).
+
 ## 2026.11.40
 
 ### TV

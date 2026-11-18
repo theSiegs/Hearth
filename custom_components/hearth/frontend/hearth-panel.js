@@ -108,6 +108,11 @@ const WORDS = {
   holdEnded: "hold ended",
   tvCommand: "TV command",
   glintInbox: "Glint request",
+  ruleOpened: "Messages when away: open",
+  ruleClosed: "Messages when away: back to normal",
+  awayMessages: "Messages when away from adults",
+  awayMessagesHint:
+    "While a kid is out, away from home and apart from every adult for 5 minutes, their text app isn't held by daily time or Messaging's limit, so they can arrange a ride. It goes back after 10 minutes with an adult or at home. School time, the schedule, bedtime, a pause and a block still hold it. Calls always work.",
   backstop: "Keep Family Link's daily limit as a backstop",
   backstopMargin: "Backstop margin (minutes)",
   backstopHint:
@@ -1206,6 +1211,17 @@ class HearthPanel extends HTMLElement {
         await this._setOption("places", places, "Place added");
         return;
       }
+      case "away-app-add":
+      case "away-app-remove": {
+        const all = { ...(this._config.away_messages_apps || {}) };
+        const mine = [...(all[d.person] || [])];
+        const pick = action === "away-app-add" ? this._value(`#away-app-${CSS.escape(d.person)}`) : d.package;
+        if (!pick) return this._notify("Pick an app first");
+        all[d.person] = action === "away-app-add" ? [...new Set([...mine, pick])] : mine.filter((p) => p !== pick);
+        if (!all[d.person].length) delete all[d.person];
+        await this._setOption("away_messages_apps", all, action === "away-app-add" ? "App added" : "App removed");
+        return;
+      }
       case "place-fav-remove": {
         const places = this._placesOption();
         places.favorites = places.favorites.filter((f) => f.key !== d.key);
@@ -1248,6 +1264,9 @@ class HearthPanel extends HTMLElement {
         await this._setOption("enforce", kept, "Parental controls saved");
         return;
       }
+      case "away-messages":
+        await this._setOption("away_messages", el.checked, el.checked ? "Messages when away on" : "Messages when away off");
+        return;
       case "voice-assistants":
         await this._setOption("voice_assistants", el.checked, el.checked ? "Voice assistants on" : "Voice assistants off");
         return;
@@ -2549,6 +2568,18 @@ class HearthPanel extends HTMLElement {
     return parts.join(" · ");
   }
 
+  // Where a kid is while they're out, by name only: "Away · apart from adults since 6:47 PM · Messages open" or
+  // "Practice · with Alex" (presence.py; nothing while they're home or not known)
+  _presenceLine(s) {
+    const p = s?.presence;
+    if (!p || !p.away) return "";
+    const parts = [esc(p.place || "Away")];
+    if (p.apart) parts.push(`apart from adults${p.apart_since ? ` since ${esc(clockAmPm(new Date(p.apart_since)))}` : ""}`);
+    else if ((p.with_adults || []).length) parts.push(`with ${esc(p.with_adults.join(", "))}`);
+    if ((p.open || []).length) parts.push(`${esc(p.open.join(", "))} open`);
+    return `<div class="line muted small presence">${parts.join(" · ")}</div>`;
+  }
+
   _todayHeader(kids) {
     const now = this._now();
     const people = kids.map((k) => ({ k, s: this._summaryPerson(k.id) }));
@@ -2688,7 +2719,7 @@ class HearthPanel extends HTMLElement {
         const s = this._summaryPerson(k.id);
         const asleep = this._lockOf(s)?.kind === "bedtime";
         return `<div class="card kid ${asleep ? "asleep" : ""}" role="button" tabindex="0" data-action="kid-sheet" data-enter="kid-sheet" data-kid="${esc(k.id)}" aria-current="${Boolean(sel && sel.id === k.id && this._wide)}">
-          ${this._ring(s || { name: k.name })}<div class="grow"><div class="name">${esc(k.name)}</div><div class="line">${this._kidLine(s) || "No word yet"}${this._originButton(s, `row|${k.id}`)}</div>${this._originList(s, `row|${k.id}`)}</div>
+          ${this._ring(s || { name: k.name })}<div class="grow"><div class="name">${esc(k.name)}</div><div class="line">${this._kidLine(s) || "No word yet"}${this._originButton(s, `row|${k.id}`)}</div>${this._presenceLine(s)}${this._originList(s, `row|${k.id}`)}</div>
           ${covered.has(k.id) ? "" : this._rowGive(s)}<span class="chev">${icon("chev")}</span></div>`;
       })
       .join("")}</div>`;
@@ -2766,7 +2797,7 @@ class HearthPanel extends HTMLElement {
     const locked = lock && lock.kind !== "paused";
     const h = [];
     h.push(`<div class="handle"><i></i></div><div class="dinner">
-      <div class="dhead">${this._ring(s, 60)}<div class="grow"><h2>${esc(kid.name)}</h2><div class="line">${this._kidLine(s)}${this._originButton(s, `sheet|${kid.id}`)}</div>${this._originList(s, `sheet|${kid.id}`)}</div>
+      <div class="dhead">${this._ring(s, 60)}<div class="grow"><h2>${esc(kid.name)}</h2><div class="line">${this._kidLine(s)}${this._originButton(s, `sheet|${kid.id}`)}</div>${this._presenceLine(s)}${this._originList(s, `sheet|${kid.id}`)}</div>
       <button class="closebtn" data-action="sheet-close" aria-label="Close">${icon("close")}</button></div>`);
     if (locked) {
       const word = LOCK_WORDS[lock.kind];
@@ -2962,6 +2993,8 @@ class HearthPanel extends HTMLElement {
         what = [r.service, r.why, r.result, r.duration_ms !== undefined ? `${r.duration_ms} ms` : null].filter(Boolean).join(" · ");
       } else if (r.kind === "hold_start" || r.kind === "hold_end") {
         what = [r.kind === "hold_start" ? WORDS.holdStarted : WORDS.holdEnded, targets, r.reason].filter(Boolean).join(" · ");
+      } else if (r.kind === "rule") {
+        what = [r.result === "opened" ? WORDS.ruleOpened : WORDS.ruleClosed, targets].filter(Boolean).join(" · ");
       } else {
         what = [r.kind === "tv_command" ? WORDS.tvCommand : WORDS.glintInbox, r.service, targets, r.result].filter(Boolean).join(" · ");
       }
@@ -4003,7 +4036,36 @@ class HearthPanel extends HTMLElement {
         <input id="place-fav-name" placeholder="Name, e.g. Practice" maxlength="40">
         <button class="btn primary" data-action="place-fav-add">Add</button>
       </div>
+      ${this._awayMessagesSetting(kids)}
     </section>`;
+  }
+
+  // Messages when away from adults (presence_rules.py): on by default; each kid's text app is found by Hearth, and
+  // an adult may add other Messaging apps of theirs
+  _awayMessagesSetting(kids) {
+    const cfg = this._config;
+    const on = cfg.away_messages !== false;
+    const added = cfg.away_messages_apps || {};
+    const choices = cfg.away_messages_choices || {};
+    const rows = on && kids.length
+      ? `<ul class="list">${kids
+          .map((k) => {
+            const mine = added[k.id] || [];
+            const named = (choices[k.id] || []).reduce((m, a) => ({ ...m, [a.package]: a.name }), {});
+            const offer = (choices[k.id] || []).filter((a) => !mine.includes(a.package)).map((a) => ({ value: a.package, label: a.name }));
+            const chips = mine
+              .map((p) => `<span class="chip small" title="${esc(p)}">${esc(named[p] || p)} <button class="lnk" data-action="away-app-remove" data-person="${esc(k.id)}" data-package="${esc(p)}" aria-label="Remove">×</button></span>`)
+              .join(" ");
+            return `<li class="wrap">${this._avatar(k.id, 32)}<div class="grow">${esc(k.name)}<div class="muted small">Their text app${chips ? ` and ${chips}` : ""}</div></div>
+              ${offer.length ? `<select id="away-app-${esc(k.id)}" aria-label="${esc(k.name)}'s other app">${this._options(offer, "", "Add an app")}</select>
+              <button class="btn" data-action="away-app-add" data-person="${esc(k.id)}">Add</button>` : ""}</li>`;
+          })
+          .join("")}</ul>`
+      : "";
+    return `<div class="strong">${esc(WORDS.awayMessages)}</div>
+      <p class="muted small">${esc(WORDS.awayMessagesHint)}</p>
+      <label class="check"><input type="checkbox" data-change="away-messages" ${on ? "checked" : ""}> ${esc(WORDS.awayMessages)}</label>
+      ${rows}`;
   }
 
   _schoolCard() {

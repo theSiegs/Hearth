@@ -793,6 +793,7 @@ get_activity:
             - hold_end
             - tv_command
             - glint_inbox
+            - rule
     since:
       selector:
         datetime:

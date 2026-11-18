@@ -1165,7 +1165,7 @@
         },
         "kind": {
           "name": "Kind",
-          "description": "call, hold_start, hold_end, tv_command or glint_inbox."
+          "description": "call, hold_start, hold_end, tv_command, glint_inbox or rule."
         },
         "since": {
           "name": "Since",

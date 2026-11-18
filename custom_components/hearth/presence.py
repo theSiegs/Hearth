@@ -676,15 +676,23 @@ class Presence:
         at, together, apart = self.fact(person, AT), self.fact(person, WITH), self.fact(person, APART)
         people = together.value if isinstance(together.value, list) else []
         adults = set(self.adults())
+        away_apps = self.household.away.lifted_apps(person)
+        names = self.household.app_names(away_apps, person) if away_apps else {}
         return {
             "at": at.value if at.value != UNKNOWN else None,
             "place": self.household.places.place_name(person, at.value),
             "away": at.value not in (HOME, UNKNOWN),
             "with": [self.household.person_name(p) for p in people],
             "with_adult": any(p in adults for p in people),
+            "with_adults": [self.household.person_name(p) for p in people if p in adults],
             "apart": apart.value == YES,
             "apart_since": dt_util.as_local(apart.since).isoformat() if apart.value == YES and apart.since else None,
             "fresh": bool(at.sure),
+            # What Messages when away keeps open for them now (presence_rules.py), by name
+            "open": sorted(names.get(p) or p for p in away_apps),
+            "open_since": (
+                dt_util.as_local(since).isoformat() if away_apps and (since := self.household.away.since(person)) else None
+            ),
         }
 
 

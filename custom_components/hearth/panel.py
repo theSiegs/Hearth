@@ -70,6 +70,7 @@ from .limits import (
 from .notifications import clear_pairing
 from .client import locked
 from .places import CONF_PLACES, FAVORITES, MAX_FAVORITES, MAX_NAME, RESERVED, SCHOOLS, TRACKERS
+from .presence_rules import CONF_AWAY_MESSAGES, CONF_AWAY_MESSAGES_APPS, MAX_APPS as AWAY_MAX_APPS
 from .schooldays import CONF_SCHOOL_DAYS
 from .sources import CONF_SOURCES, CONF_TITLES
 from .suggest_push import CONF_SUGGEST_PUSH, pairs as suggest_pairs
@@ -370,6 +371,11 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
             key=lambda z: z["name"].lower(),
         ),
         "places_now": {person: household.places.page(person) for person in household.places.people()},
+        # Messages when away from adults (presence_rules.py): on or off, the apps added per kid, and each kid's
+        # Messaging apps to add from
+        "away_messages": household.away.enabled(),
+        "away_messages_apps": {person: household.away.added(person) for person in household.places.people()},
+        "away_messages_choices": {person: household.away.choices(person) for person in household.places.people()},
         # Each person's Screen time today sensor, whose hourly statistics draw Today's hour-by-hour chart
         "screen_time_sensors": _screen_time_sensors(hass, hub),
         # What the installed integrations can do, found now: the page offers only those (nintendo.py)
@@ -430,6 +436,11 @@ OPTION_SCHEMAS: dict[str, Any] = {
     CONF_CATEGORY_LOOKUP: bool,
     CONF_CATEGORY_AI: vol.Any(AI_DEFAULT, AI_OFF, cv.entity_domain("ai_task")),
     CONF_VOICE_ASSISTANTS: bool,
+    # Messages when away from adults (presence_rules.py): on by default, and the apps added for each kid
+    CONF_AWAY_MESSAGES: bool,
+    CONF_AWAY_MESSAGES_APPS: vol.Schema(
+        {_PERSON: vol.All([vol.All(cv.string, vol.Length(min=3, max=200))], vol.Length(max=AWAY_MAX_APPS))}
+    ),
     CONF_BLOCK_UNSUPPORTED_BROWSERS: bool,
     # Family Link's daily limit as a backstop (backstop.py)
     CONF_FL_BACKSTOP: bool,

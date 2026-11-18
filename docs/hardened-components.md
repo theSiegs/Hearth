@@ -23,6 +23,7 @@ and say so in the change. When another part gets the same review-probe-fix-test 
 | `weekly.py` | Half days when School is split by a break, and "until 00:00" (`test_weekly`, `test_qc_fixes`) |
 | `todos.py` | An undone reward stays undone. Editing an every-N-days task keeps its start date (`test_chores`) |
 | `places.py` | A Family Link move needs two location fixes. A reading too rough to place someone at home doesn't jump to a big zone (`test_places`) |
+| `presence.py` + `presence_rules.py` | The kid's fix is set against an adult's track at its own time, not their latest position (a car together isn't apart). Unsure and unknown change nothing; nothing is confirmed while settling; a restored adult position keeps its stored age; no coordinate is stored, fired or logged. Messages when away opens on 5 minutes apart, goes back after 10 with an adult or at home, never flaps within 15, goes off after 6 hours unknown, and lifts time limits only; `Household.open_apps` keeps the device lock when a lock, pause, block, the schedule or School time holds the app (`test_presence`, `test_away_messages`, `test_invariants` D) |
 | `fs_site_list.py` | Refuses a web page or a list that looks like a wrong download (`test_fs_site_list`) |
 | `app_blocks.py` | A block call that timed out is still Hearth's to lift. Launchers and keyboards are never blocked (`test_app_blocks`) |
 | `client_settings.py` | Hearth's own documents are exempt from the limits. Each device scope is capped at 256 KB (`test_qc_fixes`) |
