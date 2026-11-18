@@ -649,14 +649,18 @@ def _fits(want, got, path: str = "") -> None:
             _fits(value, got[key], f"{path}.{key}")
     elif isinstance(want, list) and any(isinstance(item, dict) for item in want):
         assert isinstance(got, list), f"{path}: {got!r} is no list"
-        by_id = {item.get("id"): item for item in got if isinstance(item, dict)}
-        assert sorted(by_id) == sorted(item["id"] for item in want), f"{path}: ids {sorted(by_id)}"
+        # Groups by their id, lifts by their group
+        key = "id" if "id" in want[0] else "group"
+        by_id = {item.get(key): item for item in got if isinstance(item, dict)}
+        assert sorted(by_id) == sorted(item[key] for item in want), f"{path}: ids {sorted(by_id)}"
         for item in want:
-            _fits(item, by_id[item["id"]], f"{path}[{item['id']}]")
+            _fits(item, by_id[item[key]], f"{path}[{item[key]}]")
     elif isinstance(want, list):
         assert isinstance(got, list) and set(want) <= set(got), f"{path}: {set(want) - set(got or [])} missing"
     elif isinstance(want, str) and len(want) >= 19 and want[10:11] == "T" and dt_util.parse_datetime(want):
         assert isinstance(got, str) and dt_util.parse_datetime(got), f"{path}: {got!r} is no time"
+    elif isinstance(want, str) and len(want) == 10 and dt_util.parse_date(want):
+        assert isinstance(got, str) and len(got) == 10 and dt_util.parse_date(got), f"{path}: {got!r} is no date"
     else:
         assert type(got) is type(want) and got == want, f"{path}: {got!r}, the fixture says {want!r}"
 
@@ -711,6 +715,19 @@ async def test_the_tv_document_with_youtube_allowed(
     _fits(FIXTURE["moments"]["allowed"], await _tv_document(client, secret))
 
 
+async def test_the_tv_document_with_video_allowed_until_six(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Video allowed until 6 PM at 5 PM: Video is left out, and its lift ends at 6 with 20 minutes left after it."""
+    freezer.move_to(dt_util.now().replace(hour=17, minute=0, second=0, microsecond=0))
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    await _set(hass, "all", 60)
+    await _set(hass, "video", 30)
+    until = dt_util.now().replace(hour=18, minute=0).isoformat()
+    await _call(hass, "allow", {"people": ["person.sam"], "group": "video", "until": until})
+    _fits(FIXTURE["moments"]["allowed_until"], await _tv_document(client, secret))
+
+
 def test_the_fixture_check_catches_a_change() -> None:
     evening = FIXTURE["moments"]["evening"]
     for changed in (
@@ -718,6 +735,8 @@ def test_the_fixture_check_catches_a_change() -> None:
         {**evening, "next_lock": {**evening["next_lock"], "kind": "school_time"}},
         {**evening, "next_lock": {**evening["next_lock"], "at": "9:30 PM"}},
         {key: value for key, value in evening.items() if key != "schedule"},
+        {**evening, "tomorrow": {**evening["tomorrow"], "daily_minutes": 90}},
+        {**evening, "tomorrow": {**evening["tomorrow"], "date": "tomorrow"}},
     ):
         with pytest.raises(AssertionError):
             _fits(evening, changed)

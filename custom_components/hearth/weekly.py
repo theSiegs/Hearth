@@ -323,6 +323,8 @@ class Now:
     day: Day
     # The next Sleep or School to start: (at, bedtime | school_time)
     next_lock: tuple[datetime, str] | None = None
+    # When that one ends (the change after it: wake for Sleep), when the timeline says
+    next_lock_until: datetime | None = None
 
 
 @dataclass
@@ -533,14 +535,32 @@ class Week:
             if tomorrow.changes:
                 first = tomorrow.changes[0][0]
                 wake = datetime.combine(now.date() + timedelta(days=1), time(first // 60, first % 60), zone)
-        lock = None
-        for moment in moments[current + 1:]:
-            kind = mode_lock(self.data.modes, moment.mode)
+        lock = lock_until = None
+        for i in range(current + 1, len(moments)):
+            kind = mode_lock(self.data.modes, moments[i].mode)
             if kind is not None:
-                lock = (moment.at, kind)
+                lock = (moments[i].at, kind)
+                lock_until = moments[i + 1].at if i + 1 < len(moments) else None
                 break
         return Now(mode, since, following.at if following else None,
-                   following, bedtime, wake, today, lock)
+                   following, bedtime, wake, today, lock, lock_until)
+
+    def first_lock_on(self, person: str, day: date, zone: Any) -> tuple[datetime, str, datetime | None] | None:
+        """The first Sleep or School to start on [day] after a change that isn't one (the morning's wake): (at, kind,
+        until), for a device that starts [day] without Home Assistant. None when the day starts none."""
+        if person not in self.data.people and person not in self.data.today:
+            return None
+        moments = self.timeline(person, datetime.combine(day - timedelta(days=1), time(12, 0), zone))
+        awake = False
+        for i, moment in enumerate(moments):
+            if moment.at.date() != day:
+                continue
+            kind = mode_lock(self.data.modes, moment.mode)
+            if kind is None:
+                awake = True
+            elif awake:
+                return moment.at, kind, moments[i + 1].at if i + 1 < len(moments) else None
+        return None
 
     # Editing
 
