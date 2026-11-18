@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **School time shows through a schedule that only sets bedtime.** A weekly schedule with free time all day and Sleep at night made the mode say Free during Family Link's School time (the holds were right; only the mode was wrong); a lock entity that's on now shows through the schedule's free time.
+
 ## 2026.11.44
 
 ### TV

@@ -289,6 +289,27 @@ async def test_no_schedule_changes_nothing(hass: HomeAssistant, hass_client_no_a
     assert household.mode_of("person.sam")["source"] == "locks"
 
 
+async def test_a_school_time_lock_shows_through_the_schedule_s_free_time(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """A schedule with only bedtime (free from 7, Sleep at 9): while Family Link's School time is on, the mode says
+    School, as it does without a schedule; Sleep still comes from the schedule."""
+    freezer.move_to(dt_util.now().replace(hour=10, minute=0, second=0))
+    await _household_with_sam(hass, hass_client_no_auth)
+    school = "binary_sensor.sam_phone_school_time_active"
+    hass.states.async_set(school, "on", {"child_id": "42"})
+    await _option(hass, "locks", {"person": "person.sam", "entities": [school]})
+    await _schedule(hass, days=["every_day"], changes=[{"at": "07:00", "mode": "free"}, {"at": "21:00", "mode": "sleep"}])
+    household = _household(hass)
+    assert household.mode_of("person.sam")["mode"] == "school"
+
+    hass.states.async_set(school, "off", {"child_id": "42"})
+    household.recompute()
+    await hass.async_block_till_done()
+    found = household.mode_of("person.sam")
+    assert found["mode"] == "free" and found["source"] == "schedule"
+
+
 async def test_homework_closes_games_on_the_tv_and_family_link(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:

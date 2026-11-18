@@ -656,7 +656,10 @@ class Household:
         school in School time, else free)."""
         found = self.schedule_now.get(person)
         modes = self.week.data.modes
-        if found is not None:
+        day = self.days.get(person)
+        kinds = lock_kinds(self.hass, [e for e in (day.locked_by if day else []) if e not in (PAUSE, SCHEDULE)])
+        locked_mode = "sleep" if "bedtime" in kinds else "school" if "school_time" in kinds else None
+        if found is not None and not (found.mode == "free" and locked_mode):
             return {
                 "mode": found.mode,
                 "name": (modes.get(found.mode) or {}).get("name", found.mode),
@@ -666,9 +669,9 @@ class Household:
                 "today_changed": found.day.changed_today,
                 "source": "schedule",
             }
-        day = self.days.get(person)
-        kinds = lock_kinds(self.hass, [e for e in (day.locked_by if day else []) if e != PAUSE])
-        mode = "sleep" if "bedtime" in kinds else "school" if "school_time" in kinds else "free"
+        # No schedule, or the schedule's free time while a lock entity of theirs is on (Family Link's School time
+        # on a day the schedule has no School): the lock entities say
+        mode = locked_mode or "free"
         return {
             "mode": mode,
             "name": (modes.get(mode) or {}).get("name", mode),
