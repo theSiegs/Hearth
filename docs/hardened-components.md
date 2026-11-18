@@ -12,9 +12,9 @@ and say so in the change. When another part gets the same review-probe-fix-test 
 | `counting.py` `merge` | A live "now playing" reading next to itemized readings counts as a total only, so one play isn't counted twice (`test_counting`) |
 | `household.py` totals sources | Keeps the day's highest count across restarts. A drop of 5 min or less is accepted; a bigger drop counts as the source's new day before 6 AM and is ignored after. The count is capped at the time since midnight (`test_sources`) |
 | `household.py` startup | A limit reached today stays held for 90 s after Home Assistant starts, but not on a reload. `group_packages` is cached once per recompute (`test_qc_fixes`) |
-| `enforce.py` | A shared Switch keeps its real limit when it passes from one kid to another. Family Safety locks are applied again past midnight, and a pause locks platforms. The held set is updated as each platform's call succeeds. Hearth's own Family Link bonus isn't counted twice against a parent's. Extra time that has ended is ignored. A Family Link app pause is a parent's change only once it was seen intact (`pauses_intact`); one never shown is said and retried with a doubling wait (`pauses_not_taken`); apps of a pause call that failed part-way stay possibly held (`maybe_paused`) so letting go resumes them (`test_enforce`, `test_native_sync`, `test_seams_probes`) |
+| `enforce.py` | A shared Switch keeps its real limit when it passes from one kid to another. Family Safety locks are applied again past midnight, and a pause locks platforms. The held set is updated as each platform's call succeeds. Hearth's own Family Link bonus isn't counted twice against a parent's. Extra time that has ended is ignored. A Family Link app pause is a parent's change only once it was seen intact (`pauses_intact`); one never shown is said and retried with a doubling wait (`pauses_not_taken`); apps of a pause call that failed part-way stay possibly held (`maybe_paused`) so letting go resumes them A family pause locks a Family Link child's devices whole. `essential()` is the explicit system list (`SYSTEM_PARTS`, no `com.android.*` prefix: Chrome is held) (`test_enforce`, `test_native_sync`, `test_seams_probes`) |
 | `native_sync.py` | A parent's Family Link bonus grant lasts while their share is left; extra time Hearth couldn't cancel stays known as Hearth's (`test_native_sync`) |
-| `pause.py` | Pauses are saved and survive a restart (`test_qc_fixes`) |
+| `pause.py` | Pauses are saved and survive a restart. Family Safety's downtime sensors are a bedtime by `downtime_start`/`downtime_end` (`test_qc_fixes`, `test_pause`) |
 | `backstop.py` | A whole-device hold is remembered across a restart |
 | `api.py` | Parent PIN guesses are checked one at a time past the free tries. Deeply nested JSON gets a 400 (`test_parent_pin`) |
 | `switch_approval.py` | Only an adult can answer, and the persistent notification never carries the request id (`test_switch_approval`) |
@@ -24,7 +24,7 @@ and say so in the change. When another part gets the same review-probe-fix-test 
 | `todos.py` | An undone reward stays undone. Editing an every-N-days task keeps its start date (`test_chores`) |
 | `places.py` | A Family Link move needs two location fixes. A reading too rough to place someone at home doesn't jump to a big zone (`test_places`) |
 | `fs_site_list.py` | Refuses a web page or a list that looks like a wrong download (`test_fs_site_list`) |
-| `app_blocks.py` | A block call that timed out is still Hearth's to lift. Launchers and keyboards are never blocked (`test_app_blocks`) |
+| `app_blocks.py` | A block call that timed out is still Hearth's to lift. Launchers and keyboards are never blocked; Chrome (`com.android.chrome`) is blockable (`test_app_blocks`) |
 | `client_settings.py` | Hearth's own documents are exempt from the limits. Each device scope is capped at 256 KB (`test_qc_fixes`) |
 | `glint_api.py` | Who may forget a phone. The start-screen options come from adults' phones only (`test_glint_agent`) |
 | `entity.py` | Removes the entities of pools that no longer exist, only for keys that setup made (`test_qc_fixes`) |

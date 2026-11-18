@@ -1163,7 +1163,7 @@ or Nintendo's own schedules yet.
   Switch is held when one of its groups is closed. `hearth.allow` for the group or an app lifts it. More minutes don't
   open it; its end does. Why: `schedule` in the summary's `sync`.
 - **`next_lock`** is the schedule's next Sleep or School (`{at, by: "schedule", kind}`) when it comes before the lock
-  entities' own; a kid's Today line and the suggestions' cutoff use the schedule's bedtime.
+  entities' own (not a School that School time taken off today covers); a kid's Today line and the suggestions' cutoff use the schedule's bedtime.
 - A **family pause** still locks everything, whatever the mode.
 
 **Each kid's schedule now** is in the household summary and their state document as `schedule` (only while their
@@ -1589,7 +1589,12 @@ while they're locked, `lock` {by: the lock entities and/or "pause", kind: bedtim
 (the first that applies), kinds: all of them, until: when it ends, if known}, and `next_lock`
 {at, by, kind: bedtime | school_time} for the next bedtime or school time today, from the lock entities' own
 `bedtime_start`/`bedtime_end`/`schooltime_start`/`schooltime_end` (Family Link's; Family Safety's Downtime Active
-sensors carry `bedtime_start`/`bedtime_end` too and are a bedtime), so a device can wind down. Without
+sensors carry `downtime_start`/`downtime_end`, an older one `bedtime_start`/`bedtime_end`, and are a bedtime), so a
+device can wind down. School time taken off today is never the `next_lock` (tonight's Sleep is, then). While extra
+time lifts bedtime, `next_lock` is bedtime coming back when the lift ends (`{at: the lift's end, by: the bedtime lock
+or "schedule", kind: bedtime}`), so a device that loses Home Assistant meanwhile brings bedtime back itself; not when
+the lift lasts past the bedtime's own end. A family pause also locks a kid's Family Link devices whole, as daily
+time used up does (a phone without a Hearth app has nothing else holding it), let go when it ends. Without
 a push, a device learns of a pause with its next status answer: a TV within 2 minutes (it posts at least that often
 while on), a phone at its next post.
 

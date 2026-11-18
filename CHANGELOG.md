@@ -9,6 +9,11 @@
 
 - **A Family Link app pause that never took isn't a parent's change any more.** Google takes some apps' 1-minute limit and never shows it; Hearth read that as "the app's limit was changed in the Family Link app" and let those apps go until midnight. Only a pause Family Link has once shown in force counts as changed now. One that never shows is said on the kid's Family Link line ("Family Link didn't take the pause of …") and tried again after 5 minutes, then less and less often (up to once an hour). The grants the older reading made are dropped once on the update, so those apps are held again.
 - **Apps paused before a Family Link pause failed part-way are resumed.** Family Link pauses a list app by app and stops at the first one Google refuses; Hearth now treats the whole list as possibly paused, so time back resumes them all.
+- **Pause screens locks a phone or tablet only Family Link holds**, as daily time used up does; it's let go when the pause ends.
+- **Chrome is paused and blocked on Family Link phones.** Its package is `com.android.chrome`, and Hearth spared every `com.android.*` package as the system; the system is now an explicit list by name (the system UI, the phone and calls, contacts, the stock launchers and keyboard, the installers and permissions).
+- **Family Safety's downtime times are read again** (`downtime_start` / `downtime_end`, as the installed Family Safety names them): the next bedtime, the heads-up on the TV, bedtime on Hearth's page and the lock's end are back for a kid whose bedtime is a downtime sensor.
+- **School time taken off today isn't announced as the next lock**, so a TV doesn't show its heads-up or lock at it by itself.
+- **A lifted bedtime is the TV's next lock when its extra time ends**, so a TV that loses Home Assistant during the lift still brings bedtime back.
 
 ## 2026.11.40
 

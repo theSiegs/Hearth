@@ -183,7 +183,6 @@ async def test_unlimited_started_again_within_the_settle_leaves_no_minute_out_tw
 # 5. Pause screens and a phone that only Family Link holds (enforce.py update: paused_groups_of)
 
 
-@pytest.mark.xfail(strict=True, reason="seams 5: Pause screens doesn't reach a Family Link phone")
 async def test_pause_screens_holds_a_family_link_only_phone(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:
@@ -207,7 +206,6 @@ async def test_pause_screens_holds_a_family_link_only_phone(
 # 6. Chrome is "com.android.*", which Hearth's per-app holds treat as the system (enforce.essential)
 
 
-@pytest.mark.xfail(strict=True, reason="seams 6: Chrome is never paused through Family Link, though Hearth says so")
 async def test_pausing_chrome_pauses_it_in_family_link(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
@@ -229,7 +227,6 @@ async def test_pausing_chrome_pauses_it_in_family_link(
 # (pause.py _STARTS and _ENDS, household.py _locks_bedtime). Checked against the installed integration's attributes
 
 
-@pytest.mark.xfail(strict=True, reason="seams 7: Family Safety's downtime times aren't read")
 async def test_family_safety_downtime_says_when_it_starts_and_ends(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:
@@ -311,7 +308,6 @@ async def test_a_category_that_is_off_today_is_marked_so_in_its_group(
 # 10. School time taken off today is still announced as the next lock (household.py _locks_document, weekly.py now)
 
 
-@pytest.mark.xfail(strict=True, reason="seams 10: next_lock names a School time that was taken off")
 async def test_school_time_taken_off_is_not_the_next_lock(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer, monkeypatch
 ) -> None:

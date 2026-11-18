@@ -198,7 +198,31 @@ CLOCKS = frozenset(
         "com.lge.clock",
     }
 )
-ESSENTIAL = TRANSITION_CLIENTS | CLOCKS | frozenset(
+# Android's own parts and the home screens, by name: the system UI, the phone and its calls, contacts, the stock
+# launcher and keyboard, and what installs apps and grants permissions. Never the whole com.android.* prefix: real
+# apps live there too (Chrome is com.android.chrome), and those are paused and blocked like any app
+SYSTEM_PARTS = frozenset(
+    {
+        "com.android.systemui",
+        "com.android.phone",
+        "com.android.server.telecom",
+        "com.android.incallui",
+        "com.android.dialer",
+        "com.android.contacts",
+        "com.android.emergency",
+        "com.android.inputmethod.latin",
+        "com.android.permissioncontroller",
+        "com.android.packageinstaller",
+        "com.google.android.permissioncontroller",
+        "com.google.android.packageinstaller",
+        "com.android.launcher3",
+        "com.sec.android.app.launcher",
+        "com.google.android.apps.nexuslauncher",
+        "com.google.android.launcher",
+        "com.google.android.apps.tv.launcherx",
+    }
+)
+ESSENTIAL = TRANSITION_CLIENTS | CLOCKS | SYSTEM_PARTS | frozenset(
     {
         "com.thesiegs.hearth",
         "com.thesiegs.hearth.mobile",
@@ -217,7 +241,9 @@ ESSENTIAL = TRANSITION_CLIENTS | CLOCKS | frozenset(
 
 
 def essential(package: str) -> bool:
-    return package in ESSENTIAL or package.startswith("com.android.") or package == "android"
+    """Never paused or blocked: the explicit system list (SYSTEM_NEVER_PAUSED), the same one the whole-device path
+    reads (Enforcement._all_apps_but). No com.android.* prefix rule: Chrome and other real apps there are held."""
+    return package in SYSTEM_NEVER_PAUSED
 
 
 # Never paused for School time either: what holds the rest, and the system
@@ -382,8 +408,7 @@ def wanted(
     else:
         held = set()
     for group_id in closed:
-        # essential() spares com.android.* here: a category's own apps are never Android's system packages but by
-        # a misfiled sort, and those mustn't be paused; the whole-device path below names its exceptions instead
+        # essential() is the explicit system list, as the whole-device path reads it (no com.android.* prefix)
         packages |= {p for p in apps_of(group_id, enforcer.person) if not essential(p) and not fs_app(p)}
     if lifted:
         packages = {p for p in packages if not lifted.app(p, groups_of_app(p) if groups_of_app else None)}
@@ -668,6 +693,10 @@ class Enforcement:
                 paused |= paused_switch(e, paused_groups, now, playing)
                 if e.kind == FAMILY_SAFETY and (ALL in paused_groups or paused_groups & set(e.groups)):
                     paused |= set(e.platforms)
+                # A family pause locks a Family Link child's devices whole, as daily time running out does (a
+                # phone or tablet without a Hearth app has nothing else holding it); let go before midnight
+                if e.kind == FAMILY_LINK and ALL in paused_groups and not near_midnight(now):
+                    paused.add(DEVICES)
             scheduled = (
                 schedule_wanted(
                     e,
