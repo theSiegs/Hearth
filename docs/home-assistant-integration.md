@@ -571,7 +571,11 @@ that is left out of today's minutes. This works the same for a live source (a TV
 total-only one (Family Link's and Family Safety's daily totals, which only give a day's sum): the window's minutes are
 the total's growth between the two notes. Totals arrive a few minutes late, so the end note is taken after the 10-minute
 settle, and what is counted in the settle goes to the kid. Approximation: a minute a total reports late from just
-before the window (or one played during the settle) is left out too; never one the other way. Each window is
+before the window (or one played during the settle) is left out too; never one the other way. A total can report
+later than the settle (Family Link lags up to about 40 minutes): after it, no source can have gained more than the
+time since, so what one gains beyond that is the window's too and is left out (per source, never less than before;
+only the day's last window looks). Unlimited started again while the last window is still settling opens that window
+again, so no minute is left out twice. Each window is
 recorded in the history (`unlimited`: start, end, minutes not counted; "Unlimited 2:00–5:10 PM · 3 h 10 min not
 counted") and fires `hearth_unlimited_started` {person, until, open} and `hearth_unlimited_ended` {person, id, text}.
 
@@ -819,7 +823,8 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
   step), and once the TV saw Google's time up screen in the last week, its Set up Hearth TV page says "Google TV's own
   limit is on".
 - The person's **Screen time today** sensor has an `exceptions` attribute: `allows` (id, app or group, until, reason),
-  `grants` (below) and `school_time_off` (what's taken off and when it's put back).
+  `grants` (below), `school_time_off` (what's taken off and when it's put back) and `rules` (a standing rule while it
+  lifts something: [Messages when away from adults](#messages-when-away-from-adults)).
 
 ### Blocked apps
 
@@ -908,8 +913,14 @@ all. It's not a problem to fix.
     device (its `bonus_minutes` beyond what Hearth itself added), until the bonus is used up (the Active bonus sensor's
     `remaining_minutes` reaches 0 or it clears) or midnight; a device unlocked (`lock_override_code` 4), until midnight;
     an app a parent changed after Hearth paused it (the Apps with time limits sensor's `paused_apps`, `pause_intact`
-    false), until midnight. An app the child doesn't have (not in their app lists) never shows its pause, so its
-    `pause_intact` is false too: that's never a grant.
+    false), until midnight. Only a pause Family Link has once shown intact (`pause_intact` true) can be changed by a
+    parent: Google takes some apps' 1-minute limit (the call succeeds) and never shows it. A pause still not shown 3
+    minutes after Hearth's call didn't take: it's no grant, the kid's Family Link line says "Family Link didn't take
+    the pause of …" (with the action log, once), the app stays as held and is paused again after 5 minutes, then
+    after twice as long each time, up to an hour, until it shows. An app the child doesn't have (not in their app
+    lists) never shows its pause, so its `pause_intact` is false too: that's never a grant. A `pause_app` that fails
+    part-way (Family Link pauses the list app by app and stops at the first refusal) leaves its apps possibly paused:
+    letting go resumes them too.
   - Nintendo: the Switch's Max screentime today raised, or bonus time (`time_extended`), until midnight (adopted).
   - Family Safety (its Allowed Now sensors' and lock switches' `hold`, `override`, `allow_until`): `hold: parent` with
     extra time (`allowUntil`) is a grant until `allow_until`; with no override left (a parent cancelled Hearth's lock),
@@ -1088,6 +1099,113 @@ confirmed counts at once, and a stale reading is unknown at once (unknown never 
 from one place to another fires **`hearth_place`** {person, from, to} (place keys only: no coordinates, no accuracy)
 and ends what ends on it ([Exceptions](#exceptions)). Place rules (pause while at a place, say) aren't built.
 
+### Presence
+
+Places says which place a kid is at. **Presence** (`presence.py`) adds, per kid, facts every Hearth feature can share,
+each with a `value` (yes, no or unknown; a place key for `at`, people's ids for `with`), `since`, `as_of` and `sure`
+(whether the readings support it now, or it's only kept through an unsure or unknown stretch):
+
+| Fact | Meaning |
+|---|---|
+| `at` | The place key, read from Places unchanged |
+| `with` | The household people they're with (adults and kids) |
+| `with_adult` | With at least one adult |
+| `apart_from_adults` | Away from home and apart from every located adult |
+
+Where the positions come from:
+
+- **A kid**: their Family Link location tracker only (the one Places picks), by its `location_timestamp`. A fix counts
+  for 45 minutes (a still phone repeats one fix for half an hour); past that the kid is unknown.
+- **An adult** (role `adult` on Hearth's page): their person entity's coordinates. Home Assistant gives no fix time for
+  those, so a position's age runs from when Hearth first saw it. An adult whose person is `home` stays located however
+  old the position is (a phone lying still at home reports nothing for hours); one who isn't home is left out once the
+  position is 90 minutes old. An adult at `home` without coordinates counts as the centre of `zone.home`, its radius as
+  the accuracy. An adult who can't be located is left out while another one is; with no adult located, or the kid
+  unknown, the facts are unknown.
+
+A router's, Wi-Fi or Bluetooth tracker is never read, as in Places.
+
+How the facts are decided, with hysteresis and dwell:
+
+- **With** someone: the kid's latest fix is within 150 m plus both accuracies of that person's **track** around the
+  fix's time (the line between their positions just before and after it). Kids' fixes come minutes apart, and in a car
+  an adult's latest position is kilometres past the kid's last fix: comparing latest to latest would call them apart.
+- **Apart** from an adult: for the whole last 5 minutes, the kid and the adult were more than 300 m apart after taking
+  off both accuracies.
+- Between the two is unsure, and **unsure changes nothing**: a fact keeps its value.
+- **Away from home**: every fix of the last 5 minutes is surely outside `zone.home` (distance minus accuracy more than
+  its radius) and the kid's confirmed place isn't `home`.
+- **Unknown is never a change**: a fact that goes unknown keeps the value it last confirmed and fires nothing.
+- **Nothing is confirmed while the household settles** after a start (as the time limits, 90 seconds).
+
+A confirmed change fires **`hearth_presence`** {person, fact, value}, with no coordinates and no accuracy. The kid's
+Place sensor gains `with` (people's ids) and `apart_from_adults`, both `_unrecorded_attributes`. Hearth's page shows a
+kid who's out on their row ("Away · apart from adults since 6:47 PM · Messages open", or "Practice · with Alex"); an
+adult's own place is never shown.
+
+Privacy: coordinates stay in memory only (each kid's latest fixes and each adult's track of the last 15 minutes, gone
+on a restart; a reload of the entry keeps them). The store `hearth.presence.<entry>` holds the facts (values, people's
+ids, times), the standing rules' state and, per adult, a short salted hash of their last position with when it was
+first seen: a restart restores every person entity with a new change time, and a position whose hash matches the
+stored one keeps its stored age, so stale can't look fresh. No history is kept and coordinates are never logged. TVs
+and kids' phones get nothing of it: only the effect on their own state document (an app not held).
+
+### Messages when away from adults
+
+The first standing rule on the presence layer, built in and **on by default** (Family > Places, `away_messages`):
+**while a kid is away from home and apart from every adult, their text app isn't held by time limits**, so a kid out
+with a friend can still arrange a ride home once their daily time is used up.
+
+- **Opens** once `apart_from_adults` is confirmed: about 5 minutes after the kid is 300 m from every adult and outside
+  Home.
+- **Goes back** after **10 minutes in a row with an adult or at home** (with or without an adult there). Unsure or
+  unknown starts the 10 minutes over. A wrong opening is harmless (Messages open with a parent in the car); a wrong
+  closing breaks the point, so opening is quick and going back needs positive evidence. A change needs 5 minutes one
+  way and 10 the other, so it can't open, close and open again within 15 minutes.
+- **Unknown location keeps it as it is**, for at most **6 hours**: then it goes off, so a phone with location off
+  can't keep Messages open for good.
+- **The app**: Google Messages, else Samsung Messages, whichever the kid's Family Link lists show installed and not
+  blocked (Google Messages when the lists aren't known), plus any app an adult adds for the kid
+  (`away_messages_apps`, from their installed Messaging apps). Neither installed: the rule is idle.
+
+**What it lifts: time limits only, never something an adult scheduled or switched on.**
+
+| Hold | Lifted? |
+|---|---|
+| Daily time used up (Family Link's whole-device lock) | Yes: the text app stays open and every other app is paused instead, as a category's own bonus does |
+| Messaging's own limit used up | Yes |
+| School time's app pause | No |
+| The weekly schedule (Homework, Sleep, School) | No |
+| Bedtime (Family Link's own, or a lock entity) | No |
+| An adult's pause (the family's, or of the app) | No |
+| A block (`hearth.block_app`, or blocked in Family Link) | No |
+| A parent's own Family Link app limit | No |
+
+While anything in the "No" rows holds the app, or the kid's devices are locked, the whole-device lock stays as it is
+rather than being swapped for a pause of every other app. Calls always work whatever the rule does: the dialer and
+contacts are never paused and Family Link's lock screen allows calls.
+
+**It writes nothing of its own**: never an allow. While it's on, the household's "what lifts a budget hold" answer
+includes the app (`Lifted.open_apps`), which feeds the enforcer, Family Link's backstop (120 minutes for the open app)
+and the kid's state documents (the app is left out of the held groups and listed in daily time's `except`). When it
+goes off, the app is simply no longer in that answer: only what the rule lifted comes back, and an adult's own
+`hearth.allow` or `hearth.pause` made meanwhile is untouched. Messages keeps counting toward daily time while there is
+some left. Hearth's holds still go through its enforcer only: the presence layer calls no Family Link service.
+
+Where it shows: `hearth.explain` moves the budget hold from `blocked_by` to `lifted` and lists the rule under
+`exceptions` ({`id: "rule:away_messages"`, `app`, `apps`, `since`, `until: null`, `while`: {`apart: "adults"`, `text`:
+"while Sam is out without an adult"}}); the Screen time today sensor's `exceptions.rules`; the kid's row on Hearth's
+page; and the activity log (`kind: rule`, once when it opens and once when it goes back). There is no push
+notification: it would fire on every outing. Over a restart it comes back on or off as it was.
+
+The household's choices for this build:
+
+- **Home alone**: no. It opens only away from home; a kid home alone keeps their limits.
+- **A sleepover past bedtime**: not in this build. Family Link's bedtime still locks the phone (calls work); opening
+  Messages through it needs Family Link's own "unlimited apps during downtime".
+- **School time**: Messages stays paused during School time's app pause, though the kid is away without an adult. A
+  kid at school is away every school day; School time ends mid-afternoon, so the way home is covered.
+
 ### School days and day types
 
 Configure > School days says which budget applies (the first that answers: dates typed in, an entity, a calendar,
@@ -1157,7 +1275,7 @@ or Nintendo's own schedules yet.
   Switch is held when one of its groups is closed. `hearth.allow` for the group or an app lifts it. More minutes don't
   open it; its end does. Why: `schedule` in the summary's `sync`.
 - **`next_lock`** is the schedule's next Sleep or School (`{at, by: "schedule", kind}`) when it comes before the lock
-  entities' own; a kid's Today line and the suggestions' cutoff use the schedule's bedtime.
+  entities' own (not a School that School time taken off today covers); a kid's Today line and the suggestions' cutoff use the schedule's bedtime.
 - A **family pause** still locks everything, whatever the mode.
 
 **Each kid's schedule now** is in the household summary and their state document as `schedule` (only while their
@@ -1346,7 +1464,9 @@ The answer to each status post carries the person's (or, on a TV, each profile's
 
 `groups` lists only groups with a budget, and an adult's pauses of one app or group as groups with no time left and
 `paused` (see [Pause and locks](#pause-and-locks)): hold them like any group out of time, but say it's paused and
-**never offer to ask for more time for one**; `minutes_left` null is no limit; All screen time may carry `except`, the apps
+**never offer to ask for more time for one**; a category that's off today (its limit 0, `time.categories` `closed`)
+has `closed: true`: bonus time doesn't open it, so offer no ask for it either (an ask for it is refused, 400 `closed`);
+`minutes_left` null is no limit; All screen time may carry `except`, the apps
 it never holds (a Not screen time group's, and the accessibility apps). `never_held` (only when there are any) lists
 the accessibility apps, which no group's `apps` holds: a device may spare them from a lock or a pause too. Each person's part is described under [Ask for more](#ask-for-more) and
 [Pause and locks](#pause-and-locks); an allow of theirs that ends on a place is in `allow_ends` [{id, app, group,
@@ -1587,7 +1707,12 @@ while they're locked, `lock` {by: the lock entities and/or "pause", kind: bedtim
 (the first that applies), kinds: all of them, until: when it ends, if known}, and `next_lock`
 {at, by, kind: bedtime | school_time} for the next bedtime or school time today, from the lock entities' own
 `bedtime_start`/`bedtime_end`/`schooltime_start`/`schooltime_end` (Family Link's; Family Safety's Downtime Active
-sensors carry `bedtime_start`/`bedtime_end` too and are a bedtime), so a device can wind down. Without
+sensors carry `downtime_start`/`downtime_end`, an older one `bedtime_start`/`bedtime_end`, and are a bedtime), so a
+device can wind down. School time taken off today is never the `next_lock` (tonight's Sleep is, then). While extra
+time lifts bedtime, `next_lock` is bedtime coming back when the lift ends (`{at: the lift's end, by: the bedtime lock
+or "schedule", kind: bedtime}`), so a device that loses Home Assistant meanwhile brings bedtime back itself; not when
+the lift lasts past the bedtime's own end. A family pause also locks a kid's Family Link devices whole, as daily
+time used up does (a phone without a Hearth app has nothing else holding it), let go when it ends. Without
 a push, a device learns of a pause with its next status answer: a TV within 2 minutes (it posts at least that often
 while on), a phone at its next post.
 
@@ -2238,6 +2363,8 @@ storage helper:
   control's hold and let go, and a parent's change in their own app that lifted one.
 - **TV commands** (`tv_command`: the TV and profile) and **Glint inbox writes** (`glint_inbox`: the phone, the action
   and its request id).
+- **Standing rules** (`rule`: Messages when away going on or off for a kid): `{person, target (its apps), reason:
+  away_messages, result: opened | closed}`. Never where anyone was.
 
 People and devices appear by their entity or device ids, never a name. Read it with `hearth.get_activity` {`person`,
 `kind`, `since`, `until`, `limit` (200)} (response only; adults, as every Hearth service), the WebSocket
@@ -2268,6 +2395,9 @@ id, or its device in Home Assistant: a device selector gives that), `what` and, 
   with its next status answer: within about 2 seconds after it posts, at least every 2 minutes while it's on. The
   service answers (when asked for a response) `{"id", "device_id", "expires"}`. A TV that hasn't posted in 15 minutes
   (not connected) is refused; a phone isn't a TV (a device whose caps say `commands.play` is played on as a TV is).
+- **Hearth on a TV doesn't take plays yet**: it declares its caps without `commands.play` (`events` and `notices`), so
+  the service refuses it at once ("its Hearth doesn't take plays") rather than queueing a command that would expire
+  unanswered. A TV from before caps gets its kind's default, which still includes `commands.play`.
 - A new play for the same TV replaces one still waiting (only the last ask is played). A command waits 3 minutes,
   then it's dropped. Commands are kept while the household reloads (an options change), not over a restart.
 - `hearth_command_done` (`device_id`, `id`, `type: "play"`, `result`, `error`) tells how it went, once: `ok`, `failed`

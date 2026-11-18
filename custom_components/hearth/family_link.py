@@ -214,6 +214,15 @@ def app_limits(hass: HomeAssistant, child: str) -> list[dict[str, Any]]:
 INSTALLED_LISTS = ("_blocked_apps", "_apps_with_time_limits", "_apps_without_limits", "_always_allowed_apps")
 
 
+def _apps_of(state) -> list | None:
+    """A Family Link app list sensor's apps; an empty list carries no "apps" at all (state 0), which is none, not
+    unknown."""
+    apps = state.attributes.get("apps")
+    if apps is None and str(state.state) == "0":
+        return []
+    return apps
+
+
 def installed_apps(hass: HomeAssistant, child: str) -> set[str] | None:
     """The packages installed on the child's devices, from their Family Link app lists; None when that can't be told
     (a list missing, or cut short to fit Home Assistant's attribute limit)."""
@@ -223,7 +232,7 @@ def installed_apps(hass: HomeAssistant, child: str) -> set[str] | None:
         suffix = next((s for s in INSTALLED_LISTS if state.entity_id.endswith(s)), None)
         if suffix is None or str(state.attributes.get("child_id")) != child:
             continue
-        apps = state.attributes.get("apps")
+        apps = _apps_of(state)
         if not isinstance(apps, list) or state.attributes.get("truncated"):
             return None
         seen.add(suffix)
@@ -244,7 +253,7 @@ def app_lists(hass: HomeAssistant, child: str) -> tuple[set[str], set[str] | Non
         suffix = next((s for s in INSTALLED_LISTS if state.entity_id.endswith(s)), None)
         if suffix is None or str(state.attributes.get("child_id")) != child:
             continue
-        apps = state.attributes.get("apps")
+        apps = _apps_of(state)
         packages = {
             package
             for app in (apps if isinstance(apps, list) else [])

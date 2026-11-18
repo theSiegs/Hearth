@@ -52,8 +52,11 @@ final class HaStatusReporter {
     private static final String STATE_PREFS = "ltv_ha_status";
     private static final String EVENT_KEY = "screen_time_event";
     private static final String EVENT_AT_KEY = "screen_time_event_at";
-    /** The features this TV declares in its status (the integration's const.CAPS). */
-    static final List<String> CAPS = java.util.Arrays.asList("commands.play", "events", "notices");
+    /**
+     * The features this TV declares in its status (the integration's const.CAPS). Not "commands.play": this TV doesn't
+     * run the document's commands yet, so hearth.play_on_tv is refused for it instead of expiring unanswered.
+     */
+    static final List<String> CAPS = java.util.Arrays.asList("events", "notices");
 
     private final Context mContext;
     private final Handler mHandler = new Handler(Looper.getMainLooper());

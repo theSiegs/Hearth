@@ -49,6 +49,7 @@ from .const import (
     CONF_SHARE_APP_DATA,
     CONF_SHARE_APP_DATA_OLD,
     DOMAIN,
+    KIND_TV,
 )
 from .profiles import ISSUE_PROFILE_KEYS, legacy_keys
 from .push import new_topic
@@ -135,7 +136,7 @@ PAUSE_SCHEMA = vol.All(
 GET_ACTIVITY_SCHEMA = vol.Schema(
     {
         vol.Optional("person"): cv.entity_id,
-        vol.Optional("kind"): vol.In(("call", "hold_start", "hold_end", "tv_command", "glint_inbox")),
+        vol.Optional("kind"): vol.In(("call", "hold_start", "hold_end", "tv_command", "glint_inbox", "rule")),
         vol.Optional("since"): cv.datetime,
         vol.Optional("until"): cv.datetime,
         vol.Optional("limit", default=200): vol.All(vol.Coerce(int), vol.Range(min=1, max=2000)),
@@ -728,7 +729,10 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
             )
             if call.data.get("device"):
                 return {"ended": ended}
+        behind = household.unlimited_allows()
         ended += household.allows.end(call.data.get("id"), call.data.get("people"), app, group)
+        # The allow behind Unlimited ends Unlimited with it
+        household.end_unlimited_behind(behind)
         household.recompute()
         # Extra time Hearth gave in Family Link or Family Safety for an allow that ended goes too
         household.sync.allow_ended()
@@ -985,7 +989,11 @@ def _register_play_on_tv(hass: HomeAssistant) -> None:
         if device_id is None:
             raise ServiceValidationError(f"{given} isn't one of the household's Hearth devices")
         if not hub.has_cap(device_id, CAP_PLAY):
-            raise ServiceValidationError(f"{hub.devices[device_id].get('name') or device_id} isn't a TV")
+            name = hub.devices[device_id].get("name") or device_id
+            # A TV whose Hearth doesn't take plays yet says so in its caps: refused now, not left to expire unanswered
+            if hub.kind(device_id) == KIND_TV:
+                raise ServiceValidationError(f"{name} can't be sent something to play: its Hearth doesn't take plays")
+            raise ServiceValidationError(f"{name} isn't a TV")
         return device_id
 
     def profile_of(hub: HearthHub, device_id: str, given: str | None) -> str | None:
@@ -1172,13 +1180,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     entry.async_on_unload(async_track_time_interval(hass, recompute, timedelta(minutes=1)))
 
     # Where the kids are (places.py): whenever a tracker, a person or a place's zone changes, and every minute (a
-    # reading goes stale without a change)
+    # reading goes stale without a change). Then who they're with and the standing rules (presence.py): the adults'
+    # person entities are watched too
     @callback
     def places_update(_event_or_now=None) -> None:
         hub.household.places.update()
+        hub.household.presence.update()
 
     entry.async_on_unload(async_track_time_interval(hass, places_update, timedelta(minutes=1)))
-    if watched := hub.household.places.watched_entities():
+    watched = sorted(set(hub.household.places.watched_entities()) | set(hub.household.presence.watched_entities()))
+    if watched:
         entry.async_on_unload(async_track_state_change_event(hass, watched, places_update))
     places_update()
 

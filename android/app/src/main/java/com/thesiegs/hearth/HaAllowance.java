@@ -225,6 +225,7 @@ final class HaAllowance {
                 String profileId = keys.next();
                 JSONObject person = documents.optJSONObject(profileId);
                 JSONArray groups = person != null ? person.optJSONArray("groups") : null;
+                JSONObject time = person != null ? person.optJSONObject("time") : null;
                 Integer least = null;
                 JSONObject outOfTime = new JSONObject();
                 // The groups with none left, {id, name}, for asking for more of them (HaLocks)
@@ -238,7 +239,7 @@ final class HaAllowance {
                     if (group == null || group.isNull("minutes_left")) continue;
                     int left = Math.max(0, group.optInt("minutes_left", 0));
                     JSONArray apps = group.optJSONArray("apps");
-                    limits.put(limit(group, left));
+                    limits.put(limit(group, left, time));
                     if (ALL_GROUP.equals(group.optString("id"))) dayLeft = left;
                     if (left == 0) {
                         String name = group.optString("name", "");
@@ -259,8 +260,12 @@ final class HaAllowance {
                             }
                         }
                     }
-                    // All screen time holds HearthTube's minutes too (its apps list is empty: every app)
-                    if (!holdsHearthTube(apps) && !ALL_GROUP.equals(group.optString("id"))) continue;
+                    // All screen time holds HearthTube's minutes too (its apps list is empty: every app), unless
+                    // HearthTube is one of its exceptions (YouTube allowed, or its own bonus running past daily time)
+                    if (ALL_GROUP.equals(group.optString("id")) ? holdsHearthTube(group.optJSONArray("except"))
+                            : !holdsHearthTube(apps)) {
+                        continue;
+                    }
                     least = least == null ? left : Math.min(least, left);
                 }
                 JSONObject entry = new JSONObject();
@@ -278,6 +283,7 @@ final class HaAllowance {
                     JSONObject value = person != null ? person.optJSONObject(field) : null;
                     if (value != null) locks.put(field, value);
                 }
+                if (person != null) nextLockFromDocument(person, locks);
                 if (locks.length() > 0) entry.put(LOCKS_KEY, locks);
                 profiles.put(profileId, entry);
             }
@@ -287,8 +293,42 @@ final class HaAllowance {
         return profiles;
     }
 
-    /** A group of the document as an entry keeps it: what the remote API reads, nothing else. */
-    private static JSONObject limit(JSONObject group, int left) throws JSONException {
+    /**
+     * What the document says of the next lock beyond its own "next_lock". Extra time at bedtime ("bedtime_lifted"
+     * {since, until}) ends with bedtime back, so its end is the next lock unless an earlier one is named (a newer
+     * Home Assistant names the lift's end itself). And the weekly schedule's wake time ("schedule" {"bedtime": {at,
+     * wake}}) is when a bedtime the TV has to start itself ends ("until", unless the next lock says its own).
+     */
+    private static void nextLockFromDocument(JSONObject person, JSONObject locks) throws JSONException {
+        JSONObject lifted = person.optJSONObject("bedtime_lifted");
+        Long liftEnd = lifted != null ? HaLocks.parseTime(lifted.optString("until", null)) : null;
+        JSONObject next = locks.optJSONObject("next_lock");
+        Long at = next != null ? HaLocks.parseTime(next.optString("at", null)) : null;
+        if (liftEnd != null && (at == null || at > liftEnd)) {
+            next = new JSONObject().put("at", lifted.optString("until")).put("by", "bedtime_lifted")
+                    .put("kind", "bedtime");
+            at = liftEnd;
+            locks.put("next_lock", next);
+        }
+        JSONObject schedule = person.optJSONObject("schedule");
+        JSONObject bedtime = schedule != null ? schedule.optJSONObject("bedtime") : null;
+        if (next == null || at == null || bedtime == null || !"bedtime".equals(next.optString("kind"))
+                || HaLocks.parseTime(next.optString("until", null)) != null) {
+            return;
+        }
+        Long bedtimeAt = HaLocks.parseTime(bedtime.optString("at", null));
+        Long wake = HaLocks.parseTime(bedtime.optString("wake", null));
+        if (bedtimeAt != null && wake != null && bedtimeAt <= at && at < wake) {
+            // A copy: the document's own object is left as it came
+            locks.put("next_lock", new JSONObject(next.toString()).put("until", bedtime.optString("wake")));
+        }
+    }
+
+    /**
+     * A group of the document as an entry keeps it: what the remote API reads, nothing else. Home Assistant sends no
+     * "minutes_used" with a group: its "time" says them ("used" for All screen time, each category's "used").
+     */
+    private static JSONObject limit(JSONObject group, int left, JSONObject time) throws JSONException {
         JSONObject limit = new JSONObject().put("id", group.optString("id", "")).put("name", group.optString("name", ""))
                 .put("minutes_left", left);
         for (String list : new String[]{"apps", "except"}) {
@@ -297,32 +337,46 @@ final class HaAllowance {
         }
         if (group.has("minutes_used") && !group.isNull("minutes_used")) {
             limit.put("minutes_used", Math.max(0, group.optInt("minutes_used", 0)));
+        } else if (time != null) {
+            String id = group.optString("id", "");
+            JSONObject from = ALL_GROUP.equals(id) ? time : null;
+            JSONArray categories = time.optJSONArray("categories");
+            for (int i = 0; from == null && categories != null && i < categories.length(); i++) {
+                JSONObject category = categories.optJSONObject(i);
+                if (category != null && !id.isEmpty() && id.equals(category.optString("id"))) from = category;
+            }
+            if (from != null && from.has("used") && !from.isNull("used")) {
+                limit.put("minutes_used", Math.max(0, from.optInt("used", 0)));
+            }
         }
         return limit;
     }
 
     private static boolean holdsHearthTube(JSONArray apps) {
         for (int i = 0; apps != null && i < apps.length(); i++) {
-            String app = apps.optString(i);
-            if (CompanionApps.HEARTHTUBE.equals(app) || "com.thesiegs.hearthtube.mobile".equals(app)) return true;
+            if (isHearthTube(apps.optString(i))) return true;
         }
         return false;
+    }
+
+    private static boolean isHearthTube(String app) {
+        return CompanionApps.HEARTHTUBE.equals(app) || "com.thesiegs.hearthtube.mobile".equals(app);
     }
 
     /** This profile's allowance as last read today; values null when Home Assistant has said nothing today. */
     static Values forProfile(Context context, String profileKey, long now) {
         // Without Home Assistant, Hearth's own rules say the same things
         if (!LocalAllowance.homeAssistantDecides(context)) {
-            return valuesOf(LocalAllowance.entryFor(context, profileKey, now), null);
+            return valuesOf(LocalAllowance.entryFor(context, profileKey, now), null, now);
         }
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         if (profileKey == null) return new Values(null, false, null, null);
         // A new day before Home Assistant has answered: its lock or pause still running holds, the minutes don't
         if (!UsageToday.day(now).equals(prefs.getString(DAY_KEY, null))) {
-            return valuesOf(entryFor(context, profileKey, now), null);
+            return valuesOf(entryFor(context, profileKey, now), null, now);
         }
         Long checkedAt = prefs.contains(CHECKED_KEY) ? prefs.getLong(CHECKED_KEY, 0) : null;
-        return valuesOf(entryFor(context, profileKey, now), checkedAt);
+        return valuesOf(entryFor(context, profileKey, now), checkedAt, now);
     }
 
     /**
@@ -360,7 +414,9 @@ final class HaAllowance {
     /**
      * [entry] with each group's minutes left less the time in front since Home Assistant's word ([frontNow]: each
      * app's ms today, against the entry's FRONT_AT_KEY): a group that runs out is held as Home Assistant would hold
-     * it (its apps out of time; All screen time: every app but its exceptions). Unchanged without a snapshot.
+     * it (its apps out of time; All screen time: every app but its exceptions). HearthTube's time counts like any
+     * app's, and its minutes ("youtube_minutes_left") come down with what the other apps took of a group holding it,
+     * to 0 when the group runs out (HearthTube takes off what it played itself). Unchanged without a snapshot.
      */
     static JSONObject staleCountdown(JSONObject entry, Map<String, Long> frontNow) {
         JSONObject at = entry != null ? entry.optJSONObject(FRONT_AT_KEY) : null;
@@ -376,8 +432,12 @@ final class HaAllowance {
             Map<String, Long> since = new HashMap<>();
             for (Map.Entry<String, Long> e : frontNow.entrySet()) {
                 long used = e.getValue() - at.optLong(e.getKey(), 0);
-                if (used > 0 && !NEVER_HELD.contains(e.getKey())) since.put(e.getKey(), used);
+                // HearthTube is never held here (it holds itself), but its time is screen time like any app's
+                if (used > 0 && (!NEVER_HELD.contains(e.getKey()) || isHearthTube(e.getKey()))) {
+                    since.put(e.getKey(), used);
+                }
             }
+            Long tubeLeft = null;
             for (int i = 0; i < groups.length(); i++) {
                 JSONObject group = groups.optJSONObject(i);
                 if (group == null || group.isNull("minutes_left")) continue;
@@ -393,8 +453,17 @@ final class HaAllowance {
                 JSONArray spared = all ? group.optJSONArray("except") : null;
                 for (int j = 0; spared != null && j < spared.length(); j++) notCounted.add(spared.optString(j, ""));
                 long spent = 0;
+                long others = 0;
                 for (Map.Entry<String, Long> e : since.entrySet()) {
-                    if (all ? !notCounted.contains(e.getKey()) : members.contains(e.getKey())) spent += e.getValue();
+                    if (all ? !notCounted.contains(e.getKey()) : members.contains(e.getKey())) {
+                        spent += e.getValue();
+                        if (!isHearthTube(e.getKey())) others += e.getValue();
+                    }
+                }
+                if (left > 0 && (all ? !holdsHearthTube(spared) : holdsHearthTube(apps))) {
+                    // Whole minutes, rounded up: a few seconds of another app don't take a minute off
+                    long minutes = spent >= left ? 0 : (left - others + 59_999) / 60_000L;
+                    tubeLeft = tubeLeft == null ? minutes : Math.min(tubeLeft, minutes);
                 }
                 if (left <= 0 || spent < left) continue;
                 if (all) {
@@ -407,6 +476,11 @@ final class HaAllowance {
                     }
                 }
             }
+            // Only ever down, and only where Home Assistant gave HearthTube minutes at all
+            if (tubeLeft != null && !out.isNull("youtube_minutes_left")
+                    && tubeLeft < out.optDouble("youtube_minutes_left", 0)) {
+                out.put("youtube_minutes_left", tubeLeft.intValue());
+            }
             return out;
         } catch (JSONException e) {
             return entry;
@@ -414,8 +488,10 @@ final class HaAllowance {
     }
 
     /**
-     * What of yesterday's entry still holds today: a lock (bedtime) or a pause that hasn't ended, and nothing else (no
-     * minutes, no group out of time). Null when nothing does.
+     * What of yesterday's entry still holds today: a lock (bedtime) or a pause that hasn't ended, a lock that names no
+     * end (it holds until Home Assistant says otherwise), and the next lock it named, with when the word came, so a
+     * bedtime the TV started itself goes on past midnight (Allowance.lockedNow). Nothing else (no minutes, no group
+     * out of time). Null when nothing does.
      */
     static JSONObject carriedOver(JSONObject entry, long now) {
         JSONObject locks = entry != null ? entry.optJSONObject(LOCKS_KEY) : null;
@@ -427,20 +503,39 @@ final class HaAllowance {
                 Long until = value != null ? HaLocks.parseTime(value.optString("until", null)) : null;
                 if (until != null && until > now) kept.put(field, value);
             }
+            JSONObject lock = locks.optJSONObject("lock");
+            if (lock != null && !kept.has("lock") && HaLocks.parseTime(lock.optString("until", null)) == null) {
+                kept.put("lock", lock);
+            }
+            JSONObject next = locks.optJSONObject("next_lock");
+            Long nextUntil = next != null ? HaLocks.parseTime(next.optString("until", null)) : null;
+            if (next != null && HaLocks.parseTime(next.optString("at", null)) != null
+                    && (nextUntil == null || nextUntil > now)) {
+                kept.put("next_lock", next);
+            }
             if (kept.length() == 0) return null;
             JSONObject out = new JSONObject();
             out.put("youtube_minutes_left", JSONObject.NULL);
             out.put("out_of_time", new JSONObject());
             out.put("schedule_locked", kept.has("lock"));
             out.put(LOCKS_KEY, kept);
+            if (entry.has(WORD_AT_KEY)) out.put(WORD_AT_KEY, entry.optLong(WORD_AT_KEY));
             return out;
         } catch (JSONException e) {
             return null;
         }
     }
 
-    /** A profile's entry in the entity's "profiles" (none: no limit, not locked). */
+    /** A profile's entry in the entity's "profiles" (none: no limit, not locked), as of now. */
     static Values valuesOf(JSONObject entry, Long checkedAt) {
+        return valuesOf(entry, checkedAt, System.currentTimeMillis());
+    }
+
+    /**
+     * As {@link #valuesOf(JSONObject, Long)} at [now]: locked is what holds the other apps then (Allowance.lockedNow),
+     * so a lock whose end has passed no longer locks HearthTube, and a bedtime the TV started itself does.
+     */
+    static Values valuesOf(JSONObject entry, Long checkedAt, long now) {
         if (entry == null) return new Values(null, false, null, checkedAt);
         Integer minutes = entry.isNull("youtube_minutes_left") ? null
                 : Math.max(0, (int) Math.floor(entry.optDouble("youtube_minutes_left", 0)));
@@ -462,7 +557,10 @@ final class HaAllowance {
             Long until = HaLocks.parseTime(pause.optString("until", null));
             pausedUntil = until != null ? until : Long.MAX_VALUE;
         }
-        return new Values(minutes, entry.optBoolean("schedule_locked", false),
+        JSONObject lock = locks != null ? locks.optJSONObject("lock") : null;
+        // Without the lock's own fields (an entry from an older Hearth) the document's "locked" is all there is
+        boolean locked = lock == null && entry.optBoolean("schedule_locked", false) || Allowance.lockedNow(entry, now);
+        return new Values(minutes, locked,
                 message != null && !message.trim().isEmpty() ? message.trim() : null, checkedAt,
                 Collections.unmodifiableMap(outOfTime), all, Collections.unmodifiableSet(except), pausedUntil);
     }

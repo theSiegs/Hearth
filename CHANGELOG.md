@@ -30,6 +30,49 @@ TV where it wasn't used before.
   can drop what it learned when a PIN changes. A TV on an older build still gets the hashes until the next release.
   See docs/contracts/device-api.md.
 
+## 2026.11.43
+
+### Home Assistant integration
+
+- **Apps a kid doesn't have aren't paused, even with an empty Family Link list.** Family Link's sensor for an empty list (no always-allowed apps) carries no app list at all, so Hearth couldn't tell what's installed and paused every app of the group, including ones not on any of the kid's devices; Google keeps such a pause without showing it, so Hearth said "Family Link didn't take the pause" and retried all evening. An empty list now counts as empty.
+
+## 2026.11.42
+
+### Home Assistant integration
+
+- **Holds come back within a minute of a restart.** Hearth starts before Family Link and the Nintendo integration have loaded, so its first holds failed and waited the usual 5 minutes; a call that failed only because the integration wasn't there yet is tried again after 30 seconds, without a warning in the log.
+
+## 2026.11.41
+
+### TV
+
+- **An allowed YouTube plays on the TV once daily time is out.** An allow or a YouTube bonus lists HearthTube among daily time's exceptions; HearthTube no longer gets daily time's minutes (0, or the few left) all the same.
+- **With Home Assistant away, bedtime lasts the night.** A bedtime the TV started itself, or a lock that names no end, no longer ends at midnight; a bedtime the TV started itself ends at the weekly schedule's wake time.
+- **A lifted bedtime comes back with Home Assistant away.** When extra time at bedtime ends, the TV starts bedtime again by itself if it hasn't heard from Home Assistant since.
+- **The TV's own countdown counts HearthTube** against daily time, and lowers HearthTube's minutes as other apps use daily time up.
+- **HearthTube unlocks when a lock ends**, together with the other apps, with Home Assistant away.
+- **The lock message names the lock**: "School time until 3:00 PM", "Locked until …", not "Bedtime until" for every lock.
+- **Minutes used** in the TV's remote API come from Home Assistant's `time`, which is what it sends.
+- **The TV no longer offers to take plays** it doesn't carry out: `hearth.play_on_tv` refuses it at once instead of waiting 3 minutes for nothing.
+
+### Home Assistant integration
+
+- **Messages opens when a kid is out without an adult.** Away from home and more than 300 m from every adult for 5 minutes, a kid's text app (Google Messages, else Samsung Messages, plus any app you add for them) isn't held by daily time or Messaging's limit, so they can arrange a ride home. It goes back after 10 minutes with an adult or at home. School time, the schedule, bedtime, a pause and a block still hold it, and a kid home alone keeps their limits. On by default; switch it off or add apps in Family > Places.
+- **Hearth knows who each kid is with.** Each kid's Place sensor gains `with` and `apart_from_adults`, a `hearth_presence` event fires when one changes, and a kid who's out shows on their row ("Away · apart from adults since 6:47 PM · Messages open"). Positions stay in memory only: nothing Hearth keeps, fires or logs has a coordinate.
+- **The activity log notes Messages when away** opening and going back (`kind: rule`).
+- **A Family Link app pause that never took isn't a parent's change any more.** Google takes some apps' 1-minute limit and never shows it; Hearth read that as "the app's limit was changed in the Family Link app" and let those apps go until midnight. Only a pause Family Link has once shown in force counts as changed now. One that never shows is said on the kid's Family Link line ("Family Link didn't take the pause of …") and tried again after 5 minutes, then less and less often (up to once an hour). The grants the older reading made are dropped once on the update, so those apps are held again.
+- **Apps paused before a Family Link pause failed part-way are resumed.** Family Link pauses a list app by app and stops at the first one Google refuses; Hearth now treats the whole list as possibly paused, so time back resumes them all.
+- **Pause screens locks a phone or tablet only Family Link holds**, as daily time used up does; it's let go when the pause ends.
+- **Chrome is paused and blocked on Family Link phones.** Its package is `com.android.chrome`, and Hearth spared every `com.android.*` package as the system; the system is now an explicit list by name (the system UI, the phone and calls, contacts, the stock launchers and keyboard, the installers and permissions).
+- **Family Safety's downtime times are read again** (`downtime_start` / `downtime_end`, as the installed Family Safety names them): the next bedtime, the heads-up on the TV, bedtime on Hearth's page and the lock's end are back for a kid whose bedtime is a downtime sensor.
+- **School time taken off today isn't announced as the next lock**, so a TV doesn't show its heads-up or lock at it by itself.
+- **A lifted bedtime is the TV's next lock when its extra time ends**, so a TV that loses Home Assistant during the lift still brings bedtime back.
+- **Minutes a total reports late from an Unlimited window aren't counted.** Family Link can report the window's play up to about 40 minutes late, after the 10-minute settle; now no source counts more after the settle than the time since, and the rest is left out.
+- **Unlimited turned on again within 10 minutes of ending** opens the same window again, so its minutes aren't given back twice.
+- **Ending the allow behind Unlimited ends Unlimited** (the page's or the phones' "end", or a place it ends on), instead of holding the kid while every screen still says Unlimited.
+- **A category that's off today says so to the devices** (`closed: true` on its group) and an ask for it is refused, since bonus time can't open it.
+- **`hearth.play_on_tv` says why a TV is refused** when its Hearth doesn't take plays, instead of "isn't a TV".
+
 ## 2026.11.40
 
 ### TV

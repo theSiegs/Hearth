@@ -218,6 +218,9 @@ class Lifted:
     # a category's own bonus left, or an allow of it, when it can be spent and the kid has an app of it installed):
     # every other app is paused then instead of the whole-device lock
     open: set[str] = field(default_factory=set)
+    # Of [apps], the ones a standing rule keeps open past daily time the same way (household.open_apps: Messages while
+    # a kid is out without an adult, presence_rules.py), never written as an allow
+    open_apps: set[str] = field(default_factory=set)
 
     def group(self, group_id: str) -> bool:
         return self.everything or group_id in self.groups

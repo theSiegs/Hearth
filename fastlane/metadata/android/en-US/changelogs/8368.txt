@@ -1,0 +1,1 @@
+Home Assistant: apps a kid doesn't have aren't paused.

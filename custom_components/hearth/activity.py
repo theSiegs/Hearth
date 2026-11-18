@@ -3,7 +3,8 @@
 Every call Hearth makes to another integration goes through call_service (a test checks that no module calls
 hass.services.async_call itself), which times it and records {at, kind: call, person, target, service, args, why,
 result: ok | failed, error, duration_ms}. Holds Hearth starts and ends are recorded too ({kind: hold_start | hold_end,
-person, target, reason, by}), and so are TV commands and Glint inbox writes.
+person, target, reason, by}), and so are TV commands, Glint inbox writes and a standing rule going on or off ({kind:
+rule}: Messages when away).
 
 Records name people and devices by their entity or device ids only, never a name, and keep only call arguments from a
 short allow list (ids, minutes, times, packages): never a message, a PIN or a token. They are kept 14 days, at most
@@ -34,7 +35,10 @@ HOLD_START = "hold_start"
 HOLD_END = "hold_end"
 TV_COMMAND = "tv_command"
 GLINT_INBOX = "glint_inbox"
-KINDS = (CALL, HOLD_START, HOLD_END, TV_COMMAND, GLINT_INBOX)
+# A standing rule went on or off for a kid (presence_rules.py): {person, target: its apps, reason: the rule, result:
+# opened | closed}. Never where they were
+RULE = "rule"
+KINDS = (CALL, HOLD_START, HOLD_END, TV_COMMAND, GLINT_INBOX, RULE)
 # Call arguments kept in a record: ids, numbers and times. Anything else (a message, a title, a PIN, a token, a code)
 # is left out
 SAFE_ARGS = frozenset(

@@ -67,10 +67,18 @@ async def test_a_declared_caps_list_wins(hass: HomeAssistant, hass_client_no_aut
     assert hub.has_cap(TV_ID, CAP_NOTICES) and not hub.has_cap(TV_ID, CAP_PLAY)
     response = await _events(client, secret, [_started(int(time.time() * 1000))])
     assert response.status == 403
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ServiceValidationError, match="doesn't take plays"):
         await hass.services.async_call(
             DOMAIN, "play_on_tv", {"device_id": TV_ID, "what": "aBcDeFgHiJk"}, blocking=True, return_response=True
         )
+    # Hearth on a TV today: it shows notices and posts events, and doesn't take plays (refused, nothing queued)
+    await _post(client, secret, body={**STATUS, "caps": [CAP_EVENTS, CAP_NOTICES]})
+    with pytest.raises(ServiceValidationError, match="doesn't take plays"):
+        await hass.services.async_call(
+            DOMAIN, "play_on_tv", {"device_id": TV_ID, "what": "aBcDeFgHiJk"}, blocking=True, return_response=True
+        )
+    assert not (await (await _post(client, secret)).json())["state"].get("commands")
+    await _post(client, secret, body={**STATUS, "caps": [CAP_NOTICES, "something_newer"]})
     # A later post that leaves caps out keeps what it said
     await _post(client, secret)
     assert not hub.has_cap(TV_ID, CAP_EVENTS)
