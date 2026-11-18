@@ -369,8 +369,8 @@ class StatusView(HomeAssistantView):
 
 class EventsView(HomeAssistantView):
     """POST /api/hearth/device/{device_id}/events (header X-Hearth-Secret): {"events": [...]}, at most 50, each
-    {"type": "video_started", "profile_id", "t" (ms), "v" (video id), "title", "ch" (channel), "cid" (channel id)}:
-    what a kids profile started in HearthTube. A TV only. Answers {"ok": true, "added": n} once all are taken (a
+    {"type": "video_started", "profile_id", "t" (ms), "v" (video id), "title", "ch" (channel), "cid" (channel id),
+    optional "pa" (true: a parent's PIN let it play past the limit or a lock)}: what a kids profile started in HearthTube. A TV only. Answers {"ok": true, "added": n} once all are taken (a
     resend is harmless, and an entry of a profile mapped to no one, or one that isn't valid, is dropped), so the TV
     can mark them sent."""
 

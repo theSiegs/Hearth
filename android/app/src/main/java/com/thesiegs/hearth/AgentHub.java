@@ -54,7 +54,7 @@ import java.util.regex.Pattern;
  * {"type":"ping"}, {"type":"playing","package":"…","ms":n} (an app played that long in the profile's user),
  * {"type":"played","package":"…","title":"…","subtitle":"…","duration":ms,"position":ms} (what plays there, for the
  * profile's watch history),
- * {"type":"started","t":ms,"v":"id","title":"…","ch":"…","cid":"…"} (a video HearthTube started there, for the
+ * {"type":"started","t":ms,"v":"id","title":"…","ch":"…","cid":"…","pa":bool} (a video HearthTube started there, for the
  * parent's log: StartedLog), {"type":"kid_blocks","blocks":"{…}"} (what HearthTube there hid or blocked itself, the
  * whole list: KidBlocks), {"type":"opened","ok":bool}, {"type":"speech","package":"…","text":"…"} (what an app said through
  * Hearth's voice there, for Profile Pairing), {"type":"calendar","access":bool,"calendars":[…],"events":[…]} (the
@@ -250,7 +250,8 @@ final class AgentHub {
                         String profile = ProfileUsers.profileKey(sContext, serial);
                         HISTORY.execute(() -> StartedLog.record(sContext, profile, message.optLong("t"),
                                 message.optString("v", null), message.optString("title", ""),
-                                message.optString("ch", ""), message.optString("cid", "")));
+                                message.optString("ch", ""), message.optString("cid", ""),
+                                message.optBoolean("pa", false)));
                         break;
                     }
                     case "time_up": {

@@ -207,13 +207,15 @@ public class ProfileProvider extends ContentProvider {
             String title = extras.getString("title");
             String channel = extras.getString("channel");
             String channelId = extras.getString("channel_id");
+            // A parent's PIN let it play past the time limit or a lock (absent: false)
+            boolean parentApproved = extras.getBoolean("parent_approved", false);
             if (AgentService.isAgent(getContext())) {
                 // Not passed on (Hearth not connected): null, and HearthTube sends it again later
-                if (!AgentService.relayStarted(timeMs, videoId, title, channel, channelId)) return null;
+                if (!AgentService.relayStarted(timeMs, videoId, title, channel, channelId, parentApproved)) return null;
             } else {
                 Context context = getContext();
                 StartedLog.record(context, LauncherAccessibilityService.getActiveProfileKey(context), timeMs, videoId,
-                        title, channel, channelId);
+                        title, channel, channelId, parentApproved);
             }
             Bundle result = new Bundle();
             result.putBoolean("ok", true);
