@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **Apps a kid doesn't have aren't paused, even with an empty Family Link list.** Family Link's sensor for an empty list (no always-allowed apps) carries no app list at all, so Hearth couldn't tell what's installed and paused every app of the group, including ones not on any of the kid's devices; Google keeps such a pause without showing it, so Hearth said "Family Link didn't take the pause" and retried all evening. An empty list now counts as empty.
+
 ## 2026.11.42
 
 ### Home Assistant integration
