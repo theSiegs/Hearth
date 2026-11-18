@@ -69,6 +69,34 @@ async def test_started_videos_come_up_once(hass: HomeAssistant, hass_client_no_a
     assert [e["video_id"] for e in log["entries"]] == ["zYxWvUtSrQp", VIDEO]
 
 
+async def test_a_parent_approved_video_says_so(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """A video a parent's PIN let play past the limit: the event and the log say so, for an automation to tell the
+    adults; anything but true reads as not approved."""
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    started = async_capture_events(hass, "hearth_video_started")
+    notes = async_capture_events(hass, "logbook_entry")
+    now = int(time.time() * 1000)
+
+    await _events(client, secret, [
+        {**_started(now - 120_000, title="Plain")},
+        {**_started(now - 60_000, "zYxWvUtSrQp", title="Approved"), "pa": True},
+        {**_started(now, "qQqQqQqQqQq", title="Odd"), "pa": "yes"},
+    ])
+    await hass.async_block_till_done()
+
+    assert [(e.data["title"], e.data["parent_approved"]) for e in started] == [
+        ("Plain", False), ("Approved", True), ("Odd", False)
+    ]
+    recent = hass.states.get("sensor.hearth_sam_last_video_started").attributes["recent"]
+    assert [e["parent_approved"] for e in recent] == [False, True, False]
+    # One logbook note, on the person, with the title
+    assert len(notes) == 1
+    assert notes[0].data["entity_id"] == "person.sam"
+    assert "Approved" in notes[0].data["message"]
+
+
 async def test_what_isn_t_taken(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
     client, secret = await _household_with_sam(hass, hass_client_no_auth)
     now = int(time.time() * 1000)

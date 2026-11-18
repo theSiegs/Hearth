@@ -139,7 +139,10 @@ lists without it (Settings > Family > Kids profiles > the kid).
 - **Up**: after each status post, a TV posts the started videos Home Assistant hasn't had to
   `/api/hearth/device/<id>/events` (see [The device's side of the API](#the-devices-side-of-the-api)), only from the
   last day. They're kept per person (a kid on two TVs is one log, the newest 2,000), and each new one fires
-  `hearth_video_started` (person, time, video_id, title, channel, channel_id, url, device).
+  `hearth_video_started` (person, time, video_id, title, channel, channel_id, url, device, parent_approved).
+  `parent_approved` is true for a video a parent's PIN let play past the time limit or a lock (the first video opened
+  in the PIN's window, played to its end). Hearth also writes a logbook note on the person ("was let play "<title>"
+past the limit with a Parent PIN"), and an automation on the event can tell the adults' phones.
 - **Read**: the person's **Last video started** sensor (its attributes hold the newest 50 and the blocked lists, kept
   out of history); `hearth.get_watch_log` (person, days, limit) answers the entries and lists; `hearth.watch_digest`
   (person or everyone, days, default 7) answers one document per kid: every entry, counts per channel and per day,
@@ -2508,7 +2511,7 @@ ask waits. An older integration answers 404: keep posting as before.
 
 **Events** (a TV, or a device whose caps say `events`). `POST /api/hearth/device/<device_id>/events` with the same header and
 `{"events": [...]}`, at most 50, each `{"type": "video_started", "profile_id", "t" (ms), "v" (video id), "title",
-"ch" (channel name), "cid" (channel id)}`. `profile_id` is the TV's own key for the profile (`user:10`), resolved
+"ch" (channel name), "cid" (channel id), optional "pa" (true: a parent's PIN let it play past the limit or a lock)}`. `profile_id` is the TV's own key for the profile (`user:10`), resolved
 with the TV it came from as in [TV profile keys](#tv-profile-keys). 200 `{"ok": true, "added": n}` once all are taken:
 an entry of a profile mapped to no one, or one that isn't valid, is dropped, and a resend is harmless, so the TV marks
 them all sent. 403 `not_a_tv` from a device without `events` (a phone, by default); 429 `too_often` past 10 posts a minute; 400 for more than 50 or a

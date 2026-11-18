@@ -195,11 +195,13 @@ public class AgentService extends Service {
      * HearthTube started a video in this profile's user: Hearth keeps it for the parent. False when Hearth isn't
      * connected, so nothing was passed on and HearthTube keeps it to send again.
      */
-    static boolean relayStarted(long timeMs, String videoId, String title, String channel, String channelId) {
+    static boolean relayStarted(long timeMs, String videoId, String title, String channel, String channelId,
+            boolean parentApproved) {
         AgentService service = sInstance;
         if (service == null || !sConnected) return false;
         service.send(json("type", "started", "t", timeMs, "v", videoId, "title", title != null ? title : "",
-                "ch", channel != null ? channel : "", "cid", channelId != null ? channelId : ""));
+                "ch", channel != null ? channel : "", "cid", channelId != null ? channelId : "",
+                "pa", parentApproved));
         return true;
     }
 
