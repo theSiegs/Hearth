@@ -34,7 +34,7 @@ public class HaAllowanceCarryTest {
         // Yesterday's minutes and groups out of time don't
         assertTrue(kept.isNull("youtube_minutes_left"));
         assertEquals(0, kept.getJSONObject("out_of_time").length());
-        HaAllowance.Values values = HaAllowance.valuesOf(kept, null);
+        HaAllowance.Values values = HaAllowance.valuesOf(kept, null, NOW);
         assertTrue(values.scheduleLocked);
         assertNull(values.youtubeMinutesLeft);
     }

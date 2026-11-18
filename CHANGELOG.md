@@ -5,6 +5,17 @@
 
 ## Unreleased
 
+### TV
+
+- **An allowed YouTube plays on the TV once daily time is out.** An allow or a YouTube bonus lists HearthTube among daily time's exceptions; HearthTube no longer gets daily time's minutes (0, or the few left) all the same.
+- **With Home Assistant away, bedtime lasts the night.** A bedtime the TV started itself, or a lock that names no end, no longer ends at midnight; a bedtime the TV started itself ends at the weekly schedule's wake time.
+- **A lifted bedtime comes back with Home Assistant away.** When extra time at bedtime ends, the TV starts bedtime again by itself if it hasn't heard from Home Assistant since.
+- **The TV's own countdown counts HearthTube** against daily time, and lowers HearthTube's minutes as other apps use daily time up.
+- **HearthTube unlocks when a lock ends**, together with the other apps, with Home Assistant away.
+- **The lock message names the lock**: "School time until 3:00 PM", "Locked until …", not "Bedtime until" for every lock.
+- **Minutes used** in the TV's remote API come from Home Assistant's `time`, which is what it sends.
+- **The TV no longer offers to take plays** it doesn't carry out: `hearth.play_on_tv` refuses it at once instead of waiting 3 minutes for nothing.
+
 ### Home Assistant integration
 
 - **A Family Link app pause that never took isn't a parent's change any more.** Google takes some apps' 1-minute limit and never shows it; Hearth read that as "the app's limit was changed in the Family Link app" and let those apps go until midnight. Only a pause Family Link has once shown in force counts as changed now. One that never shows is said on the kid's Family Link line ("Family Link didn't take the pause of …") and tried again after 5 minutes, then less and less often (up to once an hour). The grants the older reading made are dropped once on the update, so those apps are held again.
@@ -18,6 +29,7 @@
 - **Unlimited turned on again within 10 minutes of ending** opens the same window again, so its minutes aren't given back twice.
 - **Ending the allow behind Unlimited ends Unlimited** (the page's or the phones' "end", or a place it ends on), instead of holding the kid while every screen still says Unlimited.
 - **A category that's off today says so to the devices** (`closed: true` on its group) and an ask for it is refused, since bonus time can't open it.
+- **`hearth.play_on_tv` says why a TV is refused** when its Hearth doesn't take plays, instead of "isn't a TV".
 
 ## 2026.11.40
 

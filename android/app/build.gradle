@@ -71,6 +71,8 @@ android {
         unitTests.all {
             inputs.file("src/main/assets/pin-recipes.json")
             inputs.file("../../pin-entry/recipes.json")
+            // The state document fixture Home Assistant's contract tests check too (TvStateDocumentFixtureTest)
+            inputs.file("../../ha_tests/contract_fixtures/tv_state_document.json")
         }
     }
     dependenciesInfo {

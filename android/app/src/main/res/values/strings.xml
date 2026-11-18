@@ -76,8 +76,13 @@
     <string name="paused_reason_until">Paused: %1$s, until %2$s</string>
     <string name="paused_reason">Paused: %1$s</string>
     <string name="paused_no_reason">a family pause</string>
-    <!-- Hearth's own bedtime (a TV without Home Assistant) holds the apps until the morning -->
+    <!-- A lock holds the apps (bedtime, School time, any other), until a time when it's known -->
     <string name="bedtime_until">Bedtime until %1$s</string>
+    <string name="bedtime_now">It’s bedtime</string>
+    <string name="school_time_until">School time until %1$s</string>
+    <string name="school_time_now">It’s School time</string>
+    <string name="locked_until">Locked until %1$s</string>
+    <string name="locked_now">Locked for now</string>
     <!-- A quiet heads-up before bedtime or school time (Home Assistant's next_lock) -->
     <string name="heads_up_bedtime">Bedtime in %1$d min</string>
     <string name="heads_up_school_time">School time in %1$d min</string>
