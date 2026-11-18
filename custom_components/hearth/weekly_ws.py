@@ -25,6 +25,7 @@ from .const import CONF_ROLES, DOMAIN
 from .counting import ALL
 from .enforce import enforcers_from_options
 from .schooldays import DAY_OFF, HALF_DAY, SCHOOL
+from .bedtime_sync import AUTO, START_FROM
 from .weekly import (
     ALLOWS,
     DAY_KEYS,
@@ -34,6 +35,7 @@ from .weekly import (
     ScheduleError,
     describe_mode,
     hhmm,
+    minutes_of,
     weekday_key,
 )
 
@@ -53,8 +55,21 @@ SET_SCHEDULE_SCHEMA = vol.Schema(
         vol.Optional("limits"): _LIMITS,
         vol.Optional("half_day_ends"): vol.Any(cv.string, cv.time),
         vol.Optional("half_day_limits"): vol.In(HALF_LIMITS),
+        # A bedtime and/or wake for good on the days given (the day's last Sleep and first change move)
+        vol.Optional("bedtime"): vol.Any(cv.string, cv.time),
+        vol.Optional("wake"): vol.Any(cv.string, cv.time),
     }
 )
+SYNC_BEDTIMES_SCHEMA = vol.Schema(
+    {
+        vol.Optional("people"): vol.All(cv.ensure_list, [_PERSON]),
+        vol.Optional("start_from", default=AUTO): vol.In(START_FROM),
+        vol.Optional("dry_run", default=False): cv.boolean,
+        vol.Optional("stop", default=False): cv.boolean,
+        vol.Optional("family_link_bedtime_on", default=False): cv.boolean,
+    }
+)
+BEDTIME_OFFER_SCHEMA = vol.Schema({vol.Required("id"): cv.string, vol.Required("accept"): cv.boolean})
 COPY_SCHEDULE_SCHEMA = vol.All(
     vol.Schema(
         {
@@ -74,6 +89,8 @@ CHANGE_TODAY_SCHEMA = vol.Schema(
         vol.Exclusive("bedtime", "what"): vol.Any(cv.string, cv.time),
         vol.Exclusive("mode", "what"): cv.string,
         vol.Exclusive("changes", "what"): [_CHANGE],
+        # Tomorrow morning only, with or without a bedtime
+        vol.Optional("wake"): vol.Any(cv.string, cv.time),
         vol.Optional("until"): vol.Any(cv.string, cv.time),
         vol.Optional("limits"): _LIMITS,
         vol.Optional("reason"): cv.string,
@@ -139,6 +156,14 @@ def _changed(household, people: list[str], days: list[str] | None, today_only: b
             EVENT_SCHEDULE_CHANGED, {"person": person, "days": days or [], "today_only": today_only, "by": by}
         )
     household.recompute()
+    # Family Link and Family Safety follow (bedtime_sync.py)
+    household.bedtime_sync.reconcile()
+
+
+def _clock(value: Any) -> str | None:
+    if value in (None, ""):
+        return None
+    return value.strftime("%H:%M") if hasattr(value, "strftime") else str(value)
 
 
 def _wrap(work):
@@ -242,9 +267,45 @@ def panel_view(household) -> dict[str, Any]:
                 "now": household.schedule_view(person),
                 # The parental controls Hearth holds for them (Configure > Enforce)
                 "controls": sorted({e.kind for e in enforcers_from_options(household.options) if e.person == person}),
+                # Each weekday's bedtime and wake (the Bedtime card), tonight's, and the apps' sync (bedtime_sync.py)
+                "bedtime": bedtime_view(household, person),
+                "sync": household.bedtime_sync.view(person) if person in household.bedtime_sync.kids() else None,
             }
             for person in kids
         ],
+    }
+
+
+def bedtime_view(household, person: str) -> dict[str, Any]:
+    """{days: {mon..sun, day_off: {bedtime, wake}}, tonight: {bedtime, wake, usual, changed}}: a day's bedtime is its
+    last change when that's a Sleep; its wake is its first change that allows something."""
+    week = household.week
+    modes = week.data.modes
+    sched = week.schedule_of(person)
+
+    def of(changes) -> dict[str, str | None]:
+        bed = hhmm(changes[-1][0]) if changes and (modes.get(changes[-1][1]) or {}).get("allows") == "nothing" else None
+        wake = next((hhmm(m) for m, md in changes if (modes.get(md) or {}).get("allows") != "nothing"), None)
+        return {"bedtime": bed, "wake": wake}
+
+    days = {
+        key: of([(minutes_of(a), m) for a, m in (sched["days"].get(key) or {}).get("changes") or [] if m in modes])
+        for key in DAY_KEYS
+    }
+    today = dt_util.now().date()
+    tonight = of(week.resolve(person, today).changes)
+    tomorrow = of(week.resolve(person, today + timedelta(days=1)).changes)
+    usual = days.get(weekday_key(today)) or {}
+    usual_wake = (days.get(weekday_key(today + timedelta(days=1))) or {}).get("wake")
+    return {
+        "days": days,
+        "tonight": {
+            "bedtime": tonight["bedtime"],
+            "wake": tomorrow["wake"],
+            "usual_bedtime": usual.get("bedtime"),
+            "usual_wake": usual_wake,
+            "changed": tonight["bedtime"] != usual.get("bedtime") or tomorrow["wake"] != usual_wake,
+        },
     }
 
 
@@ -255,6 +316,18 @@ def async_register_services(hass: HomeAssistant) -> None:
         household = _household(hass)
         people = _people(household, call.data["people"])
         days = call.data.get("days") or []
+        if "bedtime" in call.data or "wake" in call.data:
+            if any(k in call.data for k in ("changes", "half_day_ends", "half_day_limits")):
+                raise ServiceValidationError("A bedtime or wake can't go with the day's changes")
+            token = _wrap(
+                lambda: household.week.set_bedtime(
+                    people, days, _clock(call.data.get("bedtime")), _clock(call.data.get("wake"))
+                )
+            )
+            if call.data.get("limits") is not None:
+                _wrap(lambda: household.week.set_days(people, days, None, _limits(household, call.data["limits"])))
+            _changed(household, people, days, False, "service")
+            return {"undo": token, "people": {p: household.week.view(p) for p in people}}
         token = _wrap(
             lambda: household.week.set_days(
                 people,
@@ -288,8 +361,8 @@ def async_register_services(hass: HomeAssistant) -> None:
         household = _household(hass)
         people = _people(household, call.data["people"])
         now = dt_util.now()
-        if not any(k in call.data for k in ("bedtime", "mode", "changes", "limits")):
-            raise ServiceValidationError("Give a bedtime, a mode, changes or limits")
+        if not any(k in call.data for k in ("bedtime", "wake", "mode", "changes", "limits")):
+            raise ServiceValidationError("Give a bedtime, a wake, a mode, changes or limits")
         tokens = {}
         for person in people:
             tokens[person] = _wrap(
@@ -304,6 +377,7 @@ def async_register_services(hass: HomeAssistant) -> None:
                     until=call.data.get("until"),
                     by="service",
                     reason=call.data.get("reason"),
+                    wake=_clock(call.data.get("wake")),
                 )
             )
         _changed(household, people, [weekday_key(now.date())], True, "service")
@@ -321,9 +395,50 @@ def async_register_services(hass: HomeAssistant) -> None:
     def get_schedule(call: ServiceCall) -> ServiceResponse:
         household = _household(hass)
         person = _people(household, [call.data["person"]])[0]
-        return day_view(household, person, on=call.data.get("date"), day=call.data.get("day"))
+        out = day_view(household, person, on=call.data.get("date"), day=call.data.get("day"))
+        if person in household.bedtime_sync.kids():
+            out["sync"] = household.bedtime_sync.view(person)
+        return out
+
+    async def sync_bedtimes(call: ServiceCall) -> ServiceResponse:
+        """The first sync after a preview (dry_run: the preview only), "Check now" for a kid already in step, stop,
+        or Family Link's bedtime switched back on."""
+        household = _household(hass)
+        sync = household.bedtime_sync
+        people = _people(household, call.data["people"]) if call.data.get("people") else sync.kids()
+        if unknown := [p for p in people if p not in sync.kids()]:
+            raise ServiceValidationError(
+                f"No Family Link or Family Safety in Configure > Enforce for: {', '.join(unknown)}"
+            )
+        if call.data["stop"]:
+            sync.stop(people)
+            return {p: {"state": sync.state(p)} for p in people}
+        if call.data["family_link_bedtime_on"]:
+            for person in people:
+                try:
+                    await sync.async_family_link_bedtime_on(person)
+                except ScheduleError as err:
+                    raise ServiceValidationError(str(err)) from err
+        if call.data["dry_run"]:
+            return {p: sync.preview(p, call.data["start_from"]) for p in people}
+        starting = [p for p in people if sync.state(p) != "on"]
+        checking = [p for p in people if sync.state(p) == "on"]
+        out: dict[str, Any] = {}
+        if starting:
+            out.update(sync.start(starting, call.data["start_from"]))
+        if checking:
+            sync.check_now(checking)
+            out.update({p: sync.view(p) for p in checking})
+        return out
+
+    @callback
+    def bedtime_offer(call: ServiceCall) -> ServiceResponse:
+        household = _household(hass)
+        return _wrap(lambda: household.bedtime_sync.answer(call.data["id"], call.data["accept"]))
 
     for name, handler, schema, response in (
+        ("sync_bedtimes", sync_bedtimes, SYNC_BEDTIMES_SCHEMA, SupportsResponse.OPTIONAL),
+        ("bedtime_offer", bedtime_offer, BEDTIME_OFFER_SCHEMA, SupportsResponse.OPTIONAL),
         ("set_schedule", set_schedule, SET_SCHEDULE_SCHEMA, SupportsResponse.OPTIONAL),
         ("copy_schedule", copy_schedule, COPY_SCHEDULE_SCHEMA, SupportsResponse.OPTIONAL),
         ("change_today", change_today, CHANGE_TODAY_SCHEMA, SupportsResponse.OPTIONAL),
@@ -495,7 +610,112 @@ def ws_mode_remove(hass: HomeAssistant, connection: websocket_api.ActiveConnecti
     _run(hass, connection, msg, work)
 
 
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hearth/schedule/bedtime",
+        vol.Required("person"): _PERSON,
+        vol.Required("scope"): vol.In(["today", "days"]),
+        vol.Optional("days"): vol.All(cv.ensure_list, [_DAY]),
+        vol.Optional("bedtime"): vol.Any(None, cv.string),
+        vol.Optional("wake"): vol.Any(None, cv.string),
+    }
+)
+@callback
+def ws_bedtime(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """The Bedtime card: "Change tonight" (scope today: tonight's bedtime, tomorrow's wake) or a weekday chip (scope
+    days: for good, on the days given)."""
+    today = dt_util.now().date()
+    tonight = msg["scope"] == "today"
+
+    def work(household):
+        person = _people(household, [msg["person"]])[0]
+        if not msg.get("bedtime") and not msg.get("wake"):
+            raise ServiceValidationError("Give a bedtime, a wake or both")
+        if tonight:
+            token = household.week.change_today(
+                person, today, bedtime=msg.get("bedtime") or None, wake=msg.get("wake") or None, by="panel"
+            )
+        else:
+            token = household.week.set_bedtime([person], msg.get("days") or [], msg.get("bedtime"), msg.get("wake"))
+        return {"undo": token}
+
+    _run(hass, connection, msg, work, [msg["person"]], [weekday_key(today)] if tonight else msg.get("days") or [], tonight)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {vol.Required("type"): "hearth/schedule/sync", vol.Optional("start_from", default=AUTO): vol.In(START_FROM)}
+)
+@callback
+def ws_sync(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Each kid's sync status, and the preview of the first sync for those still in review."""
+
+    def work(household):
+        sync = household.bedtime_sync
+        return {
+            "sync": {
+                p: {**sync.view(p), "preview": sync.preview(p, msg["start_from"]) if sync.state(p) == "review" else None}
+                for p in sync.kids()
+            }
+        }
+
+    _run(hass, connection, msg, work)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hearth/schedule/sync/start",
+        vol.Optional("people"): [_PERSON],
+        vol.Optional("start_from"): {_PERSON: vol.In(START_FROM)},
+        vol.Optional("stop", default=False): bool,
+        vol.Optional("check", default=False): bool,
+        vol.Optional("family_link_bedtime_on", default=False): bool,
+    }
+)
+@websocket_api.async_response
+async def ws_sync_start(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """The review's "Start keeping bedtimes in step" (per kid, a direction the adult may have flipped), a card's
+    "Check now", "Turn it back on" or stop."""
+    hub = _hub(hass)
+    if hub is None:
+        connection.send_error(msg["id"], "not_set_up", "Hearth isn't set up")
+        return
+    sync = hub.household.bedtime_sync
+    people = [p for p in (msg.get("people") or sync.kids()) if p in sync.kids()]
+    try:
+        if msg["family_link_bedtime_on"]:
+            for person in people:
+                await sync.async_family_link_bedtime_on(person)
+        if msg["stop"]:
+            sync.stop(people)
+        elif msg["check"]:
+            sync.check_now(people)
+        elif not msg["family_link_bedtime_on"]:
+            directions = msg.get("start_from") or {}
+            for person in people:
+                if sync.state(person) != "on":
+                    sync.start([person], directions.get(person, AUTO))
+    except (ScheduleError, ServiceValidationError) as err:
+        connection.send_error(msg["id"], "invalid", str(err))
+        return
+    connection.send_result(msg["id"], {"schedule": panel_view(hub.household)})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {vol.Required("type"): "hearth/schedule/sync/offer", vol.Required("offer"): cv.string, vol.Required("accept"): bool}
+)
+@callback
+def ws_sync_offer(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    _run(hass, connection, msg, lambda household: household.bedtime_sync.answer(msg["offer"], msg["accept"]))
+
+
 def async_register_commands(hass: HomeAssistant) -> None:
-    for command in (ws_get, ws_set, ws_copy, ws_undo, ws_today, ws_resume, ws_mode, ws_mode_remove):
+    for command in (
+        ws_get, ws_set, ws_copy, ws_undo, ws_today, ws_resume, ws_mode, ws_mode_remove, ws_bedtime, ws_sync,
+        ws_sync_start, ws_sync_offer,
+    ):
         websocket_api.async_register_command(hass, command)
 

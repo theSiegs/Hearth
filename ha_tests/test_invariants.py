@@ -691,3 +691,133 @@ async def test_messages_when_away_never_lifts_school_time_a_pause_or_a_block(
             assert "Devices" in held, f"seed_{seed} step {step}: the device lock swapped for app pauses"
         # The allows are the adults' own, untouched by the rule
         assert sorted(a.id for a in household.allows.of(SAM)) == sorted(allows_made), f"seed_{seed}"
+
+
+# E. Bedtime sync (bedtime_sync.py): Family Safety's window is never stricter than Hearth's, a weekday changed for good
+# changes that weekday's targets only, and in Home Assistant, over random edits and echo delays: no write loops, a
+# tonight-only change always reverts with no weekly write, and "today" goes with today's weekday only
+
+BEDTIME_SEEDS = list(range(6))
+
+
+def _random_week(rng: random.Random) -> dict[str, list[tuple[int, str]]]:
+    from custom_components.hearth.weekly import DAY_KEYS
+
+    days: dict[str, list[tuple[int, str]]] = {}
+    for key in DAY_KEYS:
+        changes: list[tuple[int, str]] = []
+        if rng.random() < 0.9:
+            changes.append((rng.randrange(300, 600, 15), "free"))
+        if rng.random() < 0.15:
+            changes += [(780, "sleep"), (840, "free")]  # a nap
+        if rng.random() < 0.85:
+            changes.append((rng.randrange(1140, 1425, 15), "sleep"))
+        days[key] = changes
+    return days
+
+
+@pytest.mark.parametrize("seed", PURE_SEEDS[:100], ids=[f"seed_{s}" for s in PURE_SEEDS[:100]])
+def test_family_safety_is_never_stricter_than_hearth(seed: int) -> None:
+    from custom_components.hearth import bedtime_sync as bs
+    from custom_components.hearth.weekly import DAYS, default_modes
+
+    rng = random.Random(seed)
+    modes = default_modes()
+    days = _random_week(rng)
+    nights, windows = bs.baseline(days, modes)
+    for key in DAYS:
+        window = windows[key]
+        if not isinstance(window, tuple):
+            continue
+        begin, end = (bs.mins(v) for v in bs.fs_value(window))
+        # Never later than Hearth's wake nor earlier than its bedtime; whole half hours
+        assert begin <= window[0] and end >= window[1], f"seed_{seed}: {key} {window} -> {begin}, {end}"
+        assert begin % 30 == 0 and end % 30 == 0, f"seed_{seed}"
+        night = nights[key]
+        if isinstance(night, tuple):
+            assert bs.fl_value(night) == [bs.hm(night[0]), bs.hm(night[1])], f"seed_{seed}: Family Link is exact"
+
+
+@pytest.mark.parametrize("seed", PURE_SEEDS[:100], ids=[f"seed_{s}" for s in PURE_SEEDS[:100]])
+def test_a_weekday_for_good_changes_that_weekday_s_targets_only(seed: int) -> None:
+    from custom_components.hearth import bedtime_sync as bs
+    from custom_components.hearth.weekly import DAYS, default_modes, hhmm
+
+    rng = random.Random(seed)
+    modes = default_modes()
+    days = _random_week(rng)
+    key = rng.choice(DAYS)
+    wake = hhmm(rng.randrange(300, 600, 15)) if rng.random() < 0.5 else None
+    bed = hhmm(rng.randrange(1140, 1425, 15)) if wake is None or rng.random() < 0.5 else None
+    after = bs.apply_import(days, {key: (wake, bed)}, modes)
+    fl_before, fs_before = bs.fl_plan(bs.baseline(days, modes)[0]), bs.fs_plan(bs.baseline(days, modes)[1])
+    fl_after, fs_after = bs.fl_plan(bs.baseline(after, modes)[0]), bs.fs_plan(bs.baseline(after, modes)[1])
+    i = DAYS.index(key)
+    fl_may = {str(i + 1), str((i - 1) % 7 + 1)} if wake else {str(i + 1)}
+    fs_weekdays = ("sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday")
+    fs_may = {fs_weekdays[(i + 1) % 7]}
+    # A day that had no changes, or no Sleep of its own and gets one: what the next day carries in comes from it now
+    if not days[key] or (bed and days[key][-1][1] != "sleep"):
+        fs_may.add(fs_weekdays[(i + 2) % 7])
+    for slot in fl_before:
+        if slot not in fl_may:
+            assert fl_before[slot] == fl_after[slot], f"seed_{seed}: {key} touched Family Link {slot}"
+    for weekday in fs_before:
+        if weekday not in fs_may:
+            assert fs_before[weekday] == fs_after[weekday], f"seed_{seed}: {key} touched Family Safety {weekday}"
+
+
+@pytest.mark.parametrize("seed", BEDTIME_SEEDS, ids=[f"seed_{s}" for s in BEDTIME_SEEDS])
+async def test_bedtime_sync_never_loops_and_tonight_always_reverts(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer, monkeypatch, seed: int
+) -> None:
+    from custom_components.hearth import bedtime_sync as bs
+    from test_bedtime_sync import SAM as KID, _call, _household, _ledger, _set_up, _tick
+
+    monkeypatch.setattr(bs, "PACE", 0)
+    rng = random.Random(seed)
+    apps = await _set_up(hass, hass_client_no_auth, freezer, at=(rng.randint(8, 19), 0), delay=rng.randint(0, 5))
+    await _call(hass, "sync_bedtimes", {"people": [KID]})
+    for _ in range(8):
+        await _tick(hass, freezer, apps)
+    for step in range(6):
+        what = rng.choice(["tonight", "tonight", "weekday", "resume", "nothing"])
+        before = len(apps.fl("weekly")) + len(apps.fs(today_only=False))
+        if what == "tonight":
+            data = {"people": [KID]}
+            if rng.random() < 0.7:
+                data["bedtime"] = f"{rng.randint(20, 22)}:{rng.choice(['00', '15', '30', '45'])}"
+            if "bedtime" not in data or rng.random() < 0.4:
+                data["wake"] = f"0{rng.randint(6, 9)}:{rng.choice(['00', '30'])}"
+            await _call(hass, "change_today", data)
+        elif what == "weekday":
+            day = rng.choice(["mon", "tue", "wed", "thu", "fri", "sat", "sun"])
+            await _call(hass, "set_schedule", {"people": [KID], "days": [day], "bedtime": f"2{rng.randint(0, 2)}:30"})
+        elif what == "resume":
+            await _call(hass, "resume_schedule", {"people": [KID]})
+        for _ in range(8):
+            await _tick(hass, freezer, apps)
+        if what in ("tonight", "resume", "nothing"):
+            # A tonight-only change or its undo writes no weekly value
+            assert len(apps.fl("weekly")) + len(apps.fs(today_only=False)) == before, f"seed_{seed} step {step}"
+    # Quiet: nothing more is written
+    calls = len(apps.calls)
+    for _ in range(30):
+        await _tick(hass, freezer, apps)
+    assert len(apps.calls) == calls, f"seed_{seed}: a write loop"
+    # Back to the schedule: Hearth's tonight is the weekday's again, and so is what the apps hold tonight
+    await _call(hass, "resume_schedule", {"people": [KID]})
+    for _ in range(8):
+        await _tick(hass, freezer, apps)
+    assert _household(hass).week.data.today.get(KID) is None, f"seed_{seed}"
+    today = (_ledger(hass).get("fl") or {}).get("today")
+    if today and today.get("written") is not None:
+        weekly = _ledger(hass)["fl"]["weekly"][str(dt_util.now().isoweekday())]
+        assert today["written"] == weekly["want"], f"seed_{seed}: tonight not put back"
+    # Midnight: the today entries are gone
+    freezer.move_to((dt_util.now() + timedelta(days=1)).replace(hour=0, minute=1, second=0, microsecond=0))
+    await _tick(hass, freezer, apps, 0)
+    await _tick(hass, freezer, apps)
+    assert _ledger(hass)["fl"].get("today") is None, f"seed_{seed}"
+    # "today" only ever with today's weekday
+    assert all(day == weekday for scope, day, weekday in apps.fl_days if scope == "today"), f"seed_{seed}"

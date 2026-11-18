@@ -3,6 +3,16 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **Bedtimes kept in step in Family Link and Family Safety.** Hearth's weekly schedule becomes the one place a kid's bedtime and wake are set: Family Link gets each weekday's bedtime (and a tonight-only bedtime on nights that differ), and the Xbox and Windows get their allowed hours per weekday (rounded out to the half hour, so they're never stricter than Hearth). Nothing is written until an adult starts it from the new Bedtime card on the Schedule tab, after a preview of what each app gets. A kid without a Sleep in Hearth's schedule takes Family Link's bedtime first (else Family Safety's), so the Xbox and Windows follow the same hours; a kid whose Family Link bedtime is off gets it switched on.
+- **Tonight only, or every Wednesday.** "Change tonight" on the Bedtime card (and `hearth.change_today`'s new `wake`) changes tonight's bedtime and tomorrow's wake only; tapping a weekday changes it for good (`hearth.set_schedule`'s new `bedtime` and `wake`, with the new `school_nights` and `weekend_nights`). Each reaches only its own day in the apps.
+- **A bedtime changed in the Family Link or Family Safety app is followed tonight**, with one tap to make it that weekday's for good or put Hearth's back (`hearth.bedtime_offer`). Hearth never writes over it unasked, and a bedtime switched off in Family Link stays off.
+- **Each app's sync shows on the Bedtime card** (in step, writing, waiting, changed in the app, didn't take), with Check now (`hearth.sync_bedtimes`); a write that doesn't take is retried and told once. `hearth_bedtime_sync` fires for each step.
+- **The whole-device lock at bedtime covers a Family Link bedtime that doesn't come on.** It now also locks when Family Link names a window but it isn't on 10 minutes into Hearth's Sleep (or 10 minutes after extra time at bedtime ends).
+
 ## 2026.11.46
 
 ### Home Assistant integration

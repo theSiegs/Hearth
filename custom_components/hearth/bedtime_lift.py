@@ -123,6 +123,8 @@ class BedtimeLifts:
         # By person: what Hearth moved in Family Link: {"child", "day", "weekday", "start", "end", "set"}
         self.moved: dict[str, dict[str, Any]] = {}
         self._failed_at: dict[str, datetime] = {}
+        # By person: when their last lift ended (not kept over a restart), for sleep_locks_devices' grace
+        self.ended_at: dict[str, datetime] = {}
         self._task = None
         self._again = False
         self._closed = False
@@ -163,6 +165,14 @@ class BedtimeLifts:
             "since": dt_util.as_local(since).isoformat() if since else None,
             "until": dt_util.as_local(until).isoformat(),
         }
+
+    def moved_today(self, person: str, now: datetime | None = None) -> set[str]:
+        """Read only, for bedtime sync: the starts ("HH:MM") Hearth moved Family Link's bedtime tonight from and to
+        for the person's lift (its own writes, never a parent's change); empty without one today."""
+        moved = self.moved.get(person)
+        if not moved or moved.get("day") != (now or dt_util.now()).date().isoformat():
+            return set()
+        return {str(moved.get("start")), str(moved.get("set"))}
 
     @callback
     def give(
@@ -206,6 +216,7 @@ class BedtimeLifts:
     @callback
     def end(self, person: str) -> None:
         if self.lifts.pop(person, None) is not None:
+            self.ended_at[person] = dt_util.now()
             _LOGGER.info("%s: bedtime back (the extra time is over)", person)
             self._save()
             self.hass.bus.async_fire(EVENT_BACK, {"person": person})

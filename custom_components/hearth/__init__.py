@@ -56,6 +56,7 @@ from .push import new_topic
 from .hub import HearthHub
 from .entity import async_prune_group_entities
 from .attention import ACT_PREFIX
+from .bedtime_lift import EVENT_BACK as EVENT_BEDTIME_BACK
 from .limits import DAY_TYPES, count_messaging, retire_video
 from .asks import EVENT_MORE_TIME_ANSWERED, EVENT_MORE_TIME_REQUESTED, AskError
 from .const import EVENT_BUDGET_REACHED
@@ -1210,6 +1211,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
         await hub.household.enforcement.async_lock_ends_tick()
 
     entry.async_on_unload(async_track_time_interval(hass, fs_windows_tick, timedelta(minutes=1)))
+
+    # Bedtime kept in step in Family Link and Family Safety (bedtime_sync.py): each minute (confirm what was written,
+    # retry, see a parent's change), just after midnight (the new day's tonight), at 03:10 (the daily check), and when
+    # extra time at bedtime ends (tonight's Family Link entry may be written again then)
+    @callback
+    def bedtime_sync(_event_or_now=None) -> None:
+        hub.household.bedtime_sync.reconcile()
+
+    entry.async_on_unload(async_track_time_interval(hass, bedtime_sync, timedelta(minutes=1)))
+    entry.async_on_unload(async_track_time_change(hass, bedtime_sync, hour=0, minute=1, second=0))
+    entry.async_on_unload(async_track_time_change(hass, bedtime_sync, hour=3, minute=10, second=0))
+    entry.async_on_unload(hass.bus.async_listen(EVENT_BEDTIME_BACK, bedtime_sync))
     # The kids' to-do lists (todos.py): today's grants' notices back after a restart; the old Chores earn time lists
     # brought in once Home Assistant has started (their entities are there then); and each midnight, old marks go
     todos = hub.household.todos
