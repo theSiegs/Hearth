@@ -879,19 +879,26 @@ so Hearth's pauses, its schedule and its blocks stay in step (`app_blocks.py`).
 
 ### Outside app changes
 
-When an app gets more room in Family Link and Hearth didn't do it, every adult's phone is told
-(`outside_apps.py`). A kid holding a parent's phone looks just like a parent to Family Link, so this is how such a
-change comes to light.
+When an app gets more room in a parental-controls app and Hearth didn't do it, every adult's phone is told
+(`outside_apps.py`). The providers can't say who made a change, and a kid holding a parent's phone looks just like a
+parent to them, so this is how such a change comes to light. Every provider is read into the same lists (installed,
+blocked, time limits, paused, always allowed) and compared the same way:
 
-- **Told:** an app unblocked (still installed), with a **Block again** button (`hearth.block_app`); an app's time
-  limit raised or taken off (with **Block**); an app made Always allowed (with **Block**). The text says the app, what
-  changed and when, e.g. "Pins was unblocked in Family Link, not by Hearth (5:40 PM)."
-- **Not told:** tightening (a block, a lower limit), an app uninstalled, and Hearth's own changes: a `familylink`
-  block, unblock, pause or resume call for that kid and app in the action log in the last 30 minutes. Apps Hearth
-  pauses are left out of the limit comparison before and after.
-- Each kid's lists are compared with the last look (kept across restarts, so a change made while Home Assistant was
-  down is told at the next look). Nothing is told at the first look, or while a list is missing or cut short.
-- `hearth_outside_app_change` fires for each one (`person`, `app`, `change`: `unblocked`, `limit_raised`,
+| Provider | Read from | Always allowed means | Button |
+|---|---|---|---|
+| Family Link | the kid's app list sensors | Always allowed | Block again / Block (`hearth.block_app`) |
+| Family Safety | the kid's Applications sensor (Windows and Xbox apps) | (none) | none |
+| Nintendo | each of the kid's Switches: `list_applications` (the integration's last poll), every 10 minutes | on the console's allow list (starts whatever its age rating); told once per console | none |
+
+- **Told:** an app unblocked (still installed); an app's time limit raised or taken off; an app made Always allowed
+  or put on a Switch's allow list. The text says the app, what changed, where and when, e.g. "Pins was unblocked in
+  Family Link, not by Hearth (5:40 PM)."
+- **Not told:** tightening (a block, a lower limit), an app uninstalled, and Hearth's own changes: a call of the
+  provider's that names the app (block, unblock, pause or resume; Nintendo's `set_app_allowed`) in the action log in
+  the last 30 minutes. Apps Hearth pauses are left out of the limit comparison before and after.
+- Each list is compared with the last look (kept across restarts, so a change made while Home Assistant was down is
+  told at the next look). Nothing is told at the first look, or while a list is missing or cut short.
+- `hearth_outside_app_change` fires for each one (`person`, `provider`, `app`, `change`: `unblocked`, `limit_raised`,
   `limit_removed` or `always_allowed`, `before`, `after`), and the action log records it (`kind: outside_app_change`).
 - A parent's unblock of an app Hearth blocked is still respected (Hearth doesn't block it again by itself); Block again
   makes it Hearth's block once more.

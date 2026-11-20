@@ -45,7 +45,7 @@ SAFE_ARGS = frozenset(
     {
         "entity_id", "device_id", "child_id", "account_id", "package_name", "packages", "app", "apps", "platform",
         "daily_minutes", "minutes", "bonus_minutes", "day", "day_of_week", "hours", "until", "scope", "start_time",
-        "end_time", "value", "option", "lock", "duration", "request_id", "approve",
+        "end_time", "value", "option", "lock", "duration", "request_id", "approve", "application_id",
     }
 )
 # Domains whose calls name a person's device: the person is found from the entity's enforcer

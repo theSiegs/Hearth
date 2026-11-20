@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.11.50
+
+### Home Assistant integration
+
+- **Outside app changes from Family Safety and Nintendo too.** A Windows or Xbox app unblocked or its limit raised or taken off in Family Safety, and a game put on a Switch's allow list in the Nintendo app, are told to the adults the same way as Family Link's. `hearth_outside_app_change` now says which `provider`.
+
 ## 2026.11.49
 
 ### Home Assistant integration
