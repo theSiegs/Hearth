@@ -2,7 +2,8 @@
 Switch's allow list) made in Family Link, Family Safety or Nintendo is told to the adults; Hearth's own changes and
 tightening are not."""
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
+from pytest_homeassistant_custom_component.common import async_mock_service
 from test_app_blocks import CHILD, _call, _household, _recompute, _sam, settled  # noqa: F401 - fixture
 
 from custom_components.hearth import attention, outside_apps
@@ -49,10 +50,13 @@ async def test_unblock_in_family_link_is_told_with_block_again(hass: HomeAssista
     assert "was unblocked in Family Link, not by Hearth" in item.text
     assert item.text.startswith("Pins ")
     assert [a.label for a in item.actions] == ["Block again"]
-    assert item.actions[0].service == "hearth.block_app"
-    assert item.actions[0].data == {"people": ["person.sam"], "app": APP}
+    assert item.actions[0].service == "hearth.block_outside_app"
+    assert item.actions[0].data == {"source": "person.sam|family_link", "app": APP}
     assert [(e.data["change"], e.data["provider"]) for e in events] == [("unblocked", "Family Link")]
     assert not calls["block"]
+    # The button: Hearth's own block in Family Link
+    await _call(hass, "block_outside_app", item.actions[0].data)
+    assert [c.data["package_name"] for c in calls["block"]] == [APP]
 
 
 async def test_hearths_own_unblock_is_not_told(hass: HomeAssistant, hass_client_no_auth) -> None:
@@ -120,12 +124,15 @@ async def test_family_safety_unblock_and_limit_are_told(hass: HomeAssistant, has
     notices = _notices(hass)
     racer = notices["outside_app_person.sam_fs_sensor.sam_applications_x_racer"]
     assert racer.text.startswith("Racer was unblocked in Family Safety, not by Hearth")
-    assert racer.actions == ()  # Hearth has no block of its own for Windows or Xbox apps
+    assert [a.label for a in racer.actions] == ["Block again"]
+    blocked = async_mock_service(hass, "microsoft_family_safety", "block_app")
+    await _call(hass, "block_outside_app", racer.actions[0].data)
+    assert [(c.data["entity_id"], c.data["app_id"]) for c in blocked] == [("sensor.sam_applications", "x:racer")]
     assert "went from 30 to 60 minutes in Family Safety" in notices["outside_app_person.sam_fs_sensor.sam_applications_x_chat"].text
 
 
 async def test_a_switch_game_put_on_the_allow_list_is_told(hass: HomeAssistant, hass_client_no_auth) -> None:
-    from homeassistant.core import ServiceCall, SupportsResponse
+    from homeassistant.core import SupportsResponse
     from test_enforce import NINTENDO_LIMIT, _add_enforcer, _nintendo_switch
 
     await _sam(hass, hass_client_no_auth)
@@ -152,7 +159,15 @@ async def test_a_switch_game_put_on_the_allow_list_is_told(hass: HomeAssistant, 
     [item] = _notices(hass).values()
     assert item.text.startswith("Blaster Arena was put on the allow list (it starts whatever its age rating) on ")
     assert "in Nintendo, not by Hearth" in item.text
-    assert item.actions == ()
+    assert [a.label for a in item.actions] == ["Take off allow list"]
+    taken: list[ServiceCall] = []
+
+    async def set_allowed(call: ServiceCall):
+        taken.append(call)
+
+    hass.services.async_register("nintendo_parental_controls", "set_app_allowed", set_allowed)
+    await _call(hass, "block_outside_app", item.actions[0].data)
+    assert [(c.data["application_id"], c.data["allowed"]) for c in taken] == [("0100AAA", False)]
 
     # Not looked at again before it's due
     allowed.add("0100BBB")
@@ -161,7 +176,7 @@ async def test_a_switch_game_put_on_the_allow_list_is_told(hass: HomeAssistant, 
 
 
 async def test_hearths_own_nintendo_allow_is_not_told(hass: HomeAssistant, hass_client_no_auth) -> None:
-    from homeassistant.core import ServiceCall, SupportsResponse
+    from homeassistant.core import SupportsResponse
     from test_enforce import NINTENDO_LIMIT, _add_enforcer, _nintendo_switch
 
     from custom_components.hearth.activity import call_service
@@ -188,3 +203,15 @@ async def test_hearths_own_nintendo_allow_is_not_told(hass: HomeAssistant, hass_
     outside._nintendo_at = None
     await _recompute(hass)
     assert _notices(hass) == {}
+
+
+async def test_the_button_only_takes_lists_hearth_looks_at(hass: HomeAssistant, hass_client_no_auth) -> None:
+    import pytest
+    from homeassistant.exceptions import ServiceValidationError
+
+    await _sam(hass, hass_client_no_auth, installed=[APP])
+    await _look(hass, installed=[APP])
+    for data in ({"source": "person.nobody|family_link", "app": APP}, {"source": "nintendo:other", "app": "0100"},
+                 {"source": "person.sam|family_link", "app": "com.android.settings"}):
+        with pytest.raises(ServiceValidationError):
+            await _call(hass, "block_outside_app", data)

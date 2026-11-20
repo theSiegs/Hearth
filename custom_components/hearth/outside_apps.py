@@ -29,8 +29,7 @@ from __future__ import annotations
 
 import logging
 import re
-from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
@@ -42,6 +41,7 @@ from homeassistant.util import dt as dt_util
 from . import family_link as fl
 from .activity import call_service
 from .attention import ADULTS, NOTICE, Action, Item
+from .const import DOMAIN
 from .entry_tasks import entry_task
 
 if TYPE_CHECKING:
@@ -79,10 +79,9 @@ class Look:
     own_services: frozenset[str]
     # "on <the console>" for a console's list
     where: str | None = None
-    # The words for an app put on the always list
+    # The words for an app put on the always list, and the button that takes it off
     always_words: str = "was made Always allowed"
-    # A button that blocks the app again (Family Link), given the app
-    block: Callable[[str], Action] | None = field(default=None, repr=False)
+    undo_always: str = "Block"
 
 
 def _empty() -> dict[str, Any]:
@@ -244,8 +243,6 @@ class OutsideAppChanges:
                         f"{person}|family_link", person, "Family Link", lists,
                         frozenset({"familylink.block_app", "familylink.unblock_app", "familylink.pause_app",
                                    "familylink.resume_app"}),
-                        block=lambda app, p=person: Action("block", "Block again", "hearth.block_app",
-                                                           {"people": [p], "app": app}),
                     )
                 )
             for entity_id in self._fs_applications(person, registry):
@@ -318,9 +315,49 @@ class OutsideAppChanges:
                             frozenset({f"{NINTENDO_DOMAIN}.set_app_allowed"}),
                             where=f"on {switch['name']}",
                             always_words="was put on the allow list (it starts whatever its age rating)",
+                            undo_always="Take off allow list",
                         )
                     )
         return looks
+
+    # The button
+
+    async def async_block(self, source: str, app: str, context: Any = None) -> dict[str, Any]:
+        """Puts an app told about back under a block, in the provider it changed in: Hearth's own block in Family Link
+        (hearth.block_app's), Family Safety's block_app, or off the Switch's allow list. Only an app of a list Hearth
+        looks at."""
+        before = self.last.get(source)
+        if before is None or not isinstance(app, str) or not app:
+            raise ValueError("Hearth doesn't look at that list")
+        person, _, provider = source.partition("|")
+        if source.startswith("nintendo:"):
+            device_id = source.removeprefix("nintendo:")
+            if app not in before.get("always", []):
+                raise ValueError("That game isn't on the allow list")
+            await call_service(
+                self.hass, NINTENDO_DOMAIN, "set_app_allowed",
+                {"device_id": device_id, "application_id": app, "allowed": False}, blocking=True, context=context,
+                why="outside_apps",
+            )
+            return {"blocked": app, "provider": "Nintendo"}
+        if person not in self._kids():
+            raise ValueError("Not a kid's list")
+        if provider == "family_link":
+            from .app_blocks import android_package, never_blocked
+
+            if not android_package(app) or never_blocked(app):
+                raise ValueError("Hearth doesn't block that app")
+            if not self.household.blocks.block([person], [app]):
+                raise ValueError("Hearth couldn't block that app")
+            self.household.recompute()
+            return {"blocked": app, "provider": "Family Link"}
+        if provider.startswith("fs:"):
+            await call_service(
+                self.hass, FS_DOMAIN, "block_app", {"entity_id": provider.removeprefix("fs:"), "app_id": app},
+                blocking=True, context=context, person=person, why="outside_apps",
+            )
+            return {"blocked": app, "provider": "Family Safety"}
+        raise ValueError("Hearth doesn't look at that list")
 
     # Comparing
 
@@ -398,10 +435,9 @@ class OutsideAppChanges:
         attention = getattr(self.household.hub, "attention", None)
         if attention is None:
             return
-        actions: tuple[Action, ...] = ()
-        if look.block is not None and change in (UNBLOCKED, ALWAYS_ALLOWED, LIMIT_REMOVED):
-            button = look.block(app)
-            actions = (button if change == UNBLOCKED else Action(button.id, "Block", button.service, button.data),)
+        # One button for every provider: hearth.block_outside_app puts the app back under a block
+        label = {UNBLOCKED: "Block again", ALWAYS_ALLOWED: look.undo_always}.get(change, "Block")
+        actions = (Action("block", label, f"{DOMAIN}.block_outside_app", {"source": look.key, "app": app}),)
         who = look.where[3:] if look.where else self.household.person_name(person)
         headline = {
             UNBLOCKED: "unblocked",

@@ -267,6 +267,19 @@ block_app:
       selector:
         object:
 
+block_outside_app:
+  fields:
+    source:
+      required: true
+      example: person.alex|family_link
+      selector:
+        text:
+    app:
+      required: true
+      example: com.example.app
+      selector:
+        text:
+
 unblock_app:
   fields:
     people:

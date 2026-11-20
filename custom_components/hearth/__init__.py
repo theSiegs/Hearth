@@ -455,6 +455,22 @@ def _register_app_blocks(hass: HomeAssistant, loaded_household) -> None:
         hass, DOMAIN, "unblock_app", unblock_app, schema=BLOCK_APP_SCHEMA, supports_response=SupportsResponse.OPTIONAL
     )
 
+    async def block_outside_app(call: ServiceCall) -> ServiceResponse:
+        """The button on a notice of an app loosened outside Hearth (outside_apps.py): blocks it again in the
+        provider it changed in."""
+        try:
+            return await loaded_household().outside_apps.async_block(
+                call.data["source"], call.data["app"], context=call.context
+            )
+        except ValueError as err:
+            raise ServiceValidationError(str(err)) from err
+
+    register_service(
+        hass, DOMAIN, "block_outside_app", block_outside_app,
+        schema=vol.Schema({vol.Required("source"): cv.string, vol.Required("app"): cv.string}),
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+
 
 ANSWER_REQUEST_SCHEMA = vol.All(
     vol.Schema(

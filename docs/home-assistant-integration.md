@@ -884,11 +884,16 @@ When an app gets more room in a parental-controls app and Hearth didn't do it, e
 parent to them, so this is how such a change comes to light. Every provider is read into the same lists (installed,
 blocked, time limits, paused, always allowed) and compared the same way:
 
-| Provider | Read from | Always allowed means | Button |
+| Provider | Read from | Always allowed means | The button blocks it with |
 |---|---|---|---|
-| Family Link | the kid's app list sensors | Always allowed | Block again / Block (`hearth.block_app`) |
-| Family Safety | the kid's Applications sensor (Windows and Xbox apps) | (none) | none |
-| Nintendo | each of the kid's Switches: `list_applications` (the integration's last poll), every 10 minutes | on the console's allow list (starts whatever its age rating); told once per console | none |
+| Family Link | the kid's app list sensors | Always allowed | Hearth's own block (as `hearth.block_app`) |
+| Family Safety | the kid's Applications sensor (Windows and Xbox apps) | (none) | Family Safety's `block_app` |
+| Nintendo | each of the kid's Switches: `list_applications` (the integration's last poll), every 10 minutes | on the console's allow list (starts whatever its age rating); told once per console | `set_app_allowed` off ("Take off allow list") |
+
+Every notice has one button: **Block again** for an unblock, **Block** for a limit, **Take off allow list** for a
+Switch game. It runs `hearth.block_outside_app` (`source`: the list, as `<person>|family_link`,
+`<person>|fs:<sensor>` or `nintendo:<device id>`; `app`), adults only, which takes only a list Hearth looks at.
+Hearth never blocks again by itself: an adult decides.
 
 - **Told:** an app unblocked (still installed); an app's time limit raised or taken off; an app made Always allowed
   or put on a Switch's allow list. The text says the app, what changed, where and when, e.g. "Pins was unblocked in

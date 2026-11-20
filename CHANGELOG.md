@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.11.51
+
+### Home Assistant integration
+
+- **Every outside app change has a Block button.** Family Safety's notices block the Windows or Xbox app again, and Nintendo's take the game off the Switch's allow list, as Family Link's already blocked the app again (`hearth.block_outside_app`). Hearth still never blocks again by itself.
+
 ## 2026.11.50
 
 ### Home Assistant integration
