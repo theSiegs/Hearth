@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.11.49
+
+### Home Assistant integration
+
+- **Told when an app is loosened outside Hearth.** An app unblocked, its time limit raised or taken off, or made Always allowed in the Family Link app (by a parent, or anyone holding a parent's phone) now goes to every adult's phone, with a Block again button. Hearth's own changes and tightening aren't told; `hearth_outside_app_change` fires for each.
+
 ## 2026.11.48
 
 ### Home Assistant integration
