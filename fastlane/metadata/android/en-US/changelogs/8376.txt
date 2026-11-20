@@ -1,0 +1,1 @@
+Home Assistant: every outside app change notice has a Block button (Family Link, Family Safety, Nintendo).
