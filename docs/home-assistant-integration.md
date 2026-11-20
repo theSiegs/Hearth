@@ -877,6 +877,25 @@ so Hearth's pauses, its schedule and its blocks stay in step (`app_blocks.py`).
   kid with Family Link). `hearth/config`'s `app_blocks` carries it all.
 - Events: `hearth_app_blocked` and `hearth_app_unblocked` (`person`, `app`) after each Family Link call.
 
+### Outside app changes
+
+When an app gets more room in Family Link and Hearth didn't do it, every adult's phone is told
+(`outside_apps.py`). A kid holding a parent's phone looks just like a parent to Family Link, so this is how such a
+change comes to light.
+
+- **Told:** an app unblocked (still installed), with a **Block again** button (`hearth.block_app`); an app's time
+  limit raised or taken off (with **Block**); an app made Always allowed (with **Block**). The text says the app, what
+  changed and when, e.g. "Pins was unblocked in Family Link, not by Hearth (5:40 PM)."
+- **Not told:** tightening (a block, a lower limit), an app uninstalled, and Hearth's own changes: a `familylink`
+  block, unblock, pause or resume call for that kid and app in the action log in the last 30 minutes. Apps Hearth
+  pauses are left out of the limit comparison before and after.
+- Each kid's lists are compared with the last look (kept across restarts, so a change made while Home Assistant was
+  down is told at the next look). Nothing is told at the first look, or while a list is missing or cut short.
+- `hearth_outside_app_change` fires for each one (`person`, `app`, `change`: `unblocked`, `limit_raised`,
+  `limit_removed` or `always_allowed`, `before`, `after`), and the action log records it (`kind: outside_app_change`).
+- A parent's unblock of an app Hearth blocked is still respected (Hearth doesn't block it again by itself); Block again
+  makes it Hearth's block once more.
+
 ### Keeping the parents' apps in step
 
 A parent's change in a first-party app (Family Link, the Nintendo app, Microsoft Family Safety) is an adult's decision:

@@ -84,6 +84,7 @@ from .enforce import (
     fs_app_platform,
 )
 from .app_blocks import AppBlocks
+from .outside_apps import OutsideAppChanges
 from .exceptions import Allows, Lifted, end_of_day
 from .history import BONUS, DEVICE_BONUS, RAISE, History
 from .time_model import (
@@ -288,6 +289,8 @@ class Household:
         self.enforcement = Enforcement(hass, hub.entry.entry_id)
         # Hearth's own blocks of Android apps, through Family Link (app_blocks.py)
         self.blocks = AppBlocks(hass, self, hub.entry.entry_id)
+        # App limits loosened outside Hearth, told to the adults (outside_apps.py)
+        self.outside_apps = OutsideAppChanges(hass, self, hub.entry.entry_id)
         self.watch = WatchLog(hass, hub.entry.entry_id)
         self.allows = Allows(hass, hub.entry.entry_id)
         self.grants = Grants(hass, hub.entry.entry_id)
@@ -364,6 +367,7 @@ class Household:
         await self.categories_book.async_load()
         await self.enforcement.async_load()
         await self.blocks.async_load()
+        await self.outside_apps.async_load()
         await self.watch.async_load()
         await self.allows.async_load()
         await self.grants.async_load()
@@ -399,6 +403,7 @@ class Household:
         await self.live.async_flush()
         await self.enforcement.async_flush()
         await self.blocks.async_flush()
+        await self.outside_apps.async_flush()
         await self.watch.async_flush()
         await self.allows.async_flush()
         await self.grants.async_flush()
@@ -1385,6 +1390,8 @@ class Household:
         )
         # Hearth's app blocks in step with Family Link (an app that showed up, a block or unblock of an adult's)
         self.blocks.sync()
+        # Tell the adults what loosened in Family Link without Hearth (an unblock, a limit raised or off)
+        self.outside_apps.check()
         # An adult's allow of All screen time opens Google's and Microsoft's own limits too
         self.sync.mirror_allows()
         # Family Link's daily limit in step with today's time (backstop.py)
