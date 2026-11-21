@@ -216,7 +216,9 @@ class SuggestPush:
 
     def _item(self, person: Mapping[str, Any], suggestion: Mapping[str, Any]) -> Item:
         who = person.get("name") or person["id"]
-        minutes = suggestion["minutes"]
+        # The time to play a give names; a kid already over gets the catch-up on top (glance._suggestion)
+        minutes = suggestion.get("play") or suggestion["minutes"]
+        over = int(suggestion.get("over") or 0)
         if suggestion.get("device"):
             target = next((t for t in person.get("targets") or [] if t.get("id") == suggestion["device"]), {})
             device = target.get("display_name") or target.get("name") or "a device"
@@ -235,7 +237,7 @@ class SuggestPush:
             Action(
                 a["id"],
                 "Not today" if a["service"] == "hearth.dismiss_suggestion"
-                else f"+{duration((a.get('data') or {}).get('minutes') or 0)}",
+                else f"+{duration(max(0, ((a.get('data') or {}).get('minutes') or 0) - over))}",
                 a["service"],
                 dict(a.get("data") or {}),
             )

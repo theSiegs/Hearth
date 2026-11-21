@@ -313,33 +313,34 @@ def _paused_word(paused: dict[str, Any], names: dict[str, str]) -> str:
     return names.get(paused["group"], paused.get("name") or paused["group"]).lower()
 
 
-def _amounts(first: int, over: int = 0) -> list[int]:
-    """The two amounts a suggestion offers: its own, and a quarter or a half hour beside it. When the group is already
-    [over] its limit, both cover that first: the usual amount plus it, and a quarter hour more."""
-    if over:
-        return [first, first + 15]
+def _amounts(first: int) -> list[int]:
+    """The two amounts a suggestion offers, as time to play: its own, and a quarter or a half hour beside it."""
     return [first, 30 if first == 15 else 15]
 
 
 def _suggestion(
     person: str, key: str, text: str, reason: str, minutes: int, data: dict[str, Any], over: int = 0, **about: Any
 ) -> dict[str, Any]:
-    # Bonus time has no category (time_model.py): a give is hearth.add_time; extra time on one device stays add_bonus
+    # Bonus time has no category (time_model.py): a give is hearth.add_time; extra time on one device stays add_bonus.
+    # [minutes] is time to play: a kid already [over] gets that much on top, so a tap really opens it again, but each
+    # button reads as the time to play it gives ("+15", never "+3 h 50" after a long run past the limit)
     on_device = "device" in data
     actions = [
         _action(
-            f"suggest:{key}:{given}",
-            f"+{amount(given)}",
+            f"suggest:{key}:{over + play}",
+            f"+{amount(play)}",
             "hearth.add_bonus" if on_device else "hearth.add_time",
-            {"person": person, "minutes": given, **data} if on_device else {"person": person, "minutes": given},
-            primary=given == minutes,
+            {"person": person, "minutes": over + play, **data} if on_device
+            else {"person": person, "minutes": over + play},
+            primary=play == minutes,
         )
-        for given in _amounts(minutes, over)
+        for play in _amounts(minutes)
     ]
     actions.append(_action(f"suggest_dismiss:{key}", "not today", SERVICE_DISMISS, {"person": person, "key": key}))
-    # over: minutes already past the limit (0 when it isn't really over), for a page that says what a give leaves
-    return {"key": key, "text": text, "level": NOTICE, "reason": reason, "minutes": minutes, "over": over, **about,
-            "actions": actions}
+    # minutes: what the first button gives in all (catch-up included); play: the time to play it reads as; over:
+    # minutes already past the limit (0 when it isn't really over), for a page that says what a give leaves
+    return {"key": key, "text": text, "level": NOTICE, "reason": reason, "minutes": over + minutes, "play": minutes,
+            "over": over, **about, "actions": actions}
 
 
 def device_word(target: dict[str, Any] | None) -> str:
@@ -376,13 +377,31 @@ def _on_device(target: dict[str, Any] | None) -> str:
 OVER_MIN = 10
 
 
-def _over(group_row: dict[str, Any]) -> int:
-    """How far past its limit (budget plus today's extra time) a group is, rounded up to 5 minutes; 0 when it isn't,
-    or only by the few minutes counting runs behind enforcement (under OVER_MIN)."""
+def _over(group_row: dict[str, Any], rows: list[dict[str, Any]] | None = None) -> int:
+    """How much more bonus time it takes before a group opens again, rounded up to 5 minutes; 0 when none, or only
+    the few minutes counting runs behind enforcement (under OVER_MIN).
+
+    As time_model.account() counts it: the bonus time already given (All's row, N) pays the minutes past daily time
+    or, all together, past every category's limit (its budget plus a raise, a category row's "bonus"). Only what
+    that leaves unpaid is over; a category's minutes past its limit that the bonus already covers are not."""
     budget = group_row.get("budget")
     if budget is None or budget < 0:
         return 0
-    past = (group_row.get("used_minutes") or 0) - budget - max(0, group_row.get("bonus") or 0)
+    rows = rows if rows is not None else [group_row]
+    whole = next((r for r in rows if r.get("id") == ALL), None)
+    given = max(0, (whole or {}).get("bonus") or 0)
+    day = 0.0
+    if whole is not None and whole.get("budget") is not None and whole["budget"] >= 0:
+        day = (whole.get("used_minutes") or 0) - whole["budget"]
+    if group_row.get("id") == ALL:
+        past = day - given
+    else:
+        caps = sum(
+            max(0, (r.get("used_minutes") or 0) - r["budget"] - max(0, r.get("bonus") or 0))
+            for r in rows
+            if r.get("id") != ALL and r.get("budget") is not None and r["budget"] > 0
+        )
+        past = max(day, caps) - given
     return 0 if past < OVER_MIN else -(-int(past) // 5) * 5
 
 
@@ -408,7 +427,7 @@ def _sentence(person: dict[str, Any], reason: str, group: str, target: dict[str,
         parts = [f"Used {duration(used)} of {duration(cap)}" if cap is not None else f"Used {duration(used)}"]
         if given:
             parts[0] += f" (with {duration(given)} bonus)" if group == ALL else f" (limit raised by {duration(given)})"
-        over = _over(group_row)
+        over = _over(group_row, person.get("groups") or [])
         if over:
             parts.append(f"{duration(over)} over")
         if group != ALL:
@@ -478,11 +497,9 @@ def suggestions(
             continue
         word = _group_word(group["id"], names)
         minutes = minutes_for(group["id"], group["id"])
-        # Already over by more than the usual amount (time counted past the limit, or a give that didn't cover it):
-        # offer enough to catch up and still leave the usual amount, so a tap really opens it again
-        over = _over(group)
-        if over:
-            minutes = over + minutes
+        # Already over (time counted past the limit the bonus given doesn't cover): each give also catches up on it,
+        # so a tap really opens it again; the text and buttons name the time to play
+        over = _over(group, person.get("groups") or [])
         sentence, detail = _sentence(person, "group_out", group["id"], None, None, names)
         found.append(
             _suggestion(entity, key, f"{word} ran out · give {amount(minutes)}?", "group_out", minutes,
