@@ -205,6 +205,39 @@ async def test_hearths_own_nintendo_allow_is_not_told(hass: HomeAssistant, hass_
     assert _notices(hass) == {}
 
 
+async def test_explain_names_a_parent_s_own_block(hass: HomeAssistant, hass_client_no_auth) -> None:
+    from test_sources import _option
+
+    await _sam(hass, hass_client_no_auth, installed=[APP, OTHER])
+    _set(hass, installed=[APP, OTHER], blocked=[APP])
+    await _recompute(hass)
+    await _call(hass, "allow", {"people": ["person.sam"], "app": APP})
+
+    why = await _call(hass, "explain", {"person": "person.sam", "app": APP}, True)
+    assert why["allowed"] is False
+    assert {"kind": "blocked_app", "by": "family_link", "provider": "Family Link", "app": APP, "why": ["parent"],
+            "until": None} in why["blocked_by"]
+    assert (await _call(hass, "explain", {"person": "person.sam", "app": OTHER}, True))["allowed"] is True
+
+    hass.states.async_set("sensor.sam_family_safety", "ok", {"user_id": "ms-sam"})
+    await _option(hass, "enforce", {"person": "person.sam", "family_safety": "sensor.sam_family_safety"})
+    hass.states.async_set("sensor.sam_applications", "1", {"user_id": "ms-sam", "applications": [
+        {"app_id": "x:racer", "app_name": "Racer", "blocked": True, "limit_minutes": None}]})
+    await _recompute(hass)
+    racer = await _call(hass, "explain", {"person": "person.sam", "app": "x:racer"}, True)
+    assert racer["allowed"] is False
+    assert [b["by"] for b in racer["blocked_by"] if b["kind"] == "blocked_app"] == ["sensor.sam_applications"]
+
+
+async def test_hearths_own_block_is_explained_once(hass: HomeAssistant, hass_client_no_auth) -> None:
+    await _sam(hass, hass_client_no_auth, installed=[APP])
+    await _call(hass, "block_app", {"people": ["person.sam"], "app": APP})
+    _set(hass, installed=[APP], blocked=[APP])
+    await _recompute(hass)
+    why = await _call(hass, "explain", {"person": "person.sam", "app": APP}, True)
+    assert [b["by"] for b in why["blocked_by"] if b["kind"] == "blocked_app"] == ["hearth.block_app"]
+
+
 async def test_the_button_only_takes_lists_hearth_looks_at(hass: HomeAssistant, hass_client_no_auth) -> None:
     import pytest
     from homeassistant.exceptions import ServiceValidationError

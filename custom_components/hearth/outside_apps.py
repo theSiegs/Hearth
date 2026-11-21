@@ -257,6 +257,22 @@ class OutsideAppChanges:
                     )
         return looks
 
+    def blocked_elsewhere(self, person: str, app: str) -> list[dict[str, Any]]:
+        """hearth.explain's blocked_by for a block made in Family Link or Family Safety, not by Hearth (a parent's own,
+        in their app): no allow of Hearth's lifts it. Hearth's own block is told by app_blocks.explain instead."""
+        found: list[dict[str, Any]] = []
+        blocks = self.household.blocks
+        if app in blocks.blocked_packages(person) and not blocks.why_blocked(person, app):
+            found.append({"kind": "blocked_app", "by": "family_link", "provider": "Family Link", "app": app,
+                          "why": ["parent"], "until": None})
+        for entity_id in self._fs_applications(person, er.async_get(self.hass)):
+            state = self.hass.states.get(entity_id)
+            lists = read_family_safety(dict(state.attributes)) if state is not None else None
+            if lists is not None and app in lists["blocked"]:
+                found.append({"kind": "blocked_app", "by": entity_id, "provider": "Family Safety", "app": app,
+                              "why": ["parent"], "until": None})
+        return found
+
     def _fs_applications(self, person: str, registry: er.EntityRegistry) -> list[str]:
         """The kid's Family Safety Applications sensors: on the device of an enforcer's entity, or naming its
         account (user_id)."""

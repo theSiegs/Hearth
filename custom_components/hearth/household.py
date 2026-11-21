@@ -2379,6 +2379,8 @@ class Household:
         # Hearth's own block of the app (hearth.block_app, or the browser rule): no allow lifts it
         if app is not None:
             blocked += self.blocks.explain(person, app)
+            # A parent's own block, made in Family Link or Family Safety: no allow lifts it either
+            blocked += self.outside_apps.blocked_elsewhere(person, app)
         if app is not None:
             for enforcer in enforcers_from_options(self.options):
                 if (

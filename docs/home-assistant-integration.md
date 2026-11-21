@@ -811,7 +811,9 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
   sensor, with `app`, `device`, `limit_minutes` and `used_minutes`, until midnight; Hearth's allows and bonuses don't
   raise it, so an adult raises or removes it in Family Link; Hearth's own pauses aren't listed here) or `blocked_app`
   (Hearth's own block of the app, [Blocked apps](#blocked-apps): `by` is `hearth.block_app` or
-  `block_unsupported_browsers`, with `app` and `why`, until null; no allow lifts it). `place` is kept for place rules (none are built yet: a place only ends an exception so far). `until` is when it's allowed again (the latest of the blocks, null when one doesn't
+  `block_unsupported_browsers`, with `app` and `why`, until null; no allow lifts it; or a parent's own block made in
+  Family Link or Family Safety, not by Hearth: `by` is `family_link` or the Family Safety Applications sensor, with
+  `provider`, `app` and `why: ["parent"]`, until null; only unblocking it there lifts it, since `hearth.unblock_app` leaves a parent's own block). `place` is kept for place rules (none are built yet: a place only ends an exception so far). `until` is when it's allowed again (the latest of the blocks, null when one doesn't
   say), or, when allowed thanks to an exception, when that ends. `lifted` lists the holds an allow lifts now.
 - **Google TV's own Kids daily limit.** A kids profile can also have a daily limit set in Google TV itself (Family Link's
   or the TV's own Kids profile settings). When it runs out, Google TV shows its time up screen and blocks the whole
