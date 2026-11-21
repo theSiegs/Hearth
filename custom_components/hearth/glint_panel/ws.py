@@ -1,5 +1,6 @@
 """The panel's WebSocket commands, on any Home Assistant login with the panel's device secret: subscribe (its document), report
-(what it shows), verify_pin (a Parent PIN typed on it). Types are <domain>/panel/<name>."""
+(what it shows), verify_pin (a Parent PIN typed on it), set_start (its own Start, edited on the wall). Types are
+<domain>/panel/<name>."""
 
 from __future__ import annotations
 
@@ -9,7 +10,9 @@ import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
 
-from .const import ws_type
+from . import start
+from .const import BY_PANEL, MAX_STARTS, ws_type
+from .document import Refused
 from .manager import Panels
 
 _ID = vol.All(str, vol.Match(r"^[A-Za-z0-9_-]{8,64}$"))
@@ -64,6 +67,8 @@ def async_register_commands(hass: HomeAssistant, domain: str) -> None:
             vol.Optional("sw_version"): vol.All(str, vol.Length(max=64)),
             vol.Optional("model"): vol.All(str, vol.Length(max=64)),
             vol.Optional("unpaired"): bool,
+            # The room's layout as the panel lays it out (built-in kinds only), to start a first change from
+            vol.Optional("room_layout"): vol.Any(None, list),
         }
     )
     @websocket_api.async_response
@@ -80,6 +85,12 @@ def async_register_commands(hass: HomeAssistant, domain: str) -> None:
         if panels.too_many_reports(device_id):
             connection.send_error(msg["id"], "too_often", "Report on change only")
             return
+        if msg.get("room_layout") is not None:
+            try:
+                msg = {**msg, "room_layout": start.check_tiles(msg["room_layout"], panels.never_dealt, built_in_only=True)}
+            except Refused as err:
+                _invalid(connection, msg["id"], domain, str(err))
+                return
         panels.report(device_id, msg)
         connection.send_result(msg["id"])
 
@@ -112,5 +123,48 @@ def async_register_commands(hass: HomeAssistant, domain: str) -> None:
             translation_key=error, translation_domain=domain, translation_placeholders={"retry_in": str(retry_in)},
         )
 
-    for command in (ws_subscribe, ws_report, ws_verify_pin):
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): ws_type(domain, "set_start"),
+            vol.Required("device_id"): _ID,
+            vol.Required("secret"): _SECRET,
+            vol.Required("start"): vol.Any(None, dict),
+            vol.Optional("base_version", default=None): vol.Any(None, vol.All(str, vol.Length(max=32))),
+        }
+    )
+    @callback
+    def ws_set_start(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+        """The panel's whole Start after an edit on the wall (null: the room's layout), made from [base_version]:
+        {version, undo}; else error too_often, stale (version: the stored one) or invalid (why)."""
+        panels = _panels(hass, domain, connection, msg)
+        if panels is None:
+            return
+        device_id = msg["device_id"]
+        if panels.too_many_starts(device_id):
+            connection.send_error(msg["id"], "too_often", f"At most {MAX_STARTS} Start changes a minute")
+            return
+        stored = panels.start_version(device_id)
+        if msg["base_version"] != stored:
+            connection.send_error(
+                msg["id"], "stale", f"Start was changed elsewhere (now {stored or 'null'})",
+                translation_key="stale", translation_domain=domain,
+                translation_placeholders={"version": stored or ""},
+            )
+            return
+        try:
+            tiles = start.check_start(msg["start"], panels.never_dealt)
+        except Refused as err:
+            _invalid(connection, msg["id"], domain, str(err))
+            return
+        version, undo = panels.set_start(device_id, tiles, BY_PANEL)
+        connection.send_result(msg["id"], {"version": version, "undo": undo})
+
+    for command in (ws_subscribe, ws_report, ws_verify_pin, ws_set_start):
         websocket_api.async_register_command(hass, command)
+
+
+def _invalid(connection: websocket_api.ActiveConnection, msg_id: int, domain: str, why: str) -> None:
+    connection.send_error(
+        msg_id, "invalid", f"Not a Start layout: {why}",
+        translation_key="invalid", translation_domain=domain, translation_placeholders={"why": why},
+    )

@@ -1,4 +1,4 @@
-# Glint Panel configuration, `glint.panel-config/1`
+# Glint Panel configuration, `glint.panel-config/1.1`
 
 Owner: the integration that serves it, `<d>` below (today Hearth, `hearth`). A Glint Panel is a wall tablet, one per
 room. Its settings live in Home Assistant: an administrator approves its pairing code and picks the room, and the
@@ -62,7 +62,8 @@ A later poll is 404: the secret is never given again. The panel keeps `secret` f
 
 Removing the panel's device in Home Assistant removes the panel (its secret stops working); the owner's login and
 token are left alone (revoke the token in the user's profile to shut the panel out of Home Assistant too). Pairing
-again gives a new secret; the panel's settings, room and proxy key stay.
+again gives a new secret; the panel's settings, room and proxy key stay, and so do its own Start, its last 10 Start
+changes and the room layout it last reported (removing the device drops them).
 
 ## The WebSocket commands
 
@@ -80,12 +81,37 @@ No heartbeat.
 When the panel is removed or paired again, each open subscription gets one last event `{"unpaired": true}` and no
 more.
 
-### `<d>/panel/report {device_id, secret, view?, version?, on_tablet?, sw_version?, model?, unpaired?}`
+### `<d>/panel/report {device_id, secret, view?, version?, on_tablet?, sw_version?, model?, room_layout?, unpaired?}`
 
 Sent on change only (at most 30 a minute: error `too_often`). Sets the **View** entity (`photos`, `tiles`, `night`,
 `off`, `dark_clock` (or `dark clock`), `pairing`; anything else: unknown), **On the tablet** (words, or a list of them
 joined with `; `; none: `none`), and the device's `sw_version` / `model`. `version` is the document version the panel
 holds (`get_panel` says whether it's up to date). `unpaired: true` removes the panel: its device and entities.
+
+`room_layout` (since 1.1; the panel sends it only to a server whose document says `glint.panel-config/1.1` or later,
+and only when it changes): the room's layout as the panel lays it out, in `start`'s tile shape, built-in kinds only.
+The server keeps the last one per panel only to start a first `change_panel_start` from; it is not the panel's Start.
+A layout that isn't right: error `invalid` (as `set_start`), nothing of the report taken. `null` forgets it.
+
+### `<d>/panel/set_start {device_id, secret, start, base_version}`
+
+The panel's whole `start` after an edit made on the wall (`{"tiles": [...]}`; its `changed` and `version` are ignored),
+or `null` for "back to the room's layout". `base_version` is the `start.version` the edit started from (`null`, or
+left out, when it started from the room's layout).
+
+- At most 30 a minute per panel (counted apart from reports): error `too_often`.
+- `base_version` differs from the stored `start.version` (both `null` counts as equal): error `stale`,
+  `translation_placeholders.version` the stored one (`""` when the stored `start` is `null`). Nothing changes; the panel
+  takes the document it is pushed (Home Assistant wins) and shows "changed elsewhere · undo".
+- Not a right layout (see [The panel's own Start](#the-panels-own-start)): error `invalid`,
+  `translation_placeholders.why` the first problem in words (`no tile kind toaster`, `lock.front_door is a normal
+  state, never dealt`, `tiles heat_lamp and clock overlap`).
+- Else it is stored, stamped `changed: {"by": "panel", "at": now, "undo": <new id>}`; the `start` before it is kept as
+  one of the last 10 changes; the document is pushed to every subscription of that panel. Result `{"version": "<new
+  start.version or null>", "undo": "<id>"}`.
+- First time (migration): a panel that kept a Start on the tablet before the server had one sends it once with
+  `base_version: null`; with the stored `start` still `null` it is taken as above.
+- A wrong secret, or another panel's: `unauthorized`.
 
 ### `<d>/panel/verify_pin {device_id, secret, pin}`
 
@@ -127,13 +153,15 @@ such as presence and the room's thermostat itself).
   "bed": null,
   "proxy": {"on": false, "name": "kitchen-panel", "key": "...base64..."},
   "voice": {"heard": null, "reply": null, "reply_attribute": null, "show": null},
-  "news": {"seen": null}
+  "news": {"seen": null},
+  "start": null
 }
 ```
 
 - `version`: the first 8 hex digits of a SHA-256 of the rest of the document: it changes exactly when the content
   does.
-- `schema` major is 1. Adding fields is a minor change (`glint.panel-config/1.1`), read by old panels. Renaming or
+- `schema` is `glint.panel-config/1.1` (1.1 added `start`, and `room_layout` in reports). The major is 1. Adding
+  fields is a minor change, read by old panels. Renaming or
   removing one is a new major; old panels then keep their cached document.
 - `panel.name`: the device's name (the owner's, when they renamed it). `panel.panel_areas`: every paired panel's area,
   sorted (the house panel needs it). `panel.house_panel`: at most one panel's is true.
@@ -152,6 +180,52 @@ such as presence and the room's thermostat itself).
   integration (or plain helpers), never to the panel part.
 - The one secret in it is `proxy.key`. The document goes only to the panel that owns it, over its own subscription;
   it is never in an entity's state or attributes, nor in a service's answer.
+
+## The panel's own Start
+
+`start` is `null` until something is placed: the panel lays out Start by its room rule, exactly as before 1.1. Once
+something is placed (from the wall with `set_start`, or with `change_panel_start`):
+
+```json
+"start": {
+  "tiles": [
+    {"id": "clock",      "kind": "clock",      "col": 1, "row": 1, "w": 2, "h": 1},
+    {"id": "calendar",   "kind": "calendar",   "col": 3, "row": 1, "w": 2, "h": 2},
+    {"id": "room_stack", "kind": "room_stack", "col": 1, "row": 3, "w": 2, "h": 1,
+     "deals": [{"entity": "fan.bedroom_fan", "when": "on"},
+               {"entity": "light.porch", "when": {"from": "18:00", "until": "22:00", "days": ["mon", "tue"]}}]},
+    {"id": "heat_lamp",  "kind": "entity", "entity": "switch.heat_lamp", "col": 7, "row": 3, "w": 2, "h": 1},
+    {"id": "stack",      "kind": "stack", "name": "porch and yard",
+     "entities": ["light.porch", "light.yard"], "col": 5, "row": 4, "w": 2, "h": 1}
+  ],
+  "changed": {"by": "home assistant", "at": "2026-11-21T19:40:00Z", "undo": "a41c07"},
+  "version": "5e0d1a2b"
+}
+```
+
+- Cells count from 1; `w`, `h` in cells. `col`, `row`, `w`, `h` are whole numbers from 1, and `col + w - 1 <= 8`,
+  `row + h - 1 <= 8` (the page's larger side: 8 x 5 landscape, 5 x 8 portrait). Tiles may not overlap. The panel
+  leaves out a tile that is off its page.
+- `kind`: `clock`, `calendar`, `weather`, `climate_stack`, `family`, `arrivals`, `media_stack`, `room_stack`,
+  `routines_stack` (each at most once), `entity` (needs `entity`), `stack` (hand-made: needs `name`, at most 40
+  letters, and `entities`, 1 to 12 different ones). Anything else is refused. Other fields of a tile are dropped.
+- `id`: `[a-z0-9_]{1,32}`, unique. A built-in kind's id is its kind; a new entity tile's is its entity's object id, a new
+  stack's `stack`, with a number added on a clash (`stack2`).
+- `deals` only on `room_stack` and `stack` tiles, each entity once: `when` is `"on"` or `{from, until, days}` (`HH:MM`,
+  `mon`...`sun`). Never for `lock`, `binary_sensor`, `sensor`, `person`, `device_tracker`, `alarm_control_panel`, or a
+  `cover` of class `door`, `garage` or `gate`: those are normal states, never alerts.
+- Stacks derive their contents: `room_stack` lists no devices (the panel fills it from the room). Only placed tiles,
+  hand-made stacks' members and `deals` are stored. The panel evaluates `deals` itself.
+- At most 40 tiles and 16 KB of tiles as JSON.
+- `changed`: who made the last change (`panel` from the wall, `home assistant` from a service, or the name a service
+  call gave as `by`), when (UTC), and the undo id that takes it back.
+- `version`: the first 8 hex digits of a SHA-256 of `tiles` only (a new stamp alone doesn't change it); `set_start`'s
+  `base_version` is checked against it. The document's own `version` changes with any part of `start`.
+- When Home Assistant renames an entity id, it is rewritten in every panel's `start` (`entity`, `entities`,
+  `deals[].entity`, and the kept changes) and pushed; the tile keeps its id. An entity removed from Home Assistant is
+  kept: the panel marks its tile until someone removes it.
+- The last 10 changes are kept per panel in `<d>.panels`, each the `start` from before it with its undo id (oldest
+  dropped). Pairing again keeps them; removing the panel's device drops them.
 
 ## Entities on each panel device
 
@@ -196,12 +270,40 @@ House-wide: `family_calendars` (calendars), `person_calendars` (`{person: [calen
 after_bedtimes?}]`, at most 12; times `HH:MM`, days `mon`…`sun`), `commute_window` (`{from, until, days}`). `null` or
 `[]`: back to the default. Answers `{"defaults": ...}` as `get_panel` gives them.
 
+### `<d>.change_panel_start`
+
+`device_id` (the panel's device), `ops` (a list, applied in order, all or none), `by` (optional: who is changing it, at
+most 40 letters; default `home assistant`). Cells from 1:
+
+| op | fields | does |
+|---|---|---|
+| `add` | `kind` (default `entity`), `entity` (for `entity`), `size` `"2x1"` (default), `at` `[col, row]`? | places a tile; no `at`: the first fit from the top-left, row by row. Refused: a built-in kind already there, the same entity already placed on its own, an entity Home Assistant doesn't have, no room; `stack` (use `make_stack`) |
+| `move` | `tile`, `at` | moves it there if it fits |
+| `resize` | `tile`, `size` `"WxH"` | resizes it in place if it fits |
+| `remove` | `tile` | takes it off Start (a hand-made stack's devices go back to the room stack) |
+| `deals` | `tile` (`room_stack` or a `stack`), `entity`, `when` (`"on"`, `{from, until, days}`, or `null` to stop) | sets one device's "deals when" (in a `stack`, one of its members) |
+| `make_stack` | `name`, `entities` (1 to 12), `size`?, `at`? | a hand-made stack; those devices' own `entity` tiles leave Start, and they leave other hand-made stacks (an emptied one goes) |
+| `reset` | | `start: null` (the room's layout) |
+
+The first change of a panel whose `start` is `null` starts from the `room_layout` it last reported; none reported yet:
+refused, `the panel hasn't said its layout yet`. The result is checked as `set_start`'s, stamped, the `start` before it
+kept as a change, and pushed. Answer: `{"changed": "test lamp placed at column 5, row 1; ...", "start": {...} | null,
+"undo": "<id>"}`, the words of each op joined with `; `. Refused: nothing changes, and the error says why (`no room for
+a 2×2 tile`, `no tile lamp`, `no op explode`).
+
+### `<d>.undo_panel_start`
+
+`device_id`, `undo` (an id from a change's answer, `changed.undo`, or `get_panel`'s `start_versions`), `by`?. Puts back
+the `start` from before that change (any of the last 10) as a new change, pushes, and answers as `change_panel_start`
+(`changed`: `change <id> undone`). An unknown or expired id is refused; nothing changes.
+
 ### `<d>.get_panel`
 
 `device_id` optional (none: every panel). Answers `{"panels": [...], "defaults": {...}}`: per panel its `device_id`,
 `ha_device_id`, `name`, `area_id`, `settings` (each key as `{"value", "source": "set" | "derived"}`), `connected`,
 `view`, `on_the_tablet`, `signed_in_as` (`{"user", "token"}`: the names of the login its last subscription used, null
-before one), `up_to_date` (the version it reported is the current one) and `document` (without secrets);
+before one), `up_to_date` (the version it reported is the current one), `document` (without secrets), `start` (as in the
+document) and `start_versions` (the kept Start changes, newest first, each `{"undo", "changed": {"by", "at"}}`);
 each house-wide value as `{"value", "source"}`. Never a secret.
 
 ## Not yet built

@@ -7,7 +7,9 @@ reason; the host is attached while the entry is loaded. Saving a panel's setting
 
 from __future__ import annotations
 
+import copy
 import logging
+import secrets
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -23,15 +25,19 @@ from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
-from . import document
+from . import document, start
 from .const import (
     CONNECTED_GRACE,
     HOUSE_PANEL,
     IDENTIFIER_PREFIX,
     MAX_REPORTS,
+    MAX_STARTS,
+    NEVER_DEALT_COVERS,
+    NEVER_DEALT_DOMAINS,
     NOTHING_ON_TABLET,
     PUSH_DELAY,
     REPORT_WINDOW,
+    START_VERSIONS,
     STORE_VERSION,
     VIEWS,
     identifier,
@@ -60,6 +66,7 @@ class _Live:
     subs: dict[int, Subscription] = field(default_factory=dict)
     closed_at: datetime | None = None
     reports: list[datetime] = field(default_factory=list)
+    starts: list[datetime] = field(default_factory=list)
     login: dict[str, str | None] | None = None
 
 
@@ -110,6 +117,7 @@ class Panels:
             self._loaded = True
             self.hass.bus.async_listen(dr.EVENT_DEVICE_REGISTRY_UPDATED, self._device_updated)
             self.hass.bus.async_listen(ar.EVENT_AREA_REGISTRY_UPDATED, self._area_updated)
+            self.hass.bus.async_listen(er.EVENT_ENTITY_REGISTRY_UPDATED, self._entity_updated)
             self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._stopping)
         self.host = host
         self.entry_id = host.entry_id
@@ -219,6 +227,7 @@ class Panels:
             house_panel=self.house_panel() == device_id,
             panel_areas=self.panel_areas(),
             key=record.get("key"),
+            start=self.start_section(device_id),
         )
 
     def value(self, device_id: str, key: str) -> Any:
@@ -287,6 +296,8 @@ class Panels:
             "key": key or document.new_proxy_key(),
             "view": record.get("view") if record else None,
             "on_tablet": record.get("on_tablet") if record else None,
+            # The panel's own Start, its last changes (undo) and the room layout it last reported stay too
+            **{k: record[k] for k in ("start", "start_versions", "room_layout") if record and k in record},
         }
         self._save()
         async_dispatcher_send(hass, signal_added(self.domain), device_id)
@@ -352,12 +363,20 @@ class Panels:
     # Reports
 
     def too_many_reports(self, device_id: str) -> bool:
+        return self._too_often(device_id, "reports", MAX_REPORTS)
+
+    def too_many_starts(self, device_id: str) -> bool:
+        """set_start: at most MAX_STARTS a minute per panel, counted apart from its reports."""
+        return self._too_often(device_id, "starts", MAX_STARTS)
+
+    def _too_often(self, device_id: str, kind: str, most: int) -> bool:
         now = dt_util.utcnow()
         live = self._live.setdefault(device_id, _Live())
-        live.reports = [t for t in live.reports if now - t < REPORT_WINDOW]
-        if len(live.reports) >= MAX_REPORTS:
+        times = [t for t in getattr(live, kind) if now - t < REPORT_WINDOW]
+        setattr(live, kind, times)
+        if len(times) >= most:
             return True
-        live.reports.append(now)
+        times.append(now)
         return False
 
     def report(self, device_id: str, msg: dict[str, Any]) -> None:
@@ -372,6 +391,12 @@ class Panels:
             record["on_tablet"] = (words or "").strip()[:MAX_ON_TABLET] or None if isinstance(words, str) else None
         if "version" in msg:
             record["has_version"] = msg["version"] if isinstance(msg["version"], str) else None
+        if "room_layout" in msg:
+            # Checked by the command (start.check_tiles, built-in kinds only); kept only to seed a first change
+            if msg["room_layout"] is None:
+                record.pop("room_layout", None)
+            else:
+                record["room_layout"] = msg["room_layout"]
         updates: dict[str, Any] = {}
         for key in ("sw_version", "model"):
             if isinstance(msg.get(key), str) and msg[key] and msg[key] != record.get(key):
@@ -387,6 +412,100 @@ class Panels:
 
     def on_tablet(self, device_id: str) -> str:
         return self.panels.get(device_id, {}).get("on_tablet") or NOTHING_ON_TABLET
+
+    # The panel's own Start
+
+    def never_dealt(self, entity_id: str) -> bool:
+        """A normal state, never dealt out: doors, locks, garages, gates (and covers of those classes), sensors,
+        people and trackers, alarm panels."""
+        domain = entity_id.split(".", 1)[0]
+        if domain in NEVER_DEALT_DOMAINS:
+            return True
+        if domain != "cover":
+            return False
+        state = self.hass.states.get(entity_id)
+        device_class = state.attributes.get("device_class") if state is not None else None
+        if device_class is None and (entry := er.async_get(self.hass).async_get(entity_id)) is not None:
+            device_class = entry.device_class or entry.original_device_class
+        return device_class in NEVER_DEALT_COVERS
+
+    def start_tiles(self, device_id: str) -> list[dict[str, Any]] | None:
+        stored = self.panels[device_id].get("start")
+        return copy.deepcopy(stored["tiles"]) if isinstance(stored, dict) else None
+
+    def start_version(self, device_id: str) -> str | None:
+        return start.version_of(self.start_tiles(device_id))
+
+    def start_section(self, device_id: str) -> dict[str, Any] | None:
+        """The document's `start`: {tiles, changed, version}, or None for the room's layout."""
+        stored = self.panels[device_id].get("start")
+        if not isinstance(stored, dict):
+            return None
+        return {
+            "tiles": copy.deepcopy(stored["tiles"]),
+            "changed": copy.deepcopy(stored.get("changed")),
+            "version": start.version_of(stored["tiles"]),
+        }
+
+    def room_layout(self, device_id: str) -> list[dict[str, Any]]:
+        """The room's layout the panel last reported, to start a first change from; NotReady before it said one."""
+        layout = self.panels[device_id].get("room_layout")
+        if not isinstance(layout, list):
+            raise start.NotReady("the panel hasn't said its layout yet")
+        return copy.deepcopy(layout)
+
+    def set_start(self, device_id: str, tiles: list[dict[str, Any]] | None, by: str) -> tuple[str | None, str]:
+        """Checked [tiles] (None: the room's layout) become the panel's Start, stamped [by] now with a new undo id; the
+        Start before is kept for undo (the last START_VERSIONS). Pushed. (The new version, the undo id.)"""
+        record = self.panels[device_id]
+        versions: list[dict[str, Any]] = record.setdefault("start_versions", [])
+        undo = secrets.token_hex(3)
+        while any(v.get("undo") == undo for v in versions):
+            undo = secrets.token_hex(3)
+        at = dt_util.utcnow().replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+        versions.append({"undo": undo, "changed": {"by": by, "at": at}, "start": self.start_tiles(device_id)})
+        del versions[:-START_VERSIONS]
+        if tiles is None:
+            record.pop("start", None)
+        else:
+            record["start"] = {"tiles": copy.deepcopy(tiles), "changed": {"by": by, "at": at, "undo": undo}}
+        self._save()
+        self._changed()
+        return start.version_of(tiles), undo
+
+    def undo_start(self, device_id: str, undo: str) -> list[dict[str, Any]] | None:
+        """The Start from before change [undo] (one of the kept ones); Refused when it's unknown or expired."""
+        for version in self.panels[device_id].get("start_versions", []):
+            if version.get("undo") == undo:
+                return copy.deepcopy(version.get("start"))
+        raise document.Refused(f"no change {undo} to undo (only the last {START_VERSIONS} are kept)")
+
+    def start_versions(self, device_id: str) -> list[dict[str, Any]]:
+        """The kept changes, newest first: {undo, changed: {by, at}} (what get_panel shows)."""
+        return [
+            {"undo": v["undo"], "changed": copy.deepcopy(v.get("changed"))}
+            for v in reversed(self.panels[device_id].get("start_versions", []))
+        ]
+
+    @callback
+    def _entity_updated(self, event: Event) -> None:
+        """An entity's id was renamed: rewritten in every panel's Start (and its kept changes), and pushed. A removed
+        entity is kept: the panel marks its tile until someone removes it."""
+        data = event.data
+        if data.get("action") != "update" or not data.get("old_entity_id"):
+            return
+        old, new = data["old_entity_id"], data["entity_id"]
+        touched = False
+        for record in self.panels.values():
+            stored = record.get("start")
+            if isinstance(stored, dict) and start.rename(stored.get("tiles"), old, new):
+                touched = True
+            for version in record.get("start_versions", []):
+                if start.rename(version.get("start"), old, new):
+                    touched = True
+        if touched:
+            self._save()
+            self._changed()
 
     # Subscriptions
 
@@ -543,6 +662,9 @@ class Panels:
             "on_the_tablet": self.on_tablet(device_id),
             "up_to_date": record.get("has_version") == doc["version"],
             "document": document.public(doc),
+            # The panel's own Start (as in the document; null: the room's layout) and the changes undo can take back
+            "start": copy.deepcopy(doc["start"]),
+            "start_versions": self.start_versions(device_id),
         }
 
     def describe_house(self) -> dict[str, Any]:

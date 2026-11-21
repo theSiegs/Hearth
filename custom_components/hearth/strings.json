@@ -1483,6 +1483,42 @@
     "get_panel": {
       "name": "Get panels",
       "description": "Each Glint Panel's settings, each marked set or derived, with Connected, View and On the tablet (no secrets). With no target: every panel. Administrators and adults only."
+    },
+    "change_panel_start": {
+      "name": "Change a panel's Start",
+      "description": "Places, moves, resizes or removes tiles on a Glint Panel's Start, makes a stack, says when a stack deals a device out, or goes back to the room's layout. The changes are made in order, all or none. Answers what changed, the new Start and the undo id. Administrators and adults only.",
+      "fields": {
+        "device_id": {
+          "name": "Panel",
+          "description": "The panel's device."
+        },
+        "ops": {
+          "name": "Changes",
+          "description": "A list, in order: add {kind, entity, size \"2x1\", at [column, row]}, move {tile, at}, resize {tile, size}, remove {tile}, deals {tile, entity, when: \"on\" or {from, until, days} or null}, make_stack {name, entities, size, at}, reset. Cells count from 1."
+        },
+        "by": {
+          "name": "By",
+          "description": "Who made the change, as the panel shows it. Default: home assistant."
+        }
+      }
+    },
+    "undo_panel_start": {
+      "name": "Undo a panel's Start change",
+      "description": "Puts back a Glint Panel's Start from before one of its last 10 changes, as a new change. Administrators and adults only.",
+      "fields": {
+        "device_id": {
+          "name": "Panel",
+          "description": "The panel's device."
+        },
+        "undo": {
+          "name": "Undo id",
+          "description": "The undo id a change answered with (get_panel lists them)."
+        },
+        "by": {
+          "name": "By",
+          "description": "Who made the change, as the panel shows it. Default: home assistant."
+        }
+      }
     }
   },
   "issues": {
@@ -1500,6 +1536,12 @@
     },
     "no_pin": {
       "message": "No Parent PIN is set."
+    },
+    "stale": {
+      "message": "Start was changed elsewhere (now {version})."
+    },
+    "invalid": {
+      "message": "Not a Start layout: {why}."
     }
   }
 }

@@ -1032,3 +1032,36 @@ get_panel:
       selector:
         device:
           integration: hearth
+
+change_panel_start:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: hearth
+    ops:
+      required: true
+      example: '[{"op": "add", "entity": "switch.test_lamp"}]'
+      selector:
+        object:
+    by:
+      example: "home assistant"
+      selector:
+        text:
+
+undo_panel_start:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: hearth
+    undo:
+      required: true
+      example: "a41c07"
+      selector:
+        text:
+    by:
+      selector:
+        text:

@@ -1,4 +1,4 @@
-"""A panel's document (glint.panel-config/1), and checking every value that goes into it.
+"""A panel's document (glint.panel-config/1.1), and checking every value that goes into it.
 
 Values come from three places: set_panel / set_panel_defaults and the entities (strict: a value that isn't right is
 refused, naming it), and a pair body's seed (lax: a field that isn't right, or names an entity Home Assistant doesn't
@@ -351,8 +351,10 @@ def build(
     house_panel: bool,
     panel_areas: list[str],
     key: str | None,
+    start: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """The whole document for one panel: every key present, null or [] where the panel derives it."""
+    """The whole document for one panel: every key present, null or [] where the panel derives it. [start]: the
+    panel's own Start section ({tiles, changed, version}), None for the room's layout."""
     v = values
 
     def switch(k: str) -> bool:
@@ -405,6 +407,8 @@ def build(
         },
         # Where the panel keeps which news it has shown (an input_text); null: the panel's own fallback
         "news": {"seen": v.get("news_seen")},
+        # The panel's own Start (/1.1): null until something is placed (the room's layout)
+        "start": copy.deepcopy(start),
     }
     doc["version"] = version_of(doc)
     return doc

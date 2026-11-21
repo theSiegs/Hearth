@@ -343,11 +343,11 @@ async def test_a_panel_with_only_a_room_has_a_whole_document(
     _entry, client = await _household(hass, hass_client_no_auth)
     await _pair_panel(hass, client, area_id="kitchen")
     doc = _panels(hass).document(PANEL_ID)
-    assert doc["schema"] == SCHEMA == "glint.panel-config/1"
+    assert doc["schema"] == SCHEMA == "glint.panel-config/1.1"
     assert doc["served_by"] == "hearth"
     assert set(doc) == {
         "schema", "served_by", "version", "panel", "look", "photos", "calendars", "wake", "night", "doors",
-        "messages", "routines", "bed", "proxy", "voice", "news",
+        "messages", "routines", "bed", "proxy", "voice", "news", "start",
     }
     assert "parent_pins" not in doc and "parent_pins_version" not in doc
     assert doc["panel"] == {
@@ -363,6 +363,8 @@ async def test_a_panel_with_only_a_room_has_a_whole_document(
     assert document.proxy_key(doc["proxy"]["key"])
     assert doc["voice"] == {"heard": None, "reply": None, "reply_attribute": None, "show": None}
     assert doc["news"] == {"seen": None}
+    # The panel's own Start: the room's layout until something is placed
+    assert doc["start"] is None
 
 
 async def test_set_beats_derived_and_the_version_follows_the_content(

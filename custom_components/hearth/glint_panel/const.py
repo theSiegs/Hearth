@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 # The document's schema: adding fields is a minor change (/1.1), renaming or removing one a new major
-SCHEMA = "glint.panel-config/1"
+SCHEMA = "glint.panel-config/1.1"
 # A pairing's kind for a Glint Panel
 KIND = "panel"
 
@@ -119,3 +119,36 @@ DEFAULT_WINDOWS = (
 DEFAULT_COMMUTE = {"from": "07:00", "until": "08:30", "days": list(WEEKDAYS)}
 MAX_WINDOWS = 12
 MAX_LIST = 50
+
+# The panel's own Start (the document's `start`): its tiles, cells counted from 1
+START_BUILT_IN = (
+    "clock",
+    "calendar",
+    "weather",
+    "climate_stack",
+    "family",
+    "arrivals",
+    "media_stack",
+    "room_stack",
+    "routines_stack",
+)
+START_KINDS = (*START_BUILT_IN, "entity", "stack")
+# Only these tiles say when one of their devices is dealt out
+START_DEALS_ON = ("room_stack", "stack")
+# The larger side of the panel's page (8 x 5 landscape, 5 x 8 portrait): no tile goes past it
+START_GRID = 8
+START_MAX_TILES = 40
+START_MAX_BYTES = 16 * 1024
+START_MAX_STACK = 12
+START_MAX_DEALS = 50
+START_MAX_NAME = 40
+# Normal states, never dealt out (doors are never alerts): these domains, and covers of these classes
+NEVER_DEALT_DOMAINS = ("lock", "binary_sensor", "sensor", "person", "device_tracker", "alarm_control_panel")
+NEVER_DEALT_COVERS = ("door", "garage", "gate")
+# Undo: a panel's last changes to its Start that can be taken back
+START_VERSIONS = 10
+# set_start: at most this many a minute per panel, as report
+MAX_STARTS = 30
+# Who changed Start: the panel itself, or a service (unless the call names an agent)
+BY_PANEL = "panel"
+BY_SERVICE = "home assistant"
