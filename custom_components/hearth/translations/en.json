@@ -13,10 +13,12 @@
         "title": "Pair {name}?",
         "description": "Check that {name} shows this code:\n\n**{code}**\n\n{client}Pair it only if the codes match. A device you don't recognize, or a code that doesn't match, may be someone else's: close this instead.",
         "data": {
-          "person": "Whose device is it?"
+          "person": "Whose device is it?",
+          "area_id": "Room"
         },
         "data_description": {
-          "person": "For a phone or tablet: the person it belongs to. Its screen time counts for them."
+          "person": "For a phone or tablet: the person it belongs to. Its screen time counts for them.",
+          "area_id": "For a Glint Panel: the room it hangs in (optional). It's named for the room."
         }
       }
     },
@@ -103,6 +105,20 @@
       },
       "bonus_time_left": {
         "name": "Bonus time left"
+      },
+      "panel_view": {
+        "name": "View",
+        "state": {
+          "photos": "Photos",
+          "tiles": "Tiles",
+          "night": "Night",
+          "off": "Off",
+          "dark_clock": "Dark clock",
+          "pairing": "Pairing"
+        }
+      },
+      "panel_on_the_tablet": {
+        "name": "On the tablet"
       }
     },
     "binary_sensor": {
@@ -143,6 +159,55 @@
       },
       "bonus_today": {
         "name": "{group} limit raised today"
+      }
+    },
+    "switch": {
+      "panel_photo_caption": {
+        "name": "Photo captions"
+      },
+      "panel_on_this_day": {
+        "name": "On this day"
+      },
+      "panel_calendar_titles": {
+        "name": "Calendar titles"
+      },
+      "panel_pin_to_unlock": {
+        "name": "Parent PIN to unlock doors"
+      },
+      "panel_someone_in_front": {
+        "name": "Wake when someone is in front"
+      },
+      "panel_dark_at_night": {
+        "name": "Dark at night"
+      },
+      "panel_says_who_has_a_message": {
+        "name": "Says who has a message"
+      },
+      "panel_house_panel": {
+        "name": "House panel"
+      },
+      "panel_bluetooth_proxy": {
+        "name": "Bluetooth proxy"
+      }
+    },
+    "select": {
+      "panel_motion": {
+        "name": "Motion",
+        "state": {
+          "still": "Still",
+          "calm": "Calm",
+          "easy": "Easy",
+          "lively": "Lively"
+        }
+      },
+      "panel_photos_every": {
+        "name": "Next photo every",
+        "state": {
+          "30": "30 s",
+          "60": "1 min",
+          "120": "2 min",
+          "300": "5 min"
+        }
       }
     }
   },
@@ -1272,14 +1337,161 @@
         "person": {
           "name": "Person",
           "description": "Whose phone it is (a phone only)."
+        },
+        "area_id": {
+          "name": "Room",
+          "description": "A Glint Panel's room (optional)."
         }
       }
+    },
+    "set_panel": {
+      "name": "Set a panel",
+      "description": "Changes a Glint Panel's settings. Only the fields given change; null or [] puts one back to what the panel works out itself. Answers with the panel's settings (without secrets). Administrators and adults only.",
+      "fields": {
+        "people": {
+          "name": "People",
+          "description": "Whose room it is (person entities); [] for a shared room."
+        },
+        "extra_areas": {
+          "name": "Extra rooms",
+          "description": "Other rooms the panel shows (area ids)."
+        },
+        "routines": {
+          "name": "Routines",
+          "description": "Scripts or scenes the panel offers."
+        },
+        "bed_left": {
+          "name": "Bed, left side",
+          "description": "{connected, scripts, positions}."
+        },
+        "bed_right": {
+          "name": "Bed, right side",
+          "description": "{connected, scripts, positions}."
+        },
+        "photos": {
+          "name": "Photo album",
+          "description": "A camera entity for this panel's photos (else the house's)."
+        },
+        "presence": {
+          "name": "Presence",
+          "description": "An entity that says someone is in the room."
+        },
+        "voice_heard": {
+          "name": "Voice: heard",
+          "description": "The entity with what the voice assistant heard."
+        },
+        "voice_reply": {
+          "name": "Voice: reply",
+          "description": "The entity with the voice assistant's reply."
+        },
+        "voice_reply_attribute": {
+          "name": "Voice: reply attribute",
+          "description": "The reply entity's attribute with the reply."
+        },
+        "voice_show": {
+          "name": "Voice: show",
+          "description": "The entity that asks the panel to show something."
+        },
+        "motion": {
+          "name": "Motion",
+          "description": "still, calm, easy or lively."
+        },
+        "photos_every": {
+          "name": "Next photo every",
+          "description": "Seconds: 30, 60, 120 or 300."
+        },
+        "photo_caption": {
+          "name": "Photo captions",
+          "description": "true or false; null for the default."
+        },
+        "on_this_day": {
+          "name": "On this day",
+          "description": "true or false; null for the default."
+        },
+        "calendar_titles": {
+          "name": "Calendar titles",
+          "description": "true or false; null for the default."
+        },
+        "pin_to_unlock": {
+          "name": "Parent PIN to unlock doors",
+          "description": "true or false; null for the default."
+        },
+        "someone_in_front": {
+          "name": "Wake when someone is in front",
+          "description": "true or false; null for the default."
+        },
+        "dark_at_night": {
+          "name": "Dark at night",
+          "description": "true or false; null for the default."
+        },
+        "says_who_has_a_message": {
+          "name": "Says who has a message",
+          "description": "true or false; null for the default."
+        },
+        "house_panel": {
+          "name": "House panel",
+          "description": "true or false; null for the default."
+        },
+        "bluetooth_proxy": {
+          "name": "Bluetooth proxy",
+          "description": "true or false; null for the default."
+        }
+      }
+    },
+    "set_panel_defaults": {
+      "name": "Set panel defaults",
+      "description": "Changes what every Glint Panel uses unless it says otherwise. Null or [] puts one back to the default. Administrators and adults only.",
+      "fields": {
+        "family_calendars": {
+          "name": "Family calendars",
+          "description": "Calendar entities every panel shows."
+        },
+        "person_calendars": {
+          "name": "Person calendars",
+          "description": "{person: [calendars]}."
+        },
+        "night": {
+          "name": "Night",
+          "description": "The entity that is on at night."
+        },
+        "doorbell_camera": {
+          "name": "Doorbell camera",
+          "description": "The camera shown when the doorbell rings."
+        },
+        "photos": {
+          "name": "Photo album",
+          "description": "The camera entity with the household's photos."
+        },
+        "routine_windows": {
+          "name": "Routine windows",
+          "description": "[{word, from, until, days, after_bedtimes}]."
+        },
+        "commute_window": {
+          "name": "Commute window",
+          "description": "{from, until, days}."
+        }
+      }
+    },
+    "get_panel": {
+      "name": "Get panels",
+      "description": "Each Glint Panel's settings, each marked set or derived, with Connected, View and On the tablet (no secrets). With no target: every panel. Administrators and adults only."
     }
   },
   "issues": {
     "tv_profile_keys": {
       "title": "Pick the kids' TV profiles again",
       "description": "Hearth used to map TV profiles by their number ({keys}), but each TV numbers its profiles itself: the same number is a different kid on each TV, so one kid could get another's limits. Those mappings are no longer used. Open Hearth's page (Devices, TV profiles) or Hearth's Configure menu and pick whose each profile is. Profiles are now listed by name, one choice for every TV. Removing or replacing the old entries clears this message."
+    }
+  },
+  "exceptions": {
+    "wrong_pin": {
+      "message": "Not a Parent PIN."
+    },
+    "locked_out": {
+      "message": "Too many wrong PINs: try again in {retry_in} s."
+    },
+    "no_pin": {
+      "message": "No Parent PIN is set."
     }
   }
 }

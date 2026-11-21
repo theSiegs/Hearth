@@ -131,6 +131,10 @@ class Pairing:
     for_name: str | None = None
     for_role: str | None = None
     for_person: str | None = None
+    # Another kind's own pairing data (a Glint Panel's seed, untrusted), and what its approval adds to the device's
+    # approved answer (a panel's ha_token: handed over once, with the secret)
+    seed: dict[str, Any] | None = None
+    answer: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -292,6 +296,11 @@ class HearthHub:
         self.glint_agent = GlintAgent(hass, self)
         # Phone approval of a switch into an adult's Google TV profile, asked for a paired TV (switch_approval.py)
         self.switch_approvals = SwitchApprovals(hass, self)
+        # Pairing kinds kept outside the entry's devices, by kind (a Glint Panel's: setup puts it here; the hub
+        # doesn't import it). Each has owns(device_id) and async approve(pairing, secret_hash, area_id) -> answer | None
+        self.pairing_kinds: dict[str, Any] = {}
+        # The household's Glint Panels (glint_panel/), set by setup
+        self.glint_panel: Any = None
 
     # The devices
 
@@ -690,12 +699,25 @@ class HearthHub:
             return None
         return pairing
 
-    async def async_approve(self, pairing_id: str, person: str | None = None) -> bool:
-        """An administrator checked the code: the device joins (or gets a new secret, if it was here)."""
+    async def async_approve(self, pairing_id: str, person: str | None = None, area_id: str | None = None) -> bool:
+        """An administrator checked the code: the device joins (or gets a new secret, if it was here). A kind kept
+        outside the entry's devices (a Glint Panel, with its [area_id]) is its own part's to keep: the entry isn't
+        changed, so it doesn't reload."""
         pairing = self.pairing(pairing_id)
         if pairing is None or pairing.denied:
             return False
         secret = secrets.token_urlsafe(32)
+        if pairing.kind in self.pairing_kinds:
+            answer = await self.pairing_kinds[pairing.kind].approve(pairing, hash_secret(secret), area_id)
+            if answer is None:
+                return False
+            pairing.secret = secret
+            pairing.answer = answer
+            pairing.expires = dt_util.utcnow() + APPROVED_EXPIRES
+            async_dispatcher_send(self.hass, SIGNAL_PAIRINGS)
+            return True
+        if pairing.kind not in (KIND_TV, KIND_MOBILE):
+            return False
         # A phone gets its own push topic; pairing again makes a new one, as it does a new secret
         topic = new_topic() if pairing.kind == KIND_MOBILE else None
         devices = {

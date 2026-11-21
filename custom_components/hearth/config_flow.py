@@ -18,6 +18,7 @@ from homeassistant.const import CONF_NAME
 from homeassistant.core import callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import (
+    AreaSelector,
     BooleanSelector,
     DateSelector,
     NumberSelector,
@@ -46,6 +47,7 @@ from .const import (
     CONF_PUSH_SERVER,
     DOMAIN,
     KIND_MOBILE,
+    KIND_PANEL,
 )
 from .counting import ALL
 from .limits import BUILTIN_GROUPS, CONF_POOLS, GAMES, POOLS_VERSION, one_pool_per_app, slug
@@ -134,14 +136,19 @@ class HearthConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason="expired")
         if user_input is not None:
             hub = _loaded_hub(self.hass)
-            if hub is None or not await hub.async_approve(self._pairing_id, user_input.get(CONF_PERSON)):
+            if hub is None or not await hub.async_approve(
+                self._pairing_id, user_input.get(CONF_PERSON), user_input.get("area_id")
+            ):
                 return self.async_abort(reason="expired")
             clear_pairing(self.hass, self._pairing_id)
             return self.async_abort(reason="paired", description_placeholders={"name": pairing.name})
-        # A phone is one person's: say whose (a TV's profiles are mapped in the options)
-        schema = (
-            vol.Schema({vol.Optional(CONF_PERSON): PERSON_SELECTOR}) if pairing.kind == KIND_MOBILE else vol.Schema({})
-        )
+        # A phone is one person's: say whose (a TV's profiles are mapped in the options). A Glint Panel: its room
+        if pairing.kind == KIND_MOBILE:
+            schema = vol.Schema({vol.Optional(CONF_PERSON): PERSON_SELECTOR})
+        elif pairing.kind == KIND_PANEL:
+            schema = vol.Schema({vol.Optional("area_id"): AreaSelector()})
+        else:
+            schema = vol.Schema({})
         return self.async_show_form(
             step_id="confirm",
             data_schema=schema,

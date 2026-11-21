@@ -12,13 +12,14 @@ from datetime import datetime, timedelta
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import EVENT_STATE_CHANGED, Platform
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.start import async_at_started
 from homeassistant.helpers.event import (
     async_track_state_change_event,
@@ -35,6 +36,8 @@ from .websocket import async_register_commands
 from .pause import async_load_pauses, end_app_pause, pausable, set_app_pause, set_pause
 from .places import ARRIVE, LEAVE
 from . import client_settings_ws, glint_api, llm_api, panel, suggest_push, todo_ws, weekly_ws
+from . import glint_panel
+from .glint_panel_seam import HearthPanelHost
 from .todos import migrated_options
 from .categories import async_migrate_catalog
 from .apps import ACTION_PREFIX
@@ -49,6 +52,7 @@ from .const import (
     CONF_SHARE_APP_DATA,
     CONF_SHARE_APP_DATA_OLD,
     DOMAIN,
+    KIND_PANEL,
     KIND_TV,
 )
 from .profiles import ISSUE_PROFILE_KEYS, legacy_keys
@@ -69,6 +73,9 @@ from .sites import BLOCKED, BOTH, FROM_CHOICES, LIST_CHOICES, CopySites
 from .watch import CHANNELS, MAX_BLOCKS, MAX_LOG, VIDEOS, WORDS, channel_id_of, clean_word, video_id_of
 
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.NUMBER, Platform.SENSOR, Platform.TODO]
+# Only a household with a Glint Panel has selects and switches (its settings, glint_panel/): loaded with the first
+PANEL_PLATFORMS = [Platform.SELECT, Platform.SWITCH]
+_PANEL_PLATFORMS_LOADED = f"{DOMAIN}_panel_platforms"
 
 type HearthConfigEntry = ConfigEntry[HearthHub]
 
@@ -1162,6 +1169,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     await async_load_pin_lockouts(hass)
     await hub.household.school.async_refresh()
     hub.household.recompute()
+    # Glint Panels (glint_panel/): one Panels a run, so a panel's subscription outlives a reload; Hearth is its host
+    panels = glint_panel.Panels.get(hass, DOMAIN)
+    await panels.async_attach(HearthPanelHost(hass, hub))
+    hub.glint_panel = panels
+    hub.pairing_kinds[KIND_PANEL] = panels
     # The views stay registered for Home Assistant's lifetime (aiohttp can't take one away); with no entry
     # loaded they answer that Hearth isn't set up
     if not hass.data.get(_VIEWS_REGISTERED):
@@ -1172,10 +1184,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
         weekly_ws.async_register_commands(hass)
         client_settings_ws.async_register_commands(hass)
         glint_api.async_register_commands(hass)
+        glint_panel.async_register(hass, DOMAIN)
         hass.data[_VIEWS_REGISTERED] = True
     # Hearth's page in the sidebar, while the household is set up
     await panel.async_register_panel(hass)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await _panel_platforms(hass, entry, panels)
     # A pool that's gone (the retired Video pool) leaves its entities behind, unavailable for good: remove them
     if gone := async_prune_group_entities(hass, hub):
         _LOGGER.info("Hearth: removed %d entities of pools that are gone: %s", len(gone), ", ".join(gone))
@@ -1451,6 +1465,28 @@ def _check_profile_keys(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
     )
 
 
+async def _panel_platforms(hass: HomeAssistant, entry: HearthConfigEntry, panels: glint_panel.Panels) -> None:
+    """The panels' selects and switches: now when there's a panel, else when the first one pairs (so a household
+    without one loads no switch platform)."""
+
+    async def load() -> None:
+        if hass.data.get(_PANEL_PLATFORMS_LOADED) or entry.state is not ConfigEntryState.LOADED:
+            return
+        hass.data[_PANEL_PLATFORMS_LOADED] = True
+        await hass.config_entries.async_forward_entry_setups(entry, PANEL_PLATFORMS)
+
+    if panels.panels:
+        hass.data[_PANEL_PLATFORMS_LOADED] = True
+        await hass.config_entries.async_forward_entry_setups(entry, PANEL_PLATFORMS)
+        return
+
+    @callback
+    def paired(_device_id: str) -> None:
+        entry.async_create_task(hass, load())
+
+    entry.async_on_unload(async_dispatcher_connect(hass, glint_panel.signal_added(DOMAIN), paired))
+
+
 async def _async_entry_updated(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
     hass.config_entries.async_schedule_reload(entry.entry_id)
 
@@ -1459,13 +1495,16 @@ async def async_unload_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> b
     # Work under way (a Family Link write, a store write) finishes first, so the flush saves what it did
     await async_wait_for_entry_tasks(hass, entry.entry_id)
     await entry.runtime_data.async_flush()
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    await glint_panel.Panels.get(hass, DOMAIN).async_detach()
+    platforms = [*PLATFORMS, *PANEL_PLATFORMS] if hass.data.pop(_PANEL_PLATFORMS_LOADED, False) else PLATFORMS
+    return await hass.config_entries.async_unload_platforms(entry, platforms)
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
     """The household is deleted: Hearth's page goes from the sidebar. (A reload keeps it, so changing a setting there
-    doesn't send you away.)"""
+    doesn't send you away.) Each Glint Panel's Home Assistant user goes with it."""
     panel.async_remove_panel(hass)
+    await glint_panel.Panels.get(hass, DOMAIN).async_remove_all()
 
 
 async def async_remove_config_entry_device(
@@ -1477,5 +1516,11 @@ async def async_remove_config_entry_device(
         if domain == DOMAIN:
             if device_id.startswith("person:"):
                 return False
+            if device_id.startswith(glint_panel.IDENTIFIER_PREFIX):
+                # A Glint Panel: its user and token go, and its subscription ends
+                await glint_panel.Panels.get(hass, DOMAIN).async_remove(
+                    device_id[len(glint_panel.IDENTIFIER_PREFIX) :], from_registry=False
+                )
+                continue
             await entry.runtime_data.async_remove_device(device_id)
     return True

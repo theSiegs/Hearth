@@ -898,3 +898,130 @@ pairing_answer:
       selector:
         entity:
           domain: person
+    area_id:
+      selector:
+        area:
+
+set_panel:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: hearth
+    people:
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    extra_areas:
+      selector:
+        area:
+          multiple: true
+    routines:
+      selector:
+        entity:
+          multiple: true
+    bed_left:
+      selector:
+        object:
+    bed_right:
+      selector:
+        object:
+    photos:
+      selector:
+        entity:
+          domain: camera
+    presence:
+      selector:
+        entity:
+    voice_heard:
+      selector:
+        entity:
+    voice_reply:
+      selector:
+        entity:
+    voice_reply_attribute:
+      selector:
+        text:
+    voice_show:
+      selector:
+        entity:
+    motion:
+      selector:
+        select:
+          options:
+            - still
+            - calm
+            - easy
+            - lively
+    photos_every:
+      selector:
+        select:
+          options:
+            - "30"
+            - "60"
+            - "120"
+            - "300"
+    photo_caption:
+      selector:
+        boolean:
+    on_this_day:
+      selector:
+        boolean:
+    calendar_titles:
+      selector:
+        boolean:
+    pin_to_unlock:
+      selector:
+        boolean:
+    someone_in_front:
+      selector:
+        boolean:
+    dark_at_night:
+      selector:
+        boolean:
+    says_who_has_a_message:
+      selector:
+        boolean:
+    house_panel:
+      selector:
+        boolean:
+    bluetooth_proxy:
+      selector:
+        boolean:
+
+set_panel_defaults:
+  fields:
+    family_calendars:
+      selector:
+        entity:
+          domain: calendar
+          multiple: true
+    person_calendars:
+      selector:
+        object:
+    night:
+      selector:
+        entity:
+    doorbell_camera:
+      selector:
+        entity:
+          domain: camera
+    photos:
+      selector:
+        entity:
+          domain: camera
+    routine_windows:
+      selector:
+        object:
+    commute_window:
+      selector:
+        object:
+
+get_panel:
+  fields:
+    device_id:
+      selector:
+        device:
+          integration: hearth

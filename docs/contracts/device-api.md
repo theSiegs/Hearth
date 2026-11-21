@@ -202,7 +202,8 @@ midnight; Hearth, not the client, decides what counts:
 
 ## What Hearth interprets
 
-Person kind (`kid`/`adult`), device kind (`tv`/`mobile`), the client id, usage, `app_categories`, `caps`,
+Person kind (`kid`/`adult`), device kind (`tv`/`mobile`; a wall tablet pairs as `panel` and is served apart, see
+[panel-config.md](panel-config.md)), the client id, usage, `app_categories`, `caps`,
 `kids_profile`, and `checks[]` only as display. Nothing inside client settings, and no field it doesn't know.
 
 ## Events

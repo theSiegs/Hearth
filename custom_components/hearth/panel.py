@@ -47,6 +47,7 @@ from .const import (
     CONF_VOICE_ASSISTANTS,
     DOMAIN,
     KIND_MOBILE,
+    KIND_PANEL,
 )
 from .counting import ALL
 from .enforce import CONF_ENFORCE, FAMILY_LINK, FAMILY_SAFETY, FS_DOMAIN, NINTENDO, NINTENDO_DOMAIN, PLATFORMS
@@ -607,15 +608,20 @@ def ws_budget(hass: HomeAssistant, connection: websocket_api.ActiveConnection, m
     connection.send_result(msg["id"])
 
 
-async def async_answer_pairing(hass: HomeAssistant, hub, pairing_id: str, answer: str, person: str | None) -> bool:
-    """Approves (as [person], for a phone) or denies a device waiting to pair; its notifications and its discovered
-    device in Settings > Devices & services go. False when it's gone (expired or answered)."""
+async def async_answer_pairing(
+    hass: HomeAssistant, hub, pairing_id: str, answer: str, person: str | None, area_id: str | None = None
+) -> bool:
+    """Approves (as [person], for a phone; in [area_id], for a Glint Panel) or denies a device waiting to pair; its
+    notifications and its discovered device in Settings > Devices & services go. False when it's gone (expired or
+    answered)."""
     pairing = hub.pairing(pairing_id) if hub else None
     if pairing is None or pairing.secret is not None or pairing.denied:
         return False
     if answer == "deny":
         hub.deny(pairing_id)
-    elif not await hub.async_approve(pairing_id, person if pairing.kind == KIND_MOBILE else None):
+    elif not await hub.async_approve(
+        pairing_id, person if pairing.kind == KIND_MOBILE else None, area_id if pairing.kind == KIND_PANEL else None
+    ):
         return False
     clear_pairing(hass, pairing_id)
     for flow in hass.config_entries.flow.async_progress_by_handler(DOMAIN):
@@ -645,6 +651,8 @@ def _own_person(hass: HomeAssistant, user_id: str) -> str | None:
         vol.Optional("person"): vol.Any(None, _PERSON),
         # The code the device shows: what someone who isn't an administrator gives
         vol.Optional("code"): vol.All(cv.string, vol.Match(r"^\d{6}$")),
+        # A Glint Panel's room (optional)
+        vol.Optional("area_id"): vol.Any(None, cv.string),
     }
 )
 @websocket_api.async_response
@@ -660,7 +668,9 @@ async def ws_pairing(hass: HomeAssistant, connection: websocket_api.ActiveConnec
         if not msg.get("pairing_id"):
             connection.send_error(msg["id"], "invalid_format", "Which device: give its pairing_id")
             return
-        if not await async_answer_pairing(hass, hub, msg["pairing_id"], msg["answer"], msg.get("person")):
+        if not await async_answer_pairing(
+            hass, hub, msg["pairing_id"], msg["answer"], msg.get("person"), msg.get("area_id")
+        ):
             connection.send_error(msg["id"], "expired", "That request has expired")
             return
         connection.send_result(msg["id"])
@@ -710,7 +720,8 @@ def async_register_pairing_service(hass: HomeAssistant) -> None:
         if user is None or not user.is_admin:
             raise Unauthorized(context=call.context)
         if not await async_answer_pairing(
-            hass, _hub(hass), call.data["pairing_id"], call.data["answer"], call.data.get("person")
+            hass, _hub(hass), call.data["pairing_id"], call.data["answer"], call.data.get("person"),
+            call.data.get("area_id"),
         ):
             raise ServiceValidationError("That request has expired or was answered")
         return {"answer": call.data["answer"]}
@@ -724,6 +735,7 @@ def async_register_pairing_service(hass: HomeAssistant) -> None:
                 vol.Required("pairing_id"): cv.string,
                 vol.Required("answer"): vol.In(("approve", "deny")),
                 vol.Optional("person"): vol.Any(None, _PERSON),
+                vol.Optional("area_id"): vol.Any(None, cv.string),
             }
         ),
         supports_response=SupportsResponse.OPTIONAL,

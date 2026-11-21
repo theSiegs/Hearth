@@ -49,10 +49,14 @@ STORAGE_KEY = "hearth.status"
 SIGNAL_STATUS = "hearth_status_{}"
 SIGNAL_DEVICE_ADDED = "hearth_device_added"
 
-# What a device is: Hearth on a TV, or Hearth Mobile on a phone or tablet
+# What a device is: Hearth on a TV, or Hearth Mobile on a phone or tablet; or a Glint Panel (a wall tablet), which
+# pairs the same way but is kept by glint_panel/, never in the entry's devices: no person, no limits
 KIND_TV = "tv"
 KIND_MOBILE = "mobile"
-KINDS = (KIND_TV, KIND_MOBILE)
+KIND_PANEL = "panel"
+KINDS = (KIND_TV, KIND_MOBILE, KIND_PANEL)
+# The kinds a paired TV may vouch for with a ticket (never a panel: its room is an administrator's to choose)
+TICKET_KINDS = (KIND_TV, KIND_MOBILE)
 
 # What a device can do, for new features: a device may say so in its status (`caps`); one that never did gets its
 # kind's (default_caps). The kind stays who the device is (a TV's profiles, a phone's person) and what it may vouch
@@ -72,6 +76,7 @@ def default_caps(kind: str | None) -> frozenset[str]:
         return frozenset((CAP_PLAY, CAP_EVENTS))
     if kind == KIND_MOBILE:
         return frozenset((CAP_PUSH,))
+    # A panel (and anything else) is sent none of these: it has its own subscription (glint_panel/)
     return frozenset()
 
 TV_STATES = ["off", "idle", "paused", "playing"]

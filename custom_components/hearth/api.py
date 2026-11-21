@@ -34,11 +34,13 @@ from .const import (
     CONTRACT,
     DOMAIN,
     KIND_MOBILE,
+    KIND_PANEL,
     KIND_TV,
     KINDS,
     MAX_STATUS_BYTES,
     PAIRING_EXPIRES,
     TICKET_EXPIRES,
+    TICKET_KINDS,
 )
 from .hub import HearthHub, collect_secret, find_pairing, pin_lockout, save_pin_lockouts
 from .wait import WAIT_MAX
@@ -59,6 +61,9 @@ HEADER_NONCE = "X-Hearth-Nonce"
 
 _ID = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 _NONCE = re.compile(r"^[A-Za-z0-9_-]{32,128}$")
+# A panel's pair body may carry its settings from before it paired (glint_panel/, docs/contracts/panel-config.md)
+MAX_SEED_BYTES = 16 * 1024
+_DEFAULT_NAMES = {KIND_TV: "TV", KIND_MOBILE: "Phone", KIND_PANEL: "Panel"}
 
 
 def _hub(hass: HomeAssistant) -> HearthHub | None:
@@ -140,11 +145,22 @@ class PairStartView(HomeAssistantView):
             or not client_ok
         ):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        seed = body.get("seed") if kind == KIND_PANEL else None
+        if kind == KIND_PANEL and (
+            kind not in hub.pairing_kinds
+            or (seed is not None and (not isinstance(seed, dict) or len(json.dumps(seed)) > MAX_SEED_BYTES))
+        ):
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        # One id is one device: a panel never pairs over a TV or a phone, nor they over a panel
+        if (kind == KIND_PANEL and device_id in hub.devices) or (
+            kind != KIND_PANEL and KIND_PANEL in hub.pairing_kinds and hub.pairing_kinds[KIND_PANEL].owns(device_id)
+        ):
+            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
         pairing = hub.start_pairing(
             request.remote or "",
             device_id,
             kind,
-            name or ("TV" if kind == KIND_TV else "Phone"),
+            name or _DEFAULT_NAMES[kind],
             text(body.get("model"), 64),
             text(body.get("version"), 32),
             nonce,
@@ -155,6 +171,7 @@ class PairStartView(HomeAssistantView):
         )
         if pairing is None:
             return _error(HTTPStatus.TOO_MANY_REQUESTS, "try_later")
+        pairing.seed = seed
         approvers = await async_note_admins(hass)
         notify_pairing(hass, pairing.pairing_id, pairing.name, pairing)
         hass.async_create_task(
@@ -223,6 +240,8 @@ def _approved(hass: HomeAssistant, pairing, secret: str) -> dict[str, Any]:
         "push": push_answer(_server(options), pairing.push_topic) if pairing.kind == KIND_MOBILE else None,
         # The client locked with this pairing ({"id", "companions"}), null when the device sent none
         "client": locked(pairing.client),
+        # What the device's kind adds (a Glint Panel's ha_token), handed over once with the secret
+        **pairing.answer,
     }
 
 
@@ -248,7 +267,7 @@ class TicketView(HomeAssistantView):
         if hub.kind(device_id) != KIND_TV:
             return _error(HTTPStatus.FORBIDDEN, "not_a_tv")
         body = await _json_body(request)
-        if not isinstance(body, dict) or body.get("kind") not in KINDS:
+        if not isinstance(body, dict) or body.get("kind") not in TICKET_KINDS:
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
         kind, person = body["kind"], body.get("person")
         if kind == KIND_MOBILE:
@@ -290,11 +309,11 @@ class RedeemView(HomeAssistantView):
             or not 16 <= len(ticket) <= 128
             or not isinstance(device_id, str)
             or not _ID.match(device_id)
-            or kind not in KINDS
+            or kind not in TICKET_KINDS
             or not client_ok
         ):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
-        name = text(body.get("name"), 64) or ("TV" if kind == KIND_TV else "Phone")
+        name = text(body.get("name"), 64) or _DEFAULT_NAMES[kind]
         pairing = await hub.async_redeem(
             ticket, device_id, kind, name, text(body.get("model"), 64), text(body.get("version"), 32), client
         )

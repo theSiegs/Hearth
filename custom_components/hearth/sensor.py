@@ -28,6 +28,7 @@ from .limits import never_held_group
 from .schooldays import DAY_TYPES
 from .entity import HearthEntity, HearthPersonEntity, async_add_device_entities
 from .places import SIGNAL_PLACES, UNKNOWN
+from .glint_panel import async_setup_platform
 
 BOTH = frozenset({KIND_TV, KIND_MOBILE})
 TV = frozenset({KIND_TV})
@@ -134,6 +135,8 @@ async def async_setup_entry(
         people.append(PersonBedtime(hub, person, "bedtime"))
     async_add_entities(people)
     async_add_entities([AppsToSort(hub), DayType(hub)])
+    # Each Glint Panel's View and On the tablet (glint_panel/)
+    entry.async_on_unload(async_setup_platform(hass, hub.glint_panel, "sensor", async_add_entities))
 
 
 class HearthSensor(HearthEntity, SensorEntity):
