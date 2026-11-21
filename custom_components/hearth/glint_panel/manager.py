@@ -250,6 +250,9 @@ class Panels:
         record = self.panels.get(device_id)
         first = record is None
         devices = dr.async_get(hass)
+        if area is None and (known := self.registry_device(device_id)) is not None:
+            # Pairing again without a room keeps the room it has (and so its name)
+            area = areas.async_get_area(known.area_id) if known.area_id else None
         device = devices.async_get_or_create(
             config_entry_id=host.entry_id,
             identifiers={identifier(self.domain, device_id)},

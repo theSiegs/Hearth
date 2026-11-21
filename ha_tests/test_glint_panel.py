@@ -291,7 +291,7 @@ async def test_pairing_again_replaces_the_secret_and_keeps_the_settings(
     assert not panels.authorized(PANEL_ID, first["secret"]) and panels.authorized(PANEL_ID, second["secret"])
     # Its settings, room and proxy key stay
     assert panels.value(PANEL_ID, "motion") == "calm" and panels.panels[PANEL_ID]["key"] == key
-    assert _device(hass).area_id == "kitchen"
+    assert _device(hass).area_id == "kitchen" and _device(hass).name == "Kitchen panel"
 
 
 async def test_the_seed_is_taken_once_known_fields_and_entities_only(
