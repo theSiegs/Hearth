@@ -63,7 +63,7 @@ A later poll is 404: the secret is never given again. The panel keeps `secret` f
 Removing the panel's device in Home Assistant removes the panel (its secret stops working); the owner's login and
 token are left alone (revoke the token in the user's profile to shut the panel out of Home Assistant too). Pairing
 again gives a new secret; the panel's settings, room and proxy key stay, and so do its own Start, its last 10 Start
-changes and the room layout it last reported (removing the device drops them).
+changes and the room layout and page it last reported (removing the device drops them).
 
 ## The WebSocket commands
 
@@ -81,7 +81,7 @@ No heartbeat.
 When the panel is removed or paired again, each open subscription gets one last event `{"unpaired": true}` and no
 more.
 
-### `<d>/panel/report {device_id, secret, view?, version?, on_tablet?, sw_version?, model?, room_layout?, unpaired?}`
+### `<d>/panel/report {device_id, secret, view?, version?, on_tablet?, sw_version?, model?, room_layout?, page?, unpaired?}`
 
 Sent on change only (at most 30 a minute: error `too_often`). Sets the **View** entity (`photos`, `tiles`, `night`,
 `off`, `dark_clock` (or `dark clock`), `pairing`; anything else: unknown), **On the tablet** (words, or a list of them
@@ -93,17 +93,23 @@ and only when it changes): the room's layout as the panel lays it out, in `start
 The server keeps the last one per panel only to start a first `change_panel_start` from; it is not the panel's Start.
 A layout that isn't right: error `invalid` (as `set_start`), nothing of the report taken. `null` forgets it.
 
+`page` (since 1.1, sent as `room_layout` is): `{"cols", "rows"}`, whole numbers 1 to 12, the panel's page in cells. The
+server keeps the last one per panel; `change_panel_start` fits tiles on it (first fit, and every op's bounds). Before
+one is reported: 8 cols x 5 rows (panels are landscape only). Not right: the command's schema error. `null` forgets it.
+
 ### `<d>/panel/set_start {device_id, secret, start, base_version}`
 
 The panel's whole `start` after an edit made on the wall (`{"tiles": [...]}`; its `changed` and `version` are ignored),
-or `null` for "back to the room's layout". `base_version` is the `start.version` the edit started from (`null`, or
+or `null` (or `{"tiles": null}`) for "back to the room's layout". `base_version` is the `start.version` the edit started from (`null`, or
 left out, when it started from the room's layout).
 
 - At most 30 a minute per panel (counted apart from reports): error `too_often`.
-- `base_version` differs from the stored `start.version` (both `null` counts as equal): error `stale`,
-  `translation_placeholders.version` the stored one (`""` when the stored `start` is `null`). Nothing changes; the panel
+- `base_version` differs from the stored `start.version` (both `null` counts as equal; a `start` of `null` and one
+  with `tiles: null` both have version `null`): error `stale`, `translation_placeholders.version` the stored one (`""`
+  when it is `null`). Nothing changes; the panel
   takes the document it is pushed (Home Assistant wins) and shows "changed elsewhere · undo".
-- Not a right layout (see [The panel's own Start](#the-panels-own-start)): error `invalid`,
+- Not a right layout (see [The panel's own Start](#the-panels-own-start); here a tile may reach cell 8 either way, or
+  further on a larger reported page, since the panel leaves out what is off its page): error `invalid`,
   `translation_placeholders.why` the first problem in words (`no tile kind toaster`, `lock.front_door is a normal
   state, never dealt`, `tiles heat_lamp and clock overlap`).
 - Else it is stored, stamped `changed: {"by": "panel", "at": now, "undo": <new id>}`; the `start` before it is kept as
@@ -183,8 +189,11 @@ such as presence and the room's thermostat itself).
 
 ## The panel's own Start
 
-`start` is `null` until something is placed: the panel lays out Start by its room rule, exactly as before 1.1. Once
-something is placed (from the wall with `set_start`, or with `change_panel_start`):
+`start` is `null` for a panel whose Start was never changed: the panel lays out Start by its room rule, exactly as
+before 1.1. After a change back to the room's layout (`reset`, `set_start` with `null`, or an undo to before the first
+change) it is `{"tiles": null, "changed": {...}, "version": null}`: still the room's layout, but stamped, so the panel
+can say who changed it. A change from either starts from the reported `room_layout`. Once something is placed (from
+the wall with `set_start`, or with `change_panel_start`):
 
 ```json
 "start": {
@@ -204,8 +213,8 @@ something is placed (from the wall with `set_start`, or with `change_panel_start
 ```
 
 - Cells count from 1; `w`, `h` in cells. `col`, `row`, `w`, `h` are whole numbers from 1, and `col + w - 1 <= 8`,
-  `row + h - 1 <= 8` (the page's larger side: 8 x 5 landscape, 5 x 8 portrait). Tiles may not overlap. The panel
-  leaves out a tile that is off its page.
+  `row + h - 1 <= 8` (or a larger reported page's larger side). Tiles may not overlap. The panel leaves out a tile that
+  is off its page. The services' ops fit tiles on the reported page (8 x 5 until one is reported).
 - `kind`: `clock`, `calendar`, `weather`, `climate_stack`, `family`, `arrivals`, `media_stack`, `room_stack`,
   `routines_stack` (each at most once), `entity` (needs `entity`), `stack` (hand-made: needs `name`, at most 40
   letters, and `entities`, 1 to 12 different ones). Anything else is refused. Other fields of a tile are dropped.
@@ -277,17 +286,17 @@ most 40 letters; default `home assistant`). Cells from 1:
 
 | op | fields | does |
 |---|---|---|
-| `add` | `kind` (default `entity`), `entity` (for `entity`), `size` `"2x1"` (default), `at` `[col, row]`? | places a tile; no `at`: the first fit from the top-left, row by row. Refused: a built-in kind already there, the same entity already placed on its own, an entity Home Assistant doesn't have, no room; `stack` (use `make_stack`) |
-| `move` | `tile`, `at` | moves it there if it fits |
-| `resize` | `tile`, `size` `"WxH"` | resizes it in place if it fits |
+| `add` | `kind` (default `entity`), `entity` (for `entity`), `size` `"2x1"` (default), `at` `[col, row]`? | places a tile on the page; no `at`: the first fit from the top-left, row by row. Refused: a built-in kind already there, the same entity already placed on its own, an entity Home Assistant doesn't have, no room; `stack` (use `make_stack`) |
+| `move` | `tile`, `at` | moves it there if it fits on the page |
+| `resize` | `tile`, `size` `"WxH"` | resizes it in place if it fits on the page |
 | `remove` | `tile` | takes it off Start (a hand-made stack's devices go back to the room stack) |
 | `deals` | `tile` (`room_stack` or a `stack`), `entity`, `when` (`"on"`, `{from, until, days}`, or `null` to stop) | sets one device's "deals when" (in a `stack`, one of its members) |
 | `make_stack` | `name`, `entities` (1 to 12), `size`?, `at`? | a hand-made stack; those devices' own `entity` tiles leave Start, and they leave other hand-made stacks (an emptied one goes) |
 | `reset` | | `start: null` (the room's layout) |
 
-The first change of a panel whose `start` is `null` starts from the `room_layout` it last reported; none reported yet:
+The first change of a panel on the room's layout (`start` `null`, or `tiles` `null`) starts from the `room_layout` it last reported; none reported yet:
 refused, `the panel hasn't said its layout yet`. The result is checked as `set_start`'s, stamped, the `start` before it
-kept as a change, and pushed. Answer: `{"changed": "test lamp placed at column 5, row 1; ...", "start": {...} | null,
+kept as a change, and pushed. Answer: `{"changed": "test lamp placed at column 5, row 1; ...", "start": {...},
 "undo": "<id>"}`, the words of each op joined with `; `. Refused: nothing changes, and the error says why (`no room for
 a 2×2 tile`, `no tile lamp`, `no op explode`).
 

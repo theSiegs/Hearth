@@ -28,6 +28,7 @@ from homeassistant.util import dt as dt_util
 from . import document, start
 from .const import (
     CONNECTED_GRACE,
+    DEFAULT_PAGE,
     HOUSE_PANEL,
     IDENTIFIER_PREFIX,
     MAX_REPORTS,
@@ -37,6 +38,7 @@ from .const import (
     NOTHING_ON_TABLET,
     PUSH_DELAY,
     REPORT_WINDOW,
+    START_GRID,
     START_VERSIONS,
     STORE_VERSION,
     VIEWS,
@@ -296,8 +298,8 @@ class Panels:
             "key": key or document.new_proxy_key(),
             "view": record.get("view") if record else None,
             "on_tablet": record.get("on_tablet") if record else None,
-            # The panel's own Start, its last changes (undo) and the room layout it last reported stay too
-            **{k: record[k] for k in ("start", "start_versions", "room_layout") if record and k in record},
+            # The panel's own Start, its last changes (undo), the room layout and page it last reported stay too
+            **{k: record[k] for k in ("start", "start_versions", "room_layout", "page") if record and k in record},
         }
         self._save()
         async_dispatcher_send(hass, signal_added(self.domain), device_id)
@@ -391,6 +393,12 @@ class Panels:
             record["on_tablet"] = (words or "").strip()[:MAX_ON_TABLET] or None if isinstance(words, str) else None
         if "version" in msg:
             record["has_version"] = msg["version"] if isinstance(msg["version"], str) else None
+        if "page" in msg:
+            # The panel's page (cols, rows), checked by the command: the page a service's ops fit tiles on
+            if msg["page"] is None:
+                record.pop("page", None)
+            else:
+                record["page"] = {"cols": msg["page"]["cols"], "rows": msg["page"]["rows"]}
         if "room_layout" in msg:
             # Checked by the command (start.check_tiles, built-in kinds only); kept only to seed a first change
             if msg["room_layout"] is None:
@@ -430,21 +438,34 @@ class Panels:
         return device_class in NEVER_DEALT_COVERS
 
     def start_tiles(self, device_id: str) -> list[dict[str, Any]] | None:
+        """The panel's placed tiles; None for the room's layout (never changed, or changed back to it)."""
         stored = self.panels[device_id].get("start")
-        return copy.deepcopy(stored["tiles"]) if isinstance(stored, dict) else None
+        return copy.deepcopy(stored.get("tiles")) if isinstance(stored, dict) else None
+
+    def page(self, device_id: str) -> tuple[int, int]:
+        """The panel's page (cols, rows) a service's ops fit tiles on: the one it last reported, else DEFAULT_PAGE."""
+        page = self.panels[device_id].get("page")
+        if isinstance(page, dict) and isinstance(page.get("cols"), int) and isinstance(page.get("rows"), int):
+            return page["cols"], page["rows"]
+        return DEFAULT_PAGE
+
+    def start_grid(self, device_id: str) -> int:
+        """The farthest cell a tile may reach in set_start: the larger side, 8, or a larger page the panel reported."""
+        return max(START_GRID, *self.page(device_id))
 
     def start_version(self, device_id: str) -> str | None:
         return start.version_of(self.start_tiles(device_id))
 
     def start_section(self, device_id: str) -> dict[str, Any] | None:
-        """The document's `start`: {tiles, changed, version}, or None for the room's layout."""
+        """The document's `start`: {tiles, changed, version}; tiles (and version) None once changed back to the room's
+        layout; None for a panel whose Start was never changed."""
         stored = self.panels[device_id].get("start")
         if not isinstance(stored, dict):
             return None
         return {
-            "tiles": copy.deepcopy(stored["tiles"]),
+            "tiles": copy.deepcopy(stored.get("tiles")),
             "changed": copy.deepcopy(stored.get("changed")),
-            "version": start.version_of(stored["tiles"]),
+            "version": start.version_of(stored.get("tiles")),
         }
 
     def room_layout(self, device_id: str) -> list[dict[str, Any]]:
@@ -465,10 +486,8 @@ class Panels:
         at = dt_util.utcnow().replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
         versions.append({"undo": undo, "changed": {"by": by, "at": at}, "start": self.start_tiles(device_id)})
         del versions[:-START_VERSIONS]
-        if tiles is None:
-            record.pop("start", None)
-        else:
-            record["start"] = {"tiles": copy.deepcopy(tiles), "changed": {"by": by, "at": at, "undo": undo}}
+        # Back to the room's layout keeps the stamp (tiles None), so the panel can say who changed it
+        record["start"] = {"tiles": copy.deepcopy(tiles), "changed": {"by": by, "at": at, "undo": undo}}
         self._save()
         self._changed()
         return start.version_of(tiles), undo

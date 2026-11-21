@@ -160,10 +160,19 @@ async def test_set_start_from_the_wall_stores_stamps_and_pushes(
     assert again["success"] and again["result"]["version"] == pushed["start"]["version"]
     assert again["result"]["undo"] != answer["result"]["undo"]
 
-    # Back to the room's layout
+    # Back to the room's layout: no tiles, but still stamped, so the panel can say who changed it
     back = await _send(ws, 4, body, "set_start", start=None, base_version=pushed["start"]["version"])
     assert back["success"] and back["result"]["version"] is None
-    assert _panels(hass).document(PANEL_ID)["start"] is None
+    reset = _panels(hass).document(PANEL_ID)["start"]
+    assert reset["tiles"] is None and reset["version"] is None
+    assert reset["changed"]["by"] == "panel" and reset["changed"]["undo"] == back["result"]["undo"]
+    # From there base_version is null again; {"tiles": null} is the room's layout too
+    again = await _send(ws, 5, body, "set_start", start={"tiles": [LAMP]}, base_version=None)
+    assert again["success"], again
+    stale = await _send(ws, 6, body, "set_start", start={"tiles": None}, base_version=None)
+    assert stale["error"]["code"] == "stale"
+    back = await _send(ws, 7, body, "set_start", start={"tiles": None}, base_version=again["result"]["version"])
+    assert back["success"] and _panels(hass).start_tiles(PANEL_ID) is None
 
 
 async def test_set_start_from_an_old_version_is_stale(
@@ -255,6 +264,41 @@ async def test_a_report_keeps_the_room_layout_built_in_kinds_only(
     assert _panels(hass).document(PANEL_ID)["start"] is None
 
 
+async def test_a_report_keeps_the_page_and_service_ops_fit_on_it(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client
+) -> None:
+    body = await _set_up_panel(hass, hass_client_no_auth)
+    ws = await _ws(hass_ws_client, hass, body)
+    assert _panels(hass).page(PANEL_ID) == (8, 5)
+    for n, page in enumerate(({"cols": 13, "rows": 5}, {"cols": 0, "rows": 5}, {"cols": True, "rows": 5},
+                              {"cols": 8}, {"cols": 8, "rows": 5, "depth": 1}), start=1):
+        answer = await _send(ws, n, body, "report", page=page)
+        assert not answer["success"], page
+    assert (await _send(ws, 10, body, "report", page={"cols": 4, "rows": 2}, room_layout=ROOM))["success"]
+    assert _panels(hass).page(PANEL_ID) == (4, 2)
+    # The first fit is on the page: row 2's free cells, where the 8 x 5 page would give column 5, row 1
+    answer = await _change(hass, [{"op": "add", "entity": "switch.test_lamp"}])
+    assert answer["changed"] == "test lamp placed at column 1, row 2"
+    with pytest.raises(ServiceValidationError, match="no room for a 2×1 tile"):
+        await _change(hass, [{"op": "add", "kind": "weather"}])
+    with pytest.raises(ServiceValidationError, match="no room for test lamp at column 5, row 1"):
+        await _change(hass, [{"op": "move", "tile": "test_lamp", "at": [5, 1]}])
+
+    # A wider page: tiles reach it, from the services and from set_start (else the larger side, 8, is the bound)
+    assert (await _send(ws, 11, body, "report", page={"cols": 12, "rows": 6}))["success"]
+    answer = await _change(hass, [{"op": "add", "kind": "weather", "at": [11, 1]}])
+    assert answer["changed"] == "weather placed at column 11, row 1"
+    wide = await _send(ws, 12, body, "set_start", start=answer["start"], base_version=answer["start"]["version"])
+    assert wide["success"], wide
+    assert (await _send(ws, 13, body, "report", page=None))["success"]
+    assert _panels(hass).page(PANEL_ID) == (8, 5)
+    past = await _send(ws, 14, body, "set_start", start=answer["start"], base_version=wide["result"]["version"])
+    assert past["error"]["translation_placeholders"] == {"why": "tile weather goes past cell 8"}
+    # set_start keeps the larger side: rows 6 to 8 are the panel's to leave out
+    low = await _send(ws, 15, body, "set_start", start={"tiles": [{**LAMP, "row": 8}]}, base_version=wide["result"]["version"])
+    assert low["success"], low
+
+
 # change_panel_start
 
 
@@ -265,9 +309,15 @@ async def test_the_first_change_needs_the_room_layout(
     with pytest.raises(ServiceValidationError, match="the panel hasn't said its layout yet"):
         await _change(hass, [{"op": "add", "entity": "switch.test_lamp"}])
     assert _panels(hass).start_tiles(PANEL_ID) is None
-    # reset alone needs no layout
+    # reset alone needs no layout; a never changed Start is null, a reset one is stamped with no tiles
+    assert _panels(hass).document(PANEL_ID)["start"] is None
     answer = await _change(hass, [{"op": "reset"}])
-    assert answer["changed"] == "back to the room's layout" and answer["start"] is None
+    assert answer["changed"] == "back to the room's layout"
+    assert answer["start"] == {"tiles": None, "version": None, "changed": {
+        "by": "home assistant", "at": answer["start"]["changed"]["at"], "undo": answer["undo"]}}
+    # ... and a change from there still needs the room's layout
+    with pytest.raises(ServiceValidationError, match="the panel hasn't said its layout yet"):
+        await _change(hass, [{"op": "add", "entity": "switch.test_lamp"}])
 
     ws = await _ws(hass_ws_client, hass, body)
     assert (await _send(ws, 1, body, "report", room_layout=ROOM))["success"]
@@ -339,7 +389,10 @@ async def test_change_panel_start_ops_and_words(
     room = next(t for t in answer["start"]["tiles"] if t["id"] == "room_stack")
     assert [d["entity"] for d in room["deals"]] == ["light.porch"]
     answer = await _change(hass, [{"op": "reset"}])
-    assert answer["start"] is None and _panels(hass).document(PANEL_ID)["start"] is None
+    assert answer["start"]["tiles"] is None and _panels(hass).document(PANEL_ID)["start"]["tiles"] is None
+    # A change from the room's layout seeds from the room layout again
+    answer = await _change(hass, [{"op": "add", "kind": "weather"}])
+    assert [t["id"] for t in answer["start"]["tiles"]] == [*(t["id"] for t in ROOM), "weather"]
 
 
 async def test_a_refused_change_changes_nothing(
@@ -357,6 +410,9 @@ async def test_a_refused_change_changes_nothing(
         ([{"op": "add", "kind": "toaster"}], "no tile kind toaster"),
         ([{"op": "add", "kind": "weather", "size": "8x8"}], "no room for a 8×8 tile"),
         ([{"op": "add", "kind": "weather", "size": "2x2", "at": [1, 1]}], "no room for a 2×2 tile at column 1, row 1"),
+        # The page is 8 x 5 until the panel reports its own
+        ([{"op": "add", "kind": "weather", "size": "2x2", "at": [1, 5]}], "no room for a 2×2 tile at column 1, row 5"),
+        ([{"op": "move", "tile": "test_lamp", "at": [7, 6]}], "no room for test lamp at column 7, row 6"),
         ([{"op": "move", "tile": "test_lamp", "at": [1, 1]}], "no room for test lamp at column 1, row 1"),
         ([{"op": "resize", "tile": "test_lamp", "size": "3x1"}], "no room for a 3×1 tile at column 7, row 3"),
         ([{"op": "deals", "tile": "clock", "entity": "fan.bedroom_fan", "when": "on"}],
@@ -412,12 +468,12 @@ async def test_undo_puts_back_the_start_before_a_change(
     )
     assert answer["start"]["tiles"] == added["start"]["tiles"]
     assert answer["changed"] == f"change {moved['undo']} undone" and answer["start"]["changed"]["by"] == "panel helper"
-    # The very first change's undo: the room's layout again
+    # The very first change's undo: the room's layout again, stamped
     answer = await hass.services.async_call(
         DOMAIN, "undo_panel_start", {"device_id": _device(hass).id, "undo": added["undo"]},
         blocking=True, return_response=True,
     )
-    assert answer["start"] is None
+    assert answer["start"]["tiles"] is None and answer["start"]["changed"]["by"] == "home assistant"
     with pytest.raises(ServiceValidationError, match="no change nope to undo"):
         await hass.services.async_call(
             DOMAIN, "undo_panel_start", {"device_id": _device(hass).id, "undo": "nope"}, blocking=True,
@@ -429,6 +485,7 @@ async def test_the_last_ten_changes_are_kept_on_re_pairing_and_dropped_with_the_
 ) -> None:
     await _set_up_panel(hass, hass_client_no_auth)
     _panels(hass).panels[PANEL_ID]["room_layout"] = ROOM
+    _panels(hass).panels[PANEL_ID]["page"] = {"cols": 6, "rows": 4}
     undos = []
     for n in range(11):
         undos.append((await _change(hass, [{"op": "add", "kind": "weather"}] if n % 2 == 0 else
@@ -447,6 +504,7 @@ async def test_the_last_ten_changes_are_kept_on_re_pairing_and_dropped_with_the_
     assert _panels(hass).start_tiles(PANEL_ID) == tiles
     assert [v["undo"] for v in _panels(hass).start_versions(PANEL_ID)] == kept
     assert _panels(hass).panels[PANEL_ID]["room_layout"] == ROOM
+    assert _panels(hass).page(PANEL_ID) == (6, 4)
 
     # Removing its device drops them
     device = _device(hass)
@@ -455,7 +513,7 @@ async def test_the_last_ten_changes_are_kept_on_re_pairing_and_dropped_with_the_
     await hass.async_block_till_done()
     await _repair(hass, hass_client_no_auth)
     assert _panels(hass).start_tiles(PANEL_ID) is None and _panels(hass).start_versions(PANEL_ID) == []
-    assert "room_layout" not in _panels(hass).panels[PANEL_ID]
+    assert "room_layout" not in _panels(hass).panels[PANEL_ID] and _panels(hass).page(PANEL_ID) == (8, 5)
 
 
 async def _repair(hass, hass_client_no_auth) -> dict:

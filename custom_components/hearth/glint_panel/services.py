@@ -134,7 +134,8 @@ def async_register_services(hass: HomeAssistant, domain: str) -> None:
         panels, device_id = await _one_panel(hass, domain, call)
         known = panels.known()
         ctx = start.Context(
-            seed=lambda: panels.room_layout(device_id), entity=known.entity, never_dealt=panels.never_dealt
+            seed=lambda: panels.room_layout(device_id), entity=known.entity, never_dealt=panels.never_dealt,
+            page=panels.page(device_id),
         )
         try:
             tiles, said = start.apply(panels.start_tiles(device_id), call.data["ops"], ctx)

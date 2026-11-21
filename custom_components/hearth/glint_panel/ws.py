@@ -11,12 +11,22 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
 
 from . import start
-from .const import BY_PANEL, MAX_STARTS, ws_type
+from .const import BY_PANEL, MAX_PAGE, MAX_STARTS, ws_type
 from .document import Refused
 from .manager import Panels
 
 _ID = vol.All(str, vol.Match(r"^[A-Za-z0-9_-]{8,64}$"))
 _SECRET = vol.All(str, vol.Length(min=1, max=256))
+
+
+def _side(value: Any) -> int:
+    if not isinstance(value, int) or isinstance(value, bool) or not 1 <= value <= MAX_PAGE:
+        raise vol.Invalid(f"a whole number from 1 to {MAX_PAGE}")
+    return value
+
+
+# The panel's page in cells (landscape: 8 x 5 today)
+_PAGE = vol.Schema({vol.Required("cols"): _side, vol.Required("rows"): _side})
 
 
 def _panels(hass: HomeAssistant, domain: str, connection, msg: dict[str, Any]) -> Panels | None:
@@ -69,6 +79,8 @@ def async_register_commands(hass: HomeAssistant, domain: str) -> None:
             vol.Optional("unpaired"): bool,
             # The room's layout as the panel lays it out (built-in kinds only), to start a first change from
             vol.Optional("room_layout"): vol.Any(None, list),
+            # The page it lays tiles on, {cols, rows}: the page a service's ops fit tiles on
+            vol.Optional("page"): vol.Any(None, _PAGE),
         }
     )
     @websocket_api.async_response
@@ -152,7 +164,7 @@ def async_register_commands(hass: HomeAssistant, domain: str) -> None:
             )
             return
         try:
-            tiles = start.check_start(msg["start"], panels.never_dealt)
+            tiles = start.check_start(msg["start"], panels.never_dealt, grid=panels.start_grid(device_id))
         except Refused as err:
             _invalid(connection, msg["id"], domain, str(err))
             return

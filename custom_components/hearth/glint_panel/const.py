@@ -137,6 +137,9 @@ START_KINDS = (*START_BUILT_IN, "entity", "stack")
 START_DEALS_ON = ("room_stack", "stack")
 # The larger side of the panel's page (8 x 5 landscape, 5 x 8 portrait): no tile goes past it
 START_GRID = 8
+# The page a service's op fits tiles on (cols, rows) until the panel reports its own (`page`): landscape only
+DEFAULT_PAGE = (8, 5)
+MAX_PAGE = 12
 START_MAX_TILES = 40
 START_MAX_BYTES = 16 * 1024
 START_MAX_STACK = 12

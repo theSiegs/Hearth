@@ -1,7 +1,7 @@
 """A panel's own Start (the document's `start`, docs/contracts/panel-config.md): checking a layout, its version, the
 ops change_panel_start applies, and rewriting a renamed entity.
 
-A layout is a list of tiles, cells counted from 1. `None` is the room's layout: the panel lays it out by its room rule,
+A layout is a list of tiles, cells counted from 1. `None` (no tiles) is the room's layout: the panel lays it out by its room rule,
 which the server never does (a first edit starts from the `room_layout` the panel last reported). Only placed tiles,
 hand-made stacks' members and "deals when" rules are stored; stacks derive the rest on the panel. An entity Home
 Assistant no longer has is kept: the panel marks its tile until someone removes it.
@@ -19,6 +19,8 @@ from typing import Any
 
 from .const import (
     DAYS,
+    DEFAULT_PAGE,
+    MAX_PAGE,
     START_BUILT_IN,
     START_DEALS_ON,
     START_GRID,
@@ -50,20 +52,25 @@ def _short(value: Any) -> str:
 # Checking a whole layout (set_start, a report's room_layout, and every change's result)
 
 
-def check_start(value: Any, never_dealt: Callable[[str], bool]) -> list[dict[str, Any]] | None:
-    """The tiles of a whole `start` (None: the room's layout), cleaned; Refused with the first problem in words. Its
-    `changed` and `version` are the server's and are ignored."""
+def check_start(
+    value: Any, never_dealt: Callable[[str], bool], *, grid: int = START_GRID
+) -> list[dict[str, Any]] | None:
+    """The tiles of a whole `start` (None, or tiles None: the room's layout), cleaned; Refused with the first problem
+    in words. Its `changed` and `version` are the server's and are ignored."""
     if value is None:
         return None
     if not isinstance(value, dict) or "tiles" not in value:
         raise Refused("start is null or {tiles}")
-    return check_tiles(value["tiles"], never_dealt)
+    if value["tiles"] is None:
+        return None
+    return check_tiles(value["tiles"], never_dealt, grid=grid)
 
 
 def check_tiles(
-    tiles: Any, never_dealt: Callable[[str], bool], *, built_in_only: bool = False
+    tiles: Any, never_dealt: Callable[[str], bool], *, built_in_only: bool = False, grid: int = START_GRID
 ) -> list[dict[str, Any]]:
-    """A list of tiles, cleaned (known fields only), in its own order; Refused with the first problem in words."""
+    """A list of tiles, cleaned (known fields only), in its own order; Refused with the first problem in words. No tile
+    goes past cell [grid] either way (the panel leaves out a tile off its page)."""
     if not isinstance(tiles, list):
         raise Refused("tiles is a list")
     if len(tiles) > START_MAX_TILES:
@@ -77,7 +84,7 @@ def check_tiles(
     out: list[dict[str, Any]] = []
     taken: dict[tuple[int, int], str] = {}
     for raw in tiles:
-        tile = _tile(raw, never_dealt, built_in_only)
+        tile = _tile(raw, never_dealt, built_in_only, grid)
         if any(t["id"] == tile["id"] for t in out):
             raise Refused(f"two tiles are called {tile['id']}")
         if tile["kind"] in START_BUILT_IN and any(t["kind"] == tile["kind"] for t in out):
@@ -90,7 +97,7 @@ def check_tiles(
     return out
 
 
-def _tile(raw: Any, never_dealt: Callable[[str], bool], built_in_only: bool) -> dict[str, Any]:
+def _tile(raw: Any, never_dealt: Callable[[str], bool], built_in_only: bool, grid: int) -> dict[str, Any]:
     if not isinstance(raw, dict):
         raise Refused(f"not a tile: {_short(raw)}")
     kind = raw.get("kind")
@@ -105,8 +112,8 @@ def _tile(raw: Any, never_dealt: Callable[[str], bool], built_in_only: bool) -> 
         if not isinstance(value, int) or isinstance(value, bool) or value < 1:
             raise Refused(f"tile {tile_id}'s {key} is a whole number from 1")
         tile[key] = value
-    if tile["col"] + tile["w"] - 1 > START_GRID or tile["row"] + tile["h"] - 1 > START_GRID:
-        raise Refused(f"tile {tile_id} goes past cell {START_GRID}")
+    if tile["col"] + tile["w"] - 1 > grid or tile["row"] + tile["h"] - 1 > grid:
+        raise Refused(f"tile {tile_id} goes past cell {grid}")
     if kind == "entity":
         entity = raw.get("entity")
         if not isinstance(entity, str) or not _ENTITY.match(entity):
@@ -212,11 +219,12 @@ def rename(tiles: list[dict[str, Any]] | None, old: str, new: str) -> bool:
 @dataclass
 class Context:
     """What the ops need: the room's layout to start from (raises NotReady), whether Home Assistant has an entity,
-    and which entities are never dealt."""
+    which entities are never dealt, and the panel's page (cols, rows) that tiles are fitted on."""
 
     seed: Callable[[], list[dict[str, Any]]]
     entity: Callable[[str], bool]
     never_dealt: Callable[[str], bool]
+    page: tuple[int, int] = DEFAULT_PAGE
 
 
 def apply(
@@ -241,7 +249,7 @@ def apply(
         if work is None:
             work = copy.deepcopy(ctx.seed())
         said.append(_OPS[name](work, op, ctx))
-    final = None if work is None else check_tiles(work, ctx.never_dealt)
+    final = None if work is None else check_tiles(work, ctx.never_dealt, grid=max(START_GRID, *ctx.page))
     return final, said
 
 
@@ -257,8 +265,8 @@ def _size(value: Any, default: tuple[int, int] | None = None) -> tuple[int, int]
     if value is None and default is not None:
         return default
     match = _SIZE.match(value) if isinstance(value, str) else None
-    if match is None or not all(1 <= int(n) <= START_GRID for n in match.groups()):
-        raise Refused(f'size is "WxH" (1 to {START_GRID}), not {_short(value)}')
+    if match is None or not all(1 <= int(n) <= MAX_PAGE for n in match.groups()):
+        raise Refused(f'size is "WxH" (1 to {MAX_PAGE}), not {_short(value)}')
     return int(match[1]), int(match[2])
 
 
@@ -274,23 +282,30 @@ def _at(value: Any) -> tuple[int, int] | None:
     return value[0], value[1]
 
 
-def _fits(tiles: list[dict[str, Any]], col: int, row: int, w: int, h: int, skip: dict[str, Any] | None = None) -> bool:
-    if col + w - 1 > START_GRID or row + h - 1 > START_GRID:
+def _fits(
+    tiles: list[dict[str, Any]], page: tuple[int, int], col: int, row: int, w: int, h: int,
+    skip: dict[str, Any] | None = None,
+) -> bool:
+    """On the page, over no other tile."""
+    if col + w - 1 > page[0] or row + h - 1 > page[1]:
         return False
     wanted = cells({"col": col, "row": row, "w": w, "h": h})
     return not any(wanted & cells(t) for t in tiles if t is not skip)
 
 
-def _place(tiles: list[dict[str, Any]], size: tuple[int, int], at: tuple[int, int] | None) -> tuple[int, int]:
-    """Where a new tile of [size] goes: at [at] if it fits, else (no at) the first fit from the top-left, row by row."""
+def _place(
+    tiles: list[dict[str, Any]], page: tuple[int, int], size: tuple[int, int], at: tuple[int, int] | None
+) -> tuple[int, int]:
+    """Where a new tile of [size] goes: at [at] if it fits, else (no at) the first fit on the page from the top-left,
+    row by row."""
     w, h = size
     if at is not None:
-        if not _fits(tiles, *at, w, h):
+        if not _fits(tiles, page, *at, w, h):
             raise Refused(f"no room for a {w}×{h} tile at column {at[0]}, row {at[1]}")
         return at
-    for row in range(1, START_GRID - h + 2):
-        for col in range(1, START_GRID - w + 2):
-            if _fits(tiles, col, row, w, h):
+    for row in range(1, page[1] - h + 2):
+        for col in range(1, page[0] - w + 2):
+            if _fits(tiles, page, col, row, w, h):
                 return col, row
     raise Refused(f"no room for a {w}×{h} tile")
 
@@ -349,27 +364,27 @@ def _add(tiles: list[dict[str, Any]], op: dict[str, Any], ctx: Context) -> str:
             raise Refused(f"the {_words(kind)} is on Start already")
         tile["id"] = _new_id(tiles, kind)
     w, h = _size(op.get("size"), (2, 1))
-    tile["col"], tile["row"] = _place(tiles, (w, h), _at(op.get("at")))
+    tile["col"], tile["row"] = _place(tiles, ctx.page, (w, h), _at(op.get("at")))
     tile["w"], tile["h"] = w, h
     tiles.append(tile)
     return f"{label(tile)} placed at {_where(tile)}"
 
 
-def _move(tiles: list[dict[str, Any]], op: dict[str, Any], _ctx: Context) -> str:
+def _move(tiles: list[dict[str, Any]], op: dict[str, Any], ctx: Context) -> str:
     tile = _find(tiles, op)
     at = _at(op.get("at"))
     if at is None:
         raise Refused("move needs at [column, row]")
-    if not _fits(tiles, *at, tile["w"], tile["h"], skip=tile):
+    if not _fits(tiles, ctx.page, *at, tile["w"], tile["h"], skip=tile):
         raise Refused(f"no room for {label(tile)} at column {at[0]}, row {at[1]}")
     tile["col"], tile["row"] = at
     return f"{label(tile)} moved to {_where(tile)}"
 
 
-def _resize(tiles: list[dict[str, Any]], op: dict[str, Any], _ctx: Context) -> str:
+def _resize(tiles: list[dict[str, Any]], op: dict[str, Any], ctx: Context) -> str:
     tile = _find(tiles, op)
     w, h = _size(op.get("size"))
-    if not _fits(tiles, tile["col"], tile["row"], w, h, skip=tile):
+    if not _fits(tiles, ctx.page, tile["col"], tile["row"], w, h, skip=tile):
         raise Refused(f"no room for a {w}×{h} tile at {_where(tile)}")
     tile["w"], tile["h"] = w, h
     return f"{label(tile)} is now {w}×{h}"
@@ -433,7 +448,7 @@ def _make_stack(tiles: list[dict[str, Any]], op: dict[str, Any], ctx: Context) -
                 tiles.remove(tile)
     tile: dict[str, Any] = {"id": _new_id(tiles, "stack"), "kind": "stack", "name": name.strip(), "entities": members}
     w, h = _size(op.get("size"), (2, 1))
-    tile["col"], tile["row"] = _place(tiles, (w, h), _at(op.get("at")))
+    tile["col"], tile["row"] = _place(tiles, ctx.page, (w, h), _at(op.get("at")))
     tile["w"], tile["h"] = w, h
     tiles.append(tile)
     return f"{label(tile)} made at {_where(tile)}"
