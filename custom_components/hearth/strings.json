@@ -184,7 +184,7 @@
         "name": "Says who has a message"
       },
       "panel_house_panel": {
-        "name": "House panel"
+        "name": "Shows rooms without a panel"
       },
       "panel_bluetooth_proxy": {
         "name": "Bluetooth proxy"
@@ -1437,8 +1437,8 @@
           "description": "true or false; null for the default."
         },
         "house_panel": {
-          "name": "House panel",
-          "description": "true or false; null for the default."
+          "name": "Shows rooms without a panel",
+          "description": "Device issues from rooms that have no panel of their own show on this one (at most one panel). true or false; null for the default (the first panel shared by everyone)."
         },
         "bluetooth_proxy": {
           "name": "Bluetooth proxy",

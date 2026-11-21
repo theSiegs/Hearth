@@ -169,7 +169,7 @@ the store has.
 | `someone_in_front` | switch | config | on |
 | `dark_at_night` | switch | config | on |
 | `says_who_has_a_message` | switch | config | on |
-| `house_panel` | switch | config | at most one on: turning one on turns the others off; turning it off leaves none until one is turned on. Until one is chosen: the first paired shared-room panel (no `people`) |
+| `house_panel` ("Shows rooms without a panel": device issues from rooms with no panel of their own show here) | switch | config | at most one on: turning one on turns the others off; turning it off leaves none until one is turned on. Until one is chosen: the first paired shared-room panel (no `people`) |
 | `bluetooth_proxy` | switch | config | off |
 | `connected` | binary_sensor | diagnostic | the subscription is open (2 min grace) |
 | `view` | sensor (enum) | diagnostic | photos · tiles · night · off · dark_clock · pairing |
