@@ -188,11 +188,14 @@ async def test_the_token_is_in_the_first_approved_poll_only(
     from custom_components.hearth.panel import async_answer_pairing
 
     assert await async_answer_pairing(hass, entry.runtime_data, started["pairing_id"], "approve", None, "kitchen")
-    first = await client.get(f"/api/hearth/pair/{started['pairing_id']}", headers={"X-Hearth-Nonce": NONCE})
+    # The panel contract's neutral header works as well as Hearth's own
+    first = await client.get(f"/api/hearth/pair/{started['pairing_id']}", headers={"X-Panel-Nonce": NONCE})
     assert (await first.json())["ha_token"]
     again = await client.get(f"/api/hearth/pair/{started['pairing_id']}", headers={"X-Hearth-Nonce": NONCE})
     assert again.status == 404
     assert "ha_token" not in await again.text()
+    # Hearth's own 404s are JSON, so a panel tells them from Home Assistant's "no such route"
+    assert (await again.json())["error"]
 
 
 async def test_a_pair_body_needs_its_device_id_and_a_small_seed(
@@ -296,15 +299,26 @@ async def test_the_seed_is_taken_once_known_fields_and_entities_only(
         "messages": {"shared_room_says_who": "yes"},
         "made_up": {"x": 1},
         "routines": {"windows": [dict(w) for w in DEFAULT_WINDOWS]},
-        "proxy": {"on": True, "key": PROXY_KEY},
+        "proxy": {"on": True, "key": PROXY_KEY, "name": "bedroom-tablet"},
+        "news": {"seen": "input_text.panel_seen"},
     }
+    hass.states.async_set("input_text.panel_seen", "")
     await _pair_panel(hass, client, area_id="kitchen", seed=seed)
     panels = _panels(hass)
     # Defaults (every 60 s, the default windows) and fields that aren't right are dropped
-    assert panels.panels[PANEL_ID]["values"] == {"motion": "lively", "photo_caption": False, "bluetooth_proxy": True}
+    assert panels.panels[PANEL_ID]["values"] == {
+        "motion": "lively",
+        "photo_caption": False,
+        "bluetooth_proxy": True,
+        "proxy_name": "bedroom-tablet",
+        "news_seen": "input_text.panel_seen",
+    }
     assert panels.house == {"family_calendars": ["calendar.family"], "photos": "camera.album"}
     doc = panels.document(PANEL_ID)
     assert doc["proxy"]["key"] == PROXY_KEY and doc["wake"]["presence"] is None
+    # The proxy keeps the ESPHome name it had, not one made from the device's name
+    assert doc["proxy"]["name"] == "bedroom-tablet"
+    assert doc["news"] == {"seen": "input_text.panel_seen"}
 
     # Once: pairing again with another seed changes nothing
     await _pair_panel(hass, client, seed={"look": {"motion": "still"}})
@@ -324,7 +338,7 @@ async def test_a_panel_with_only_a_room_has_a_whole_document(
     assert doc["served_by"] == "hearth"
     assert set(doc) == {
         "schema", "served_by", "version", "panel", "look", "photos", "calendars", "wake", "night", "doors",
-        "messages", "routines", "bed", "proxy", "voice",
+        "messages", "routines", "bed", "proxy", "voice", "news",
     }
     assert "parent_pins" not in doc and "parent_pins_version" not in doc
     assert doc["panel"] == {
@@ -339,6 +353,7 @@ async def test_a_panel_with_only_a_room_has_a_whole_document(
     assert doc["proxy"]["on"] is False and doc["proxy"]["name"] == "kitchen-panel"
     assert document.proxy_key(doc["proxy"]["key"])
     assert doc["voice"] == {"heard": None, "reply": None, "reply_attribute": None, "show": None}
+    assert doc["news"] == {"seen": None}
 
 
 async def test_set_beats_derived_and_the_version_follows_the_content(

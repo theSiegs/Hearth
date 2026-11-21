@@ -30,9 +30,12 @@ As for TVs and phones (`docs/contracts/device-api.md`), with kind `panel`:
   is dropped, a field of the wrong type is dropped, and a value equal to the derived default isn't kept. It is taken
   once, at the panel's first pairing; house-wide values in it (calendars, night, doorbell, routine windows, commute,
   the photo album) are taken only while the house has none. A valid `proxy.key` is kept, so an ESPHome proxy already
-  set up keeps working.
+  set up keeps working, and so is a valid `proxy.name` (see the document), so ESPHome sees the same device.
 - The answer is as today: `{pairing_id, code, expires_in, approvers}`.
 - A paired TV can't vouch for a panel: tickets are for TVs and phones only.
+- Finding the server before pairing: a panel has no token yet, so it tries `POST /api/glint_panel/pair`, then
+  `POST /api/hearth/pair`. Every error Hearth itself answers on these routes is JSON `{"error": "<reason>"}` (404
+  `not_set_up` included); only Home Assistant's own plain 404 means "no such route". A future server keeps both rules.
 
 Approval (Hearth's page, the administrators' phone notice, or Settings > Devices & services) asks only for a room (an
 area, optional): no person, no role. Over the WebSocket: `{"type": "hearth/pairing", "pairing_id", "answer":
@@ -45,7 +48,8 @@ approval:
 - a Home Assistant user named as the device: not an administrator (group `system-users`), local only, in no person;
   and a long-lived access token for it (client name `Glint Panel`, 10 years). Only the user id is kept.
 
-The poll's approved answer (`GET /api/<d>/pair/<pairing_id>`, header `X-Hearth-Nonce`) is handed over once, as for
+The poll's approved answer (`GET /api/<d>/pair/<pairing_id>`, header `X-Panel-Nonce`, or `X-Hearth-Nonce` as for TVs and
+phones; any future server takes `X-Panel-Nonce`) is handed over once, as for
 every device, and adds the token:
 
     {"status": "approved", "contract": 3, "device_id": "...", "secret": "...", "ha_token": "...",
@@ -119,7 +123,8 @@ such as presence and the room's thermostat itself).
                "commute": {"from": "07:00", "until": "08:30", "days": ["mon", "tue", "wed", "thu", "fri"]}},
   "bed": null,
   "proxy": {"on": false, "name": "kitchen-panel", "key": "...base64..."},
-  "voice": {"heard": null, "reply": null, "reply_attribute": null, "show": null}
+  "voice": {"heard": null, "reply": null, "reply_attribute": null, "show": null},
+  "news": {"seen": null}
 }
 ```
 
@@ -135,8 +140,11 @@ such as presence and the room's thermostat itself).
   every day with `after_bedtimes: true`. `routines.commute` default: weekdays 07:00–08:30.
 - `bed`: `null`, or `{"left": side | null, "right": side | null}`, a side being `{"connected": entity | null,
   "scripts": [entities], "positions": [entities]}`.
-- `proxy.name`: the device's name as an ESPHome name (`kitchen-panel`, at most 31 characters). `proxy.key`: a
+- `proxy.name`: the name the panel's seed gave (kept, so ESPHome sees the same device) or set with `set_panel`
+  `proxy_name`; else the device's name as an ESPHome name (`kitchen-panel`, at most 31 characters). `proxy.key`: a
   32-byte ESPHome API encryption key (base64), made at the first pairing (or kept from the seed).
+- `news.seen`: the `input_text` where the panel keeps which news it has shown, or `null` (the panel's own
+  fallback). Set with `set_panel` `news_seen`.
 - `voice` only names entities; the voice turn log, timers and the shared request entity belong to the voice
   integration (or plain helpers), never to the panel part.
 - The one secret in it is `proxy.key`. The document goes only to the panel that owns it, over its own subscription;
@@ -171,8 +179,8 @@ Unique ids `panel_<device_id>_<key>`.
 ### `<d>.set_panel`
 
 `device_id`: the one panel's Home Assistant device. Any of `people` (persons), `extra_areas` (areas), `routines`
-(entities), `bed_left`, `bed_right` (a bed side), `photos`, `presence`, `voice_heard`, `voice_reply`, `voice_show`
-(entities), `voice_reply_attribute` (words), `motion`, `photos_every`, and every switch key above (`house_panel`
+(entities), `bed_left`, `bed_right` (a bed side), `photos`, `presence`, `voice_heard`, `voice_reply`, `voice_show`,
+`news_seen` (entities), `voice_reply_attribute` (words), `proxy_name` (an ESPHome name), `motion`, `photos_every`, and every switch key above (`house_panel`
 included). Left out: unchanged. `null` or `[]`: back to derived (for a switch: its default; `house_panel: null` goes
 back to the derived house panel). An entity or area Home Assistant doesn't have is refused, naming it; a device that
 isn't a panel is refused. The answer (`return_response`) is the effective document without its secrets (no

@@ -85,7 +85,7 @@ VIEWS = ("photos", "tiles", "night", "off", "dark_clock", "pairing")
 NOTHING_ON_TABLET = "none"
 
 # set_panel's other keys: entity ids, lists of them, and words
-ENTITY_KEYS = ("photos", "presence", "voice_heard", "voice_reply", "voice_show")
+ENTITY_KEYS = ("photos", "presence", "voice_heard", "voice_reply", "voice_show", "news_seen")
 ENTITY_LIST_KEYS = ("routines",)
 BED_KEYS = ("bed_left", "bed_right")
 PANEL_KEYS = (
@@ -95,6 +95,7 @@ PANEL_KEYS = (
     *BED_KEYS,
     *ENTITY_KEYS,
     "voice_reply_attribute",
+    "proxy_name",
     *SELECTS,
     *SWITCHES,
 )

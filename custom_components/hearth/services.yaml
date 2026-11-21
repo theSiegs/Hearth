@@ -947,6 +947,13 @@ set_panel:
     voice_show:
       selector:
         entity:
+    news_seen:
+      selector:
+        entity:
+          domain: input_text
+    proxy_name:
+      selector:
+        text:
     motion:
       selector:
         select:

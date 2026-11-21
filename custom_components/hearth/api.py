@@ -58,6 +58,8 @@ from .pin_grants import GRANT_SECONDS, GRANT_WRITES
 
 HEADER_SECRET = "X-Hearth-Secret"
 HEADER_NONCE = "X-Hearth-Nonce"
+# The same, for a Glint Panel: the panel contract's neutral name (docs/contracts/panel-config.md)
+HEADER_PANEL_NONCE = "X-Panel-Nonce"
 
 _ID = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 _NONCE = re.compile(r"^[A-Za-z0-9_-]{32,128}$")
@@ -210,7 +212,9 @@ class PairStatusView(HomeAssistantView):
         if not _local(request):
             return _error(HTTPStatus.FORBIDDEN, "not_local")
         # Not through the entry: approving saves the device and reloads the entry, and this must answer meanwhile
-        pairing = find_pairing(hass, pairing_id, request.headers.get(HEADER_NONCE))
+        pairing = find_pairing(
+            hass, pairing_id, request.headers.get(HEADER_NONCE) or request.headers.get(HEADER_PANEL_NONCE)
+        )
         if pairing is None:
             return _error(HTTPStatus.NOT_FOUND, "unknown")
         if pairing.denied:

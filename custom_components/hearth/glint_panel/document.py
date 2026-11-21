@@ -161,6 +161,9 @@ def _windows(value: Any, strict: bool) -> list[dict[str, Any]] | None:
     return found
 
 
+_PROXY_NAME = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,29}[a-z0-9])?$")
+
+
 def panel_value(key: str, value: Any, known: Known, strict: bool = True) -> Any:
     """[value] for the panel's [key], checked; None: back to derived (left out, null, [] or the default)."""
     if key == "people":
@@ -173,6 +176,15 @@ def panel_value(key: str, value: Any, known: Known, strict: bool = True) -> Any:
         return _bed(value, known, strict)
     if key in ENTITY_KEYS:
         return _entity(value, known, strict)
+    if key == "proxy_name":
+        # The ESPHome name the panel's proxy already has (from its seed): kept, so ESPHome sees the same device
+        if value is None or value == "":
+            return None
+        if not isinstance(value, str) or not _PROXY_NAME.match(value):
+            if strict:
+                raise Refused(f"Not an ESPHome name: {value!r}")
+            return None
+        return value
     if key == "voice_reply_attribute":
         if value is None or value == "":
             return None
@@ -277,6 +289,8 @@ _SEED_PANEL = {
     ("bed", "left"): "bed_left",
     ("bed", "right"): "bed_right",
     ("proxy", "on"): "bluetooth_proxy",
+    ("proxy", "name"): "proxy_name",
+    ("news", "seen"): "news_seen",
     ("voice", "heard"): "voice_heard",
     ("voice", "reply"): "voice_reply",
     ("voice", "reply_attribute"): "voice_reply_attribute",
@@ -382,13 +396,15 @@ def build(
             "commute": copy.deepcopy(house.get("commute_window") or DEFAULT_COMMUTE),
         },
         "bed": bed if bed["left"] or bed["right"] else None,
-        "proxy": {"on": switch("bluetooth_proxy"), "name": proxy_name(name), "key": key},
+        "proxy": {"on": switch("bluetooth_proxy"), "name": v.get("proxy_name") or proxy_name(name), "key": key},
         "voice": {
             "heard": v.get("voice_heard"),
             "reply": v.get("voice_reply"),
             "reply_attribute": v.get("voice_reply_attribute"),
             "show": v.get("voice_show"),
         },
+        # Where the panel keeps which news it has shown (an input_text); null: the panel's own fallback
+        "news": {"seen": v.get("news_seen")},
     }
     doc["version"] = version_of(doc)
     return doc

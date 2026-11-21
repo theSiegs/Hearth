@@ -1392,6 +1392,14 @@
           "name": "Voice: show",
           "description": "The entity that asks the panel to show something."
         },
+        "news_seen": {
+          "name": "News seen",
+          "description": "The text helper where the panel keeps which news it has shown."
+        },
+        "proxy_name": {
+          "name": "Bluetooth proxy name",
+          "description": "The proxy's ESPHome name (lowercase letters, digits and dashes). Empty: from the panel's name."
+        },
         "motion": {
           "name": "Motion",
           "description": "still, calm, easy or lively."
