@@ -165,3 +165,38 @@ def test_a_group_already_over_offers_enough_to_catch_up() -> None:
     amounts = [a["data"]["minutes"] for a in games["actions"] if a["service"] == "hearth.add_time"]
     assert amounts == [25, 40]
     assert "still up" in games["sentence"] and "10 min over" in games["detail"] and "limit raised by 30 min" in games["detail"]
+
+
+def test_bonus_already_given_pays_toward_the_catch_up_and_buttons_name_play_time() -> None:
+    """A kid far past a category's limit (2 h of Games, 4 h played) with an hour of bonus already given: the bonus
+    pays an hour of it, so a give catches up the rest, and each button reads as the time to play it gives (+15, +30),
+    never the catch-up and play added up ("+2 h 15")."""
+    person = _person(all=0, games=0)
+    for g in person["groups"]:
+        if g["id"] == ALL_ID:
+            g.update({"budget": 240, "bonus": 60, "used_minutes": 242, "minutes_left": 58})
+        if g["id"] == "games":
+            g.update({"budget": 120, "bonus": 0, "used_minutes": 242})
+    games = suggestions(person, [], [])[0]
+    # 122 past Games' limit, 60 of it paid by the bonus given: 62, rounded up to 65
+    assert games["over"] == 65
+    assert games["play"] == 15 and games["minutes"] == 80
+    assert games["text"] == "games ran out · give 15?"
+    gives = [a for a in games["actions"] if a["service"] == "hearth.add_time"]
+    assert [a["label"] for a in gives] == ["+15", "+30"]
+    assert [a["data"]["minutes"] for a in gives] == [80, 95]
+
+
+def test_a_category_past_its_limit_but_paid_by_the_bonus_isnt_over() -> None:
+    person = _person(all=0, games=0)
+    for g in person["groups"]:
+        if g["id"] == ALL_ID:
+            g.update({"budget": 240, "bonus": 60, "used_minutes": 170, "minutes_left": 130})
+        if g["id"] == "games":
+            g.update({"budget": 120, "bonus": 0, "used_minutes": 170})
+    games = suggestions(person, [], [])[0]
+    assert games["over"] == 0 and games["minutes"] == 15
+    assert [a["data"]["minutes"] for a in games["actions"] if a["service"] == "hearth.add_time"] == [15, 30]
+
+
+ALL_ID = "all"

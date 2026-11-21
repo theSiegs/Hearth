@@ -656,12 +656,25 @@ class HearthPanel extends HTMLElement {
     this._offerUndo(`Unlocked ${what} for ${name} until midnight`, () => this._call("allow_end", id ? { id } : fallback));
   }
 
-  // How far past its limit (budget plus today's extra time) a group is, as glance.py's _over: rounded up to 5
-  // minutes, 0 under 10
-  _overOf(row) {
+  // How much more bonus time it takes before a group opens again, as glance.py's _over: the bonus already given
+  // (All's row) pays what's past daily time or, all together, past the category limits; rounded up to 5 minutes,
+  // 0 under 10
+  _overOf(row, rows) {
     const budget = row?.budget;
     if (budget === null || budget === undefined || budget < 0) return 0;
-    const past = (row.used_minutes || 0) - budget - Math.max(0, row.bonus || 0);
+    rows = rows && rows.length ? rows : [row];
+    const whole = rows.find((r) => r.id === "all");
+    const given = Math.max(0, whole?.bonus || 0);
+    const day = whole && whole.budget !== null && whole.budget !== undefined && whole.budget >= 0
+      ? (whole.used_minutes || 0) - whole.budget : 0;
+    let past;
+    if (row.id === "all") past = day - given;
+    else {
+      const caps = rows
+        .filter((r) => r.id !== "all" && r.budget !== null && r.budget !== undefined && r.budget > 0)
+        .reduce((sum, r) => sum + Math.max(0, (r.used_minutes || 0) - r.budget - Math.max(0, r.bonus || 0)), 0);
+      past = Math.max(day, caps) - given;
+    }
     return past < 10 ? 0 : Math.ceil(Math.floor(past) / 5) * 5;
   }
 
@@ -2883,7 +2896,7 @@ class HearthPanel extends HTMLElement {
         const group = first.data?.group || x.group || "all";
         const device = first.data?.device || null;
         const row = device ? null : (s?.groups || []).find((g) => g.id === group);
-        const over = device ? 0 : typeof x.over === "number" ? x.over : this._overOf(row);
+        const over = device ? 0 : typeof x.over === "number" ? x.over : this._overOf(row, s?.groups);
         acts += this._giveBox(`${inSheet ? "sheet" : "list"}|${item.person}|${x.key}`, { person: item.person, group, device, over });
       }
       if (dismiss) acts += `<button class="b ghost" data-action="sugg-dismiss" data-person="${esc(item.person)}" data-key="${esc(x.key)}" data-id="${esc(dismiss.id)}" title="Hides it until tomorrow">Dismiss</button>`;
@@ -3036,7 +3049,7 @@ class HearthPanel extends HTMLElement {
       bar.push(`<button class="b primary" data-action="give-open" aria-expanded="${Boolean(this._giveOpen)}">${icon("plus", "sm")}${esc(WORDS.bonus)}</button>`);
       // The same "+" box as For you's: bonus amounts, and Unlimited today (or no limit for the category that stops them)
       const b = this._binding(s);
-      bar.push(this._giveBox(`bar|${kid.id}`, { person: kid.id, group: b?.id || "all", over: this._overOf(b) }));
+      bar.push(this._giveBox(`bar|${kid.id}`, { person: kid.id, group: b?.id || "all", over: this._overOf(b, s?.groups) }));
       if (categories.length)
         bar.push(`<button class="b" data-action="raise-open" aria-expanded="${Boolean(this._raiseOpen)}">${icon("plus", "sm")}${esc(WORDS.raise)}</button>`);
     } else bar.push(`<button class="b" data-action="allow-open" aria-expanded="${Boolean(this._allowOpen)}">${icon("shield", "sm")}Allow an app…</button>`);
