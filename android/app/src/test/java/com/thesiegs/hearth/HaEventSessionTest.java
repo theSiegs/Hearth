@@ -45,13 +45,15 @@ public class HaEventSessionTest {
         @Override
         public void send(JSONObject message) throws IOException {
             if (closed) throw new IOException("closed");
-            sent.add(message);
+            // The answer is queued before the message counts as sent: a test that sees the subscription sent and then
+            // sends an event must find the event behind the subscription's result, as Home Assistant would send them
             String type = message.optString("type");
             if ("auth".equals(type)) {
                 incoming.add(json(refuseToken ? "{\"type\":\"auth_invalid\"}" : "{\"type\":\"auth_ok\"}"));
             } else if ("subscribe_events".equals(type)) {
                 incoming.add(json("{\"id\":" + message.optInt("id") + ",\"type\":\"result\",\"success\":true}"));
             }
+            sent.add(message);
         }
 
         @Override

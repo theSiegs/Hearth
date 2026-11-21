@@ -491,3 +491,25 @@ async def test_one_stray_fix_is_no_move_and_a_rough_one_near_home_isn_t_a_big_zo
     await _reading(hass, freezer, HOME, accuracy=300)
     await _update(hass)
     assert moved == [] and hass.states.get(PLACE).state == "home"
+
+
+async def test_one_precise_fix_held_still_is_a_move_after_a_while(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """A phone sitting still keeps one fix for many minutes: a precise one, uncontradicted for 10 minutes, is a
+    move; a rough one isn't."""
+    await _sam_at(hass, hass_client_no_auth, freezer, HOME)
+    moved = async_capture_events(hass, "hearth_place")
+    await _reading(hass, freezer, SCHOOL, accuracy=20)
+    freezer.tick(timedelta(minutes=5))
+    await _update(hass)
+    assert moved == []
+    freezer.tick(timedelta(minutes=6))
+    await _update(hass)
+    assert hass.states.get(PLACE).state == "school"
+
+    await _reading(hass, freezer, ELSEWHERE, accuracy=400)
+    freezer.tick(timedelta(minutes=15))
+    await _update(hass)
+    assert hass.states.get(PLACE).state == "school"
+

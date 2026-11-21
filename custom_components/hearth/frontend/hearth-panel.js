@@ -108,6 +108,11 @@ const WORDS = {
   holdEnded: "hold ended",
   tvCommand: "TV command",
   glintInbox: "Glint request",
+  ruleOpened: "Messages when away: open",
+  ruleClosed: "Messages when away: back to normal",
+  awayMessages: "Messages when away from adults",
+  awayMessagesHint:
+    "While a kid is out, away from home and apart from every adult for 5 minutes, their text app isn't held by daily time or Messaging's limit, so they can arrange a ride. It goes back after 10 minutes with an adult or at home. School time, the schedule, bedtime, a pause and a block still hold it. Calls always work.",
   backstop: "Keep Family Link's daily limit as a backstop",
   backstopMargin: "Backstop margin (minutes)",
   backstopHint:
@@ -1206,6 +1211,17 @@ class HearthPanel extends HTMLElement {
         await this._setOption("places", places, "Place added");
         return;
       }
+      case "away-app-add":
+      case "away-app-remove": {
+        const all = { ...(this._config.away_messages_apps || {}) };
+        const mine = [...(all[d.person] || [])];
+        const pick = action === "away-app-add" ? this._value(`#away-app-${CSS.escape(d.person)}`) : d.package;
+        if (!pick) return this._notify("Pick an app first");
+        all[d.person] = action === "away-app-add" ? [...new Set([...mine, pick])] : mine.filter((p) => p !== pick);
+        if (!all[d.person].length) delete all[d.person];
+        await this._setOption("away_messages_apps", all, action === "away-app-add" ? "App added" : "App removed");
+        return;
+      }
       case "place-fav-remove": {
         const places = this._placesOption();
         places.favorites = places.favorites.filter((f) => f.key !== d.key);
@@ -1248,6 +1264,9 @@ class HearthPanel extends HTMLElement {
         await this._setOption("enforce", kept, "Parental controls saved");
         return;
       }
+      case "away-messages":
+        await this._setOption("away_messages", el.checked, el.checked ? "Messages when away on" : "Messages when away off");
+        return;
       case "voice-assistants":
         await this._setOption("voice_assistants", el.checked, el.checked ? "Voice assistants on" : "Voice assistants off");
         return;
@@ -1923,12 +1942,117 @@ class HearthPanel extends HTMLElement {
   _schControls(kid) {
     const has = new Set(kid.controls || []);
     const lines = [{ name: "The TV and Hearth phones", sub: "Hearth", d: "Everything as scheduled, to the minute: locked in Sleep and School, closed groups held." }];
-    if (has.has("family_link")) lines.push({ name: "Family Link", sub: "phones and tablets", d: "Keeps its own bedtime and School time for now. During modes that close groups, Hearth pauses those groups' apps." });
-    if (has.has("family_safety")) lines.push({ name: "Xbox and Windows", sub: "Family Safety", d: "Hearth locks them during Sleep, School and modes that close their groups." });
+    const syncing = kid.sync?.state === "on";
+    if (has.has("family_link")) lines.push({ name: "Family Link", sub: "phones and tablets", d: syncing ? "Hearth keeps its bedtime in step. School time stays Family Link's own. During modes that close groups, Hearth pauses those groups' apps." : "Keeps its own bedtime and School time for now. During modes that close groups, Hearth pauses those groups' apps." });
+    if (has.has("family_safety")) lines.push({ name: "Xbox and Windows", sub: "Family Safety", d: `Hearth locks them during Sleep, School and modes that close their groups.${syncing ? " Their allowed hours follow bedtime and wake." : ""}` });
     if (has.has("nintendo")) lines.push({ name: "Switch", sub: "Nintendo", d: "Hearth holds it during Sleep, School and modes that close its groups." });
     return `<div class="s-subh"><span>How Hearth holds it</span><span style="font-weight:500">today</span></div>
       <ul class="s-sync">${lines.map((l) => `<li><span class="s-ic ok">${icon("check", "sm")}</span><div class="s-t">${esc(l.name)} <small>${esc(l.sub)}</small></div><div class="s-d">${esc(l.d)}</div></li>`).join("")}</ul>
-      ${has.size ? `<div class="s-hint">Sending the schedule to Family Link, the Xbox and the Switch themselves comes in a later update.</div>` : ""}`;
+      ${has.size ? `<div class="s-hint">${syncing ? "Bedtime and wake are kept in step in Family Link and Family Safety. School time and the Switch's own schedule aren't sent yet." : "Bedtime and wake can be kept in step in Family Link and Family Safety from the Bedtime card. School time and the Switch's own schedule aren't sent yet."}</div>` : ""}`;
+  }
+
+  // The Bedtime card (bedtime_sync.py): tonight's bedtime with "Change tonight" (tonight only), each weekday's for good,
+  // the apps' sync status, a parent's change made in an app, and the first sync's preview
+  _schBedCard(kid) {
+    const bed = kid.bedtime;
+    if (!bed) return "";
+    const sync = kid.sync;
+    const days = [...SCH_DAYS, "day_off"];
+    const at = (v) => (v ? esc(schClock(schMin(v))) : "–");
+    const t = bed.tonight || {};
+    const tonight = t.bedtime
+      ? `${at(t.bedtime)} → ${t.wake ? `${at(t.wake)} tomorrow` : "morning"}`
+      : "No bedtime tonight";
+    const banner = t.changed && t.bedtime
+      ? `<div class="s-bnr"><span class="s-grow">Tonight only: ${at(t.bedtime)}${t.wake && t.wake !== t.usual_wake ? `, wake ${at(t.wake)}` : ""} (usually ${at(t.usual_bedtime)}${t.wake && t.wake !== t.usual_wake ? `, ${at(t.usual_wake)}` : ""})</span><button class="b sm ghost" data-action="sch-resume">Back to the schedule</button></div>`
+      : "";
+    const today = this._schTodayKey();
+    const chips = days
+      .map((k) => {
+        const d = bed.days[k] || {};
+        return `<button class="s-bchip ${k === today && t.changed ? "marked" : ""}" data-action="sch-bed-open" data-scope="days" data-day="${k}" aria-label="${esc(SCH_LONG[k])}: bedtime ${d.bedtime ? esc(schClock(schMin(d.bedtime))) : "none"}"><small>${esc(SCH_SHORT[k])}</small><b>${d.bedtime ? esc(schShort(schMin(d.bedtime))) : "–"}</b><i>${d.wake ? esc(schShort(schMin(d.wake))) : "–"}</i></button>`;
+      })
+      .join("");
+    const names = { family_link: "Family Link", family_safety: "" };
+    const marks = { in_sync: [icon("check", "sm"), "ok", "In step"], writing: [icon("more", "sm"), "wait", "Writing"], waiting: [icon("pause", "sm"), "wait", "Waiting"], failed: ["<b>!</b>", "bad", "Didn't take"], unsupported: ["<b>!</b>", "bad", "Can't be set there"], differs: ["<b>?</b>", "warn", "Changed in the app"], off: ["<b>–</b>", "", "Off"] };
+    const pills = (sync?.services || [])
+      .map((s, i) => {
+        const [mark, cls, word] = marks[s.status] || marks.waiting;
+        const name = s.platform || names[s.via] || s.via;
+        return `<button class="s-pill ${cls}" data-action="sch-sync-pill" data-i="${i}" aria-label="${esc(name)}: ${esc(word)}" aria-pressed="${this._schPill === i}">${esc(name)} ${mark}</button>`;
+      })
+      .join("");
+    let detail = "";
+    const open = sync?.services?.[this._schPill];
+    if (open) {
+      const rows = Object.entries(open.days || {})
+        .map(([day, e]) => {
+          const key = open.via === "family_link" ? SCH_DAYS[Number(day) - 1] : SCH_DAYS[(["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"].indexOf(day) + 6) % 7];
+          const value = e.theirs || e.written || e.want;
+          const shown = Array.isArray(value) ? `${esc(schClock(schMin(value[0])))}–${esc(schClock(schMin(value[1])))}` : value === "several" ? "several windows" : "–";
+          return `<li><span>${esc(SCH_SHORT[key] || day)}</span><span class="s-grow">${shown}</span><span class="muted">${esc(e.reason || "")}</span></li>`;
+        })
+        .join("");
+      const offer = (sync.offers || []).find((o) => o.via === open.via && (o.platform || null) === (open.platform || null));
+      detail = `<div class="s-pilld"><div class="s-d">${esc(open.reason || marks[open.status]?.[2] || "")}${open.next_try ? ` · tried again at ${esc(schIsoClock(open.next_try))}` : ""}</div>
+        <ul class="s-pdays">${rows}</ul>
+        <div class="s-acts"><button class="b sm" data-action="sch-sync-check">Check now</button>
+        ${offer ? `<button class="b sm" data-action="sch-offer" data-offer="${esc(offer.id)}" data-accept="0">Put Hearth's back</button>` : ""}
+        ${open.status === "off" && sync.state === "on" ? `<button class="b sm" data-action="sch-fl-on">Turn it back on</button>` : ""}</div></div>`;
+    }
+    const offers = (sync?.offers || [])
+      .map((o) => {
+        const app = o.via === "family_link" ? "Family Link" : `Family Safety${o.platform ? ` (${o.platform})` : ""}`;
+        if (!o.adoptable) return `<div class="s-bnr warn"><span class="s-grow">${esc(app)} has several windows on ${esc(SCH_LONG[o.day])}, which Hearth can't keep in step.</span><button class="b sm" data-action="sch-offer" data-offer="${esc(o.id)}" data-accept="0">Put Hearth's back</button></div>`;
+        return `<div class="s-bnr warn"><span class="s-grow">Changed in ${esc(app)}: ${esc(SCH_LONG[o.day])} bedtime ${at(o.bedtime)} (Hearth has ${at(o.was?.bedtime)})</span>
+          <button class="b sm primary" data-action="sch-offer" data-offer="${esc(o.id)}" data-accept="1">Make it every ${esc(SCH_LONG[o.day])}</button>
+          <button class="b sm ghost" data-action="sch-offer" data-offer="${esc(o.id)}" data-accept="0">Put ${at(o.was?.bedtime)} back</button></div>`;
+      })
+      .join("");
+    return `<div class="card s-bed"><div class="s-bedh"><h2 class="s-grow">Bedtime</h2>${pills}</div>${detail}
+      <div class="s-tonight"><span class="s-t">Tonight</span><span class="s-grow">${tonight}</span><button class="b sm" data-action="sch-bed-open" data-scope="today">Change tonight</button></div>
+      ${banner}<div class="s-bchips">${chips}</div>${offers}${this._schReview(kid)}</div>`;
+  }
+
+  // Before the first sync: what each app gets, and the one button that starts it
+  _schReview(kid) {
+    if (kid.sync?.state !== "review") return "";
+    const preview = this._schPreview?.[kid.id]?.preview;
+    if (!preview) {
+      if (!this._schPreviewLoading) setTimeout(() => this._schLoadPreview(), 0);
+      return `<div class="s-review"><div class="s-d">Working out what keeping bedtimes in step would change…</div></div>`;
+    }
+    if (preview.start_from === "none") return `<div class="s-review"><div class="s-d">Nothing to keep in step yet: ${esc(kid.name)} has no bedtime here or in the apps.</div></div>`;
+    const from = preview.start_from;
+    const where = from === "hearth" ? "Hearth's schedule" : from === "family_link" ? "Family Link's bedtime" : "Family Safety's allowed hours";
+    const fl = (preview.family_link || []).filter((r) => r.write);
+    const fs = (preview.family_safety || []).filter((r) => r.write);
+    const flips = ["hearth", "family_link", "family_safety"].filter((f) => f !== from)
+      .map((f) => `<button class="b sm ghost" data-action="sch-sync-flip" data-from="${f}">Start from ${f === "hearth" ? "Hearth's" : f === "family_link" ? "Family Link's" : "Family Safety's"}</button>`)
+      .join("");
+    const rows = SCH_DAYS.map((k) => {
+      const d = preview.days?.[k] || {};
+      return `<li><span>${esc(SCH_SHORT[k])}</span><span class="s-grow">${d.bedtime ? esc(schClock(schMin(d.bedtime))) : "–"} → ${d.wake ? esc(schClock(schMin(d.wake))) : "–"}</span></li>`;
+    }).join("");
+    return `<div class="s-review"><div class="s-t">Bedtimes can now be kept in step</div>
+      <div class="s-d">Starting from ${esc(where)}. ${fl.length ? `Family Link gets ${fl.length} night${fl.length === 1 ? "" : "s"}` : "Family Link already matches"}${preview.switch_on ? ", and its bedtime is switched on" : ""}; ${fs.length ? `Family Safety gets ${fs.length} day${fs.length === 1 ? "" : "s"}` : "Family Safety already matches"}.${(preview.unsupported || []).length ? ` ${preview.unsupported.length} can't be set there.` : ""}</div>
+      <ul class="s-pdays">${rows}</ul>
+      <div class="s-acts">${flips}<button class="b primary" data-action="sch-sync-start">Start keeping bedtimes in step</button></div></div>`;
+  }
+
+  async _schLoadPreview() {
+    if (this._schPreviewLoading) return;
+    this._schPreviewLoading = true;
+    try {
+      const answer = await this._hass.callWS({ type: "hearth/schedule/sync", ...(this._schFrom ? { start_from: this._schFrom } : {}) });
+      this._schPreview = answer.sync;
+    } catch (err) {
+      this._schPreview = {};
+      this._notify(this._message(err));
+    } finally {
+      this._schPreviewLoading = false;
+    }
+    this._render();
   }
 
   _schEditor(kid) {
@@ -2020,6 +2144,22 @@ class HearthPanel extends HTMLElement {
         <label class="s-ck"><input type="checkbox" data-change="sch-kidlim" ${this._schKidsLimits !== false ? "checked" : ""}>With the time each day (limits)</label>
         <div class="s-acts"><button class="b ghost" data-action="sch-dlg-close">Cancel</button><button class="b primary" data-action="sch-copykids" ${to.size ? "" : "disabled"}>Copy</button></div></div></div>`;
     }
+    if (dlg === "bed") {
+      const b = this._schBedDraft || {};
+      const tonight = b.scope === "today";
+      const t = kid.bedtime?.tonight || {};
+      const d = tonight ? { bedtime: t.bedtime, wake: t.wake } : kid.bedtime?.days?.[b.day] || {};
+      const title = tonight ? "Change tonight" : `Every ${SCH_LONG[b.day]} from now on`;
+      const apply = b.apply || b.day;
+      const sets = b.day === "day_off" ? [] : [[b.day, `Every ${SCH_LONG[b.day]}`], ["school_nights", "School nights"], ["weekend_nights", "Weekend nights"], ["every_day", "Every day"]];
+      const usual = t.usual_bedtime ? schClock(schMin(t.usual_bedtime)) : null;
+      return `<div class="s-scrim" data-action="sch-dlg-close"><div class="s-dlg" role="dialog" aria-modal="true" aria-label="${esc(title)}" data-stop="1">
+        <h3>${esc(title)}</h3><p>${tonight ? `Tonight only.${usual ? ` Back to ${esc(usual)} tomorrow.` : ""}` : `${esc(kid.name)}'s bedtime and wake from now on. Family Link and Family Safety follow when they're kept in step.`}</p>
+        <label class="s-ck s-name"><span class="muted">Bedtime${tonight ? " tonight" : ""}</span><input id="sch-bed-bed" type="time" step="900" value="${esc(d.bedtime || "")}"></label>
+        <label class="s-ck s-name"><span class="muted">${tonight ? "Wake tomorrow" : "Wake"}</span><input id="sch-bed-wake" type="time" step="900" value="${esc(d.wake || "")}"></label>
+        ${sets.length ? `<div class="s-subh"><span>Apply to</span></div><div class="s-quick">${sets.map(([v, label]) => `<button data-action="sch-bed-apply" data-v="${v}" aria-pressed="${apply === v}">${esc(label)}</button>`).join("")}</div>` : ""}
+        <div class="s-acts"><button class="b ghost" data-action="sch-dlg-close">Cancel</button><button class="b primary" data-action="sch-bed-save">Save</button></div></div></div>`;
+    }
     if (dlg === "mode") {
       const draft = this._schModeDraft;
       const radio = (v, title, sub) => `<label class="s-radio"><input type="radio" name="sch-mk" data-change="sch-mode-kind" value="${v}" ${draft.allows === v ? "checked" : ""} ${draft.builtin && draft.allows !== v ? "disabled" : ""}><span>${title}<small>${sub}</small></span></label>`;
@@ -2055,6 +2195,7 @@ class HearthPanel extends HTMLElement {
       .join("")}</div>`;
     const week = `<div class="card flat s-week"><div class="s-axisrow"><span></span>${this._schAxis()}</div>${SCH_DAYS.map((_, i) => this._schWeekRow(kid, i)).join("")}</div>`;
     const main = `<div>
+      ${this._schBedCard(kid)}
       <div class="sec"><span>${esc(kid.name)}'s week</span>${(this._sched.kids || []).length > 1 ? `<button class="lnk" data-action="sch-dlg" data-dlg="kids" style="font-size:13px">Copy to another kid</button>` : ""}</div>
       ${week}
       <div class="sec"><span>Special days</span><span style="font-weight:500">These replace the weekday</span></div>
@@ -2114,6 +2255,69 @@ class HearthPanel extends HTMLElement {
       case "sch-resume":
         await this._schSend({ type: "hearth/schedule/resume", person: kid.id }, `${kid.name} is back on the schedule`);
         return;
+      // The Bedtime card
+      case "sch-bed-open":
+        this._schBedDraft = { scope: d.scope, day: d.day || null, apply: d.day || null };
+        this._schDlg = "bed";
+        break;
+      case "sch-bed-apply":
+        this._schBedDraft = { ...(this._schBedDraft || {}), apply: d.v };
+        break;
+      case "sch-bed-save": {
+        const b = this._schBedDraft || {};
+        const bedtime = this._value("#sch-bed-bed") || null;
+        const wake = this._value("#sch-bed-wake") || null;
+        if (!bedtime && !wake) {
+          this._notify("Give a bedtime or a wake");
+          return;
+        }
+        this._schDlg = null;
+        const said = [bedtime ? `bedtime ${schClock(schMin(bedtime))}` : null, wake ? `wake ${schClock(schMin(wake))}` : null].filter(Boolean).join(", ");
+        if (b.scope === "today") {
+          const usual = kid.bedtime?.tonight?.usual_bedtime;
+          await this._schSend(
+            { type: "hearth/schedule/bedtime", person: kid.id, scope: "today", bedtime, wake },
+            `Tonight only: ${said}.${usual ? ` Back to ${schClock(schMin(usual))} tomorrow.` : ""}`
+          );
+        } else {
+          const apply = b.apply || b.day;
+          const words = { school_nights: "School nights", weekend_nights: "Weekend nights", every_day: "Every day" };
+          await this._schSend(
+            { type: "hearth/schedule/bedtime", person: kid.id, scope: "days", days: [apply], bedtime, wake },
+            `${words[apply] || `Every ${SCH_LONG[apply]}`}: ${said}`
+          );
+        }
+        return;
+      }
+      case "sch-sync-pill":
+        this._schPill = this._schPill === Number(d.i) ? null : Number(d.i);
+        break;
+      case "sch-sync-check":
+        await this._schSend({ type: "hearth/schedule/sync/start", people: [kid.id], check: true }, "Checking the apps again");
+        return;
+      case "sch-fl-on":
+        await this._schSend({ type: "hearth/schedule/sync/start", people: [kid.id], family_link_bedtime_on: true }, "Family Link's bedtime is on again");
+        return;
+      case "sch-sync-flip":
+        this._schFrom = d.from;
+        this._schPreview = null;
+        await this._schLoadPreview();
+        return;
+      case "sch-sync-start": {
+        const from = this._schPreview?.[kid.id]?.preview?.start_from;
+        this._schPreview = null;
+        await this._schSend(
+          { type: "hearth/schedule/sync/start", people: [kid.id], ...(from ? { start_from: { [kid.id]: from } } : {}) },
+          `${kid.name}'s bedtime is kept in step from now on`
+        );
+        this._schFrom = null;
+        return;
+      }
+      case "sch-offer": {
+        const accept = d.accept === "1";
+        await this._schSend({ type: "hearth/schedule/sync/offer", offer: d.offer, accept }, accept ? "Kept for every week" : "Hearth's bedtime goes back");
+        return;
+      }
       case "sch-dlg":
         this._schDlg = d.dlg;
         if (d.dlg === "copy") this._schCopyTo = new Set();
@@ -2549,6 +2753,18 @@ class HearthPanel extends HTMLElement {
     return parts.join(" · ");
   }
 
+  // Where a kid is while they're out, by name only: "Away · apart from adults since 6:47 PM · Messages open" or
+  // "Practice · with Alex" (presence.py; nothing while they're home or not known)
+  _presenceLine(s) {
+    const p = s?.presence;
+    if (!p || !p.away) return "";
+    const parts = [esc(p.place || "Away")];
+    if (p.apart) parts.push(`apart from adults${p.apart_since ? ` since ${esc(clockAmPm(new Date(p.apart_since)))}` : ""}`);
+    else if ((p.with_adults || []).length) parts.push(`with ${esc(p.with_adults.join(", "))}`);
+    if ((p.open || []).length) parts.push(`${esc(p.open.join(", "))} open`);
+    return `<div class="line muted small presence">${parts.join(" · ")}</div>`;
+  }
+
   _todayHeader(kids) {
     const now = this._now();
     const people = kids.map((k) => ({ k, s: this._summaryPerson(k.id) }));
@@ -2688,7 +2904,7 @@ class HearthPanel extends HTMLElement {
         const s = this._summaryPerson(k.id);
         const asleep = this._lockOf(s)?.kind === "bedtime";
         return `<div class="card kid ${asleep ? "asleep" : ""}" role="button" tabindex="0" data-action="kid-sheet" data-enter="kid-sheet" data-kid="${esc(k.id)}" aria-current="${Boolean(sel && sel.id === k.id && this._wide)}">
-          ${this._ring(s || { name: k.name })}<div class="grow"><div class="name">${esc(k.name)}</div><div class="line">${this._kidLine(s) || "No word yet"}${this._originButton(s, `row|${k.id}`)}</div>${this._originList(s, `row|${k.id}`)}</div>
+          ${this._ring(s || { name: k.name })}<div class="grow"><div class="name">${esc(k.name)}</div><div class="line">${this._kidLine(s) || "No word yet"}${this._originButton(s, `row|${k.id}`)}</div>${this._presenceLine(s)}${this._originList(s, `row|${k.id}`)}</div>
           ${covered.has(k.id) ? "" : this._rowGive(s)}<span class="chev">${icon("chev")}</span></div>`;
       })
       .join("")}</div>`;
@@ -2766,7 +2982,7 @@ class HearthPanel extends HTMLElement {
     const locked = lock && lock.kind !== "paused";
     const h = [];
     h.push(`<div class="handle"><i></i></div><div class="dinner">
-      <div class="dhead">${this._ring(s, 60)}<div class="grow"><h2>${esc(kid.name)}</h2><div class="line">${this._kidLine(s)}${this._originButton(s, `sheet|${kid.id}`)}</div>${this._originList(s, `sheet|${kid.id}`)}</div>
+      <div class="dhead">${this._ring(s, 60)}<div class="grow"><h2>${esc(kid.name)}</h2><div class="line">${this._kidLine(s)}${this._originButton(s, `sheet|${kid.id}`)}</div>${this._presenceLine(s)}${this._originList(s, `sheet|${kid.id}`)}</div>
       <button class="closebtn" data-action="sheet-close" aria-label="Close">${icon("close")}</button></div>`);
     if (locked) {
       const word = LOCK_WORDS[lock.kind];
@@ -2962,6 +3178,8 @@ class HearthPanel extends HTMLElement {
         what = [r.service, r.why, r.result, r.duration_ms !== undefined ? `${r.duration_ms} ms` : null].filter(Boolean).join(" · ");
       } else if (r.kind === "hold_start" || r.kind === "hold_end") {
         what = [r.kind === "hold_start" ? WORDS.holdStarted : WORDS.holdEnded, targets, r.reason].filter(Boolean).join(" · ");
+      } else if (r.kind === "rule") {
+        what = [r.result === "opened" ? WORDS.ruleOpened : WORDS.ruleClosed, targets].filter(Boolean).join(" · ");
       } else {
         what = [r.kind === "tv_command" ? WORDS.tvCommand : WORDS.glintInbox, r.service, targets, r.result].filter(Boolean).join(" · ");
       }
@@ -4003,7 +4221,36 @@ class HearthPanel extends HTMLElement {
         <input id="place-fav-name" placeholder="Name, e.g. Practice" maxlength="40">
         <button class="btn primary" data-action="place-fav-add">Add</button>
       </div>
+      ${this._awayMessagesSetting(kids)}
     </section>`;
+  }
+
+  // Messages when away from adults (presence_rules.py): on by default; each kid's text app is found by Hearth, and
+  // an adult may add other Messaging apps of theirs
+  _awayMessagesSetting(kids) {
+    const cfg = this._config;
+    const on = cfg.away_messages !== false;
+    const added = cfg.away_messages_apps || {};
+    const choices = cfg.away_messages_choices || {};
+    const rows = on && kids.length
+      ? `<ul class="list">${kids
+          .map((k) => {
+            const mine = added[k.id] || [];
+            const named = (choices[k.id] || []).reduce((m, a) => ({ ...m, [a.package]: a.name }), {});
+            const offer = (choices[k.id] || []).filter((a) => !mine.includes(a.package)).map((a) => ({ value: a.package, label: a.name }));
+            const chips = mine
+              .map((p) => `<span class="chip small" title="${esc(p)}">${esc(named[p] || p)} <button class="lnk" data-action="away-app-remove" data-person="${esc(k.id)}" data-package="${esc(p)}" aria-label="Remove">×</button></span>`)
+              .join(" ");
+            return `<li class="wrap">${this._avatar(k.id, 32)}<div class="grow">${esc(k.name)}<div class="muted small">Their text app${chips ? ` and ${chips}` : ""}</div></div>
+              ${offer.length ? `<select id="away-app-${esc(k.id)}" aria-label="${esc(k.name)}'s other app">${this._options(offer, "", "Add an app")}</select>
+              <button class="btn" data-action="away-app-add" data-person="${esc(k.id)}">Add</button>` : ""}</li>`;
+          })
+          .join("")}</ul>`
+      : "";
+    return `<div class="strong">${esc(WORDS.awayMessages)}</div>
+      <p class="muted small">${esc(WORDS.awayMessagesHint)}</p>
+      <label class="check"><input type="checkbox" data-change="away-messages" ${on ? "checked" : ""}> ${esc(WORDS.awayMessages)}</label>
+      ${rows}`;
   }
 
   _schoolCard() {
@@ -4521,6 +4768,28 @@ ol.steps { margin: 0; padding-left: 20px; line-height: 1.7; }
 .sched .s-step button { width: 36px; height: 34px; border-radius: 999px; font-size: 18px; line-height: 1; color: var(--secondary-text-color); }
 .sched .s-step button:hover { background: var(--h-surface-2); color: var(--primary-text-color); }
 .s-step output { min-width: 72px; text-align: center; font-weight: 600; font-size: 14px; }
+.s-bed { margin-bottom: 14px; display: grid; gap: 10px; }
+.s-bedh { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.s-bedh h2 { margin: 0; font-size: 17px; }
+.s-pill { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--h-line); background: var(--h-surface-2); color: inherit; border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+.s-pill.ok { color: var(--h-ok); }
+.s-pill.warn, .s-pill.wait { color: var(--secondary-text-color); }
+.s-pill.bad { color: var(--h-out); }
+.s-pilld { border: 1px solid var(--h-line); border-radius: 10px; padding: 8px 10px; }
+.s-pdays { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 2px; font-size: 13px; }
+.s-pdays li { display: flex; gap: 10px; }
+.s-pdays li > span:first-child { width: 4.5em; color: var(--secondary-text-color); }
+.s-tonight { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.s-bnr { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--h-night) 12%, transparent); font-size: 13px; }
+.s-bnr.warn { background: color-mix(in srgb, var(--h-out) 10%, transparent); }
+.s-bchips { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
+.s-bchip { display: grid; gap: 1px; justify-items: center; border: 1px solid var(--h-line); border-radius: 10px; background: none; color: inherit; font: inherit; padding: 6px 2px; cursor: pointer; }
+.s-bchip small { font-size: 11px; color: var(--secondary-text-color); }
+.s-bchip b { font-size: 13px; }
+.s-bchip i { font-style: normal; font-size: 11px; color: var(--secondary-text-color); }
+.s-bchip.marked { border-color: var(--h-night); }
+.s-review { border-top: 1px solid var(--h-line); padding-top: 10px; display: grid; gap: 6px; }
+@media (max-width: 520px) { .s-bchips { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .s-sync { margin: 0; padding: 0; list-style: none; }
 .s-sync li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 2px 10px; padding: 10px 0; border-top: 1px solid var(--h-line); }
 .s-sync li:first-child { border-top: 0; }

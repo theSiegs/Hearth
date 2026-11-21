@@ -133,8 +133,18 @@ final class Allowance {
         if (lock != null && (lockUntil == null || lockUntil > now)) return true;
         JSONObject next = locks.optJSONObject("next_lock");
         Long nextAt = next != null ? HaLocks.parseTime(next.optString("at", null)) : null;
-        return nextAt != null && nextAt <= now;
+        if (nextAt == null || nextAt > now - NEXT_LOCK_GRACE_MS) return false;
+        // Where the next lock says when it ends (the weekly schedule's wake time), it's over then
+        Long nextUntil = HaLocks.parseTime(next.optString("until", null));
+        if (nextUntil != null && nextUntil <= now) return false;
+        // Only while Home Assistant has said nothing since it was due: a word after it (bedtime lifted for extra time,
+        // School time taken off) is the truth
+        long wordAt = entry != null ? entry.optLong(HaAllowance.WORD_AT_KEY, 0) : 0;
+        return wordAt < nextAt;
     }
+
+    /** How long after the next lock was due the TV starts it itself (Home Assistant posts at least every 2 min). */
+    static final long NEXT_LOCK_GRACE_MS = 3 * 60_000L;
 
     /** In {@link #heldApps}: everything is held (a family pause or a lock), not one group's time. */
     static final String HELD_ALL = "";
@@ -159,7 +169,7 @@ final class Allowance {
     static java.util.Map<String, String> heldApps(java.util.Collection<String> packages, JSONObject entry,
             Integer youtubeMinutesLeft, String youtubeName, long now) {
         java.util.Map<String, String> held = new java.util.HashMap<>();
-        HaAllowance.Values ha = HaAllowance.valuesOf(entry, null);
+        HaAllowance.Values ha = HaAllowance.valuesOf(entry, null, now);
         boolean locked = lockedNow(entry, now);
         for (String app : packages) {
             if (app == null) continue;
@@ -228,18 +238,49 @@ final class Allowance {
                 : context.getString(R.string.time_up_for_group, group), Toast.LENGTH_LONG).show();
     }
 
-    /** Tells the kid a lock holds the apps (Hearth's own bedtime): "Bedtime until 7:00 AM"; as often as showTimeUp. */
+    /**
+     * The lock holding the entry's apps at [now] ({kind, until}): the lock Home Assistant sent while it lasts, else the
+     * next lock the TV started itself. Null when {@link #lockedNow} says nothing holds.
+     */
+    static JSONObject lockInForce(JSONObject entry, long now) {
+        if (!lockedNow(entry, now)) return null;
+        JSONObject locks = HaLocks.locksOf(entry);
+        JSONObject lock = locks.optJSONObject("lock");
+        Long until = lock != null ? HaLocks.parseTime(lock.optString("until", null)) : null;
+        return lock != null && (until == null || until > now) ? lock : locks.optJSONObject("next_lock");
+    }
+
+    /** The words for a lock of this kind, with its end's time ([timed]) or without: bedtime, School time, any other. */
+    static int lockMessage(String kind, boolean timed) {
+        if ("bedtime".equals(kind)) return timed ? R.string.bedtime_until : R.string.bedtime_now;
+        if ("school_time".equals(kind)) return timed ? R.string.school_time_until : R.string.school_time_now;
+        return timed ? R.string.locked_until : R.string.locked_now;
+    }
+
+    /**
+     * Tells the kid a lock holds the apps, by its kind: "Bedtime until 7:00 AM", "School time until 3:00 PM", a
+     * pause's own words, "Locked until ..." for any other; as often as showTimeUp.
+     */
     static void showLocked(Context context) {
         long now = SystemClock.elapsedRealtime();
         if (HELD_ALL.equals(sToldGroup) && now - sToldAt < TELL_AGAIN_AFTER_MS) return;
         sToldGroup = HELD_ALL;
         sToldAt = now;
-        JSONObject lock = HaLocks.locksOf(HaAllowance.entryFor(context,
-                LauncherAccessibilityService.getActiveProfileKey(context), TvClock.now(context)))
-                .optJSONObject("lock");
+        long time = TvClock.now(context);
+        JSONObject entry = HaAllowance.entryFor(context, LauncherAccessibilityService.getActiveProfileKey(context), time);
+        JSONObject lock = lockInForce(entry, time);
+        String kind = lock != null ? lock.optString("kind", "") : "";
+        // A family pause holds every app too (on its own, or as the lock's kind): its own words ("Paused: Dinner,
+        // until 7:00 PM")
+        if (HaLocks.locksOf(entry).optJSONObject("pause") != null && (lock == null || "pause".equals(kind))) {
+            Toast.makeText(context, pauseMessage(context), Toast.LENGTH_LONG).show();
+            return;
+        }
         Long until = lock != null ? HaLocks.parseTime(lock.optString("until", null)) : null;
-        String time = until != null ? DateFormat.getTimeFormat(context).format(new Date(until)) : "";
-        Toast.makeText(context, context.getString(R.string.bedtime_until, time), Toast.LENGTH_LONG).show();
+        String message = until != null
+                ? context.getString(lockMessage(kind, true), DateFormat.getTimeFormat(context).format(new Date(until)))
+                : context.getString(lockMessage(kind, false));
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show();
     }
 
     /** "Paused: Dinner, until 7:00 PM", as the active profile's pause says it. */

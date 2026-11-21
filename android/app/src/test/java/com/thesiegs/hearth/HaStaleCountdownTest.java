@@ -42,6 +42,12 @@ public class HaStaleCountdownTest {
     }
 
     @Test
+    public void dailyTimesExceptionsNeverCountAgainstIt() throws Exception {
+        JSONObject out = HaAllowance.staleCountdown(entry(), Map.of("com.example.reader", 40 * 60000L));
+        assertFalse(out.has("all_out_of_time"));
+    }
+
+    @Test
     public void lessUseOrNoSnapshotChangesNothing() throws Exception {
         JSONObject out = HaAllowance.staleCountdown(entry(), Map.of("com.example.game", 600000L + 5 * 60000L));
         assertEquals(0, out.getJSONObject("out_of_time").length());

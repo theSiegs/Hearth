@@ -267,6 +267,19 @@ block_app:
       selector:
         object:
 
+block_outside_app:
+  fields:
+    source:
+      required: true
+      example: person.alex|family_link
+      selector:
+        text:
+    app:
+      required: true
+      example: com.example.app
+      selector:
+        text:
+
 unblock_app:
   fields:
     people:
@@ -495,10 +508,20 @@ set_schedule:
             - school_days
             - weekend
             - every_day
+            - school_nights
+            - weekend_nights
     changes:
       example: '[{"at": "07:45", "mode": "school"}, {"at": "15:15", "mode": "free"}, {"at": "21:30", "mode": "sleep"}]'
       selector:
         object:
+    bedtime:
+      example: "21:30"
+      selector:
+        time:
+    wake:
+      example: "07:00"
+      selector:
+        time:
     limits:
       example: '{"all": 180, "games": 60}'
       selector:
@@ -574,6 +597,10 @@ change_today:
       example: "22:00"
       selector:
         time:
+    wake:
+      example: "08:00"
+      selector:
+        time:
     mode:
       example: homework
       selector:
@@ -594,6 +621,44 @@ change_today:
       example: Movie night
       selector:
         text:
+sync_bedtimes:
+  fields:
+    people:
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    start_from:
+      default: auto
+      selector:
+        select:
+          options:
+            - auto
+            - hearth
+            - family_link
+            - family_safety
+    dry_run:
+      default: false
+      selector:
+        boolean:
+    stop:
+      default: false
+      selector:
+        boolean:
+    family_link_bedtime_on:
+      default: false
+      selector:
+        boolean:
+bedtime_offer:
+  fields:
+    id:
+      required: true
+      selector:
+        text:
+    accept:
+      required: true
+      selector:
+        boolean:
 resume_schedule:
   fields:
     people:
@@ -793,6 +858,7 @@ get_activity:
             - hold_end
             - tv_command
             - glint_inbox
+            - rule
     since:
       selector:
         datetime:

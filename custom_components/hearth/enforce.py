@@ -44,7 +44,8 @@ add, per person, the parental controls of other integrations (Configure > Enforc
 
 - The weekly schedule (weekly.py): a mode that closes groups (Homework) holds them through the same holds as a group
   out of time (Family Link's app pauses, Family Safety's platform lock and app pauses, the Switch), and Sleep and School
-  hold Family Safety's platforms and the Switch (schedule_wanted). Family Link keeps its own bedtime and School time.
+  hold Family Safety's platforms and the Switch (schedule_wanted). Family Link keeps its own School time; its bedtime
+  follows the schedule's through bedtime_sync.py, and Sleep locks its devices whole where it has none running.
 
 - Extra time at bedtime (bedtime_lift.py): an adult's extra time of All screen time given in bedtime lifts the
   schedule's Sleep and the bedtime locks while it lasts, so Sleep's holds above are let go; Family Link's bedtime
@@ -79,7 +80,7 @@ from typing import TYPE_CHECKING, Any
 import voluptuous as vol
 
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, SupportsResponse, callback
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import ServiceNotFound, ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_call_later
@@ -122,12 +123,16 @@ WEEKDAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", 
 # A Switch's limit is put back this long before midnight: after it, "today" is another day's setting
 NINTENDO_LET_GO_BEFORE_MIDNIGHT = timedelta(minutes=2)
 NINTENDO_EACH_DAY = "each_day_of_the_week"
-# Nothing is let go this long after Home Assistant starts (the sources report in first)
+# Nothing is let go this long after Home Assistant starts (the sources report in first)
 # How long a Switch limit Hearth put back may still read 0 (the Nintendo integration polls)
 SWITCH_PUT_BACK_FRESH = timedelta(minutes=5)
 SETTLE = timedelta(minutes=5)
 # A failed call is tried again after this long
 RETRY = timedelta(minutes=5)
+# ... or this soon when the parental control wasn't there yet (its integration still loading after a start)
+RETRY_NOT_LOADED = timedelta(seconds=30)
+# How long after Hearth starts an unavailable entity counts as still loading (later: a real outage, tried every 5 min)
+LOADING_WINDOW = timedelta(minutes=10)
 # Family Link's lock_override_code of a device a parent unlocked
 FL_UNLOCK_CODE = 4
 # Family Safety's hold attribute (Allowed Now sensors, platform lock switches): who decides the lock now
@@ -164,6 +169,20 @@ QUIET_AFTER_CALL = timedelta(minutes=1)
 # polling is a minute to five): what Hearth locked or let go shows within seconds
 REFRESH_AFTER_WRITE = timedelta(seconds=10)
 MAX_PACKAGES = 150
+# held.restore keys of a Family Link enforcer's app pauses. Apps whose pause call failed or never showed (they may be
+# paused all the same: let go like held ones); apps whose pause Family Link has shown intact once (only those can
+# later be "changed by a parent"); and apps whose pause never showed: {package: {tries, at}} (said as an error and
+# tried again, each time after a longer wait)
+MAYBE_PAUSED = "maybe_paused"
+PAUSES_INTACT = "pauses_intact"
+PAUSES_NOT_TAKEN = "pauses_not_taken"
+# A pause Family Link doesn't show intact this long after Hearth's last call didn't take (its lists follow within a
+# poll or two)
+PAUSE_SHOWS_WITHIN = timedelta(minutes=3)
+# The longest wait between tries of a pause that doesn't take (RETRY, doubled each time, up to this)
+PAUSE_RETRY_MAX = timedelta(hours=1)
+# How held.error starts while a pause didn't take
+PAUSE_NOT_TAKEN = "Family Link didn't take the pause"
 
 # Never paused, whatever category they're in: calls (the dialer and contacts, so an emergency call always works), the
 # system, and the apps that hold the rest. Messages apps are NOT here: daily time, a limit, bedtime
@@ -184,7 +203,31 @@ CLOCKS = frozenset(
         "com.lge.clock",
     }
 )
-ESSENTIAL = TRANSITION_CLIENTS | CLOCKS | frozenset(
+# Android's own parts and the home screens, by name: the system UI, the phone and its calls, contacts, the stock
+# launcher and keyboard, and what installs apps and grants permissions. Never the whole com.android.* prefix: real
+# apps live there too (Chrome is com.android.chrome), and those are paused and blocked like any app
+SYSTEM_PARTS = frozenset(
+    {
+        "com.android.systemui",
+        "com.android.phone",
+        "com.android.server.telecom",
+        "com.android.incallui",
+        "com.android.dialer",
+        "com.android.contacts",
+        "com.android.emergency",
+        "com.android.inputmethod.latin",
+        "com.android.permissioncontroller",
+        "com.android.packageinstaller",
+        "com.google.android.permissioncontroller",
+        "com.google.android.packageinstaller",
+        "com.android.launcher3",
+        "com.sec.android.app.launcher",
+        "com.google.android.apps.nexuslauncher",
+        "com.google.android.launcher",
+        "com.google.android.apps.tv.launcherx",
+    }
+)
+ESSENTIAL = TRANSITION_CLIENTS | CLOCKS | SYSTEM_PARTS | frozenset(
     {
         "com.thesiegs.hearth",
         "com.thesiegs.hearth.mobile",
@@ -203,7 +246,9 @@ ESSENTIAL = TRANSITION_CLIENTS | CLOCKS | frozenset(
 
 
 def essential(package: str) -> bool:
-    return package in ESSENTIAL or package.startswith("com.android.") or package == "android"
+    """Never paused or blocked: the explicit system list (SYSTEM_NEVER_PAUSED), the same one the whole-device path
+    reads (Enforcement._all_apps_but). No com.android.* prefix rule: Chrome and other real apps there are held."""
+    return package in SYSTEM_NEVER_PAUSED
 
 
 # Never paused for School time either: what holds the rest, and the system
@@ -364,12 +409,11 @@ def wanted(
         if near_midnight(now):
             held = set()
         else:
-            held = {ALL_APPS} if lifted is not None and lifted.open else {DEVICES}
+            held = {ALL_APPS} if lifted is not None and (lifted.open or lifted.open_apps) else {DEVICES}
     else:
         held = set()
     for group_id in closed:
-        # essential() spares com.android.* here: a category's own apps are never Android's system packages but by
-        # a misfiled sort, and those mustn't be paused; the whole-device path below names its exceptions instead
+        # essential() is the explicit system list, as the whole-device path reads it (no com.android.* prefix)
         packages |= {p for p in apps_of(group_id, enforcer.person) if not essential(p) and not fs_app(p)}
     if lifted:
         packages = {p for p in packages if not lifted.app(p, groups_of_app(p) if groups_of_app else None)}
@@ -473,6 +517,8 @@ class Enforcement:
 
     def __init__(self, hass: HomeAssistant, entry_id: str) -> None:
         self.hass = hass
+        # When this started: an entity with no state yet in the first minutes is still loading, not broken
+        self._started = dt_util.utcnow()
         self._entry_id = entry_id
         # Set by async_flush (the entry is unloading): no new enforcement pass starts after it
         self._closed = False
@@ -607,6 +653,7 @@ class Enforcement:
         exempt_of=None,
         blocked_of=None,
         budget_lifted_of=None,
+        sleep_locks_devices_of=None,
     ) -> None:
         """[apps_of]: a group id's packages for a person (for All screen time, every app of theirs). [lifted_of]: what
         a person's allows lift (Lifted); [school_time_of]: whether an enforcer's child is in School time now;
@@ -618,7 +665,9 @@ class Enforcement:
         [spared]: packages never paused, for any reason (the accessibility apps: household.never_held);
         [exempt_of]: the packages Family Link never pauses for a person (their paired devices' clients);
         [blocked_of]: the packages Hearth's blocks hold for a person (app_blocks.py): never paused or resumed, so one
-        paused when it was blocked stays as held (Family Link's resume_app skips a blocked app anyway)."""
+        paused when it was blocked stays as held (Family Link's resume_app skips a blocked app anyway);
+        [sleep_locks_devices_of]: whether the weekly schedule's Sleep locks a person's Family Link devices whole (no
+        Family Link bedtime of their own: household.sleep_locks_devices)."""
         self.enforcers = enforcers
         now = dt_util.now()
         wanted_now: dict[str, set[str]] = {}
@@ -654,6 +703,10 @@ class Enforcement:
                 paused |= paused_switch(e, paused_groups, now, playing)
                 if e.kind == FAMILY_SAFETY and (ALL in paused_groups or paused_groups & set(e.groups)):
                     paused |= set(e.platforms)
+                # A family pause locks a Family Link child's devices whole, as daily time running out does (a
+                # phone or tablet without a Hearth app has nothing else holding it); let go before midnight
+                if e.kind == FAMILY_LINK and ALL in paused_groups and not near_midnight(now):
+                    paused.add(DEVICES)
             scheduled = (
                 schedule_wanted(
                     e,
@@ -670,6 +723,10 @@ class Enforcement:
             )
             if e.kind == FAMILY_LINK:
                 scheduled -= self._always_allowed(e.entity_id)
+                # The schedule's Sleep for a kid without a Family Link bedtime: their devices are locked whole, as a
+                # family pause does (nothing else would hold a phone or tablet without a Hearth app)
+                if sleep_locks_devices_of and sleep_locks_devices_of(e.person):
+                    scheduled.add(DEVICES)
             device_lifted = device_lifted_of(e) if device_lifted_of else set()
             wanted_now[e.key] = (budget | school | paused | scheduled) - granted - device_lifted - set(spared)
             if e.kind == FAMILY_LINK and exempt_of:
@@ -829,8 +886,14 @@ class Enforcement:
                     if let_go:
                         self.activity.hold(False, person, let_go, None, kind)
             except Exception as err:  # noqa: BLE001 - one parental control failing mustn't stop the others
-                _LOGGER.warning("Hearth couldn't %s for %s through %s: %s", "hold" if hold else "let go", person, kind, err)
-                held.error, held.failed_at = str(err)[:200], now
+                loading = _not_loaded_yet(
+                    self.hass, err, held.entity_id or entity_id, now - self._started < LOADING_WINDOW
+                )
+                (_LOGGER.debug if loading else _LOGGER.warning)(
+                    "Hearth couldn't %s for %s through %s: %s", "hold" if hold else "let go", person, kind, err
+                )
+                # Not loaded yet: tried again in 30 s rather than 5 minutes
+                held.error, held.failed_at = str(err)[:200], (now - RETRY + RETRY_NOT_LOADED) if loading else now
                 self.note(key, held=sorted(hold), let_go=sorted(let_go), error=held.error)
             finally:
                 self._busy.discard(key)
@@ -915,6 +978,12 @@ class Enforcement:
             packages = items - {DEVICES}
             if packages:
                 service = "pause_app" if hold else "resume_app"
+                if hold:
+                    # Kept before the call: Family Link pauses a list one app after the other and raises at the
+                    # first one refused (or times out), so any of them may be paused by now. Possibly held until a
+                    # pause of them goes through or they're resumed, so letting go resumes them (_holding)
+                    _maybe_paused(held, packages)
+                    self._save()
                 response = await call_service(self.hass,
                     "familylink",
                     service,
@@ -922,8 +991,10 @@ class Enforcement:
                     blocking=True,
                     return_response=self._responds("familylink", service),
                 )
+                _maybe_paused(held, packages, False)
                 if not hold:
                     outcomes.update(_resume_outcomes(response))
+                    _forget_pauses(held, packages)
             return outcomes
         apps = {item for item in items if fs_app(item)}
         for platform in sorted(items - apps):
@@ -1059,7 +1130,8 @@ class Enforcement:
         installed = fl.installed_apps(self.hass, child) if child else None
         if not installed:
             return {DEVICES}
-        open_apps: set[str] = set()
+        # A standing rule's apps (Messages while out without an adult) stay open too
+        open_apps: set[str] = set(lifted.open_apps)
         for group_id in lifted.open:
             open_apps |= set(apps_of(group_id, enforcer.person))
         return {
@@ -1108,7 +1180,11 @@ class Enforcement:
 
     async def _lock_devices(self, entity_id: str, held: Held) -> None:
         """Today's daily limit to 0 on every device of the child. The limit it had is kept first (once: a retry after
-        a half-done hold mustn't keep the 0)."""
+        a half-done hold mustn't keep the 0). A lock of an earlier day (Sleep past midnight) first puts that weekday's
+        limit back, then locks today's."""
+        if "lock_minutes" in held.restore and held.restore.get("lock_day") != dt_util.now().date().isoformat():
+            await self._unlock_devices(held)
+            self._save()
         if "lock_minutes" not in held.restore:
             child, limit_entity = self._family_link_child(entity_id)
             state = self.hass.states.get(limit_entity) if limit_entity else None
@@ -1492,14 +1568,82 @@ class Enforcement:
             installed = fl.installed_apps(self.hass, str(child))
             if installed is not None:
                 packages &= installed
+            # Only a pause Hearth has once seen intact can later be "changed by a parent" (as seen_zero for a
+            # Switch, lock_seen_zero for the daily limit). Google takes some apps' 1-minute limit (the call
+            # succeeds) and never shows it: that pause didn't take, nobody changed it
+            intact = set(restore.get(PAUSES_INTACT) or ())
+            seen = set(intact)
+            never: set[str] = set()
+            called = self._quiet_until.get(e.key)
+            # Family Link's lists have had the time to show Hearth's last call (not known after a restart: long ago)
+            shown = not quiet and (
+                called is None or dt_util.utcnow() >= called - QUIET_AFTER_CALL + PAUSE_SHOWS_WITHIN
+            )
             for state in self.hass.states.async_all("sensor"):
                 paused = state.attributes.get("paused_apps")
                 if str(state.attributes.get("child_id")) != str(child) or not isinstance(paused, list):
                     continue
                 watch.add(state.entity_id)
                 for app in paused:
-                    if isinstance(app, dict) and app.get("package") in packages and app.get("pause_intact") is False:
-                        grant(g.APP, app["package"], "the app's limit was changed in the Family Link app")
+                    if not isinstance(app, dict) or app.get("package") not in packages:
+                        continue
+                    if app.get("pause_intact") is True:
+                        seen.add(app["package"])
+                    elif app.get("pause_intact") is False:
+                        if app["package"] in intact:
+                            grant(g.APP, app["package"], g.APP_CHANGED)
+                        elif shown:
+                            never.add(app["package"])
+            self._pauses_not_taken(e, held, seen, never - seen)
+
+    def _pauses_not_taken(self, e: Enforcer, held: Held, intact: set[str], never: set[str]) -> None:
+        """Keeps which app pauses Family Link has shown intact ([intact]) and handles those it never showed ([never]):
+        said once as an error (the kid's Family Link line, the action log), and paused again after RETRY, then after
+        twice as long each time (up to PAUSE_RETRY_MAX). Until then the app stays as held; for the next try it becomes
+        possibly held, so the hold pauses it again and letting go still resumes it."""
+        restore = held.restore
+        was = (restore.get(PAUSES_INTACT) or [], restore.get(PAUSES_NOT_TAKEN) or {})
+        # Of what's held still (an app waiting for its next try is possibly held)
+        holding = _holding(held)
+        intact = intact & holding
+        records = {p: r for p, r in was[1].items() if p in holding and p not in intact}
+        now = dt_util.utcnow()
+        new: set[str] = set()
+        again: set[str] = set()
+        for package in sorted(never):
+            record = records.get(package)
+            if record is None:
+                records[package] = {"tries": 1, "at": now.isoformat()}
+                new.add(package)
+                continue
+            tries = max(1, int(record.get("tries") or 1))
+            wait = min(RETRY * 2 ** min(tries - 1, 8), PAUSE_RETRY_MAX)
+            if (at := _utc(record.get("at"))) is None or now - at >= wait:
+                records[package] = {"tries": tries + 1, "at": now.isoformat()}
+                again.add(package)
+        if again:
+            held.items -= again
+            _maybe_paused(held, again)
+        if (sorted(intact), records) != (sorted(was[0]), was[1]):
+            restore[PAUSES_INTACT] = sorted(intact)
+            restore[PAUSES_NOT_TAKEN] = records
+            for key in (PAUSES_INTACT, PAUSES_NOT_TAKEN):
+                if not restore[key]:
+                    del restore[key]
+            self._save()
+        if records:
+            names = sorted(records)
+            text = f"{PAUSE_NOT_TAKEN} of {', '.join(names[:3])}" + (f" and {len(names) - 3} more" if len(names) > 3 else "")
+            # A failed call's own error stays (it's being retried)
+            if held.failed_at is None:
+                held.error = f"{text}; Hearth tries again"[:200]
+            if new:
+                _LOGGER.warning("Family Link never showed Hearth's pause of %s for %s", sorted(new), e.person)
+                self.note(e.key, not_taken=sorted(new), error=held.error)
+                if self.activity is not None:
+                    self.activity.hold(False, e.person, new, "pause_not_taken", e.kind)
+        elif held.failed_at is None and (held.error or "").startswith(PAUSE_NOT_TAKEN):
+            held.error = None
 
     def fs_mine(self, e: Enforcer, platform: str) -> dict[str, Any]:
         """What Hearth itself asked of a Family Safety platform of the enforcer's: whether it holds it, when its lock
@@ -1802,7 +1946,45 @@ def _holding(held: Held) -> set[str]:
         started.add(SWITCH)
     if "lock_minutes" in held.restore:
         started.add(DEVICES)
+    # Family Link apps whose pause call failed part-way, or never showed: they may be paused all the same
+    started |= set(held.restore.get(MAYBE_PAUSED) or ())
     return held.items | started
+
+
+def _maybe_paused(held: Held, packages: set[str], add: bool = True) -> None:
+    """Family Link apps that may be paused without Hearth holding them for sure (held.restore, kept over a restart):
+    added before a pause call, taken out when a pause or a resume of them went through."""
+    was = set(held.restore.get(MAYBE_PAUSED) or ())
+    now = was | packages if add else was - packages
+    if now:
+        held.restore[MAYBE_PAUSED] = sorted(now)
+    else:
+        held.restore.pop(MAYBE_PAUSED, None)
+
+
+def _forget_pauses(held: Held, packages: set[str]) -> None:
+    """Apps let go: whether their pause was seen intact, and whether it never took, is over with the pause."""
+    intact = set(held.restore.get(PAUSES_INTACT) or ()) - packages
+    if intact:
+        held.restore[PAUSES_INTACT] = sorted(intact)
+    else:
+        held.restore.pop(PAUSES_INTACT, None)
+    not_taken = {p: r for p, r in (held.restore.get(PAUSES_NOT_TAKEN) or {}).items() if p not in packages}
+    if not_taken:
+        held.restore[PAUSES_NOT_TAKEN] = not_taken
+    else:
+        held.restore.pop(PAUSES_NOT_TAKEN, None)
+
+
+def _not_loaded_yet(hass: HomeAssistant, err: Exception, entity_id: str | None, starting: bool) -> bool:
+    """Whether a failed call failed only because the parental control's integration hasn't loaded yet (just after
+    Home Assistant starts): its action isn't registered, or ([starting]) its entity has no state yet."""
+    if isinstance(err, ServiceNotFound):
+        return True
+    if not starting:
+        return False
+    state = hass.states.get(entity_id) if entity_id else None
+    return state is None or state.state in ("unavailable", "unknown")
 
 
 def _number(value: Any) -> float | None:
@@ -1814,9 +1996,14 @@ def _number(value: Any) -> float | None:
 
 
 def _ended_locks(held: Held, now: datetime | None = None) -> set[str]:
-    """Family Safety platforms Hearth locked whose lock is over (its end passed, or Hearth ended it at midnight)."""
+    """Family Safety platforms Hearth locked whose lock is over (its end passed, or Hearth ended it at midnight), and
+    Family Link's device lock of a day that's over: it's that weekday's daily limit at 0, so on the next day the
+    devices are open again (a hold still wanted past midnight, Sleep, is made again on the new weekday)."""
     now = now or dt_util.utcnow()
     ended = set((held.restore.get(FS_LOCK_ENDED) or {}).keys())
+    day = held.restore.get("lock_day")
+    if DEVICES in held.items and day and day != dt_util.as_local(now).date().isoformat():
+        ended.add(DEVICES)
     for platform, at in (held.restore.get("fs_lock_until") or {}).items():
         if (when := _utc(at)) is not None and when <= now:
             ended.add(platform)

@@ -369,8 +369,8 @@ class StatusView(HomeAssistantView):
 
 class EventsView(HomeAssistantView):
     """POST /api/hearth/device/{device_id}/events (header X-Hearth-Secret): {"events": [...]}, at most 50, each
-    {"type": "video_started", "profile_id", "t" (ms), "v" (video id), "title", "ch" (channel), "cid" (channel id)}:
-    what a kids profile started in HearthTube. A TV only. Answers {"ok": true, "added": n} once all are taken (a
+    {"type": "video_started", "profile_id", "t" (ms), "v" (video id), "title", "ch" (channel), "cid" (channel id),
+    optional "pa" (true: a parent's PIN let it play past the limit or a lock)}: what a kids profile started in HearthTube. A TV only. Answers {"ok": true, "added": n} once all are taken (a
     resend is harmless, and an entry of a profile mapped to no one, or one that isn't valid, is dropped), so the TV
     can mark them sent."""
 
@@ -579,8 +579,9 @@ class AskView(HomeAssistantView):
     """POST /api/hearth/device/{device_id}/ask (header X-Hearth-Secret): {"minutes": 15|30|45|60, "group": "all" or a
     group id, "note": short text, "profile_id": a TV's profile (a phone asks for its own person)} -> {"ok": true,
     "request": {id, status, minutes, asked_minutes, group, expires}}. 409 already_open (with that request), 429 cooldown
-    (with retry_in) after a "not now", 400 for anything else wrong, 404 no_person when the profile is nobody's. The
-    answer comes in the person's state document ("request") with the next status answers."""
+    (with retry_in) after a "not now", 400 closed for a category that's off today, 400 for anything else wrong, 404
+    no_person when the profile is nobody's. The answer comes in the person's state document ("request") with the next
+    status answers."""
 
     url = "/api/hearth/device/{device_id}/ask"
     name = "api:hearth:device:ask"

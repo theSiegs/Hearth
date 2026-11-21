@@ -1004,6 +1004,78 @@ test("Schedule: a kid with no times yet, and a today-only change with Back to th
   assert.match(html, /Changed for today<\/span>/);
 });
 
+test("Schedule: the Bedtime card keeps tonight and every weekday apart, with the apps' sync and a parent's change", async () => {
+  const { p, sent } = scheduled();
+  const kid = p._schKid();
+  const days = Object.fromEntries(["mon", "tue", "wed", "thu", "fri", "sat", "sun", "day_off"].map((k) => [k, { bedtime: "21:30", wake: "06:45" }]));
+  kid.bedtime = { days, tonight: { bedtime: "22:00", wake: "06:45", usual_bedtime: "21:30", usual_wake: "06:45", changed: true } };
+  kid.sync = {
+    state: "on",
+    services: [
+      { via: "family_link", platform: null, status: "in_sync", reason: null, days: { 1: { want: ["21:30", "06:45"], written: ["21:30", "06:45"] } } },
+      { via: "family_safety", platform: "Xbox", status: "differs", reason: "Changed in Family Safety", days: {} },
+    ],
+    offers: [{ id: "o1", via: "family_link", platform: null, day: "wed", bedtime: "22:15", wake: "06:45", was: { bedtime: "21:30", wake: "06:45" }, adoptable: true }],
+  };
+  let html = p._page();
+  assert.match(html, /Tonight only: 10 PM \(usually 9:30 PM\)/);
+  assert.match(html, /aria-label="Family Link: In step"/);
+  assert.match(html, /aria-label="Xbox: Changed in the app"/);
+  assert.match(html, /Changed in Family Link: Wednesday bedtime 10:15 PM \(Hearth has 9:30 PM\)/);
+  assert.match(html, /Make it every Wednesday/);
+  assert.match(html, /Hearth keeps its bedtime in step/);
+  // "Change tonight" is tonight only
+  await p._schAct("sch-bed-open", { dataset: { scope: "today" } });
+  html = p._page();
+  assert.match(html, /<h3>Change tonight<\/h3><p>Tonight only. Back to 9:30 PM tomorrow.<\/p>/);
+  p._value = (sel) => (sel === "#sch-bed-bed" ? "22:30" : "07:00");
+  await p._schAct("sch-bed-save", { dataset: {} });
+  assert.deepEqual(sent.at(-1), { type: "hearth/schedule/bedtime", person: "person.sam", scope: "today", bedtime: "22:30", wake: "07:00" });
+  assert.equal(p._undo.text, "Tonight only: bedtime 10:30 PM, wake 7 AM. Back to 9:30 PM tomorrow.");
+  clearTimeout(p._undoTimer);
+  // A weekday chip is for good, and Apply to widens it
+  await p._schAct("sch-bed-open", { dataset: { scope: "days", day: "wed" } });
+  assert.match(p._page(), /Every Wednesday from now on/);
+  await p._schAct("sch-bed-apply", { dataset: { v: "school_nights" } });
+  p._value = (sel) => (sel === "#sch-bed-bed" ? "21:00" : "");
+  await p._schAct("sch-bed-save", { dataset: {} });
+  assert.deepEqual(sent.at(-1), { type: "hearth/schedule/bedtime", person: "person.sam", scope: "days", days: ["school_nights"], bedtime: "21:00", wake: null });
+  assert.equal(p._undo.text, "School nights: bedtime 9 PM");
+  clearTimeout(p._undoTimer);
+  // The offer's answers
+  await p._schAct("sch-offer", { dataset: { offer: "o1", accept: "1" } });
+  assert.deepEqual(sent.at(-1), { type: "hearth/schedule/sync/offer", offer: "o1", accept: true });
+  clearTimeout(p._undoTimer);
+  clearTimeout(p._toastTimer);
+});
+
+test("Schedule: before the first sync the card shows what changes and one button starts it", async () => {
+  const { p, sent } = scheduled();
+  const kid = p._schKid();
+  kid.bedtime = { days: {}, tonight: {} };
+  kid.sync = { state: "review", services: [], offers: [] };
+  p._schPreview = {
+    "person.sam": {
+      preview: {
+        start_from: "family_link",
+        days: { mon: { bedtime: "21:00", wake: "06:00" } },
+        family_link: [{ day: "1", write: false }],
+        family_safety: [{ platform: "Xbox", day: "monday", write: true }, { platform: "Xbox", day: "tuesday", write: true }],
+        unsupported: [],
+        switch_on: false,
+      },
+    },
+  };
+  const html = p._page();
+  assert.match(html, /Bedtimes can now be kept in step/);
+  assert.match(html, /Starting from Family Link&#39;s bedtime|Starting from Family Link's bedtime/);
+  assert.match(html, /Family Link already matches; Family Safety gets 2 days/);
+  assert.match(html, /Start from Hearth's/);
+  await p._schAct("sch-sync-start", { dataset: {} });
+  assert.deepEqual(sent.at(-1), { type: "hearth/schedule/sync/start", people: ["person.sam"], start_from: { "person.sam": "family_link" } });
+  clearTimeout(p._toastTimer);
+});
+
 test("Parental controls: what Hearth does with less on the installed Family Safety, not a problem", () => {
   const fs = {
     domain: "microsoft_family_safety",
@@ -1154,4 +1226,44 @@ test("Activity: plain lines from hearth/activity, a kid filter, failures marked 
   assert.match(card, /<option value="person\.sam" >Sam<\/option>/);
   await p._act("activity-who", { value: "person.sam", dataset: {} });
   assert.deepEqual(asked.at(-1), { type: "hearth/activity", limit: 200, person: "person.sam" });
+});
+
+test("Messages when away: the kid's line says where they are by name, the setting sits under Places", async () => {
+  const away = today(16, {
+    sam: { presence: { away: true, place: "Away", apart: true, apart_since: iso(15, 47), with_adults: [], open: ["Messages"] } },
+  });
+  const kids = away._page().split('class="card kid').slice(1);
+  assert.match(kids[0], /class="line muted small presence">Away · apart from adults since 3:47 pm · Messages open</);
+  const together = today(16, { sam: { presence: { away: true, place: "Practice", apart: false, with_adults: ["Robin"], open: [] } } });
+  assert.match(together._page(), /presence">Practice · with Robin</);
+  // At home: no line
+  const home = today(16, { sam: { presence: { away: false, place: "Home", apart: false, with_adults: ["Robin"], open: [] } } });
+  assert.doesNotMatch(home._page(), /class="line muted small presence"/);
+
+  const p = today(16);
+  p._config.away_messages_apps = { "person.sam": ["com.whatsapp"] };
+  p._config.away_messages_choices = {
+    "person.sam": [{ package: "com.whatsapp", name: "WhatsApp" }, { package: "org.thoughtcrime.securesms", name: "Signal" }],
+  };
+  const card = p._placesCard();
+  assert.match(card, /Messages when away from adults/);
+  assert.match(card, /data-change="away-messages" checked/);
+  assert.match(card, /WhatsApp <button class="lnk" data-action="away-app-remove" data-person="person.sam" data-package="com.whatsapp"/);
+  assert.match(card, /<option value="org.thoughtcrime.securesms"[^>]*>Signal<\/option>/);
+  const set = [];
+  p._setOption = async (key, value) => set.push([key, value]);
+  p._value = () => "org.thoughtcrime.securesms";
+  await p._act("away-app-add", { dataset: { person: "person.sam" } });
+  assert.deepEqual(set.at(-1), ["away_messages_apps", { "person.sam": ["com.whatsapp", "org.thoughtcrime.securesms"] }]);
+  await p._act("away-app-remove", { dataset: { person: "person.sam", package: "com.whatsapp" } });
+  assert.deepEqual(set.at(-1), ["away_messages_apps", {}]);
+  await p._act("away-messages", { checked: false, dataset: {} });
+  assert.deepEqual(set.at(-1), ["away_messages", false]);
+  // Off: the per-kid list is hidden
+  p._config.away_messages = false;
+  assert.doesNotMatch(p._placesCard(), /away-app-add/);
+  // The activity line
+  p._activity = [{ at: "2026-11-16T21:05:00Z", kind: "rule", person: "person.sam", target: ["com.google.android.apps.messaging"], reason: "away_messages", result: "opened" }];
+  p._activityOpen = true;
+  assert.match(p._activityCard(), /Messages when away: open · com\.google\.android\.apps\.messaging/);
 });

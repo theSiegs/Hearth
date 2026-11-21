@@ -99,11 +99,12 @@ so while playing and when playback stops. Same callers as above; returns a Bundl
 agent it's passed on to Hearth TV, and returns null when it couldn't be (Hearth TV not connected): report that time again
 later. Observers on `/active` are told when a report changes `youtube_minutes_left`, not at every report.
 
-`call(uri /active, "report_started", null, extras {"time_ms": long, "video_id": string, "title": string, "channel": string, "channel_id": string})`:
+`call(uri /active, "report_started", null, extras {"time_ms": long, "video_id": string, "title": string, "channel": string, "channel_id": string, "parent_approved": boolean})`:
 HearthTube started a video in a kids profile (time in epoch milliseconds). Hearth TV keeps it in that profile's log of started
 videos (the newest 2,000; the same `time_ms` and `video_id` twice is one entry, so a resend is harmless) for a parent to
 read, and sends it to Home Assistant when that is set up. Hearth TV works without Home Assistant. `title`, `channel` and
-`channel_id` may be empty. Same callers as above; returns a Bundle with `ok` true, or null for a start that isn't valid
+`channel_id` may be empty. `parent_approved` (optional, absent is false) is true for a video a parent's PIN let play
+past the time limit or a lock; Hearth TV keeps it with the entry and Home Assistant shows it on `hearth_video_started`. Same callers as above; returns a Bundle with `ok` true, or null for a start that isn't valid
 (no time, an id that isn't a video id). In a profile's agent it's passed on to Hearth TV and returns null when it couldn't be
 (Hearth TV not connected): HearthTube keeps the entry and sends it again later.
 
@@ -167,6 +168,8 @@ version here.
 
 - **9** (2026-10-28): no column changes. `/active` answers only HearthTube (signed as below), like `/wallpaper`
   and the calls; any other app gets no row.
+- **8, `parent_approved`** (2026-11-17): an optional `report_started` extra; an older Hearth TV ignores it, so no
+  new version.
 - **8** (2026-10-27): added `parent_blocks`, `parent_blocks_version` and the `report_started` call (a kids profile's
   started videos up, the parent's blocked videos, channels and words down). Also in a profile's agent, as Hearth TV sends it.
 - **7** (2026-10-14): added `ha_share_now_playing` (Home Assistant's setup question for HearthTube's now playing).

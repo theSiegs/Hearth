@@ -1,0 +1,1 @@
+Allowed YouTube plays once daily time is out; with Home Assistant away, bedtime lasts the night and comes back after extra time; lock messages name the lock.

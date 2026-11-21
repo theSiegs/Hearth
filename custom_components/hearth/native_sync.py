@@ -656,6 +656,55 @@ class NativeSync:
         self._save()
         return _hhmm(wanted)
 
+    def cutoff_today(self, person: str, platform: str) -> dict[str, Any] | None:
+        """Read only, for bedtime sync: extra time of the person's today that moved the platform's allowed hours ({begin,
+        end, set}), or None."""
+        today = dt_util.now().date().isoformat()
+        return next(
+            (
+                r["cutoffs"][platform]
+                for (p, _), r in self._given.items()
+                if p == person and r.get("day") == today and platform in (r.get("cutoffs") or {})
+            ),
+            None,
+        )
+
+    async def async_set_window_today(self, person: str, entity_id: str, platform: str, begin: int, end: int) -> str:
+        """Bedtime sync's today write of a platform's allowed hours (begin, end minutes; 1440 midnight): today only on a
+        Family Safety that takes today_only, else this weekday's setting, recorded in self.windows to be put back after
+        midnight (async_windows_tick), as _fs_move_cutoff does. Not on Windows while Family Safety keeps a saved
+        schedule (raises). "today_only" or "weekday"."""
+        data = _fs_window_data(entity_id, platform, begin, end)
+        if fs_accepts(self.hass, SET_INTERVALS, data):
+            await call_service(self.hass, FS_DOMAIN, SET_INTERVALS, data, blocking=True)
+            self.household.enforcement.refresh_soon(entity_id)
+            return "today_only"
+        weekday = fs_weekday(dt_util.now())
+        data = _fs_window_data(entity_id, platform, begin, end, weekday)
+        if not fs_accepts(self.hass, SET_INTERVALS, data):
+            raise vol.Invalid("Family Safety takes no allowed hours for this day")
+        if platform == "Windows" and fs_saved_schedule(self.hass, entity_id):
+            raise HomeAssistantError(
+                "Family Safety keeps a saved schedule (its account lock or limits off), which would keep the change"
+            )
+        now_window = fs_allowed_window(self.hass, entity_id, platform) or (begin, end)
+        key, was = await self._window_begin(
+            person, entity_id, platform, weekday, {"begin": now_window[0], "end": now_window[1]}, begin, end
+        )
+        try:
+            await call_service(self.hass, FS_DOMAIN, SET_INTERVALS, data, blocking=True)
+        except Exception:
+            if was is not None:
+                self.windows[key] = was
+            else:
+                self.windows.pop(key, None)
+            self._save()
+            raise
+        self.windows[key]["written_at"] = dt_util.utcnow().isoformat()
+        self._save()
+        self.household.enforcement.refresh_soon(entity_id)
+        return "weekday"
+
     async def _window_begin(
         self, person: str, entity_id: str, platform: str, weekday: str, before: dict[str, Any], begin: int, wanted: int
     ) -> tuple[str, dict[str, Any] | None]:
@@ -1133,6 +1182,46 @@ def fs_weekday_window(hass: HomeAssistant, entity_id: str, platform: str, weekda
     if end >= MINUTES_A_DAY - 1 or end <= begin:
         end = MINUTES_A_DAY  # 23:59 (how the integration shows midnight) or 00:00
     return begin, end
+
+
+def fs_policy_windows(
+    hass: HomeAssistant, entity_id: str, platform: str, weekday: str
+) -> list[tuple[int, int]] | None:
+    """A weekday's allowed hours of a platform from the child's Screen Time Policy sensor (bedtime sync): Windows'
+    <weekday>_allowed_intervals (48 half hours), the Xbox's xbox_<weekday>_allowed_intervals ([{begin, end}]), as
+    [(begin, end)] minutes (1440: midnight). [] when nothing is allowed; None when the sensor doesn't say."""
+    account = fs_account_of(hass, entity_id)
+    if account is None:
+        return None
+    key = f"xbox_{weekday}_allowed_intervals" if platform == "Xbox" else f"{weekday}_allowed_intervals"
+    for state in hass.states.async_all("sensor"):
+        attrs = state.attributes
+        if str(attrs.get("user_id")) != account or key not in attrs:
+            continue
+        value = attrs.get(key)
+        if not isinstance(value, list):
+            return None
+        out: list[tuple[int, int]] = []
+        if platform != "Xbox":
+            if len(value) != 48:
+                return None
+            start = None
+            for n, allowed in enumerate([*value, False]):
+                if allowed and start is None:
+                    start = n
+                elif not allowed and start is not None:
+                    out.append((start * 30, n * 30))
+                    start = None
+            return out
+        for item in value:
+            if not isinstance(item, dict):
+                return None
+            begin, end = _clock(item.get("begin")), _clock(item.get("end"))
+            if begin is None or end is None:
+                return None
+            out.append((begin, MINUTES_A_DAY if end <= begin or end >= MINUTES_A_DAY - 1 else end))
+        return out
+    return None
 
 
 def _local(value: Any) -> str:

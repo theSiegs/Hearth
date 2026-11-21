@@ -867,11 +867,19 @@
         },
         "days": {
           "name": "Days",
-          "description": "mon to sun, day_off, or several at once: school_days (Monday to Friday), weekend, every_day (with the Day off)."
+          "description": "mon to sun, day_off, or several at once: school_days (Monday to Friday), weekend, every_day (with the Day off), and for bedtimes school_nights (Sunday to Thursday) and weekend_nights (Friday and Saturday)."
         },
         "changes": {
           "name": "Changes",
           "description": "The day's changes: [{\"at\": \"07:45\", \"mode\": \"school\"}, ...], at most 12. The last one runs past midnight until the next day's first."
+        },
+        "bedtime": {
+          "name": "Bedtime",
+          "description": "The days' bedtime from now on: their last Sleep moves here (or one is added). Not with changes. Family Link and Family Safety follow when bedtime sync is on."
+        },
+        "wake": {
+          "name": "Wake",
+          "description": "The days' wake from now on: their first change moves here. Not with changes."
         },
         "limits": {
           "name": "Time each day",
@@ -929,6 +937,10 @@
           "name": "Bedtime",
           "description": "Tonight's bedtime: \"let Sam stay up until 10\"."
         },
+        "wake": {
+          "name": "Wake tomorrow",
+          "description": "Tomorrow morning's wake, this once: tonight's Sleep runs until then."
+        },
         "mode": {
           "name": "Mode",
           "description": "A mode from now (Homework, Free time...)."
@@ -948,6 +960,46 @@
         "reason": {
           "name": "Reason",
           "description": "Why, for the record."
+        }
+      }
+    },
+    "sync_bedtimes": {
+      "name": "Keep bedtimes in step",
+      "description": "Starts keeping the kids' bedtime in step in Family Link and Family Safety (the first sync, after a preview), checks again for kids already in step, or stops. Returns, per kid, its state and what each app gets.",
+      "fields": {
+        "people": {
+          "name": "People",
+          "description": "Which kids; every kid with Family Link or Family Safety when empty."
+        },
+        "start_from": {
+          "name": "Start from",
+          "description": "auto (Hearth's schedule when it has a Sleep, else the apps' bedtime), hearth, family_link or family_safety."
+        },
+        "dry_run": {
+          "name": "Preview only",
+          "description": "Say what would be written and imported, and write nothing."
+        },
+        "stop": {
+          "name": "Stop",
+          "description": "Write nothing more for them. Nothing is put back: the apps keep the hours they have."
+        },
+        "family_link_bedtime_on": {
+          "name": "Turn Family Link's bedtime back on",
+          "description": "Switch Family Link's bedtime on again after a parent switched it off."
+        }
+      }
+    },
+    "bedtime_offer": {
+      "name": "Answer a bedtime change",
+      "description": "Answers a bedtime changed in Family Link or Family Safety: keep it every week in Hearth's schedule (every app follows), or put Hearth's back in that app.",
+      "fields": {
+        "id": {
+          "name": "Offer",
+          "description": "The offer's id (in the kid's bedtime_sync offers)."
+        },
+        "accept": {
+          "name": "Keep it",
+          "description": "On: make it that weekday's bedtime for good. Off: put Hearth's back."
         }
       }
     },
@@ -994,6 +1046,20 @@
         "apps": {
           "name": "Apps",
           "description": "Several apps' package names."
+        }
+      }
+    },
+    "block_outside_app": {
+      "name": "Block an app loosened outside Hearth",
+      "description": "The button on Hearth's notice of an app unblocked, its limit raised or taken off, or always allowed in Family Link, Family Safety or Nintendo without Hearth: blocks it again there (Family Link: as Hearth's own block; Nintendo: off the Switch's allow list).",
+      "fields": {
+        "source": {
+          "name": "List",
+          "description": "The list the notice is about, as the notice's button gives it."
+        },
+        "app": {
+          "name": "App",
+          "description": "The app's id in that list."
         }
       }
     },
@@ -1165,7 +1231,7 @@
         },
         "kind": {
           "name": "Kind",
-          "description": "call, hold_start, hold_end, tv_command or glint_inbox."
+          "description": "call, hold_start, hold_end, tv_command, glint_inbox or rule."
         },
         "since": {
           "name": "Since",

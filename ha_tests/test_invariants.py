@@ -7,6 +7,9 @@ B. Counting (counting.merge, group_seconds): the merged total is never below a r
    a live reading beside an itemized one only ever counts as a total.
 C. A day in Home Assistant: a kid's phone posting, a totals source going up, down and away, bonus time, budgets,
    Pause screens, allows, reloads and midnight, with the promised invariants checked after every step.
+D. Presence and Messages when away: over random outings (fixes, gaps, adults out of reach, restarts) the rule never
+   flaps, unknown never changes it but the 6-hour end, it never opens at home, a restart leaves it as it was; and in
+   Home Assistant it never lifts School time, a pause or a block, nor touches an allow.
 
 Every assertion names its seed: rerun one case with `-k "seed_<n>"` (or the pure test with that seed in SEEDS).
 """
@@ -462,3 +465,359 @@ async def test_a_random_day_keeps_its_promises(
 ) -> None:
     await _run_day(hass, hass_client_no_auth, freezer, seed)
 
+
+# D. Presence and Messages when away (presence.py, presence_rules.py): random outings of fixes, gaps and restarts
+
+
+from datetime import UTC, datetime  # noqa: E402
+import json  # noqa: E402
+
+from custom_components.hearth.places import AWAY, HOME  # noqa: E402
+from custom_components.hearth.presence import (  # noqa: E402
+    APART,
+    AT,
+    DWELL,
+    WITH_ADULT,
+    YES,
+    AdultNow,
+    Core,
+    Fact,
+    Fix,
+    KidNow,
+)
+from custom_components.hearth.presence_rules import BACK_AFTER, UNKNOWN_FOR, AwayMessages  # noqa: E402
+
+PRESENCE_SEEDS = list(range(60))
+_HOME = (40.0, -75.0, 100.0)
+_M = 111195.0
+
+
+class _FakeHousehold:
+    """What the rule reads of the household: the options, no Family Link lists (Google Messages), a name."""
+
+    def __init__(self) -> None:
+        self.options: dict = {}
+        self.hass = None
+
+    def family_link_child(self, person):
+        return None
+
+    def person_name(self, person):
+        return "Sam"
+
+
+class _FakePresence:
+    def __init__(self) -> None:
+        self.core = Core({})
+        self.rules: dict = {}
+
+    def kids(self):
+        return [SAM]
+
+    def fact(self, person, name):
+        return self.core.facts.get(person, {}).get(name) or Fact()
+
+    def save(self) -> None:
+        pass
+
+
+def _outing(rng: random.Random):
+    """Minute by minute: (kid's position in metres north of home or None for no new fix, the adult's position or None
+    when they can't be located, whether Home Assistant restarts this minute)."""
+    steps = []
+    kid, adult = 0.0, 0.0
+    while len(steps) < 900:
+        kind = rng.choice(("home", "together", "apart", "near", "gap", "adult_gone", "drive"))
+        span = rng.randint(2, 90 if kind != "gap" else 420)
+        spot = rng.uniform(500, 8000)
+        for n in range(span):
+            if kind == "home":
+                kid, adult = rng.uniform(0, 40), 0.0
+            elif kind == "together":
+                kid = adult = spot
+            elif kind == "apart":
+                kid, adult = spot, rng.choice((0.0, spot + rng.uniform(600, 5000)))
+            elif kind == "near":
+                kid, adult = spot, spot + rng.uniform(150, 320)
+            elif kind == "drive":
+                adult = kid = n * 900.0
+            fresh = kind != "gap" and rng.random() < 0.7
+            steps.append((kid if fresh else None, None if kind == "adult_gone" else adult, rng.random() < 0.01))
+    return steps
+
+
+def _simulate(seed: int):
+    """The rule's changes [(minute, opened, the facts then, the state before)], over one random outing."""
+    rng = random.Random(seed)
+    household, presence = _FakeHousehold(), _FakePresence()
+    rule = AwayMessages(household, presence)
+    start = datetime(2026, 11, 17, 8, 0, tzinfo=UTC)
+    kid_fix: KidNow | None = None
+    adult_seen: tuple[float, datetime] | None = None
+    settle_until = None
+    changes = []
+    states = []
+    for minute, (kid, adult, restart) in enumerate(_outing(rng)):
+        now = start + timedelta(minutes=minute)
+        if restart:
+            # A restart: the positions in memory are gone, the facts and the rule's state come back from the store
+            before = (presence.core.data(), json.dumps(presence.rules))
+            stored = presence.core.data()
+            presence.core = Core({})
+            presence.core.load(stored)
+            assert (presence.core.data(), json.dumps(presence.rules)) == before, f"seed_{seed}: restart"
+            settle_until = now + timedelta(minutes=2)
+        if kid is not None:
+            place = HOME if kid < 100 else AWAY
+            kid_fix = KidNow(Fix(now, _HOME[0] + kid / _M, _HOME[1], 10), place, place, now, now, True)
+        adults = {}
+        if adult is None:
+            adults["person.alex"] = None
+        else:
+            if adult_seen is None or adult_seen[0] != adult:
+                adult_seen = (adult, now)
+            adults["person.alex"] = AdultNow(Fix(adult_seen[1], _HOME[0] + adult / _M, _HOME[1], 10), adult < 100)
+        settling = settle_until is not None and now < settle_until
+        kids = {SAM: kid_fix if kid_fix is not None else KidNow(None)}
+        state_before = json.dumps(presence.rules)
+        presence.core.step(now, kids, adults, _HOME, settling)
+        if settling:
+            assert json.dumps(presence.rules) == state_before, f"seed_{seed}: changed while settling"
+            continue
+        before = dict(presence.rules.get("away_messages", {}).get(SAM) or {})
+        for person, opened in rule.check(now):
+            facts = {name: (presence.fact(SAM, name).value, presence.fact(SAM, name).sure) for name in (AT, WITH_ADULT, APART)}
+            changes.append((now, opened, facts, before))
+        states.append((now, rule.on(SAM)))
+    return changes, states
+
+
+@pytest.mark.parametrize("seed", PRESENCE_SEEDS[:20], ids=[f"seed_{s}" for s in PRESENCE_SEEDS[:20]])
+def test_messages_when_away_never_flaps(seed: int) -> None:
+    """No two changes less than 5 minutes apart; no open, close, open within 15 minutes; open at least 10 minutes."""
+    changes, _states = _simulate(seed)
+    for (a, opened_a, *_), (b, opened_b, *_) in zip(changes, changes[1:]):
+        assert b - a >= DWELL, f"seed_{seed}: {a} {b}"
+        assert opened_a != opened_b, f"seed_{seed}: the same change twice"
+    for first, _, third in zip(changes, changes[1:], changes[2:]):
+        if first[1]:
+            assert third[0] - first[0] >= timedelta(minutes=15), f"seed_{seed}"
+
+
+@pytest.mark.parametrize("seed", PRESENCE_SEEDS[20:40], ids=[f"seed_{s}" for s in PRESENCE_SEEDS[20:40]])
+def test_unknown_never_changes_messages_when_away_but_the_6_hour_end(seed: int) -> None:
+    changes, _states = _simulate(seed)
+    for now, opened, facts, before in changes:
+        if opened:
+            assert facts[APART] == (YES, True), f"seed_{seed}: opened at {now} on {facts}"
+            continue
+        back = facts[AT] == (HOME, True) or facts[WITH_ADULT] == (YES, True)
+        unknown_since = before.get("unknown_since")
+        long_unknown = unknown_since is not None and now - datetime.fromisoformat(unknown_since) >= UNKNOWN_FOR
+        assert back or long_unknown, f"seed_{seed}: closed at {now} on {facts}"
+        if back:
+            assert before.get("back_since") and now - datetime.fromisoformat(before["back_since"]) >= BACK_AFTER - timedelta(
+                minutes=1
+            ), f"seed_{seed}"
+
+
+@pytest.mark.parametrize("seed", PRESENCE_SEEDS[40:], ids=[f"seed_{s}" for s in PRESENCE_SEEDS[40:]])
+def test_messages_when_away_never_opens_at_home_and_survives_restarts(seed: int) -> None:
+    """While the kid's confirmed place is home, it never opens (home alone isn't away). Every restart in the outing
+    left the state as it was (checked inside _simulate)."""
+    changes, _states = _simulate(seed)
+    for now, opened, facts, _before in changes:
+        if opened:
+            assert facts[AT][0] != HOME, f"seed_{seed}: opened at home at {now}"
+
+
+HOLD_SEEDS = list(range(6))
+
+
+@pytest.mark.parametrize("seed", HOLD_SEEDS, ids=[f"seed_{s}" for s in HOLD_SEEDS])
+async def test_messages_when_away_never_lifts_school_time_a_pause_or_a_block(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer, seed: int
+) -> None:
+    """Whatever an adult does while it's open (School time, pauses, blocks, allows), Messages is held when one of those
+    holds it, and the rule never adds, changes or ends an allow."""
+    from test_app_blocks import _lists
+    from test_messaging import FAMILY_LINK, MESSAGES, _out_of_time
+
+    rng = random.Random(seed)
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+    await _out_of_time(hass, hass_client_no_auth)
+    await _option(hass, "enforce", {"person": SAM, "family_link": FAMILY_LINK, "school_time_apps": [MESSAGES]})
+    school = "binary_sensor.sam_phone_school_time_active"
+    hass.states.async_set(school, "off", {"child_id": "42"})
+    household = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
+    # The rule on, as after an outing
+    household.presence.rules["away_messages"] = {SAM: {"on": True, "since": dt_util.utcnow().isoformat()}}
+    installed = ["com.google.android.apps.messaging", "com.android.chrome", "com.example.game"]
+    allows_made: list[str] = []
+    for step in range(12):
+        what = rng.choice(("school", "pause", "block", "allow", "nothing"))
+        on = rng.random() < 0.5
+        if what == "school":
+            hass.states.async_set(school, "on" if on else "off", {"child_id": "42", "schooltime_end": "2030-01-01T15:00:00"})
+        elif what == "pause":
+            if on:
+                await hass.services.async_call(DOMAIN, "pause", {"people": [SAM], "app": MESSAGES, "minutes": 30}, blocking=True)
+            else:
+                await hass.services.async_call(DOMAIN, "pause_end", {"people": [SAM], "app": MESSAGES}, blocking=True)
+        elif what == "block":
+            _lists(hass, installed, blocked=[MESSAGES] if on else [])
+        elif what == "allow" and on:
+            answer = await hass.services.async_call(
+                DOMAIN, "allow", {"people": [SAM], "app": "com.example.game", "until": "end_of_day"},
+                blocking=True, return_response=True,
+            )
+            allows_made.append(answer["id"])
+        await hass.async_block_till_done()
+        household.recompute()
+        await hass.async_block_till_done()
+        assert household.away.on(SAM), f"seed_{seed}"
+        held = household.enforcement.held_for(SAM).get("family_link", {}).get("held", [])
+        child = household.family_link_child(SAM)
+        from custom_components.hearth import family_link as fl
+        from custom_components.hearth.pause import app_pauses_of
+
+        blocked = MESSAGES in (fl.app_lists(hass, child)[1] or set())
+        held_by_school = hass.states.get(school).state == "on"
+        paused = any(p["app"] == MESSAGES for p in app_pauses_of(hass, SAM))
+        if held_by_school or paused:
+            assert MESSAGES in held, f"seed_{seed} step {step}: {what}"
+        if held_by_school or paused or blocked:
+            assert MESSAGES not in household.open_apps(SAM), f"seed_{seed} step {step}"
+            assert "Devices" in held, f"seed_{seed} step {step}: the device lock swapped for app pauses"
+        # The allows are the adults' own, untouched by the rule
+        assert sorted(a.id for a in household.allows.of(SAM)) == sorted(allows_made), f"seed_{seed}"
+
+
+# E. Bedtime sync (bedtime_sync.py): Family Safety's window is never stricter than Hearth's, a weekday changed for good
+# changes that weekday's targets only, and in Home Assistant, over random edits and echo delays: no write loops, a
+# tonight-only change always reverts with no weekly write, and "today" goes with today's weekday only
+
+BEDTIME_SEEDS = list(range(6))
+
+
+def _random_week(rng: random.Random) -> dict[str, list[tuple[int, str]]]:
+    from custom_components.hearth.weekly import DAY_KEYS
+
+    days: dict[str, list[tuple[int, str]]] = {}
+    for key in DAY_KEYS:
+        changes: list[tuple[int, str]] = []
+        if rng.random() < 0.9:
+            changes.append((rng.randrange(300, 600, 15), "free"))
+        if rng.random() < 0.15:
+            changes += [(780, "sleep"), (840, "free")]  # a nap
+        if rng.random() < 0.85:
+            changes.append((rng.randrange(1140, 1425, 15), "sleep"))
+        days[key] = changes
+    return days
+
+
+@pytest.mark.parametrize("seed", PURE_SEEDS[:100], ids=[f"seed_{s}" for s in PURE_SEEDS[:100]])
+def test_family_safety_is_never_stricter_than_hearth(seed: int) -> None:
+    from custom_components.hearth import bedtime_sync as bs
+    from custom_components.hearth.weekly import DAYS, default_modes
+
+    rng = random.Random(seed)
+    modes = default_modes()
+    days = _random_week(rng)
+    nights, windows = bs.baseline(days, modes)
+    for key in DAYS:
+        window = windows[key]
+        if not isinstance(window, tuple):
+            continue
+        begin, end = (bs.mins(v) for v in bs.fs_value(window))
+        # Never later than Hearth's wake nor earlier than its bedtime; whole half hours
+        assert begin <= window[0] and end >= window[1], f"seed_{seed}: {key} {window} -> {begin}, {end}"
+        assert begin % 30 == 0 and end % 30 == 0, f"seed_{seed}"
+        night = nights[key]
+        if isinstance(night, tuple):
+            assert bs.fl_value(night) == [bs.hm(night[0]), bs.hm(night[1])], f"seed_{seed}: Family Link is exact"
+
+
+@pytest.mark.parametrize("seed", PURE_SEEDS[:100], ids=[f"seed_{s}" for s in PURE_SEEDS[:100]])
+def test_a_weekday_for_good_changes_that_weekday_s_targets_only(seed: int) -> None:
+    from custom_components.hearth import bedtime_sync as bs
+    from custom_components.hearth.weekly import DAYS, default_modes, hhmm
+
+    rng = random.Random(seed)
+    modes = default_modes()
+    days = _random_week(rng)
+    key = rng.choice(DAYS)
+    wake = hhmm(rng.randrange(300, 600, 15)) if rng.random() < 0.5 else None
+    bed = hhmm(rng.randrange(1140, 1425, 15)) if wake is None or rng.random() < 0.5 else None
+    after = bs.apply_import(days, {key: (wake, bed)}, modes)
+    fl_before, fs_before = bs.fl_plan(bs.baseline(days, modes)[0]), bs.fs_plan(bs.baseline(days, modes)[1])
+    fl_after, fs_after = bs.fl_plan(bs.baseline(after, modes)[0]), bs.fs_plan(bs.baseline(after, modes)[1])
+    i = DAYS.index(key)
+    fl_may = {str(i + 1), str((i - 1) % 7 + 1)} if wake else {str(i + 1)}
+    fs_weekdays = ("sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday")
+    fs_may = {fs_weekdays[(i + 1) % 7]}
+    # A day that had no changes, or no Sleep of its own and gets one: what the next day carries in comes from it now
+    if not days[key] or (bed and days[key][-1][1] != "sleep"):
+        fs_may.add(fs_weekdays[(i + 2) % 7])
+    for slot in fl_before:
+        if slot not in fl_may:
+            assert fl_before[slot] == fl_after[slot], f"seed_{seed}: {key} touched Family Link {slot}"
+    for weekday in fs_before:
+        if weekday not in fs_may:
+            assert fs_before[weekday] == fs_after[weekday], f"seed_{seed}: {key} touched Family Safety {weekday}"
+
+
+@pytest.mark.parametrize("seed", BEDTIME_SEEDS, ids=[f"seed_{s}" for s in BEDTIME_SEEDS])
+async def test_bedtime_sync_never_loops_and_tonight_always_reverts(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer, monkeypatch, seed: int
+) -> None:
+    from custom_components.hearth import bedtime_sync as bs
+    from test_bedtime_sync import SAM as KID, _call, _household, _ledger, _set_up, _tick
+
+    monkeypatch.setattr(bs, "PACE", 0)
+    rng = random.Random(seed)
+    apps = await _set_up(hass, hass_client_no_auth, freezer, at=(rng.randint(8, 19), 0), delay=rng.randint(0, 5))
+    await _call(hass, "sync_bedtimes", {"people": [KID]})
+    for _ in range(8):
+        await _tick(hass, freezer, apps)
+    for step in range(6):
+        what = rng.choice(["tonight", "tonight", "weekday", "resume", "nothing"])
+        before = len(apps.fl("weekly")) + len(apps.fs(today_only=False))
+        if what == "tonight":
+            data = {"people": [KID]}
+            if rng.random() < 0.7:
+                data["bedtime"] = f"{rng.randint(20, 22)}:{rng.choice(['00', '15', '30', '45'])}"
+            if "bedtime" not in data or rng.random() < 0.4:
+                data["wake"] = f"0{rng.randint(6, 9)}:{rng.choice(['00', '30'])}"
+            await _call(hass, "change_today", data)
+        elif what == "weekday":
+            day = rng.choice(["mon", "tue", "wed", "thu", "fri", "sat", "sun"])
+            await _call(hass, "set_schedule", {"people": [KID], "days": [day], "bedtime": f"2{rng.randint(0, 2)}:30"})
+        elif what == "resume":
+            await _call(hass, "resume_schedule", {"people": [KID]})
+        for _ in range(8):
+            await _tick(hass, freezer, apps)
+        if what in ("tonight", "resume", "nothing"):
+            # A tonight-only change or its undo writes no weekly value
+            assert len(apps.fl("weekly")) + len(apps.fs(today_only=False)) == before, f"seed_{seed} step {step}"
+    # Quiet: nothing more is written
+    calls = len(apps.calls)
+    for _ in range(30):
+        await _tick(hass, freezer, apps)
+    assert len(apps.calls) == calls, f"seed_{seed}: a write loop"
+    # Back to the schedule: Hearth's tonight is the weekday's again, and so is what the apps hold tonight
+    await _call(hass, "resume_schedule", {"people": [KID]})
+    for _ in range(8):
+        await _tick(hass, freezer, apps)
+    assert _household(hass).week.data.today.get(KID) is None, f"seed_{seed}"
+    today = (_ledger(hass).get("fl") or {}).get("today")
+    if today and today.get("written") is not None:
+        weekly = _ledger(hass)["fl"]["weekly"][str(dt_util.now().isoweekday())]
+        assert today["written"] == weekly["want"], f"seed_{seed}: tonight not put back"
+    # Midnight: the today entries are gone
+    freezer.move_to((dt_util.now() + timedelta(days=1)).replace(hour=0, minute=1, second=0, microsecond=0))
+    await _tick(hass, freezer, apps, 0)
+    await _tick(hass, freezer, apps)
+    assert _ledger(hass)["fl"].get("today") is None, f"seed_{seed}"
+    # "today" only ever with today's weekday
+    assert all(day == weekday for scope, day, weekday in apps.fl_days if scope == "today"), f"seed_{seed}"

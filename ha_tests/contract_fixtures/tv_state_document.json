@@ -1,0 +1,151 @@
+{
+  "about": "Sam's part of the state document a TV gets with its status (state.profiles[\"user:10\"]), at six moments. ha_tests/test_client_contract.py builds each moment in Home Assistant and checks this file still says what it sends; android/app/src/test/java/com/thesiegs/hearth/TvStateDocumentFixtureTest.java checks what the TV makes of it. Only what a TV reads is kept, and long app lists are cut to the apps that matter. Times are checked as times only (their date and second follow the test's clock), dates as dates, everything else as written.",
+  "moments": {
+    "evening": {
+      "person": "person.sam",
+      "locked": false,
+      "groups": [
+        {
+          "id": "all",
+          "name": "Daily time",
+          "minutes_left": 45,
+          "apps": [],
+          "except": ["com.android.systemui", "com.google.android.tvlauncher"]
+        },
+        {
+          "id": "video",
+          "name": "Video",
+          "minutes_left": 20,
+          "apps": ["com.google.android.youtube.tv", "com.thesiegs.hearthtube", "com.thesiegs.hearthtube.mobile"]
+        }
+      ],
+      "time": {
+        "used": 15,
+        "today_left": 45,
+        "categories": [{"id": "video", "name": "Video", "left": 20, "used": 10}]
+      },
+      "next_lock": {
+        "at": "2026-11-17T21:30:00-08:00",
+        "by": "binary_sensor.sam_phone_bedtime_active",
+        "kind": "bedtime",
+        "until": "2026-11-18T07:00:00-08:00"
+      },
+      "schedule": {"bedtime": {"at": "2026-11-17T21:30:00-08:00", "wake": "2026-11-18T06:45:00-08:00"}},
+      "tomorrow": {
+        "date": "2026-11-18",
+        "groups": [{"id": "all", "minutes": 60}, {"id": "video", "minutes": 30}],
+        "daily_minutes": 60,
+        "next_lock": {
+          "at": "2026-11-18T07:45:00-08:00",
+          "by": "schedule",
+          "kind": "school_time",
+          "until": "2026-11-18T15:15:00-08:00"
+        }
+      }
+    },
+    "bedtime": {
+      "person": "person.sam",
+      "locked": true,
+      "groups": [
+        {"id": "all", "name": "Daily time", "minutes_left": 45, "apps": [], "except": ["com.android.systemui"]}
+      ],
+      "time": {"used": 15, "today_left": 45, "categories": []},
+      "lock": {
+        "by": ["binary_sensor.sam_phone_bedtime_active", "schedule"],
+        "kind": "bedtime",
+        "kinds": ["bedtime"],
+        "until": "2026-11-18T07:00:00-08:00"
+      },
+      "next_lock": {
+        "at": "2026-11-18T07:45:00-08:00",
+        "by": "schedule",
+        "kind": "school_time",
+        "until": "2026-11-18T15:15:00-08:00"
+      },
+      "schedule": {"bedtime": {"at": "2026-11-17T21:30:00-08:00", "wake": "2026-11-18T06:45:00-08:00"}}
+    },
+    "lifted": {
+      "person": "person.sam",
+      "locked": false,
+      "groups": [
+        {"id": "all", "name": "Daily time", "minutes_left": 75, "apps": [], "except": ["com.android.systemui"]}
+      ],
+      "time": {"used": 15, "today_left": 75, "bonus": 30, "bonus_left": 30, "categories": []},
+      "bedtime_lifted": {"since": "2026-11-17T21:45:00-08:00", "until": "2026-11-17T22:15:00-08:00"},
+      "next_lock": {
+        "at": "2026-11-17T22:15:00-08:00",
+        "by": "binary_sensor.sam_phone_bedtime_active",
+        "kind": "bedtime",
+        "until": "2026-11-18T07:00:00-08:00"
+      },
+      "schedule": {"bedtime": {"at": "2026-11-17T21:30:00-08:00", "wake": "2026-11-18T06:45:00-08:00"}}
+    },
+    "paused": {
+      "person": "person.sam",
+      "locked": true,
+      "groups": [
+        {"id": "all", "name": "Daily time", "minutes_left": 45, "apps": [], "except": ["com.android.systemui"]}
+      ],
+      "time": {"used": 15, "today_left": 45, "categories": []},
+      "lock": {"by": ["pause"], "kind": "pause", "kinds": ["pause"], "until": "2026-11-17T17:53:00-08:00"},
+      "pause": {"reason": "Dinner", "until": "2026-11-17T17:53:00-08:00"}
+    },
+    "allowed": {
+      "person": "person.sam",
+      "locked": false,
+      "groups": [
+        {
+          "id": "all",
+          "name": "Daily time",
+          "minutes_left": 0,
+          "apps": [],
+          "except": [
+            "com.android.systemui",
+            "com.google.android.youtube.tv",
+            "com.thesiegs.hearthtube",
+            "com.thesiegs.hearthtube.mobile"
+          ]
+        }
+      ],
+      "time": {
+        "used": 15,
+        "today_left": 0,
+        "categories": [{"id": "video", "name": "Video", "left": 15, "used": 10, "bonus_left": 15}]
+      },
+      "lifts": [
+        {
+          "group": "video",
+          "name": "Video",
+          "minutes": 15,
+          "minutes_after": 0,
+          "apps": ["com.google.android.youtube.tv", "com.thesiegs.hearthtube", "com.thesiegs.hearthtube.mobile"],
+          "in_daily": true
+        }
+      ]
+    },
+    "allowed_until": {
+      "person": "person.sam",
+      "locked": false,
+      "groups": [
+        {
+          "id": "all",
+          "name": "Daily time",
+          "minutes_left": 45,
+          "apps": [],
+          "except": ["com.android.systemui", "com.google.android.youtube.tv", "com.thesiegs.hearthtube"]
+        }
+      ],
+      "time": {"used": 15, "today_left": 45, "categories": [{"id": "video", "name": "Video", "left": 20, "used": 10}]},
+      "lifts": [
+        {
+          "group": "video",
+          "name": "Video",
+          "until": "2026-11-17T18:00:00-08:00",
+          "minutes_after": 20,
+          "apps": ["com.google.android.youtube.tv", "com.thesiegs.hearthtube", "com.thesiegs.hearthtube.mobile"],
+          "in_daily": true
+        }
+      ]
+    }
+  }
+}

@@ -84,6 +84,7 @@ from .enforce import (
     fs_app_platform,
 )
 from .app_blocks import AppBlocks
+from .outside_apps import OutsideAppChanges
 from .exceptions import Allows, Lifted, end_of_day
 from .history import BONUS, DEVICE_BONUS, RAISE, History
 from .time_model import (
@@ -102,15 +103,30 @@ from .device_extra import ALLOW as EXTRA_ALLOW, BONUS as EXTRA_BONUS, DeviceExtr
 from .native_sync import NativeSync
 from .backstop import Backstop
 from .unlimited import Unlimited
-from .activity import ActivityLog
-from .bedtime_lift import BedtimeLifts, in_family_link_bedtime, lift_minutes
+from .activity import RULE, ActivityLog
+from .bedtime_lift import BedtimeLifts, bedtime_sensors, in_family_link_bedtime, lift_minutes
+from .bedtime_sync import BedtimeSync
 from . import family_link as fl
 from .todos import ChoreBook
 from .schedule import Scheduler
 from .weekly import EVENT_MODE, Now, Week, mode_closed, mode_lock
 from .watch import WatchLog
-from .pause import PAUSE, SCHEDULE, app_pauses_of, end_pause, lock_kinds, lock_until, next_lock, pause_ends_on, pause_of
+from .pause import (
+    BEDTIME_ENDS,
+    BEDTIME_STARTS,
+    PAUSE,
+    SCHEDULE,
+    app_pauses_of,
+    end_pause,
+    lock_kinds,
+    lock_until,
+    next_lock,
+    pause_ends_on,
+    pause_of,
+)
 from .places import Places, happened, matches
+from .presence import Presence
+from .presence_rules import OPEN_LEFT, RULE_ID, AwayMessages
 from . import parent_pin
 from .media import media_rooms
 from .phones import person_phones
@@ -216,6 +232,9 @@ class PersonDay:
 # today's count is short and a kid who was out of time looks as if they had some. A limit reached today stays held
 # until the sources have settled this long after Home Assistant is running
 STARTUP_SETTLE = timedelta(seconds=90)
+# How long the schedule's Sleep (or the end of a bedtime lift) waits for a Family Link bedtime that names a window to
+# come on before Hearth locks the devices whole itself (sleep_locks_devices)
+SLEEP_GAP_GRACE = timedelta(minutes=10)
 
 
 def _keep_held(state: GroupState) -> None:
@@ -270,6 +289,8 @@ class Household:
         self.enforcement = Enforcement(hass, hub.entry.entry_id)
         # Hearth's own blocks of Android apps, through Family Link (app_blocks.py)
         self.blocks = AppBlocks(hass, self, hub.entry.entry_id)
+        # App limits loosened outside Hearth, told to the adults (outside_apps.py)
+        self.outside_apps = OutsideAppChanges(hass, self, hub.entry.entry_id)
         self.watch = WatchLog(hass, hub.entry.entry_id)
         self.allows = Allows(hass, hub.entry.entry_id)
         self.grants = Grants(hass, hub.entry.entry_id)
@@ -291,6 +312,8 @@ class Household:
         self.week = Week(hass, hub.entry.entry_id, lambda: self.limits.data.budgets, lambda: self.options)
         self.week.type_of = self.day_type_on
         self.limits.week = self.week
+        # The schedule's bedtime kept in step in Family Link and Family Safety (bedtime_sync.py)
+        self.bedtime_sync = BedtimeSync(hass, self, hub.entry.entry_id)
         # Each person's schedule now (weekly.Now, None without one), as of the last recompute; the mode last told
         # (hearth_mode fires when it changes)
         self.schedule_now: dict[str, Now | None] = {}
@@ -299,6 +322,10 @@ class Household:
         # Chore minutes earned today count as bonus (todos.py)
         self.limits.chore_minutes = self.todos.minutes_today
         self.places = Places(hass, self)
+        # Who each kid is with, and whether they're out without an adult (presence.py), and the standing rule built on
+        # it: Messages while out without an adult (presence_rules.py)
+        self.presence = Presence(hass, self, hub.entry.entry_id)
+        self.away = AwayMessages(self, self.presence)
         self.days: dict[str, PersonDay] = {}
         # What the time model said last per person (debug logs only a change)
         self._model_logged: dict[str, tuple] = {}
@@ -340,6 +367,7 @@ class Household:
         await self.categories_book.async_load()
         await self.enforcement.async_load()
         await self.blocks.async_load()
+        await self.outside_apps.async_load()
         await self.watch.async_load()
         await self.allows.async_load()
         await self.grants.async_load()
@@ -355,7 +383,9 @@ class Household:
         await self.bedtime_lift.async_load()
         await self.scheduler.async_load()
         await self.week.async_load()
+        await self.bedtime_sync.async_load()
         await self.todos.async_load()
+        await self.presence.async_load()
 
     def _totals_data(self) -> dict[str, Any]:
         return {
@@ -373,6 +403,7 @@ class Household:
         await self.live.async_flush()
         await self.enforcement.async_flush()
         await self.blocks.async_flush()
+        await self.outside_apps.async_flush()
         await self.watch.async_flush()
         await self.allows.async_flush()
         await self.grants.async_flush()
@@ -385,7 +416,9 @@ class Household:
         await self.bedtime_lift.async_flush()
         await self.scheduler.async_flush()
         await self.week.async_flush()
+        await self.bedtime_sync.async_flush()
         await self.todos.async_flush()
+        await self.presence.async_flush()
 
     # The mapping
 
@@ -571,9 +604,10 @@ class Household:
             state = self.hass.states.get(entity_id)
             if state is None:
                 continue
-            for key, into in (("bedtime_start", starts), ("bedtime_end", ends)):
-                if (clock := _clock_of(state.attributes.get(key))) is not None:
-                    into.append(clock)
+            # Family Link's bedtime_start / bedtime_end, Family Safety's downtime_start / downtime_end
+            for keys, into in ((BEDTIME_STARTS, starts), (BEDTIME_ENDS, ends)):
+                clocks = [c for key in keys if (c := _clock_of(state.attributes.get(key))) is not None]
+                into.extend(clocks[:1])
         if not starts or not ends:
             return None
         zone = dt_util.get_default_time_zone()
@@ -615,14 +649,39 @@ class Household:
 
     def schedule_holds(self, person: str) -> set[str]:
         """What the schedule closes now for the other parental controls: the mode's groups, and All screen time in
-        Sleep and School (Family Safety's platforms and the Switch are held then; Family Link keeps its own bedtime and
-        School time in phase 1)."""
+        Sleep and School (Family Safety's platforms and the Switch are held then; Family Link's bedtime follows through
+        bedtime_sync.py, and sleep_locks_devices covers where it has none running)."""
         found = set(self.schedule_closed(person))
         lock = self.schedule_lock(person)
         # Extra time at bedtime lifts Sleep's hold while it lasts (bedtime_lift.py)
         if lock is not None and not (lock == "bedtime" and self.bedtime_lift.until(person) is not None):
             found.add(ALL)
         return found
+
+    def sleep_locks_devices(self, person: str) -> bool:
+        """Whether the weekly schedule's Sleep locks the person's Family Link devices whole now: it's Sleep, extra time
+        doesn't lift it, and Family Link has no bedtime of its own for them: none of their devices' Bedtime active
+        sensors names a window (one set in Family Link locks the devices itself, with its calls and alarms; its sensor
+        can read off for a poll or two after extra time ends, which mustn't lock and unlock the phone). Also when a
+        sensor names a window but none is on once the schedule's Sleep has been on for SLEEP_GAP_GRACE: Family Link
+        didn't follow tonight (a sync that didn't take, a day off learned that morning), and Hearth covers the gap."""
+        if self.schedule_lock(person) != "bedtime" or self.bedtime_lift.until(person) is not None:
+            return False
+        child = self.family_link_child(person)
+        if child is None:
+            return False
+        sensors = bedtime_sensors(self.hass, child)
+        if not any(s.state == "on" or s.attributes.get("bedtime_start") for s in sensors):
+            return True
+        found = self.schedule_now.get(person)
+        since = found.since if found is not None else None
+        if since is not None and (ended := self.bedtime_lift.ended_at.get(person)) is not None:
+            since = max(since, ended)
+        return (
+            not any(s.state == "on" for s in sensors)
+            and since is not None
+            and dt_util.now() - since >= SLEEP_GAP_GRACE
+        )
 
     def week_people(self) -> list[str]:
         """The people with a weekly schedule of their own: the kids."""
@@ -635,7 +694,10 @@ class Household:
         school in School time, else free)."""
         found = self.schedule_now.get(person)
         modes = self.week.data.modes
-        if found is not None:
+        day = self.days.get(person)
+        kinds = lock_kinds(self.hass, [e for e in (day.locked_by if day else []) if e not in (PAUSE, SCHEDULE)])
+        locked_mode = "sleep" if "bedtime" in kinds else "school" if "school_time" in kinds else None
+        if found is not None and not (found.mode == "free" and locked_mode):
             return {
                 "mode": found.mode,
                 "name": (modes.get(found.mode) or {}).get("name", found.mode),
@@ -645,9 +707,9 @@ class Household:
                 "today_changed": found.day.changed_today,
                 "source": "schedule",
             }
-        day = self.days.get(person)
-        kinds = lock_kinds(self.hass, [e for e in (day.locked_by if day else []) if e != PAUSE])
-        mode = "sleep" if "bedtime" in kinds else "school" if "school_time" in kinds else "free"
+        # No schedule, or the schedule's free time while a lock entity of theirs is on (Family Link's School time
+        # on a day the schedule has no School): the lock entities say
+        mode = locked_mode or "free"
         return {
             "mode": mode,
             "name": (modes.get(mode) or {}).get("name", mode),
@@ -739,14 +801,75 @@ class Household:
                 "kinds": kinds,
                 "until": dt_util.as_local(until).isoformat() if until else None,
             }
+        # Each with its end ("until") where it's known, for a device that starts it by itself: a lock entity's own end
+        # time, the schedule's next change (wake for Sleep)
         upcoming = next_lock(self.hass, self._lock_entities(person))
         if scheduled is not None and scheduled.next_lock is not None:
             at, kind = scheduled.next_lock
-            if upcoming is None or at < dt_util.parse_datetime(upcoming["at"]):
+            ends = scheduled.next_lock_until
+            if kind == "school_time" and self.scheduler.off_now(person, at) is not None:
+                # School time taken off isn't coming (schedule_lock): a device that locks at next_lock by itself
+                # mustn't. Tonight's Sleep is the next one then
+                later = scheduled.bedtime
+                at, kind = (later if later is not None and later > dt_util.now() else None), "bedtime"
+                ends = scheduled.wake
+            if at is not None and (upcoming is None or at < dt_util.parse_datetime(upcoming["at"])):
                 upcoming = {"at": dt_util.as_local(at).isoformat(), "by": SCHEDULE, "kind": kind}
+                if ends is not None and ends > at:
+                    upcoming["until"] = dt_util.as_local(ends).isoformat()
+        # A lifted bedtime comes back when its extra time ends: said as the next lock, so a device that loses Home
+        # Assistant meanwhile brings bedtime back itself
+        if (back := self._bedtime_back(person)) is not None and (
+            upcoming is None or back[0] < dt_util.parse_datetime(upcoming["at"])
+        ):
+            upcoming = {"at": dt_util.as_local(back[0]).isoformat(), "by": back[1], "kind": "bedtime"}
+            if (ends := self._bedtime_end(person, back[1])) is not None and ends > back[0]:
+                upcoming["until"] = dt_util.as_local(ends).isoformat()
         if upcoming:
             out["next_lock"] = upcoming
         return out
+
+    def _bedtime_end(self, person: str, by: str) -> datetime | None:
+        """When a bedtime held by [by] ends: the schedule's (its Sleep's end now, else the next wake), else the lock
+        entity's own end time (Family Link's bedtime_end, Family Safety's downtime_end)."""
+        if by == SCHEDULE:
+            scheduled = self.schedule_now.get(person)
+            if scheduled is None:
+                return None
+            if self.schedule_lock(person) == "bedtime" and scheduled.until is not None:
+                return scheduled.until
+            return scheduled.wake
+        if (end := lock_until(self.hass, [by])) is not None:
+            return end
+        tonight = self._locks_bedtime(person)
+        wake = dt_util.parse_datetime(tonight["end"]) if tonight else None
+        return wake + timedelta(days=1) if wake else None
+
+    def _bedtime_back(self, person: str) -> tuple[datetime, str] | None:
+        """While extra time lifts the person's bedtime: when it ends and which bedtime is back then (a lock entity
+        of theirs that's on, else the schedule's Sleep). None without a lift, or when its end isn't in bedtime (Unlimited
+        with bedtime included that ends before bedtime starts)."""
+        until = self.bedtime_lift.until(person)
+        if until is None:
+            return None
+        by = next((e for e in self._locked_by(person) if lock_kinds(self.hass, [e]) == ["bedtime"]), None)
+        if by is None and self.schedule_lock(person) == "bedtime":
+            by = SCHEDULE
+        if by is not None:
+            # A lift that lasts past the bedtime's own end (a morning's extra time) brings no bedtime back
+            scheduled = self.schedule_now.get(person)
+            end = (scheduled.until if scheduled else None) if by == SCHEDULE else lock_until(self.hass, [by])
+            if end is not None and end <= until:
+                return None
+        if by is None:
+            # Not in bedtime by a lock of Hearth's now (Family Link's own bedtime, moved to the lift's end, or a
+            # lift that started before bedtime): back when the lift ends past tonight's bedtime
+            tonight = self.bedtime_tonight(person)
+            start = dt_util.parse_datetime(tonight["at"]) if tonight else None
+            if not self.in_bedtime(person) and (start is None or until < start):
+                return None
+            by = SCHEDULE if tonight and tonight["source"] == "schedule" else next(iter(self._lock_entities(person)), SCHEDULE)
+        return until, by
 
     def seen_profiles(self) -> dict[str, str]:
         """The TV profiles to map, for the options: option key -> how to show it. A profile a TV reports with its
@@ -1185,7 +1308,15 @@ class Household:
                 )
             raw = group_seconds(devices, membership, self.outside_all())
             # Minutes used while unlimited aren't counted (unlimited.py)
-            seconds = self.unlimited.exclude(person, raw, now)
+            # Per device too, while a window of today's is there: a total's minutes of a window that arrive after its
+            # settle are told from that device's growth since
+            outside = self.outside_all()
+            by_device = (
+                {device: group_seconds({device: usage}, membership, outside) for device, usage in devices.items()}
+                if self.unlimited.windows.get(person)
+                else None
+            )
+            seconds = self.unlimited.exclude(person, raw, now, by_device)
             day = PersonDay(person, devices, seconds, playing=playing.get(person, []),
                             together_s=self.live.together_s.get(person, 0.0), raw_groups=raw)
             for group in self.groups:
@@ -1253,11 +1384,14 @@ class Household:
             device_lifted_of=self._device_lifted,
             paused_groups_of=lambda person: self.paused_groups(person, now),
             closed_of=self.schedule_holds,
+            sleep_locks_devices_of=self.sleep_locks_devices,
             exempt_of=self.client_exempt(),
             blocked_of=self.blocks.blocked_packages,
         )
         # Hearth's app blocks in step with Family Link (an app that showed up, a block or unblock of an adult's)
         self.blocks.sync()
+        # Tell the adults what loosened in Family Link without Hearth (an unblock, a limit raised or off)
+        self.outside_apps.check()
         # An adult's allow of All screen time opens Google's and Microsoft's own limits too
         self.sync.mirror_allows()
         # Family Link's daily limit in step with today's time (backstop.py)
@@ -1793,6 +1927,9 @@ class Household:
                 "minutes_left": max(state.minutes_left, bonus_here.get(group.id, 0)),
                 "apps": [p for p in apps if not lifted.app(p, membership(p))] if lifted else apps,
             }
+            # A category that's off today (its limit 0): bonus time doesn't open it, so a device offers no ask for it
+            if state.closed and group.id != ALL:
+                entry["closed"] = True
             # All screen time holds every app but these (a group outside it: music, say; what an allow lifts)
             if group.id == ALL:
                 spared = self._spared(membership)
@@ -1801,9 +1938,13 @@ class Household:
                 if spared:
                     entry["except"] = sorted(spared)
             groups.append(entry)
+        sent = {g["id"]: g for g in groups}
         groups += self._paused_groups_document(person, membership)
         groups += self._closed_groups_document(person, membership, self.allows.lifted(person))
         return {
+            # For a device that loses Home Assistant: each lift's end and the minutes after it, and tomorrow's minutes
+            **({"lifts": lifts} if (lifts := self._lifts_document(person, day, membership, lifted)) else {}),
+            **({"tomorrow": ahead} if (ahead := self._tomorrow_document(person, sent, membership)) else {}),
             "person": person,
             "groups": groups,
             # Today's time, bonus time and category limits as a person is shown them (docs/contracts/time-model.md)
@@ -1831,6 +1972,85 @@ class Household:
             # Their own allows that end on a place: "ends when you get home". Never where they are
             **({"allow_ends": ends} if (ends := self._allow_ends(person)) else {}),
         }
+
+    def _lifts_document(self, person: str, day: PersonDay | None, membership, lifted: Lifted) -> list[dict[str, Any]]:
+        """Each group with a limit that's left out of the document because something lifts it for a while, with what
+        holds it again after, for a device that loses Home Assistant meanwhile: [{group, name, until (an allow's or
+        Unlimited's end, before midnight), minutes (its own bonus left, spent first), minutes_after, apps (a category)
+        or except (daily time), in_daily (its apps count in daily time again after)}]. A lift that lasts until
+        midnight isn't listed (the new day starts over)."""
+        if not lifted or day is None:
+            return []
+        now = dt_util.now()
+        midnight = end_of_day(now)
+        allows = self.allows.of(person)
+        outside = self.outside_all()
+        out = []
+        for group in self.groups:
+            state = day.limits.get(group.id)
+            if state is None or state.budget_min is None or not lifted.group(group.id):
+                continue
+            ends = [
+                a.until[person]
+                for a in allows
+                if (a.group == ALL or (a.group == group.id and group.id != ALL)) and person in a.until
+            ]
+            until = max(ends) if ends else None
+            if until is not None and until >= midnight:
+                continue
+            bonus = state.cat_bonus_left if group.id != ALL and group.id in lifted.groups else 0
+            if until is None and bonus <= 0:
+                continue
+            entry: dict[str, Any] = {"group": group.id, "name": group.name}
+            if until is not None:
+                entry["until"] = dt_util.as_local(until).isoformat()
+            if bonus > 0:
+                entry["minutes"] = int(bonus)
+            # A category's minutes left count its own bonus too: what's left of its limit once that's spent
+            entry["minutes_after"] = max(0, int(state.minutes_left or 0) - bonus)
+            if group.id == ALL:
+                entry["except"] = sorted(self._spared(membership))
+            else:
+                entry["apps"] = self._held_apps(group, membership)
+                entry["in_daily"] = group.id not in outside
+            out.append(entry)
+        return out
+
+    def _tomorrow_document(
+        self, person: str, sent: dict[str, dict[str, Any]], membership
+    ) -> dict[str, Any] | None:
+        """Tomorrow's base minutes per group (its kind of day, no bonus time), for a device that starts the day without
+        Home Assistant: {date, groups [{id, minutes, name, apps or except where they differ from today's [sent]}],
+        daily_minutes, next_lock {at, by, kind, until} (the weekly schedule's first Sleep or School after waking)}."""
+        tomorrow = (self.today or dt_util.now().date()) + timedelta(days=1)
+        budget = self.budget_on(person, tomorrow)
+        groups = []
+        for group in self.groups:
+            minutes = budget.get(group.id)
+            if minutes is None:
+                continue
+            entry: dict[str, Any] = {"id": group.id, "minutes": int(minutes)}
+            today = sent.get(group.id)
+            if group.id == ALL:
+                spared = sorted(self._spared(membership))
+                if today is None or sorted(today.get("except") or []) != spared:
+                    entry.update(name=group.name, apps=[], **({"except": spared} if spared else {}))
+            else:
+                apps = self._held_apps(group, membership)
+                if today is None or today.get("apps") != apps:
+                    entry.update(name=group.name, apps=apps)
+            groups.append(entry)
+        if not groups:
+            return None
+        out: dict[str, Any] = {"date": tomorrow.isoformat(), "groups": groups, "daily_minutes": budget.get(ALL)}
+        zone = dt_util.get_default_time_zone()
+        if (first := self.week.first_lock_on(person, tomorrow, zone)) is not None:
+            at, kind, until = first
+            if not (kind == "school_time" and self.scheduler.off_now(person, at) is not None):
+                out["next_lock"] = {"at": dt_util.as_local(at).isoformat(), "by": SCHEDULE, "kind": kind}
+                if until is not None and until > at:
+                    out["next_lock"]["until"] = dt_util.as_local(until).isoformat()
+        return out
 
     def _allow_ends(self, person: str) -> list[dict[str, Any]]:
         return [
@@ -1972,6 +2192,8 @@ class Household:
             # A parent's change in the Family Link, Nintendo or Family Safety app that lifts one of Hearth's holds
             "grants": [g.view() for g in self.grants.of(person)],
             "school_time_off": self.off_views(person),
+            # A standing rule while it lifts something (presence_rules.py: Messages while out without an adult)
+            "rules": [view] if (view := self.away.view(person)) is not None else [],
         }
 
     def allow_views(self, person: str, allows=None) -> list[dict[str, Any]]:
@@ -2002,6 +2224,7 @@ class Household:
         """A confirmed change of the person's place: what ends on it ends for them, as allow_end, pause_end and
         school_time_off_cancel would, and the adults are told."""
         ended: list[tuple[dict[str, str], str]] = []
+        behind = {p: ids for p, ids in self.unlimited_allows().items() if p == person}
         for allow in list(self.allows.of(person)):
             if matches(allow.ends_on, came_from, went_to) and self.allows.end_for(allow.id, person):
                 group = self.group(allow.group) if allow.group else None
@@ -2009,6 +2232,8 @@ class Household:
                     "screen time" if allow.group == "all" else group.name if group else allow.group or allow.app
                 )
                 ended.append((allow.ends_on, f"their allow ({what}) ended"))
+        # The allow behind Unlimited ends Unlimited with it
+        self.end_unlimited_behind(behind)
         if (pause := pause_ends_on(self.hass, person)) and matches(pause[0], came_from, went_to):
             self.end_pause_now([person])
             ended.append((pause[0], "their pause ended"))
@@ -2034,6 +2259,28 @@ class Household:
         ]
         self.hub.asks.tell(f"{who}: {self.places.place_name(person, went_to)}", " ".join(lines), f"hearth_place_{person}")
 
+    @callback
+    def presence_changed(self, person: str, fact: str, value: Any) -> None:
+        """A confirmed change of one of a kid's presence facts (presence.py, after hearth_presence fired). The standing
+        rules look at the facts every time (presence_checked); this is the seam for what a change itself starts."""
+        _LOGGER.debug("presence %s: %s is now %s", person, fact, value)
+
+    @callback
+    def presence_checked(self, now: datetime) -> None:
+        """After each look at the presence facts: the standing rules on or off (presence_rules.py), never while the
+        household settles after a start. A change is logged and recomputed (the enforcer holds what it should then)."""
+        if self._settling(now):
+            return
+        changes = self.away.check(now)
+        for person, opened in changes:
+            self.activity.add(
+                RULE, person=person, target=sorted(self.away.sms_apps(person)), reason=RULE_ID,
+                result="opened" if opened else "closed", by="hearth",
+            )
+            _LOGGER.info("%s: Messages when away %s", person, "opened" if opened else "closed")
+        if changes:
+            self.recompute()
+
     def explain(self, person: str, app: str | None = None, group: str | None = None) -> dict[str, Any]:
         """Why an app or a group is held for the person now, or isn't: allowed, until, blocked_by [{kind, by, until}],
         exceptions (the allows that apply)."""
@@ -2041,6 +2288,10 @@ class Household:
         membership = self.membership()
         day = self.days.get(person)
         lifted = self.allows.lifted(person)
+        # A standing rule's apps (presence_rules.py): their limits are lifted while it's on, and daily time's too while
+        # the app may keep the devices open (open_apps)
+        rule_apps = self.away.lifted_apps(person) if app is not None else set()
+        rule_open = bool(rule_apps) and app in self.open_apps(person)
         outside = self.outside_all()
         # An accessibility app: no budget, pause or School time of Hearth's holds it (a lock still does)
         spared = app is not None and app in self.never_held(membership)
@@ -2064,7 +2315,8 @@ class Household:
                 hold = {"kind": "budget", "by": group_id, "until": midnight}
                 # A category's own bonus left lifts daily time's hold of its apps
                 bonus_open = group_id == ALL and bool(self.bonus_groups(person) & groups)
-                (lifted_holds if excepted or lifted.group(group_id) or bonus_open else blocked).append(hold)
+                rule = app in rule_apps and (group_id != ALL or rule_open)
+                (lifted_holds if excepted or lifted.group(group_id) or bonus_open or rule else blocked).append(hold)
         for entity_id in (day.locked_by if day else []):
             if entity_id == PAUSE:
                 pause = pause_of(self.hass, person, now) or {}
@@ -2186,12 +2438,16 @@ class Household:
             "until": until,
             "blocked_by": blocked,
             "lifted": lifted_holds,
-            "exceptions": self.allow_views(person, applying) + granted,
+            "exceptions": self.allow_views(person, applying) + granted + (
+                [rule] if app in rule_apps and (rule := self.away.view(person, app)) is not None else []
+            ),
             "school_time_off": self.off_views(person),
             # Extra time on one device (a device's own bonus or allow): that device may go on whatever the pool says
             "device_extras": [
                 v for v in self.device_extra_views(person) if v["group"] == ALL or v["group"] in groups
             ],
+            # The parents' apps whose bedtime isn't in step with Hearth's schedule (bedtime_sync.py), when any
+            **({"bedtime_sync": lines} if (lines := self.bedtime_sync.explain_lines(person)) else {}),
         }
 
     # Extra time on one device (device_extra.py)
@@ -2546,6 +2802,7 @@ class Household:
                     "text": origin_text(
                         record.get("detail") or "", record.get("source") or "hearth", record.get("by"),
                         say_clock(local.hour, local.minute) if local else None,
+                        verb="changed" if record.get("kind") == "bedtime" else "added",
                     ),
                     "endable": endable,
                     "end": {"service": "hearth.end_grant", "data": {"origin_id": origin_id}} if endable else None,
@@ -2660,7 +2917,10 @@ class Household:
         lifted = self.allows.lifted(person)
         extra = self.bonus_groups(person)
         groups = set(lifted.groups) | extra
-        return Lifted(lifted.everything, groups, set(lifted.apps), self.open_groups(person, groups))
+        # A standing rule's apps (presence_rules.py: Messages while out without an adult): their time limits only.
+        # allows.lifted is left alone, so School time, the schedule and pauses still hold them
+        apps = set(lifted.apps) | self.away.lifted_apps(person)
+        return Lifted(lifted.everything, groups, apps, self.open_groups(person, groups), self.open_apps(person))
 
     def open_groups(self, person: str, candidates: set[str] | None = None) -> set[str]:
         """Of the categories open past daily time for the person (their own bonus left, an allow of them), the ones
@@ -2686,6 +2946,28 @@ class Household:
                 found.add(gid)
         return found
 
+    def open_apps(self, person: str) -> set[str]:
+        """Of the apps a standing rule lifts for the person now (presence_rules.py: Messages while out without an
+        adult), the ones that may keep Family Link's devices open past daily time (every other app paused instead):
+        installed, not blocked, and held by nothing a time limit isn't: a lock (bedtime, the schedule's Sleep or
+        School, a family pause), an adult's pause of it, the schedule's mode or School time's app pause. Otherwise the
+        whole-device lock stays, rather than one lock swapped for a pause of every other app."""
+        apps = self.away.lifted_apps(person)
+        if not apps or self._locks_now(person) or self.in_bedtime(person):
+            return set()
+        child = self.family_link_child(person)
+        installed = fl.installed_apps(self.hass, child) if child else None
+        if not installed:
+            return set()
+        membership = self.membership()
+        apps = (apps & installed) - self.blocks.blocked_packages(person) - self.paused_packages(person, membership)
+        closed = set(self.schedule_closed(person))
+        apps = {p for p in apps if not membership(p) & closed}
+        for enforcer in enforcers_from_options(self.options):
+            if enforcer.kind == FAMILY_LINK and enforcer.person == person and self.in_school_time(enforcer):
+                apps -= set(enforcer.school_apps)
+        return apps
+
     def open_left(self, person: str, group: str, now: datetime | None = None) -> int:
         """The minutes an open category has left past daily time: its own bonus left, or an allow's minutes to its
         end (the longer)."""
@@ -2693,6 +2975,9 @@ class Household:
         day = self.days.get(person)
         state = day.limits.get(group) if day else None
         own = state.cat_bonus_left if state else 0
+        if group in self.open_apps(person):
+            # A standing rule's app (it has no end of its own): OPEN_LEFT minutes, for Family Link's backstop
+            return max(own, OPEN_LEFT)
         ends = [a.until[person] for a in self.allows.of(person) if a.group == group and a.until.get(person, now) > now]
         allow = int((max(ends) - now).total_seconds() // 60) if ends else 0
         return max(own, allow)
@@ -2857,6 +3142,30 @@ class Household:
             self.note_origin(person, "unlimited", detail, "hearth", by, id=grant["id"])
         self.recompute()
         return allowed
+
+    def unlimited_allows(self) -> dict[str, set[str]]:
+        """The allows of daily time behind each person's Unlimited now (its running grants' and its window's): ending
+        one of them is ending Unlimited."""
+        found: dict[str, set[str]] = {}
+        now = dt_util.now()
+        for person in self.people():
+            ids = {g["allow"] for g in self.limits.grants(person, "unlimited", now=now) if g.get("allow")}
+            if (window := self.unlimited.active(person, now)) is not None and window.get("allow"):
+                ids.add(window["allow"])
+            if ids:
+                found[person] = ids
+        return found
+
+    @callback
+    def end_unlimited_behind(self, before: dict[str, set[str]], by: str | None = None) -> list[str]:
+        """Unlimited ends for each person whose allow behind it ([before]: unlimited_allows) was just ended (allow_end,
+        a place): every screen would still say Unlimited, and the minutes go uncounted, while they're held again."""
+        gone = [
+            person
+            for person, ids in before.items()
+            if any(person not in (a.until if (a := self.allows.allows.get(i)) else {}) for i in ids)
+        ]
+        return self.end_unlimited(gone, by) if gone else []
 
     @callback
     def end_unlimited(self, people: list[str] | None, by: str | None = None) -> list[str]:

@@ -72,7 +72,8 @@ async def test_bedtime_says_until_when_and_comes_with_a_heads_up(
 async def test_family_safety_downtime_is_a_bedtime(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:
-    """Family Safety's Downtime Active sensor mirrors Family Link's bedtime attributes (with an offset)."""
+    """Family Safety's Downtime Active sensor says downtime_start / downtime_end (with an offset), as Family Link's
+    bedtime says bedtime_start / bedtime_end."""
     freezer.move_to(dt_util.now().replace(hour=20, minute=30, second=0))
     client, secret = await _household_with_sam(hass, hass_client_no_auth)
     start = dt_util.now().replace(hour=21, minute=0, second=0, microsecond=0)
@@ -83,15 +84,13 @@ async def test_family_safety_downtime_is_a_bedtime(
         "platform": "Xbox",
         "downtime_start": start.isoformat(),
         "downtime_end": end.isoformat(),
-        "bedtime_start": start.isoformat(),
-        "bedtime_end": end.isoformat(),
     }
     hass.states.async_set(downtime, "off", attributes)
     await _option(hass, "locks", {"person": "person.sam", "entities": [downtime]})
 
     body = await (await _post(client, secret, body=_tv_status(hearthtube_s=60))).json()
     upcoming = body["state"]["profiles"][KID]["next_lock"]
-    assert upcoming == {"at": start.isoformat(), "by": downtime, "kind": "bedtime"}
+    assert upcoming == {"at": start.isoformat(), "by": downtime, "kind": "bedtime", "until": end.isoformat()}
 
     hass.states.async_set(downtime, "on", attributes)
     await hass.async_block_till_done()

@@ -410,3 +410,12 @@ async def test_a_block_that_timed_out_but_went_through_is_hearth_s_to_lift(
     assert kid["blocks"][0]["state"] == "blocked"
     await _call(hass, "unblock_app", {"apps": [FIREFOX], "people": ["person.sam"]})
     assert _packages(unblocked) == [FIREFOX]
+
+
+def test_chrome_is_blocked_like_any_app_but_android_s_own_parts_are_not() -> None:
+    """Chrome's package is com.android.chrome: no com.android.* prefix rule spares it (enforce.essential is the
+    explicit system list)."""
+    assert not app_blocks.never_blocked("com.android.chrome")
+    assert not enforce.essential("com.android.chrome")
+    for package in ("com.android.systemui", "com.android.phone", "com.android.launcher3", "com.android.settings", "android"):
+        assert app_blocks.never_blocked(package) and enforce.essential(package)

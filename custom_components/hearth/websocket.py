@@ -127,6 +127,9 @@ def summary(hub) -> dict[str, Any]:
             }
         )
         # A kid's to-do list today and their money balance (todos.py)
+        # Bedtime kept in step in Family Link and Family Safety (bedtime_sync.py), for a kid it's for
+        if person in household.bedtime_sync.kids():
+            people[-1]["bedtime_sync"] = household.bedtime_sync.view(person)
         if person in household.todos.kids():
             people[-1]["todo"] = household.todos.counts(person)
             people[-1]["balance_cents"] = household.todos.balance_cents(person)
@@ -157,6 +160,10 @@ def summary(hub) -> dict[str, Any]:
         # Where a kid is, by name only (no coordinates): every reader of the summary is an adult (_may_read)
         if (place := household.places.summary(person)) is not None:
             people[-1]["place"] = place
+        # Who a kid is with and whether they're out without an adult, by name only, and what a standing rule keeps
+        # open for them (presence.py): adults only, as above
+        if (presence := household.presence.page(person)) is not None:
+            people[-1]["presence"] = presence
         if people[-1].get("pause") and (ends_on := household.pause_view(person)):
             people[-1]["pause"] = {**people[-1]["pause"], "ends_on": ends_on}
         # School time taken off for them today (hearth.school_time_off), for the page's "School time is back"

@@ -10,8 +10,10 @@ in each group (the first recompute after it starts), and while it lasts, and for
 above that is left out of today's minutes. It works the same for every source, live (a TV, a console title Hearth times)
 or total-only (Family Link's and Family Safety's daily totals, which say only a day's sum): the window's minutes are the
 total's growth between the two notes. Totals arrive a few minutes late, so the end is noted SETTLE after the window
-ends, and what's counted in that settle goes to the kid (it isn't counted either). At midnight the day's counts start
-again, and a window from another day is gone.
+ends, and what's counted in that settle goes to the kid (it isn't counted either). A total that reports later still
+can't have gained more since the settle than the time since: per source, the rest is the window's (late). At midnight
+the day's counts start again, and a window from another day is gone. Unlimited started again while the last window is
+still settling opens that window again (its start kept), so no minute is left out twice.
 
 Bedtime, School time and Pause screens still lock the kid, unless include_bedtime (then bedtime is lifted for the
 window, bedtime_lift.py). Family Link's backstop is a whole day while it lasts (backstop.py).
@@ -87,6 +89,24 @@ class Unlimited:
             running["include_bedtime"] = bool(running.get("include_bedtime")) or include_bedtime
             self._save()
             return running
+        # One that ended less than SETTLE ago is still settling: it's opened again (its start's base kept), so the
+        # minutes since its start are left out once, not by it and a second window both
+        settling = next(
+            (
+                w
+                for w in reversed(self.windows.get(person, []))
+                if w.get("excluded") is None and (ended := _at(w.get("ended"))) is not None and now - ended < SETTLE
+            ),
+            None,
+        )
+        if settling is not None:
+            settling.update(
+                allow=allow_id, until=until.isoformat(), open=open_ended, ended=None, include_bedtime=include_bedtime
+            )
+            settling.pop("told", None)
+            self._save()
+            self.hass.bus.async_fire(EVENT_STARTED, {"person": person, "until": until.isoformat(), "open": open_ended})
+            return settling
         window = {
             "id": secrets.token_hex(6),
             "allow": allow_id,
@@ -145,9 +165,18 @@ class Unlimited:
     # Counting
 
     @callback
-    def exclude(self, person: str, seconds: dict[str, float], now: datetime) -> dict[str, float]:
+    def exclude(
+        self,
+        person: str,
+        seconds: dict[str, float],
+        now: datetime,
+        by_device: dict[str, dict[str, float]] | None = None,
+    ) -> dict[str, float]:
         """[seconds] (today's counted seconds per group) without what windows of today left out. Notes a window's
-        start, its end (and the minutes it left out, once settled), and says when one ended (EVENT_ENDED)."""
+        start, its end (and the minutes it left out, once settled), and says when one ended (EVENT_ENDED).
+        [by_device]: the same per device (source). A total that reports a window's minutes after its settle (Family
+        Link lags up to about 40 minutes) can't have gained more since the settle than the time since: what a device
+        gained beyond that is the window's too, and is left out (late), never less than before."""
         self._new_day(now)
         windows = self.windows.get(person)
         if not windows:
@@ -174,11 +203,52 @@ class Unlimited:
                     window["excluded"] = gone
                     changed = True
                     self._told_end(person, window)
+            if window.get("excluded") is not None and (by_device is not None or window.get("late")):
+                gone = dict(gone)
+                # Only the last window looks for late minutes: a later one's own count (and late minutes) holds what
+                # an earlier one's total reports after it starts, so nothing is left out twice
+                if by_device is not None and window is windows[-1]:
+                    changed = self._late(window, by_device, now) or changed
+                for device_late in (window.get("late") or {}).values():
+                    for group, s in device_late.items():
+                        gone[group] = gone.get(group, 0.0) + s
             for group, s in gone.items():
                 excluded[group] = excluded.get(group, 0.0) + s
         if changed:
             self._save()
         return {g: max(0.0, s - excluded.get(g, 0.0)) for g, s in seconds.items()}
+
+    @staticmethod
+    def _late(window: dict[str, Any], by_device: dict[str, dict[str, float]], now: datetime) -> bool:
+        """A settled window's late minutes, per device and group (window["late"]): from each device's counts at the
+        settle (window["after"], noted the first look after it), what it gained beyond the time since. A device not
+        seen at the settle is left alone. Says whether anything changed."""
+        after = window.get("after")
+        if after is None:
+            window["after"] = {
+                "at": now.isoformat(),
+                "devices": {d: {g: float(s) for g, s in groups.items()} for d, groups in by_device.items()},
+            }
+            return True
+        at = _at(after.get("at"))
+        if at is None:
+            return False
+        elapsed = max(0.0, (now - at).total_seconds())
+        late = window.setdefault("late", {})
+        changed = False
+        for device, groups in by_device.items():
+            base = (after.get("devices") or {}).get(device)
+            if base is None:
+                continue
+            for group, s in groups.items():
+                was = float((late.get(device) or {}).get(group, 0.0))
+                found = max(was, float(s) - float(base.get(group, 0.0)) - elapsed)
+                if found > was:
+                    late.setdefault(device, {})[group] = found
+                    changed = True
+        if not late:
+            window.pop("late", None)
+        return changed
 
     def _told_end(self, person: str, window: dict[str, Any]) -> None:
         from .counting import ALL

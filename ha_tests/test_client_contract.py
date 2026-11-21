@@ -1,7 +1,9 @@
 """Contract 3, the generic client contract: a device's client (locked at pairing) and its checks, the never-paused
 exemption, PIN grants, client settings, share_app_data, and catalog_categories no longer read."""
 
+import json
 from datetime import timedelta
+from pathlib import Path
 
 import pytest
 
@@ -27,9 +29,12 @@ from custom_components.hearth.client_settings import (
 )
 from custom_components.hearth.const import DOMAIN
 
-from test_init import NONCE, _set_up, _video_apps
+from test_bedtime_lift import _bonus as _bonus_at_bedtime, _sam as _sam_at_bedtime
+from test_init import NONCE, _post, _set_up, _video_apps
 from test_parent_pin import _adults
+from test_people import KID, _household_with_sam, _tv_status
 from test_sources import _option
+from test_time_model import _call, _set
 
 LAUNCHER = "com.example.launcher"
 DIALER = "com.example.launcher.phone"
@@ -625,3 +630,114 @@ async def test_time_from_before_pairing_doesn_t_count_that_day(
         SAM_PHONE, {"day": tomorrow, "seconds_today": 600, "app_seconds_today": {"com.example.tube": 600}}
     )
     assert reading.total_s == 600 and reading.items == {"com.example.tube": 600}
+
+
+# The state document a TV holds by, against the fixture the TV's own tests read (TvStateDocumentFixtureTest): each
+# moment is built here as Home Assistant sends it, and must still say what the fixture says
+
+
+FIXTURE = json.loads((Path(__file__).parent / "contract_fixtures" / "tv_state_document.json").read_text("utf-8"))
+
+
+def _fits(want, got, path: str = "") -> None:
+    """[got] (Home Assistant's) says at least what [want] (the fixture) says: each key of a mapping, a list of mappings
+    with ids by the same ids, a list of strings as a part of it, a time as a time, anything else as written."""
+    if isinstance(want, dict):
+        assert isinstance(got, dict), f"{path}: {got!r} is no mapping"
+        for key, value in want.items():
+            assert key in got, f"{path}.{key} is no longer sent"
+            _fits(value, got[key], f"{path}.{key}")
+    elif isinstance(want, list) and any(isinstance(item, dict) for item in want):
+        assert isinstance(got, list), f"{path}: {got!r} is no list"
+        # Groups by their id, lifts by their group
+        key = "id" if "id" in want[0] else "group"
+        by_id = {item.get(key): item for item in got if isinstance(item, dict)}
+        assert sorted(by_id) == sorted(item[key] for item in want), f"{path}: ids {sorted(by_id)}"
+        for item in want:
+            _fits(item, by_id[item[key]], f"{path}[{item[key]}]")
+    elif isinstance(want, list):
+        assert isinstance(got, list) and set(want) <= set(got), f"{path}: {set(want) - set(got or [])} missing"
+    elif isinstance(want, str) and len(want) >= 19 and want[10:11] == "T" and dt_util.parse_datetime(want):
+        assert isinstance(got, str) and dt_util.parse_datetime(got), f"{path}: {got!r} is no time"
+    elif isinstance(want, str) and len(want) == 10 and dt_util.parse_date(want):
+        assert isinstance(got, str) and len(got) == 10 and dt_util.parse_date(got), f"{path}: {got!r} is no date"
+    else:
+        assert type(got) is type(want) and got == want, f"{path}: {got!r}, the fixture says {want!r}"
+
+
+async def _tv_document(client, secret) -> dict:
+    body = await (await _post(client, secret, body=_tv_status(hearthtube_s=600, game_s=300))).json()
+    return body["state"]["profiles"][KID]
+
+
+async def test_the_tv_document_in_the_evening(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """8 PM: Daily time and Video left, bedtime next at 9:30 PM, the weekly schedule's wake time."""
+    client, secret, _set_bedtime = await _sam_at_bedtime(hass, hass_client_no_auth, freezer, 20, 0)
+    await _set(hass, "video", 30)
+    _fits(FIXTURE["moments"]["evening"], await _tv_document(client, secret))
+
+
+async def test_the_tv_document_at_bedtime(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    client, secret, _set_bedtime = await _sam_at_bedtime(hass, hass_client_no_auth, freezer, 21, 45)
+    _fits(FIXTURE["moments"]["bedtime"], await _tv_document(client, secret))
+
+
+async def test_the_tv_document_with_bedtime_lifted(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """30 minutes of extra time at 9:45 PM: no lock, bedtime_lifted until 10:15 PM, and no next_lock for it."""
+    client, secret, _set_bedtime = await _sam_at_bedtime(hass, hass_client_no_auth, freezer, 21, 45)
+    await _bonus_at_bedtime(hass, 30)
+    document = await _tv_document(client, secret)
+    _fits(FIXTURE["moments"]["lifted"], document)
+    assert "lock" not in document
+
+
+async def test_the_tv_document_while_paused(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    await _set(hass, "all", 60)
+    await hass.services.async_call(DOMAIN, "pause", {"minutes": 45, "reason": "Dinner"}, blocking=True)
+    _fits(FIXTURE["moments"]["paused"], await _tv_document(client, secret))
+
+
+async def test_the_tv_document_with_youtube_allowed(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """Daily time used up, then a Video bonus: Video is left out and its apps are Daily time's exceptions."""
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    await _set(hass, "all", 15)
+    await _set(hass, "video", 10)
+    await _call(hass, "add_time", {"person": "person.sam", "minutes": 15, "category": "video"})
+    _fits(FIXTURE["moments"]["allowed"], await _tv_document(client, secret))
+
+
+async def test_the_tv_document_with_video_allowed_until_six(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Video allowed until 6 PM at 5 PM: Video is left out, and its lift ends at 6 with 20 minutes left after it."""
+    freezer.move_to(dt_util.now().replace(hour=17, minute=0, second=0, microsecond=0))
+    client, secret = await _household_with_sam(hass, hass_client_no_auth)
+    await _set(hass, "all", 60)
+    await _set(hass, "video", 30)
+    until = dt_util.now().replace(hour=18, minute=0).isoformat()
+    await _call(hass, "allow", {"people": ["person.sam"], "group": "video", "until": until})
+    _fits(FIXTURE["moments"]["allowed_until"], await _tv_document(client, secret))
+
+
+def test_the_fixture_check_catches_a_change() -> None:
+    evening = FIXTURE["moments"]["evening"]
+    for changed in (
+        {**evening, "groups": evening["groups"][:1]},
+        {**evening, "next_lock": {**evening["next_lock"], "kind": "school_time"}},
+        {**evening, "next_lock": {**evening["next_lock"], "at": "9:30 PM"}},
+        {key: value for key, value in evening.items() if key != "schedule"},
+        {**evening, "tomorrow": {**evening["tomorrow"], "daily_minutes": 90}},
+        {**evening, "tomorrow": {**evening["tomorrow"], "date": "tomorrow"}},
+    ):
+        with pytest.raises(AssertionError):
+            _fits(evening, changed)
+    _fits(evening, json.loads(json.dumps(evening)))

@@ -1,0 +1,1 @@
+Home Assistant: Sleep in Hearth's schedule locks a kid's phone and tablet when Family Link has no bedtime for them.

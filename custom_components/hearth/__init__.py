@@ -49,12 +49,14 @@ from .const import (
     CONF_SHARE_APP_DATA,
     CONF_SHARE_APP_DATA_OLD,
     DOMAIN,
+    KIND_TV,
 )
 from .profiles import ISSUE_PROFILE_KEYS, legacy_keys
 from .push import new_topic
 from .hub import HearthHub
 from .entity import async_prune_group_entities
 from .attention import ACT_PREFIX
+from .bedtime_lift import EVENT_BACK as EVENT_BEDTIME_BACK
 from .limits import DAY_TYPES, count_messaging, retire_video
 from .asks import EVENT_MORE_TIME_ANSWERED, EVENT_MORE_TIME_REQUESTED, AskError
 from .const import EVENT_BUDGET_REACHED
@@ -135,7 +137,7 @@ PAUSE_SCHEMA = vol.All(
 GET_ACTIVITY_SCHEMA = vol.Schema(
     {
         vol.Optional("person"): cv.entity_id,
-        vol.Optional("kind"): vol.In(("call", "hold_start", "hold_end", "tv_command", "glint_inbox")),
+        vol.Optional("kind"): vol.In(("call", "hold_start", "hold_end", "tv_command", "glint_inbox", "rule")),
         vol.Optional("since"): cv.datetime,
         vol.Optional("until"): cv.datetime,
         vol.Optional("limit", default=200): vol.All(vol.Coerce(int), vol.Range(min=1, max=2000)),
@@ -453,6 +455,22 @@ def _register_app_blocks(hass: HomeAssistant, loaded_household) -> None:
         hass, DOMAIN, "unblock_app", unblock_app, schema=BLOCK_APP_SCHEMA, supports_response=SupportsResponse.OPTIONAL
     )
 
+    async def block_outside_app(call: ServiceCall) -> ServiceResponse:
+        """The button on a notice of an app loosened outside Hearth (outside_apps.py): blocks it again in the
+        provider it changed in."""
+        try:
+            return await loaded_household().outside_apps.async_block(
+                call.data["source"], call.data["app"], context=call.context
+            )
+        except ValueError as err:
+            raise ServiceValidationError(str(err)) from err
+
+    register_service(
+        hass, DOMAIN, "block_outside_app", block_outside_app,
+        schema=vol.Schema({vol.Required("source"): cv.string, vol.Required("app"): cv.string}),
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+
 
 ANSWER_REQUEST_SCHEMA = vol.All(
     vol.Schema(
@@ -728,7 +746,10 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
             )
             if call.data.get("device"):
                 return {"ended": ended}
+        behind = household.unlimited_allows()
         ended += household.allows.end(call.data.get("id"), call.data.get("people"), app, group)
+        # The allow behind Unlimited ends Unlimited with it
+        household.end_unlimited_behind(behind)
         household.recompute()
         # Extra time Hearth gave in Family Link or Family Safety for an allow that ended goes too
         household.sync.allow_ended()
@@ -985,7 +1006,11 @@ def _register_play_on_tv(hass: HomeAssistant) -> None:
         if device_id is None:
             raise ServiceValidationError(f"{given} isn't one of the household's Hearth devices")
         if not hub.has_cap(device_id, CAP_PLAY):
-            raise ServiceValidationError(f"{hub.devices[device_id].get('name') or device_id} isn't a TV")
+            name = hub.devices[device_id].get("name") or device_id
+            # A TV whose Hearth doesn't take plays yet says so in its caps: refused now, not left to expire unanswered
+            if hub.kind(device_id) == KIND_TV:
+                raise ServiceValidationError(f"{name} can't be sent something to play: its Hearth doesn't take plays")
+            raise ServiceValidationError(f"{name} isn't a TV")
         return device_id
 
     def profile_of(hub: HearthHub, device_id: str, given: str | None) -> str | None:
@@ -1172,13 +1197,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     entry.async_on_unload(async_track_time_interval(hass, recompute, timedelta(minutes=1)))
 
     # Where the kids are (places.py): whenever a tracker, a person or a place's zone changes, and every minute (a
-    # reading goes stale without a change)
+    # reading goes stale without a change). Then who they're with and the standing rules (presence.py): the adults'
+    # person entities are watched too
     @callback
     def places_update(_event_or_now=None) -> None:
         hub.household.places.update()
+        hub.household.presence.update()
 
     entry.async_on_unload(async_track_time_interval(hass, places_update, timedelta(minutes=1)))
-    if watched := hub.household.places.watched_entities():
+    watched = sorted(set(hub.household.places.watched_entities()) | set(hub.household.presence.watched_entities()))
+    if watched:
         entry.async_on_unload(async_track_state_change_event(hass, watched, places_update))
     places_update()
 
@@ -1199,6 +1227,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
         await hub.household.enforcement.async_lock_ends_tick()
 
     entry.async_on_unload(async_track_time_interval(hass, fs_windows_tick, timedelta(minutes=1)))
+
+    # Bedtime kept in step in Family Link and Family Safety (bedtime_sync.py): each minute (confirm what was written,
+    # retry, see a parent's change), just after midnight (the new day's tonight), at 03:10 (the daily check), and when
+    # extra time at bedtime ends (tonight's Family Link entry may be written again then)
+    @callback
+    def bedtime_sync(_event_or_now=None) -> None:
+        hub.household.bedtime_sync.reconcile()
+
+    entry.async_on_unload(async_track_time_interval(hass, bedtime_sync, timedelta(minutes=1)))
+    entry.async_on_unload(async_track_time_change(hass, bedtime_sync, hour=0, minute=1, second=0))
+    entry.async_on_unload(async_track_time_change(hass, bedtime_sync, hour=3, minute=10, second=0))
+    entry.async_on_unload(hass.bus.async_listen(EVENT_BEDTIME_BACK, bedtime_sync))
     # The kids' to-do lists (todos.py): today's grants' notices back after a restart; the old Chores earn time lists
     # brought in once Home Assistant has started (their entities are there then); and each midnight, old marks go
     todos = hub.household.todos

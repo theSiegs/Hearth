@@ -85,6 +85,45 @@ def weekly_window(hass: HomeAssistant, child: str, day: date) -> tuple[time, tim
     return None
 
 
+def bedtime_slot(hass: HomeAssistant, child: str, iso_day: int) -> tuple[str, str] | None:
+    """The child's weekly bedtime of a weekday (1 Monday to 7 Sunday) as ("HH:MM" start, "HH:MM" end the next
+    morning), from its start and end time entities (unique id familylink_<child>_bedtime_<day>_<start|end>, else a time
+    entity of the child's named for the weekday); None when it can't be read."""
+    found: dict[str, str] = {}
+    for bound in ("start", "end"):
+        entity_id = _by_unique_id(hass, "time", f"{FL_DOMAIN}_{child}_bedtime_{iso_day}_{bound}")
+        if entity_id is None:
+            suffix = f"_{WEEKDAYS[iso_day - 1]}_bedtime_{bound}"
+            entity_id = next(
+                (
+                    s.entity_id
+                    for s in hass.states.async_all("time")
+                    if s.entity_id.endswith(suffix) and str(s.attributes.get("child_id")) == child
+                ),
+                None,
+            )
+        state = hass.states.get(entity_id) if entity_id else None
+        clock = _clock(state.state if state else None)
+        if clock is not None:
+            found[bound] = f"{clock.hour:02d}:{clock.minute:02d}"
+    if "start" in found and "end" in found:
+        return found["start"], found["end"]
+    return None
+
+
+def bedtime_switch(hass: HomeAssistant, child: str) -> str | None:
+    """The child's Bedtime switch (on: Family Link's bedtime is on), by unique id, else the switch named like the
+    child's bedtime time entities."""
+    if (found := _by_unique_id(hass, "switch", f"{FL_DOMAIN}_{child}_bedtime")) is not None:
+        return found
+    for state in hass.states.async_all("time"):
+        if str(state.attributes.get("child_id")) == child and state.entity_id.endswith("_monday_bedtime_start"):
+            candidate = "switch." + state.entity_id[len("time."):-len("monday_bedtime_start")] + "bedtime"
+            if hass.states.get(candidate) is not None:
+                return candidate
+    return None
+
+
 def school_time_sensors(hass: HomeAssistant, child: str) -> list[Any]:
     """The child's School time sensors, one per device (binary_sensor.<device>_school_time_active, maybe _2)."""
     return [
@@ -214,16 +253,42 @@ def app_limits(hass: HomeAssistant, child: str) -> list[dict[str, Any]]:
 INSTALLED_LISTS = ("_blocked_apps", "_apps_with_time_limits", "_apps_without_limits", "_always_allowed_apps")
 
 
+def _child_lists(hass: HomeAssistant, child: str) -> list[tuple[str, Any]]:
+    """(suffix, state) of the child's Family Link app list sensors. An empty list's sensor carries no attributes at
+    all, not even child_id: it is the child's when its entity id has the same name as one of their other lists."""
+    lists: list[tuple[str, Any]] = []
+    prefixes: set[str] = set()
+    unclaimed: list[tuple[str, Any]] = []
+    for state in hass.states.async_all("sensor"):
+        suffix = next((s for s in INSTALLED_LISTS if state.entity_id.endswith(s)), None)
+        if suffix is None:
+            continue
+        owner = state.attributes.get("child_id")
+        if owner is None:
+            unclaimed.append((suffix, state))
+        elif str(owner) == child:
+            lists.append((suffix, state))
+            prefixes.add(state.entity_id[: -len(suffix)])
+    lists.extend((suffix, state) for suffix, state in unclaimed if state.entity_id[: -len(suffix)] in prefixes)
+    return lists
+
+
+def _apps_of(state) -> list | None:
+    """A Family Link app list sensor's apps; an empty list carries no "apps" at all (state 0), which is none, not
+    unknown."""
+    apps = state.attributes.get("apps")
+    if apps is None and str(state.state) == "0":
+        return []
+    return apps
+
+
 def installed_apps(hass: HomeAssistant, child: str) -> set[str] | None:
     """The packages installed on the child's devices, from their Family Link app lists; None when that can't be told
     (a list missing, or cut short to fit Home Assistant's attribute limit)."""
     found: set[str] = set()
     seen: set[str] = set()
-    for state in hass.states.async_all("sensor"):
-        suffix = next((s for s in INSTALLED_LISTS if state.entity_id.endswith(s)), None)
-        if suffix is None or str(state.attributes.get("child_id")) != child:
-            continue
-        apps = state.attributes.get("apps")
+    for suffix, state in _child_lists(hass, child):
+        apps = _apps_of(state)
         if not isinstance(apps, list) or state.attributes.get("truncated"):
             return None
         seen.add(suffix)
@@ -240,11 +305,8 @@ def app_lists(hass: HomeAssistant, child: str) -> tuple[set[str], set[str] | Non
     was cut short: whether an app is blocked can't be told then)."""
     listed: set[str] = set()
     blocked: set[str] | None = None
-    for state in hass.states.async_all("sensor"):
-        suffix = next((s for s in INSTALLED_LISTS if state.entity_id.endswith(s)), None)
-        if suffix is None or str(state.attributes.get("child_id")) != child:
-            continue
-        apps = state.attributes.get("apps")
+    for suffix, state in _child_lists(hass, child):
+        apps = _apps_of(state)
         packages = {
             package
             for app in (apps if isinstance(apps, list) else [])

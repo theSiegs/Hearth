@@ -25,11 +25,15 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '21'
+          # Gradle's downloads (the wrapper, plugins, libraries) kept between runs: fewer chances for a network blip
+          cache: 'gradle'
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.47.8'
+          # The SDK and the pub cache, kept between runs
+          cache: true
 
       - name: Install Dependencies
         run: flutter pub get
@@ -54,9 +58,33 @@ jobs:
       - name: Test Hearth's Home Assistant page
         run: node --test test/js/hearth_panel_test.mjs
 
-      # Compiles the Java side too, which nothing else checks before a release.
+      # The NDK Flutter asks for isn't on the runner: the build used to fetch it itself, which once hung for ten
+      # minutes and failed on a broken zip. Fetched here instead, each try time-limited, three tries.
+      - name: Install the NDK
+        run: |
+          ndk=$(sed -n 's/.*val ndkVersion: String = "\([0-9.]*\)".*/\1/p' \
+            "$FLUTTER_ROOT/packages/flutter_tools/gradle/src/main/kotlin/FlutterExtension.kt")
+          if [ -z "$ndk" ]; then echo "Flutter's NDK version not found: the build fetches it"; exit 0; fi
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          for try in 1 2 3; do
+            if timeout 300 "$sdkmanager" --install "ndk;$ndk" > /dev/null; then exit 0; fi
+            echo "::warning::Installing NDK $ndk failed (try $try)"
+            rm -rf "$ANDROID_HOME/ndk/$ndk"
+            sleep 20
+          done
+          exit 1
+
+      # Compiles the Java side too, which nothing else checks before a release. Built a second time only when the
+      # first build failed on a download, never on a compile error.
       - name: Build Debug APK
-        run: flutter build apk --debug --target-platform=android-arm64
+        shell: bash
+        run: |
+          for try in 1 2; do
+            if flutter build apk --debug --target-platform=android-arm64 2>&1 | tee build.log; then exit 0; fi
+            if [ $try = 2 ] || ! grep -qE 'downloading artifacts from the network|Could not (GET|HEAD|resolve|download)|Connection reset|Read timed out|sdkmanager' build.log; then exit 1; fi
+            echo "::warning::The build failed on a download: building again in 30 s"
+            sleep 30
+          done
 
       - name: Test Java
         working-directory: android
