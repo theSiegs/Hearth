@@ -1,4 +1,4 @@
-"""The panel's WebSocket commands, as the panel's own user with its device secret: subscribe (its document), report
+"""The panel's WebSocket commands, on any Home Assistant login with the panel's device secret: subscribe (its document), report
 (what it shows), verify_pin (a Parent PIN typed on it). Types are <domain>/panel/<name>."""
 
 from __future__ import annotations
@@ -17,12 +17,12 @@ _SECRET = vol.All(str, vol.Length(min=1, max=256))
 
 
 def _panels(hass: HomeAssistant, domain: str, connection, msg: dict[str, Any]) -> Panels | None:
-    """The panels, once the secret is the panel's and the user its own (or an administrator); else the error sent."""
+    """The panels, once the secret is the panel's; else the error sent."""
     panels = Panels.find(hass, domain)
     if panels is None:
         connection.send_error(msg["id"], "not_set_up", "Panels aren't set up")
         return None
-    if not panels.authorized(msg["device_id"], msg["secret"], connection.user):
+    if not panels.authorized(msg["device_id"], msg["secret"]):
         connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Not this panel's secret")
         return None
     return panels
@@ -39,6 +39,10 @@ def async_register_commands(hass: HomeAssistant, domain: str) -> None:
         if panels is None:
             return
         msg_id = msg["id"]
+        token = hass.auth.async_get_refresh_token(connection.refresh_token_id) if connection.refresh_token_id else None
+        panels.note_login(
+            msg["device_id"], connection.user.name if connection.user else None, token.client_name if token else None
+        )
         connection.send_result(msg_id)
 
         @callback
@@ -64,7 +68,7 @@ def async_register_commands(hass: HomeAssistant, domain: str) -> None:
     )
     @websocket_api.async_response
     async def ws_report(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
-        """What the panel shows and has; unpaired: true removes it (and its user)."""
+        """What the panel shows and has; unpaired: true removes it."""
         panels = _panels(hass, domain, connection, msg)
         if panels is None:
             return

@@ -1,5 +1,5 @@
 """Glint Panels (custom_components/hearth/glint_panel/, docs/contracts/panel-config.md): pairing a wall tablet with a
-room, its own Home Assistant user and token, its settings document over a WebSocket subscription, its entities and
+room (it signs in to Home Assistant with a token the owner made, panels may share one), its settings document over a WebSocket subscription, its entities and
 services, the Parent PIN check, and the package's seam to the rest of Hearth."""
 
 import ast
@@ -44,9 +44,26 @@ HEARTH = PACKAGE.parent
 
 
 @pytest.fixture(autouse=True)
-def _an_owner(hass_owner_user):
-    """Home Assistant always has its owner (made at onboarding): a panel's user is never the first."""
+async def _displays(hass: HomeAssistant, hass_owner_user):
+    """The owner's shared, non-administrator "displays" user, with a long-lived token per panel as the owner made
+    them in its profile: pairing makes no user. The token goes in each approved answer as `ha_token` for the tests."""
+    from homeassistant.auth.const import GROUP_ID_USER
+    from homeassistant.auth.models import TOKEN_TYPE_LONG_LIVED_ACCESS_TOKEN
+
+    user = await hass.auth.async_create_user("Displays", group_ids=[GROUP_ID_USER], local_only=True)
+    TOKENS.clear()
+    for name in ("Kitchen tablet", "Bedroom tablet"):
+        refresh = await hass.auth.async_create_refresh_token(
+            user, client_name=name, token_type=TOKEN_TYPE_LONG_LIVED_ACCESS_TOKEN,
+            access_token_expiration=timedelta(days=3650),
+        )
+        TOKENS.append(hass.auth.async_create_access_token(refresh))
+    DISPLAYS[:] = [user]
     yield
+
+
+TOKENS: list[str] = []
+DISPLAYS: list = []
 
 
 def _panels(hass: HomeAssistant) -> glint_panel.Panels:
@@ -93,7 +110,8 @@ async def _pair_panel(
     approved = await client.get(f"/api/hearth/pair/{started['pairing_id']}", headers={"X-Hearth-Nonce": NONCE})
     body = await approved.json()
     assert body["status"] == "approved"
-    return body
+    assert "ha_token" not in body
+    return {**body, "ha_token": TOKENS[0 if device_id == PANEL_ID else 1]}
 
 
 async def _household(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator):
@@ -122,7 +140,7 @@ async def _after_push(hass: HomeAssistant) -> None:
 # Pairing
 
 
-async def test_a_panel_pairs_with_a_room_and_gets_a_user_of_its_own(
+async def test_a_panel_pairs_with_a_room_and_makes_no_user(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
     entry, client = await _household(hass, hass_client_no_auth)
@@ -132,7 +150,7 @@ async def test_a_panel_pairs_with_a_room_and_gets_a_user_of_its_own(
     body = await _pair_panel(hass, client, area_id="kitchen")
     assert hass.states.get(_eid(hass, "switch", "house_panel")).state == "on"
 
-    assert body["device_id"] == PANEL_ID and body["secret"] and body["ha_token"]
+    assert body["device_id"] == PANEL_ID and body["secret"]
     assert body["person"] is None and body["role"] is None and body["push"] is None
     assert set(body["urls"]) == {"internal", "external"}
     device = _device(hass)
@@ -141,16 +159,12 @@ async def test_a_panel_pairs_with_a_room_and_gets_a_user_of_its_own(
     assert device.configuration_url == f"homeassistant://hearth#panel-{PANEL_ID}"
     assert entry.entry_id in device.config_entries
 
-    user = await hass.auth.async_get_user(_panels(hass).panels[PANEL_ID]["user_id"])
-    assert user is not None and user.name == "Kitchen panel"
-    assert not user.is_admin and user.local_only and not user.system_generated
-    assert not any(s.attributes.get("user_id") == user.id for s in hass.states.async_all("person"))
+    # Pairing makes no Home Assistant user: the panel brings its own login
+    assert not any(u.name == "Kitchen panel" for u in await hass.auth.async_get_users())
+    assert "user_id" not in _panels(hass).panels[PANEL_ID]
     # Kept apart from the TVs and phones: never in the entry, and the entry didn't reload
     assert PANEL_ID not in entry.data.get("devices", {})
     assert hass.config_entries.async_entries(DOMAIN)[0].runtime_data is hub
-    # The token signs in as the panel's user
-    refresh = hass.auth.async_validate_access_token(body["ha_token"])
-    assert refresh is not None and refresh.user.id == user.id
 
 
 async def test_a_panel_pairs_without_a_room(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
@@ -172,11 +186,11 @@ async def test_the_confirm_form_asks_for_a_room_only(
     result = await hass.config_entries.flow.async_configure(flows[0]["flow_id"], {"area_id": "bedroom"})
     assert result["type"] is FlowResultType.ABORT and result["reason"] == "paired"
     approved = await client.get(f"/api/hearth/pair/{started['pairing_id']}", headers={"X-Hearth-Nonce": NONCE})
-    assert (await approved.json())["ha_token"]
+    assert (await approved.json())["status"] == "approved"
     assert _device(hass).area_id == "bedroom"
 
 
-async def test_the_token_is_in_the_first_approved_poll_only(
+async def test_the_secret_is_in_the_first_approved_poll_only(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
     entry, client = await _household(hass, hass_client_no_auth)
@@ -184,16 +198,17 @@ async def test_the_token_is_in_the_first_approved_poll_only(
     started = await response.json()
     await hass.async_block_till_done()
     pending = await client.get(f"/api/hearth/pair/{started['pairing_id']}", headers={"X-Hearth-Nonce": NONCE})
-    assert "ha_token" not in await pending.json()
+    assert "secret" not in await pending.json()
     from custom_components.hearth.panel import async_answer_pairing
 
     assert await async_answer_pairing(hass, entry.runtime_data, started["pairing_id"], "approve", None, "kitchen")
     # The panel contract's neutral header works as well as Hearth's own
     first = await client.get(f"/api/hearth/pair/{started['pairing_id']}", headers={"X-Panel-Nonce": NONCE})
-    assert (await first.json())["ha_token"]
+    approved = await first.json()
+    assert approved["secret"] and "ha_token" not in approved
     again = await client.get(f"/api/hearth/pair/{started['pairing_id']}", headers={"X-Hearth-Nonce": NONCE})
     assert again.status == 404
-    assert "ha_token" not in await again.text()
+    assert approved["secret"] not in await again.text()
     # Hearth's own 404s are JSON, so a panel tells them from Home Assistant's "no such route"
     assert (await again.json())["error"]
 
@@ -231,17 +246,17 @@ async def test_a_tv_s_ticket_never_pairs_a_panel(hass: HomeAssistant, hass_clien
     assert response.status == 400
 
 
-async def test_removing_the_device_deletes_its_user(
+async def test_removing_the_device_removes_the_panel_and_keeps_the_login(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
     entry, client = await _household(hass, hass_client_no_auth)
-    await _pair_panel(hass, client, area_id="kitchen")
-    user_id = _panels(hass).panels[PANEL_ID]["user_id"]
+    body = await _pair_panel(hass, client, area_id="kitchen")
     device = _device(hass)
     assert await async_remove_config_entry_device(hass, entry, device)
     dr.async_get(hass).async_remove_device(device.id)
     await hass.async_block_till_done()
-    assert await hass.auth.async_get_user(user_id) is None
+    # The owner's login and token are theirs: removing a panel leaves them
+    assert hass.auth.async_validate_access_token(body["ha_token"]) is not None
     assert not _panels(hass).has(PANEL_ID)
     assert er.async_get(hass).async_get_entity_id("switch", DOMAIN, f"panel_{PANEL_ID}_house_panel") is None
 
@@ -251,34 +266,28 @@ async def test_unpaired_on_the_panel_removes_it(
 ) -> None:
     _entry, client = await _household(hass, hass_client_no_auth)
     body = await _pair_panel(hass, client, area_id="kitchen")
-    user_id = _panels(hass).panels[PANEL_ID]["user_id"]
     ws = await hass_ws_client(hass, access_token=body["ha_token"])
     await ws.send_json(
         {"id": 1, "type": "hearth/panel/report", "device_id": PANEL_ID, "secret": body["secret"], "unpaired": True}
     )
     assert (await ws.receive_json())["success"]
     await hass.async_block_till_done()
-    assert await hass.auth.async_get_user(user_id) is None
+    assert not _panels(hass).has(PANEL_ID)
     assert not dr.async_entries_for_config_entry(dr.async_get(hass), _entry.entry_id) or all(
         (DOMAIN, f"panel:{PANEL_ID}") not in d.identifiers for d in dr.async_entries_for_config_entry(dr.async_get(hass), _entry.entry_id)
     )
 
 
-async def test_pairing_again_replaces_the_user_and_keeps_the_settings(
+async def test_pairing_again_replaces_the_secret_and_keeps_the_settings(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
     _entry, client = await _household(hass, hass_client_no_auth)
     first = await _pair_panel(hass, client, area_id="kitchen")
     panels = _panels(hass)
-    old_user = panels.panels[PANEL_ID]["user_id"]
     panels.set_values(PANEL_ID, {"motion": "calm"})
     key = panels.panels[PANEL_ID]["key"]
 
     second = await _pair_panel(hass, client)
-    assert await hass.auth.async_get_user(old_user) is None
-    assert hass.auth.async_validate_access_token(first["ha_token"]) is None
-    new_user = panels.panels[PANEL_ID]["user_id"]
-    assert new_user != old_user and await hass.auth.async_get_user(new_user) is not None
     assert not panels.authorized(PANEL_ID, first["secret"]) and panels.authorized(PANEL_ID, second["secret"])
     # Its settings, room and proxy key stay
     assert panels.value(PANEL_ID, "motion") == "calm" and panels.panels[PANEL_ID]["key"] == key
@@ -384,7 +393,7 @@ async def test_secrets_are_never_in_answers_states_or_attributes(
     _entry, client = await _household(hass, hass_client_no_auth)
     body = await _pair_panel(hass, client, area_id="kitchen")
     record = _panels(hass).panels[PANEL_ID]
-    secrets = (record["key"], record["secret_hash"], body["secret"], body["ha_token"])
+    secrets = (record["key"], record["secret_hash"], body["secret"])
 
     got = await hass.services.async_call(DOMAIN, "get_panel", {}, blocking=True, return_response=True)
     set_answer = await hass.services.async_call(
@@ -402,19 +411,25 @@ async def test_secrets_are_never_in_answers_states_or_attributes(
 # Subscribe and report
 
 
-async def test_a_wrong_secret_or_another_user_is_refused(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client, hass_read_only_access_token
+async def test_the_secret_says_which_panel_on_a_shared_login(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client
 ) -> None:
     _entry, client = await _household(hass, hass_client_no_auth)
-    body = await _pair_panel(hass, client, area_id="kitchen")
-    ws = await hass_ws_client(hass, access_token=body["ha_token"])
+    kitchen = await _pair_panel(hass, client, area_id="kitchen")
+    bedroom = await _pair_panel(hass, client, OTHER_ID, area_id="bedroom")
+    ws = await hass_ws_client(hass, access_token=kitchen["ha_token"])
     await ws.send_json({"id": 1, "type": "hearth/panel/subscribe", "device_id": PANEL_ID, "secret": "not-the-secret"})
     answer = await ws.receive_json()
     assert not answer["success"] and answer["error"]["code"] == "unauthorized"
-    # The panel's secret on another (not administrator) user's connection
-    other = await hass_ws_client(hass, access_token=hass_read_only_access_token)
-    await other.send_json({"id": 1, "type": "hearth/panel/subscribe", "device_id": PANEL_ID, "secret": body["secret"]})
-    assert (await other.receive_json())["error"]["code"] == "unauthorized"
+    # One panel's secret never opens another's document, on the same shared login
+    await ws.send_json({"id": 2, "type": "hearth/panel/subscribe", "device_id": OTHER_ID, "secret": kitchen["secret"]})
+    assert (await ws.receive_json())["error"]["code"] == "unauthorized"
+    # Each panel on the shared user's own token, told apart by its secret; get_panel says who signed in
+    _ws, doc = await _subscribe(hass_ws_client, hass, bedroom, OTHER_ID)
+    assert doc["panel"]["device_id"] == OTHER_ID
+    got = await hass.services.async_call(DOMAIN, "get_panel", {}, blocking=True, return_response=True)
+    logins = {p["device_id"]: p["signed_in_as"] for p in got["panels"]}
+    assert logins[OTHER_ID] == {"user": "Displays", "token": "Bedroom tablet"} and logins[PANEL_ID] is None
 
 
 async def test_the_first_message_is_the_whole_document_and_one_call_is_one_push(
@@ -639,11 +654,10 @@ async def test_only_adults_call_the_panel_services(
                 DOMAIN, service, data, blocking=True, context=Context(user_id=hass_read_only_user.id),
                 return_response=service == "get_panel",
             )
-    # The panel's own user isn't an adult either
-    panel_user = _panels(hass).panels[PANEL_ID]["user_id"]
+    # The panels' shared login isn't an adult either
     with pytest.raises(Unauthorized):
         await hass.services.async_call(
-            DOMAIN, "get_panel", {}, blocking=True, context=Context(user_id=panel_user), return_response=True
+            DOMAIN, "get_panel", {}, blocking=True, context=Context(user_id=DISPLAYS[0].id), return_response=True
         )
     await hass.services.async_call(
         DOMAIN, "set_panel", {"device_id": target, "motion": "calm"}, blocking=True,

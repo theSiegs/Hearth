@@ -244,7 +244,7 @@ def _approved(hass: HomeAssistant, pairing, secret: str) -> dict[str, Any]:
         "push": push_answer(_server(options), pairing.push_topic) if pairing.kind == KIND_MOBILE else None,
         # The client locked with this pairing ({"id", "companions"}), null when the device sent none
         "client": locked(pairing.client),
-        # What the device's kind adds (a Glint Panel's ha_token), handed over once with the secret
+        # What the device's kind adds to its answer, handed over once with the secret (none so far)
         **pairing.answer,
     }
 

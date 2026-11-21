@@ -1,5 +1,5 @@
-"""The household's Glint Panels: their store (the one source of truth for their settings), pairing's panel kind, each
-panel's own Home Assistant user, and the documents pushed to their subscriptions.
+"""The household's Glint Panels: their store (the one source of truth for their settings), pairing's panel kind, and the
+documents pushed to their subscriptions.
 
 One per Home Assistant run (Panels.get), so a panel's subscription outlives the serving entry reloading for some other
 reason; the host is attached while the entry is loaded. Saving a panel's settings never touches the config entry.
@@ -10,11 +10,9 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
-from homeassistant.auth.const import GROUP_ID_USER
-from homeassistant.auth.models import TOKEN_TYPE_LONG_LIVED_ACCESS_TOKEN
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
 from homeassistant.helpers import area_registry as ar
@@ -35,8 +33,6 @@ from .const import (
     PUSH_DELAY,
     REPORT_WINDOW,
     STORE_VERSION,
-    TOKEN_CLIENT,
-    TOKEN_DAYS,
     VIEWS,
     identifier,
     signal,
@@ -64,6 +60,7 @@ class _Live:
     subs: dict[int, Subscription] = field(default_factory=dict)
     closed_at: datetime | None = None
     reports: list[datetime] = field(default_factory=list)
+    login: dict[str, str | None] | None = None
 
 
 class Panels:
@@ -159,12 +156,20 @@ class Panels:
         """Pairing asks: is this device id a panel's (so a TV or phone of the same id isn't paired over it)."""
         return device_id in self.panels
 
-    def authorized(self, device_id: str, secret: str | None, user=None) -> bool:
-        """The device secret is this panel's, and the WebSocket's user is the panel's own (or an administrator)."""
+    def authorized(self, device_id: str, secret: str | None) -> bool:
+        """The device secret is this panel's. The panel signs in to Home Assistant with a token the owner made (any
+        user's; panels may share one): the secret, not the login, says which panel it is."""
         record = self.panels.get(device_id)
-        if record is None or self.host is None or not self.host.secret_matches(record.get("secret_hash"), secret):
-            return False
-        return user is None or user.is_admin or user.id == record.get("user_id")
+        return (
+            record is not None
+            and self.host is not None
+            and self.host.secret_matches(record.get("secret_hash"), secret)
+        )
+
+    def note_login(self, device_id: str, user: str | None, token: str | None) -> None:
+        """Who the panel's subscription signed in as (the user's name and the token's name), for get_panel."""
+        live = self._live.setdefault(device_id, _Live())
+        live.login = {"user": user, "token": token}
 
     def registry_device(self, device_id: str) -> dr.DeviceEntry | None:
         if self.entry_id is None:
@@ -232,8 +237,9 @@ class Panels:
     # Pairing's panel kind (the host's approve calls it)
 
     async def approve(self, pairing: Any, secret_hash: str, area_id: str | None) -> dict[str, Any] | None:
-        """An administrator approved a panel's pairing (with an area, or none): its device, a user of its own with a
-        long-lived token, and its record. The answer's extra fields for the panel (its token, once); None: not now."""
+        """An administrator approved a panel's pairing (with an area, or none): its device and its record. Home
+        Assistant's own login is the owner's to give the panel (a long-lived token): pairing makes no user. The
+        answer's extra fields for the panel (none); None: not now."""
         host = self.host
         if host is None:
             return None
@@ -257,21 +263,8 @@ class Panels:
             device = devices.async_update_device(device.id, area_id=area.id) or device
         name = device.name_by_user or device.name or "Panel"
 
-        user = await hass.auth.async_create_user(name, group_ids=[GROUP_ID_USER], local_only=True)
-        if user.is_owner or user.is_admin:
-            # Home Assistant makes the first user its owner: a panel is never that
-            await hass.auth.async_remove_user(user)
-            return None
-        refresh = await hass.auth.async_create_refresh_token(
-            user,
-            client_name=TOKEN_CLIENT,
-            token_type=TOKEN_TYPE_LONG_LIVED_ACCESS_TOKEN,
-            access_token_expiration=timedelta(days=TOKEN_DAYS),
-        )
-        token = hass.auth.async_create_access_token(refresh)
         if record is not None:
-            # Pairing again: the old user (and its token) goes, and the old secret's subscriptions end
-            await self._remove_user(record.get("user_id"))
+            # Pairing again: the old secret's subscriptions end
             self._end_subscriptions(device_id)
 
         values: dict[str, Any] = dict(record.get("values", {})) if record else {}
@@ -284,7 +277,6 @@ class Panels:
         self.panels[device_id] = {
             "name": name,
             "secret_hash": secret_hash,
-            "user_id": user.id,
             "model": pairing.model,
             "sw_version": pairing.sw_version,
             "paired_at": dt_util.utcnow().isoformat(),
@@ -296,17 +288,10 @@ class Panels:
         self._save()
         async_dispatcher_send(hass, signal_added(self.domain), device_id)
         self._changed()
-        return {"ha_token": token}
-
-    async def _remove_user(self, user_id: str | None) -> None:
-        if not user_id:
-            return
-        user = await self.hass.auth.async_get_user(user_id)
-        if user is not None:
-            await self.hass.auth.async_remove_user(user)
+        return {}
 
     async def async_remove(self, device_id: str, *, from_registry: bool = True) -> bool:
-        """A panel leaves: its user (and token) goes, its subscriptions end, and (unless the registry is removing it
+        """A panel leaves: its subscriptions end, and (unless the registry is removing it
         already) its device and entities."""
         record = self.panels.pop(device_id, None)
         if record is None:
@@ -317,7 +302,6 @@ class Panels:
         self._live.pop(device_id, None)
         if cancel := self._grace_timers.pop(device_id, None):
             cancel()
-        await self._remove_user(record.get("user_id"))
         if from_registry and (device := self.registry_device(device_id)) is not None:
             dr.async_get(self.hass).async_remove_device(device.id)
         await self.async_flush()
@@ -325,7 +309,7 @@ class Panels:
         return True
 
     async def async_remove_all(self) -> None:
-        """The serving entry is deleted: every panel's user goes."""
+        """The serving entry is deleted: every panel goes."""
         for device_id in list(self.panels):
             await self.async_remove(device_id, from_registry=False)
 
@@ -550,6 +534,8 @@ class Panels:
             "area_id": self.area_id(device_id),
             "settings": settings,
             "connected": self.connected(device_id),
+            # Who its subscription signed in as: {"user", "token"} names, null before it first subscribed
+            "signed_in_as": live.login if (live := self._live.get(device_id)) is not None else None,
             "view": self.view(device_id),
             "on_the_tablet": self.on_tablet(device_id),
             "up_to_date": record.get("has_version") == doc["version"],

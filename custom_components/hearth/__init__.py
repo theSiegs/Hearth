@@ -1502,7 +1502,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> b
 
 async def async_remove_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
     """The household is deleted: Hearth's page goes from the sidebar. (A reload keeps it, so changing a setting there
-    doesn't send you away.) Each Glint Panel's Home Assistant user goes with it."""
+    doesn't send you away.) Its Glint Panels go with it."""
     panel.async_remove_panel(hass)
     await glint_panel.Panels.get(hass, DOMAIN).async_remove_all()
 
@@ -1517,7 +1517,7 @@ async def async_remove_config_entry_device(
             if device_id.startswith("person:"):
                 return False
             if device_id.startswith(glint_panel.IDENTIFIER_PREFIX):
-                # A Glint Panel: its user and token go, and its subscription ends
+                # A Glint Panel: it goes, and its subscription ends
                 await glint_panel.Panels.get(hass, DOMAIN).async_remove(
                     device_id[len(glint_panel.IDENTIFIER_PREFIX) :], from_registry=False
                 )

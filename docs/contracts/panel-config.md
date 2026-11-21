@@ -2,7 +2,12 @@
 
 Owner: the integration that serves it, `<d>` below (today Hearth, `hearth`). A Glint Panel is a wall tablet, one per
 room. Its settings live in Home Assistant: an administrator approves its pairing code and picks the room, and the
-panel gets one versioned document over a WebSocket subscription it holds with its own Home Assistant user.
+panel gets one versioned document over a WebSocket subscription.
+
+**Signing in to Home Assistant is the owner's, not pairing's.** The panel uses a long-lived access token the owner
+made (Profile > Security), any user's; panels may share one non-administrator user, a token each. Pairing makes
+no user and hands out no token. The panel's **device secret** (from pairing) says which panel it is, on every
+command below; the login only gets it onto Home Assistant's WebSocket.
 
 The panel side finds `<d>` itself: it reads `get_config`'s `components` and uses the first of `glint_panel`, `hearth`
 that is loaded. Every name below is built from `<d>`; nothing is registered under any other prefix. The panel refuses
@@ -45,26 +50,24 @@ approval:
 - a device under the config entry, named `<area name> panel` (`Panel` without a room), its area set, `model` and
   `sw_version` from the pair body (later from reports), `configuration_url` to the panel's card on Hearth's page. It
   is renamed with its room until the owner renames it.
-- a Home Assistant user named as the device: not an administrator (group `system-users`), local only, in no person;
-  and a long-lived access token for it (client name `Glint Panel`, 10 years). Only the user id is kept.
 
 The poll's approved answer (`GET /api/<d>/pair/<pairing_id>`, header `X-Panel-Nonce`, or `X-Hearth-Nonce` as for TVs and
 phones; any future server takes `X-Panel-Nonce`) is handed over once, as for
-every device, and adds the token:
+every device:
 
-    {"status": "approved", "contract": 3, "device_id": "...", "secret": "...", "ha_token": "...",
+    {"status": "approved", "contract": 3, "device_id": "...", "secret": "...",
      "urls": {"internal": "...", "external": "..."}, "person": null, "role": null, "push": null, "client": null}
 
-A later poll is 404: the token is never given again. The panel signs in to Home Assistant with `ha_token` and keeps
-`secret` for the commands below.
+A later poll is 404: the secret is never given again. The panel keeps `secret` for the commands below.
 
-Removing the panel's device in Home Assistant deletes its user (and so its token). Pairing again deletes the old user
-and makes a new one; the panel's settings, room and proxy key stay.
+Removing the panel's device in Home Assistant removes the panel (its secret stops working); the owner's login and
+token are left alone (revoke the token in the user's profile to shut the panel out of Home Assistant too). Pairing
+again gives a new secret; the panel's settings, room and proxy key stay.
 
 ## The WebSocket commands
 
-As the panel's own user (an administrator's connection may also use them), each with the device secret. A wrong
-secret, or another user's connection: error `unauthorized`.
+On any Home Assistant login, each with the device secret, which alone says which panel it is: a wrong secret, or
+another panel's: error `unauthorized`.
 
 ### `<d>/panel/subscribe {device_id, secret}`
 
@@ -75,14 +78,14 @@ While a subscription is open the panel's **Connected** entity is on; it goes off
 No heartbeat.
 
 When the panel is removed or paired again, each open subscription gets one last event `{"unpaired": true}` and no
-more (removal also deletes the user, which closes the connection).
+more.
 
 ### `<d>/panel/report {device_id, secret, view?, version?, on_tablet?, sw_version?, model?, unpaired?}`
 
 Sent on change only (at most 30 a minute: error `too_often`). Sets the **View** entity (`photos`, `tiles`, `night`,
 `off`, `dark_clock` (or `dark clock`), `pairing`; anything else: unknown), **On the tablet** (words, or a list of them
 joined with `; `; none: `none`), and the device's `sw_version` / `model`. `version` is the document version the panel
-holds (`get_panel` says whether it's up to date). `unpaired: true` removes the panel: its device, entities and user.
+holds (`get_panel` says whether it's up to date). `unpaired: true` removes the panel: its device and entities.
 
 ### `<d>/panel/verify_pin {device_id, secret, pin}`
 
@@ -197,7 +200,8 @@ after_bedtimes?}]`, at most 12; times `HH:MM`, days `mon`…`sun`), `commute_win
 
 `device_id` optional (none: every panel). Answers `{"panels": [...], "defaults": {...}}`: per panel its `device_id`,
 `ha_device_id`, `name`, `area_id`, `settings` (each key as `{"value", "source": "set" | "derived"}`), `connected`,
-`view`, `on_the_tablet`, `up_to_date` (the version it reported is the current one) and `document` (without secrets);
+`view`, `on_the_tablet`, `signed_in_as` (`{"user", "token"}`: the names of the login its last subscription used, null
+before one), `up_to_date` (the version it reported is the current one) and `document` (without secrets);
 each house-wide value as `{"value", "source"}`. Never a secret.
 
 ## Not yet built

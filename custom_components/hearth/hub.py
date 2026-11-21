@@ -132,7 +132,7 @@ class Pairing:
     for_role: str | None = None
     for_person: str | None = None
     # Another kind's own pairing data (a Glint Panel's seed, untrusted), and what its approval adds to the device's
-    # approved answer (a panel's ha_token: handed over once, with the secret)
+    # approved answer (handed over once, with the secret)
     seed: dict[str, Any] | None = None
     answer: dict[str, Any] = field(default_factory=dict)
 
