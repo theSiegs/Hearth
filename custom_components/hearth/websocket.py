@@ -30,6 +30,7 @@ from .counting import ALL
 from .asks import AMOUNTS, VIA_HOME_ASSISTANT, AskError
 from .limits import GAMES, OTHER
 from .media import media_rooms
+from .adult_offer import note_refused
 from .auth import is_adult_user
 from .glance import app_name_guess, duration, household_glance, person_glance
 from .grants import APP
@@ -378,8 +379,12 @@ def _hub(hass: HomeAssistant):
 
 
 def _may_read(hass: HomeAssistant, hub, user) -> bool:
-    """An administrator, or a user whose person is an adult on Hearth's page (auth.py)."""
-    return is_adult_user(hass, hub, user)
+    """An administrator, or a user whose person is an adult on Hearth's page (auth.py). Someone refused may be an
+    adult nobody marked yet: the administrators are asked once (adult_offer.py)."""
+    if is_adult_user(hass, hub, user):
+        return True
+    note_refused(hass, hub, user)
+    return False
 
 
 def _for_reader(body: dict[str, Any], user) -> dict[str, Any]:

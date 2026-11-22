@@ -213,6 +213,35 @@ The household maps once (see [Setting it up](#setting-it-up)):
 Hearth's TVs can suggest the mapping by name (a profile called like a person), for an adult to check. The integration,
 not Hearth, owns this map; Hearth's `profile_id` to name map goes away.
 
+### Adults' own phones
+
+Each person can have a **role** on Hearth's page (the `roles` option): `adult` or `kid`. An adult's own phone (Glint, or
+any Hearth client signed in to Home Assistant as their own user) reads the household (`hearth/household`, its
+subscription, Glint's `hearth/glint/*`) only when that user is an administrator, or their person (the one whose
+`user_id` is that user) is an adult on Hearth's page.
+
+That step is easy to miss, so Hearth asks. When a user is refused one of those reads, and all of this holds, the
+administrators get one notice (their phones, and a card on Hearth's page): "Alex signed in from a phone. Make them an
+adult in Hearth? Adults see the kids' time and can give more.", with **Make adult** and **Not now**:
+
+- the user is active, not one Home Assistant made itself, and not an administrator;
+- exactly one person has that `user_id`;
+- that person has no role yet (a kid, or any choice made on Hearth's page, is never overridden);
+- nothing about the person is a kid's: no Family Link, Family Safety or Nintendo account (`enforce`), no screen time
+  source, no lock, no budget, schedule or bonus. Anyone with any of these is never offered.
+
+**Make adult** sets the role as Hearth's page does (the options; the entry reloads), and the next read succeeds.
+**Not now** takes the notice away. Either way, and once asked at all, the person is never asked again: asked, declined
+and made are kept in Hearth's store (`hearth.adult_offers.<entry>`) across restarts, and an offer still open after a
+restart keeps working. The role can still be set or changed by hand on Hearth's page at any time; an offer settled
+that way goes from the phones. A refused read comes on every poll, so each user is looked at only once per Home
+Assistant run.
+
+Both buttons run `hearth.adult_offer_answer` (`person`, `answer`: `adult` or `not_now`), which only an administrator
+may call: an adult who isn't one, an automation or anyone else is refused, since only an administrator may make
+someone an adult. It checks again that the person still qualifies. Each offer fires `hearth_adult_offered`
+(`person`).
+
 ### TV profile keys
 
 A TV names a profile by its own key, `profile_id` (`user:10`, or `user:0:sam` for another account in an adults' user).

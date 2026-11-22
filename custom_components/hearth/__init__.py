@@ -35,7 +35,7 @@ from .auth import is_adult_user, register_service
 from .websocket import async_register_commands
 from .pause import async_load_pauses, end_app_pause, pausable, set_app_pause, set_pause
 from .places import ARRIVE, LEAVE
-from . import client_settings_ws, glint_api, llm_api, panel, suggest_push, todo_ws, weekly_ws
+from . import adult_offer, client_settings_ws, glint_api, llm_api, panel, suggest_push, todo_ws, weekly_ws
 from . import glint_panel
 from .glint_panel_seam import HearthPanelHost
 from .todos import migrated_options
@@ -386,6 +386,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     _register_copy_sites(hass, loaded_household)
     # An administrator's Approve or Deny on a pairing's phone notification
     panel.async_register_pairing_service(hass)
+    # An administrator's Make adult or Not now on the offer for a person who signed in from a phone (adult_offer.py)
+    adult_offer.async_register_service(hass)
     # Hearth for assistants: Home Assistant's MCP Server and Assist (llm_api.py)
     llm_api.async_register(hass)
     # Glint agents through Hearth: the "glint" LLM API beside it (glint_api.py)
@@ -1174,6 +1176,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     await panels.async_attach(HearthPanelHost(hass, hub))
     hub.glint_panel = panels
     hub.pairing_kinds[KIND_PANEL] = panels
+    # An offer to make someone an adult still open: its buttons work again (or it goes, settled meanwhile)
+    await hub.adult_offers.async_restore()
     # The views stay registered for Home Assistant's lifetime (aiohttp can't take one away); with no entry
     # loaded they answer that Hearth isn't set up
     if not hass.data.get(_VIEWS_REGISTERED):

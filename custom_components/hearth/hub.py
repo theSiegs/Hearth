@@ -52,6 +52,7 @@ from .const import (
 )
 from .asks import Asks
 from .fs_requests import RequestTracker
+from .adult_offer import AdultOffers
 from .attention import ADMINS, ADULTS, Attention, Item
 from .client import checks_of, locked
 from .client_settings import ClientSettings
@@ -301,6 +302,8 @@ class HearthHub:
         self.pairing_kinds: dict[str, Any] = {}
         # The household's Glint Panels (glint_panel/), set by setup
         self.glint_panel: Any = None
+        # "Make this person an adult?", asked of the administrators once a person (adult_offer.py)
+        self.adult_offers = AdultOffers(hass, self)
 
     # The devices
 
@@ -328,6 +331,7 @@ class HearthHub:
         await self.fs_requests.async_load()
         await self.client_settings.async_load()
         await self.glint_agent.async_load()
+        await self.adult_offers.async_load()
         stored = await self._store.async_load() or {}
         for device_id, kept in stored.items():
             if device_id not in self.devices or not isinstance(kept, dict):
@@ -607,6 +611,7 @@ class HearthHub:
         await self.fs_requests.async_flush()
         await self.client_settings.async_flush()
         await self.glint_agent.async_flush()
+        await self.adult_offers.async_flush()
 
     async def async_remove_device(self, device_id: str) -> None:
         """Forgets a device: its secret stops working at once."""

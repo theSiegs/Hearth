@@ -1066,3 +1066,19 @@ undo_panel_start:
     by:
       selector:
         text:
+
+
+adult_offer_answer:
+  fields:
+    person:
+      required: true
+      selector:
+        entity:
+          domain: person
+    answer:
+      required: true
+      selector:
+        select:
+          options:
+            - adult
+            - not_now
