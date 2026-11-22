@@ -699,12 +699,24 @@ class HearthHub:
             return None
         return pairing
 
+    def owned_by_another_kind(self, device_id: str, kind: str) -> bool:
+        """One id is one device: [device_id] is already a device of a kind kept apart from [kind] (a panel's id for a TV
+        or phone, a TV's or phone's for a panel). Every pairing route asks (the pair view, approval, tickets)."""
+        if kind in self.pairing_kinds:
+            return device_id in self.devices or any(
+                other != kind and part.owns(device_id) for other, part in self.pairing_kinds.items()
+            )
+        return any(part.owns(device_id) for part in self.pairing_kinds.values())
+
     async def async_approve(self, pairing_id: str, person: str | None = None, area_id: str | None = None) -> bool:
         """An administrator checked the code: the device joins (or gets a new secret, if it was here). A kind kept
         outside the entry's devices (a Glint Panel, with its [area_id]) is its own part's to keep: the entry isn't
         changed, so it doesn't reload."""
         pairing = self.pairing(pairing_id)
         if pairing is None or pairing.denied:
+            return False
+        if self.owned_by_another_kind(pairing.device_id, pairing.kind):
+            # Paired as another kind since it asked (or through a route that didn't ask): never over it
             return False
         secret = secrets.token_urlsafe(32)
         if pairing.kind in self.pairing_kinds:
@@ -777,7 +789,7 @@ class HearthHub:
             return None
         # A device already paired as another kind (an adult's phone, say) is never taken over by a ticket: re-pairing
         # the same TV after a reinstall is fine
-        if device_id in self.devices and self.kind(device_id) != kind:
+        if (device_id in self.devices and self.kind(device_id) != kind) or self.owned_by_another_kind(device_id, kind):
             return None
         for old in [p.pairing_id for p in self._pairings.values() if p.device_id == device_id]:
             del self._pairings[old]

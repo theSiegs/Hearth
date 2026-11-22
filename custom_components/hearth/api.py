@@ -154,9 +154,7 @@ class PairStartView(HomeAssistantView):
         ):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
         # One id is one device: a panel never pairs over a TV or a phone, nor they over a panel
-        if (kind == KIND_PANEL and device_id in hub.devices) or (
-            kind != KIND_PANEL and KIND_PANEL in hub.pairing_kinds and hub.pairing_kinds[KIND_PANEL].owns(device_id)
-        ):
+        if hub.owned_by_another_kind(device_id, kind):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
         pairing = hub.start_pairing(
             request.remote or "",

@@ -132,3 +132,39 @@ async def test_a_ticket_never_takes_over_a_device_paired_as_another_kind(
     ticket = (await (await _ticket(client, secret, {"kind": "tv"})).json())["ticket"]
     assert (await _redeem(client, ticket, device_id=PHONE_ID)).status == 404
     assert entry.data["devices"][PHONE_ID]["kind"] == "mobile"
+
+
+PANEL_ID = "panel-0123456789ab"
+
+
+async def _approve(hub, device_id: str, kind: str, address: str) -> bool:
+    """A pairing started and approved in the hub itself (no HTTP view): the route a WebSocket pairing would take."""
+    pairing = hub.start_pairing(address, device_id, kind, kind, "Box", "1", "n" * 40)
+    assert pairing is not None
+    return await hub.async_approve(pairing.pairing_id)
+
+
+async def test_one_id_is_never_two_kinds_whatever_the_route(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """The one-id rule lives in the hub: a TV's ticket can't pair a TV over a panel's id, an approval can't pair a
+    panel over a TV's (or a TV over a panel's), and the panel can still pair again afterwards."""
+    from custom_components.hearth import glint_panel
+
+    entry, client, secret = await _paired_tv(hass, hass_client_no_auth)
+    hub = entry.runtime_data
+    panels = glint_panel.Panels.get(hass, DOMAIN)
+    assert await _approve(hub, PANEL_ID, "panel", "192.0.2.1")
+    assert panels.has(PANEL_ID)
+
+    ticket = (await (await _ticket(client, secret, {"kind": "tv"})).json())["ticket"]
+    assert (await _redeem(client, ticket, device_id=PANEL_ID)).status == 404
+    await hass.async_block_till_done()
+    assert PANEL_ID not in hub.devices
+
+    # A TV's request for the panel's id, approved in the hub: refused; nor a panel over the TV's id
+    assert not await _approve(hub, PANEL_ID, "tv", "192.0.2.2")
+    assert not await _approve(hub, TV_ID, "panel", "192.0.2.3")
+    assert PANEL_ID not in hub.devices and not panels.has(TV_ID)
+    # The panel itself pairs again as before
+    assert await _approve(hub, PANEL_ID, "panel", "192.0.2.4")
