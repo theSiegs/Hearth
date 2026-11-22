@@ -98,6 +98,9 @@ class Item:
     bell_text: str | None = None
     # A request for more time a tap on the phone opens (phones.Phone.click)
     opens: str | None = None
+    # Otherwise the page a tap opens, a path on Home Assistant ("/hearth"): relative, so the companion app uses the
+    # address it reaches Home Assistant on (at home or away)
+    link: str | None = None
     sent: datetime = field(default_factory=dt_util.utcnow)
     # The Home Assistant users it reached on the companion app: the ones whose buttons count
     reached: frozenset[str] = frozenset()

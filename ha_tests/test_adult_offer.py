@@ -92,6 +92,8 @@ async def test_a_linked_person_who_isn_t_a_kid_is_offered_once(hass: HomeAssista
         "Jordan signed in from a phone. Make them an adult in Hearth? Adults see the kids' time and can give more."
     )
     assert [b["title"] for b in push.data["data"]["actions"]] == ["Make adult", "Not now"]
+    # A tap opens Hearth's page by a relative path, so it works away from home too
+    assert push.data["data"]["clickAction"] == push.data["data"]["url"] == "/hearth"
     assert [e.data for e in offered] == [{"person": JORDAN}]
     # On Hearth's page too
     admin_ws = await _ws_as(hass, hass_ws_client, alex)

@@ -47,6 +47,8 @@ MAKE_ADULT = "adult"
 NOT_NOW = "not_now"
 # The item's key (only letters, digits, dots and underscores: a phone button sends it between "|"s)
 KEY_PREFIX = "hearth_adult_offer_"
+# Hearth's page, relative (the companion app adds the address it reaches Home Assistant on)
+PAGE = "/hearth"
 # What the store keeps per person
 ASKED = "asked"
 DECLINED = "declined"
@@ -173,6 +175,8 @@ class AdultOffers:
                 Action("not_now", "Not now", f"{DOMAIN}.{SERVICE}", {**data, "answer": NOT_NOW}),
             ),
             about={"person": person},
+            # A tap opens Hearth's page, where the offer waits as a card (Today)
+            link=PAGE,
             once=True,
         )
 

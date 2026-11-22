@@ -32,6 +32,9 @@ def send(hass: HomeAssistant, options: Mapping[str, Any], to: list[phones.Phone]
     data: dict[str, Any] = {"tag": item.channel_tag}
     if item.actions:
         data["actions"] = buttons(item)
+    if item.link and not item.opens:
+        # Android reads clickAction, iOS url; both relative, so the app picks its own address
+        data["clickAction"] = data["url"] = item.link
     return phones.send(hass, options, item.title, item.text, data, ask_id=item.opens, to=to)
 
 
