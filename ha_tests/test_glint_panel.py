@@ -424,10 +424,15 @@ async def test_the_secret_says_which_panel_on_a_shared_login(
     ws = await hass_ws_client(hass, access_token=kitchen["ha_token"])
     await ws.send_json({"id": 1, "type": "hearth/panel/subscribe", "device_id": PANEL_ID, "secret": "not-the-secret"})
     answer = await ws.receive_json()
-    assert not answer["success"] and answer["error"]["code"] == "unauthorized"
+    # Its own code, never Home Assistant's "unauthorized" (a refused login token): only this one says pair again
+    assert not answer["success"] and answer["error"]["code"] == "unknown_panel"
     # One panel's secret never opens another's document, on the same shared login
     await ws.send_json({"id": 2, "type": "hearth/panel/subscribe", "device_id": OTHER_ID, "secret": kitchen["secret"]})
-    assert (await ws.receive_json())["error"]["code"] == "unauthorized"
+    assert (await ws.receive_json())["error"]["code"] == "unknown_panel"
+    # And on report
+    await ws.send_json({"id": 3, "type": "hearth/panel/report", "device_id": PANEL_ID, "secret": "not-the-secret",
+                        "view": "photos"})
+    assert (await ws.receive_json())["error"]["code"] == "unknown_panel"
     # Each panel on the shared user's own token, told apart by its secret; get_panel says who signed in
     _ws, doc = await _subscribe(hass_ws_client, hass, bedroom, OTHER_ID)
     assert doc["panel"]["device_id"] == OTHER_ID
@@ -859,7 +864,7 @@ async def test_verify_pin_names_the_adult_and_locks_out(
                  parent_pin.CONF_PARENT_PINS: {"person.alex": parent_pin.make(PIN)}},
     )
     await hass.async_block_till_done()
-    assert (await verify(PIN, "not-the-secret"))["error"]["code"] == "unauthorized"
+    assert (await verify(PIN, "not-the-secret"))["error"]["code"] == "unknown_panel"
     right = await verify(PIN)
     assert right["success"] and right["result"] == {"person": "person.alex"}
     for _ in range(parent_pin.FREE_TRIES - 1):

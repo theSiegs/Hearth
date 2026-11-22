@@ -69,7 +69,11 @@ changes and the room layout and page it last reported (removing the device drops
 ## The WebSocket commands
 
 On any Home Assistant login, each with the device secret, which alone says which panel it is: a wrong secret, or
-another panel's: error `unauthorized`.
+another panel's (the panel was removed, or paired again elsewhere), on every command below: error `unknown_panel`
+(since 1.2; before, `unauthorized`). **Only `unknown_panel` means "this secret is dead"**: the panel then drops its
+secret and pairs again. Home Assistant's own `auth_invalid` / `unauthorized` (a refused login token, or a command the
+login may not use) is never that: the token is the owner's to fix, and the panel keeps its secret and its cached
+document, shows that it can't sign in, and tries again later. No panel command answers `unauthorized` for a secret.
 
 While `<d>` is reloading (Hearth reloads whenever a setting is saved on its page) or hasn't loaded yet, every command
 answers error `unavailable`, `translation_placeholders.retry_in` the seconds to wait (5): try again then. Right after
@@ -123,7 +127,7 @@ left out, when it started from the room's layout).
   start.version or null>", "undo": "<id>"}`.
 - First time (migration): a panel that kept a Start on the tablet before the server had one sends it once with
   `base_version: null`; with the stored `start` still `null` it is taken as above.
-- A wrong secret, or another panel's: `unauthorized`.
+- A wrong secret, or another panel's: `unknown_panel`.
 
 ### `<d>/panel/verify_pin {device_id, secret, pin}`
 
@@ -140,7 +144,7 @@ PIN or a hash.
   (or `unknown_command` before it has loaded). This never means "no PIN".
 
 **The panel keeps its door locked (the adult screen shut) on every error**, and on no answer at all: only a right PIN
-opens it. `wrong_pin`, `locked_out`, `unavailable`, `unknown_command`, `unauthorized`, a lost connection or anything
+opens it. `wrong_pin`, `locked_out`, `unavailable`, `unknown_command`, `unknown_panel`, `unauthorized`, a lost connection or anything
 else is "not now", never "open" and never "check locally". (What the panel does on `no_pin` is its own choice; it must
 not be what it does on any other error.)
 

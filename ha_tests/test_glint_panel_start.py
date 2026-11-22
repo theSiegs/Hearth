@@ -1,5 +1,5 @@
 """A Glint Panel's own Start (the document's `start`, docs/contracts/panel-config.md): checking a layout, set_start from
-the wall (stale, invalid, too often, unauthorized), change_panel_start and undo_panel_start, the last 10 changes, the
+the wall (stale, invalid, too often, unknown_panel), change_panel_start and undo_panel_start, the last 10 changes, the
 room layout a report brings, entity renames, and get_panel."""
 
 import hashlib
@@ -226,7 +226,7 @@ async def test_set_start_is_thirty_a_minute_and_the_panel_s_own_secret(
     body = await _set_up_panel(hass, hass_client_no_auth)
     ws = await _ws(hass_ws_client, hass, body)
     wrong = await _send(ws, 1, {"secret": "not-the-secret"}, "set_start", start=None, base_version=None)
-    assert wrong["error"]["code"] == "unauthorized"
+    assert wrong["error"]["code"] == "unknown_panel"
     for n in range(2, 32):
         assert (await _send(ws, n, body, "set_start", start={"tiles": []}, base_version="0badc0de"))["error"]["code"] == "stale"
     assert (await _send(ws, 40, body, "set_start", start=None, base_version=None))["error"]["code"] == "too_often"
@@ -242,7 +242,7 @@ async def test_another_panel_s_secret_never_sets_this_start(
     bedroom = await _pair_panel(hass, client, OTHER_ID, area_id="bedroom")
     ws = await _ws(hass_ws_client, hass, bedroom)
     answer = await _send(ws, 1, bedroom, "set_start", device_id=PANEL_ID, start={"tiles": ROOM}, base_version=None)
-    assert answer["error"]["code"] == "unauthorized"
+    assert answer["error"]["code"] == "unknown_panel"
     assert _panels(hass).start_tiles(PANEL_ID) is None
 
 

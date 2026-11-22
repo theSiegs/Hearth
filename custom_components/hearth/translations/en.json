@@ -1553,6 +1553,9 @@
     "unavailable": {
       "message": "Hearth isn't ready: try again in {retry_in} s."
     },
+    "unknown_panel": {
+      "message": "Not this panel's secret: pair the panel again."
+    },
     "stale": {
       "message": "Start was changed elsewhere (now {version})."
     },

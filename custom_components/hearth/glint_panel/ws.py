@@ -18,6 +18,10 @@ from .manager import Panels
 # The error while the serving integration reloads or hasn't loaded: retry after this many seconds
 UNAVAILABLE = "unavailable"
 UNAVAILABLE_RETRY = 5
+# The error for a device secret that isn't this panel's (removed, paired again, or another panel's): the panel drops
+# its secret and pairs again. Never Home Assistant's own "unauthorized" (a refused login token: the token is the
+# owner's to fix, pairing again doesn't help)
+UNKNOWN_PANEL = "unknown_panel"
 
 _ID = vol.All(str, vol.Match(r"^[A-Za-z0-9_-]{8,64}$"))
 _SECRET = vol.All(str, vol.Length(min=1, max=256))
@@ -45,7 +49,10 @@ def _panels(hass: HomeAssistant, domain: str, connection, msg: dict[str, Any]) -
         )
         return None
     if not panels.authorized(msg["device_id"], msg["secret"]):
-        connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Not this panel's secret")
+        connection.send_error(
+            msg["id"], UNKNOWN_PANEL, "Not this panel's secret: pair again",
+            translation_key=UNKNOWN_PANEL, translation_domain=domain,
+        )
         return None
     return panels
 
