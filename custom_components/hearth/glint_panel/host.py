@@ -43,6 +43,9 @@ class PanelHost(Protocol):
     def trusted(self, user: Any) -> bool:
         """Whether a Home Assistant user is an administrator or an adult (a hello of theirs is approved at once)."""
 
+    def kid(self, user: Any) -> bool:
+        """Whether a Home Assistant user is a kid's own login (a hello of theirs always waits for an approval in HA)."""
+
     def taken(self, device_id: str) -> bool:
         """One id is one device: [device_id] is already another kind's (a TV's or a phone's), never a panel's."""
 

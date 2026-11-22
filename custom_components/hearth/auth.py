@@ -32,6 +32,17 @@ def is_adult_user(hass: HomeAssistant, hub, user) -> bool:
     )
 
 
+def is_kid_user(hass: HomeAssistant, hub, user) -> bool:
+    """A user (not an administrator) whose person is a kid on Hearth's page."""
+    if user is None or user.is_admin or hub is None:
+        return False
+    roles = hub.entry.options.get(CONF_ROLES, {})
+    return any(
+        roles.get(state.entity_id) == "kid" and state.attributes.get("user_id") == user.id
+        for state in hass.states.async_all("person")
+    )
+
+
 def _hub(hass: HomeAssistant):
     entries = hass.config_entries.async_loaded_entries(DOMAIN)
     return entries[0].runtime_data if entries else None

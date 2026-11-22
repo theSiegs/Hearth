@@ -288,6 +288,31 @@ async def test_the_panels_shared_login_with_a_room_is_a_new_panel_at_once(
     assert waits == {"status": "pending"}
 
 
+async def test_a_kid_s_login_never_takes_a_panel_over(
+    hass: HomeAssistant, hass_client_no_auth, hass_ws_client, freezer
+) -> None:
+    entry, client = await _household(hass, hass_client_no_auth)
+    body = await _pair_panel(hass, client, area_id="kitchen")
+    panels = _panels(hass)
+    panel = await _socket(hass_ws_client, hass, TOKENS[0])
+    assert (await panel.subscribe(PANEL_ID, body["secret"]))["success"]
+    await panel.event()
+    kid = await _socket(hass_ws_client, hass, await _kid(hass))
+
+    # Rule 1 (its id), rule 2 (its room, once it's offline) and rule 3 (a room): all wait for an approval in HA
+    _r, known, _ = await kid.hello(PANEL_ID)
+    assert known == {"status": "pending"}
+    await panel.ws.close()
+    await _offline(hass, freezer)
+    _r, takes, _ = await kid.hello(TABLET_ID, area="Kitchen")
+    _r, new, _ = await kid.hello(NEW_ID, area="Bedroom")
+    assert takes == new == {"status": "pending"}
+    # Nothing changed: the panel's secret still works, no tablet id, no new panel or device
+    assert panels.authorized(PANEL_ID, body["secret"])
+    assert "tablet_ids" not in panels.panels[PANEL_ID] and not panels.has(NEW_ID)
+    assert dr.async_get(hass).async_get_device_by_identifier((DOMAIN, f"panel:{NEW_ID}"), entry.entry_id) is None
+
+
 async def test_an_adult_s_login_is_approved_at_once(hass: HomeAssistant, hass_client_no_auth, hass_ws_client) -> None:
     await _household(hass, hass_client_no_auth)
     jordan = await _adult(hass)

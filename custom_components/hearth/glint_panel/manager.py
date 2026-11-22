@@ -836,7 +836,7 @@ class Panels:
         found = hello.match(
             hello_id, area.id if area else None, request.get("replaces"), self.panels, self.area_id, self.connected
         )
-        if hello.at_once(found):
+        if hello.at_once(found) and not host.kid(user):
             # A known panel, or one whose place it takes, keeps its room
             target, secret = self._take(found, hello_id, area if found.rule == hello.NEW else None, request)
             was_waiting = entry is not None and entry.get("status") == "pending"

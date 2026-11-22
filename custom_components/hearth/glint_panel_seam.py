@@ -11,7 +11,7 @@ from homeassistant.core import Context, HomeAssistant, ServiceCall
 from homeassistant.util import dt as dt_util
 
 from . import parent_pin
-from .auth import async_check_caller, async_check_context, is_adult_user
+from .auth import async_check_caller, async_check_context, is_adult_user, is_kid_user
 from .const import DOMAIN, KIND_PANEL, PANEL_HELLO
 from .hub import HearthHub, hash_secret, pin_lockout
 from .notifications import clear_panel_hello, notify_panel_hello
@@ -69,6 +69,9 @@ class HearthPanelHost:
         return user is not None and user.is_active and not user.system_generated and is_adult_user(
             self._hass, self._hub, user
         )
+
+    def kid(self, user: Any) -> bool:
+        return is_kid_user(self._hass, self._hub, user)
 
     def taken(self, device_id: str) -> bool:
         # hub.owned_by_another_kind: one id is one device, a TV's or a phone's id is never a panel's

@@ -9,8 +9,8 @@ How a hello is matched (first rule that fits):
 3. it names an area HA has: a new panel in it;
 4. anything else waits for an approval in HA.
 
-Rules 1 to 3 are approved at once on any Home Assistant login (the owner's choice: a setup command that names a room
-needs no step in HA); only rule 4 waits.
+Rules 1 to 3 are approved at once on any Home Assistant login but a kid's own (the owner's choice: a setup command
+that names a room needs no step in HA); rule 4, and any hello on a kid's login, waits.
 """
 
 from __future__ import annotations
