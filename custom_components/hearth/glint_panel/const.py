@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-# The document's schema: adding fields is a minor change (/1.1), renaming or removing one a new major
-SCHEMA = "glint.panel-config/1.1"
+# The document's schema: adding fields is a minor change (/1.1 start, /1.2 a bed side's name, presets and controls),
+# renaming or removing one a new major
+SCHEMA = "glint.panel-config/1.2"
 # A pairing's kind for a Glint Panel
 KIND = "panel"
 
@@ -85,6 +86,22 @@ NOTHING_ON_TABLET = "none"
 ENTITY_KEYS = ("photos", "presence", "voice_heard", "voice_reply", "voice_show", "news_seen")
 ENTITY_LIST_KEYS = ("routines",)
 BED_KEYS = ("bed_left", "bed_right")
+# A bed side's fields (name, active, reliable, presets and controls since 1.2)
+BED_SIDE_KEYS = ("connected", "scripts", "positions", "name", "active", "reliable", "presets", "controls")
+BED_CONTROLS = (
+    "stop",
+    "light",
+    "massage",
+    "massage_head_up",
+    "massage_head_down",
+    "massage_foot_up",
+    "massage_foot_down",
+    "massage_mode",
+)
+BED_MAX_PRESETS = 12
+# An action's data (a script's fields): a small JSON object
+BED_MAX_DATA_KEYS = 16
+BED_MAX_DATA_BYTES = 1024
 PANEL_KEYS = (
     "people",
     "extra_areas",

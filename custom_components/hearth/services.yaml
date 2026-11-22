@@ -923,6 +923,7 @@ set_panel:
         entity:
           multiple: true
     bed_left:
+      example: '{"connected": "binary_sensor.bed_1_connected", "name": "left side", "presets": [{"name": "flat", "entity": "button.bed_1_flat"}], "controls": {"stop": "script.bed_stop"}}'
       selector:
         object:
     bed_right:

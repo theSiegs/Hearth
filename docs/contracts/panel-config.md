@@ -1,4 +1,4 @@
-# Glint Panel configuration, `glint.panel-config/1.1`
+# Glint Panel configuration, `glint.panel-config/1.2`
 
 Owner: the integration that serves it, `<d>` below (today Hearth, `hearth`). A Glint Panel is a wall tablet, one per
 room. Its settings live in Home Assistant: an administrator approves its pairing code and picks the room, and the
@@ -153,7 +153,7 @@ such as presence and the room's thermostat itself).
 
 ```json
 {
-  "schema": "glint.panel-config/1.1",
+  "schema": "glint.panel-config/1.2",
   "served_by": "hearth",
   "version": "9c1e04aa",
   "panel": {"device_id": "panel-1a2b3c4d", "name": "Kitchen panel", "area_id": "kitchen",
@@ -179,7 +179,8 @@ such as presence and the room's thermostat itself).
 
 - `version`: the first 8 hex digits of a SHA-256 of the rest of the document: it changes exactly when the content
   does.
-- `schema` is `glint.panel-config/1.1` (1.1 added `start`, and `room_layout` in reports). The major is 1. Adding
+- `schema` is `glint.panel-config/1.2` (1.1 added `start`, and `room_layout` in reports; 1.2 a bed side's `name`,
+  `active`, `reliable`, `presets` and `controls`). The major is 1. Adding
   fields is a minor change, read by old panels. Renaming or
   removing one is a new major; old panels then keep their cached document.
 - `panel.name`: the device's name (the owner's, when they renamed it). `panel.panel_areas`: every paired panel's area,
@@ -188,8 +189,31 @@ such as presence and the room's thermostat itself).
 - `photos.camera`: the panel's own album, else the house's, else `null`.
 - `routines.windows` defaults: good morning 06:00–09:00 every day; dinner 17:30–19:00 weekdays; good night 21:00–23:30
   every day with `after_bedtimes: true`. `routines.commute` default: weekdays 07:00–08:30.
-- `bed`: `null`, or `{"left": side | null, "right": side | null}`, a side being `{"connected": entity | null,
-  "scripts": [entities], "positions": [entities]}`.
+- `bed`: `null`, or `{"left": side | null, "right": side | null}`. A side always has every key (a side set before 1.2
+  gets the new ones empty; its values are unchanged):
+
+  ```json
+  {"connected": "binary_sensor.bed_controller_bed_1_connected", "scripts": [], "positions": [],
+   "name": "alex's side", "active": null, "reliable": null,
+   "presets": [{"name": "flat", "entity": "button.bed_controller_bed_1_flat"},
+               {"name": "zero g", "entity": "script.bed_preset", "data": {"side": "left", "preset": "zero_g"}}],
+   "controls": {"stop": {"entity": "script.bed_stop", "data": {"side": "left"}}}}
+  ```
+
+  - `connected`, `active`: an entity or `null`; `scripts`, `positions`: entities (at most 50 each).
+  - `name` (1.2): words, at most 40 letters, or `null`. `reliable` (1.2): `true`, `false` or `null`.
+  - `presets` (1.2): at most 12, each `{"name", "entity", "data"?}`; names at most 40 letters, different (ignoring
+    case).
+  - `controls` (1.2): any of `stop`, `light`, `massage`, `massage_head_up`, `massage_head_down`,
+    `massage_foot_up`, `massage_foot_down`, `massage_mode`, each `{"entity", "data"?}`. `set_panel` also takes a bare
+    entity id for a control (or a preset's `{name, entity}`), and stores and serves the object. Only the controls set
+    are present; `{}` when none.
+  - `data` (a preset's or control's, 1.2): a JSON object, at most 16 fields and 1 KB as JSON, left out when there is
+    none. The panel runs an action by its entity's domain (a button is pressed, a script runs with `data` as its
+    variables, a scene turns on, a switch toggles).
+  - Every entity must be one Home Assistant has (`set_panel` refuses it, naming it; a seed's is dropped). A side is
+    `null` when nothing in it is set. Anything not set is the panel's to derive (a bed controller found by
+    `connected`).
 - `proxy.name`: the name the panel's seed gave (kept, so ESPHome sees the same device) or set with `set_panel`
   `proxy_name`; else the device's name as an ESPHome name (`kitchen-panel`, at most 31 characters). `proxy.key`: a
   32-byte ESPHome API encryption key (base64), made at the first pairing (or kept from the seed).
@@ -246,7 +270,7 @@ the wall with `set_start`, or with `change_panel_start`):
 - When Home Assistant renames an entity id, it is rewritten in every panel's `start` (`entity`, `entities`,
   `deals[].entity`, and the kept changes) and its reported `room_layout`, in every panel setting that names entities
   (`people`, `routines`, `photos`, `presence`, `voice_heard`, `voice_reply`, `voice_show`, `news_seen`, `bed_left`,
-  `bed_right`) and in the house-wide values (`family_calendars`, `person_calendars` (its people too), `night`,
+  `bed_right`: `connected`, `scripts`, `positions`, `active`, and each preset's and control's `entity`) and in the house-wide values (`family_calendars`, `person_calendars` (its people too), `night`,
   `doorbell_camera`, `photos`), and pushed; the tile keeps its id. An entity removed from Home Assistant is
   kept: the panel marks its tile until someone removes it.
 - The last 10 changes are kept per panel in `<d>.panels`, each the `start` from before it with its undo id (oldest

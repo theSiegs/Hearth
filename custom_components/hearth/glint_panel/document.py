@@ -1,4 +1,4 @@
-"""A panel's document (glint.panel-config/1.1), and checking every value that goes into it.
+"""A panel's document (glint.panel-config/1.2), and checking every value that goes into it.
 
 Values come from three places: set_panel / set_panel_defaults and the entities (strict: a value that isn't right is
 refused, naming it), and a pair body's seed (lax: a field that isn't right, or names an entity Home Assistant doesn't
@@ -18,7 +18,12 @@ from dataclasses import dataclass
 from typing import Any
 
 from .const import (
+    BED_CONTROLS,
     BED_KEYS,
+    BED_MAX_DATA_BYTES,
+    BED_MAX_DATA_KEYS,
+    BED_MAX_PRESETS,
+    BED_SIDE_KEYS,
     DAYS,
     DEFAULT_COMMUTE,
     DEFAULT_WINDOWS,
@@ -97,19 +102,135 @@ def _areas(value: Any, known: Known, strict: bool) -> list[str] | None:
     return list(dict.fromkeys(found)) or None
 
 
+def _data(value: Any, strict: bool, what: str) -> dict[str, Any] | None:
+    """An action's fields: a small JSON object (string keys), or None for none."""
+    if value is None or value == {}:
+        return None
+    try:
+        size = len(json.dumps(value, separators=(",", ":"))) if isinstance(value, dict) else None
+    except (TypeError, ValueError):
+        size = None
+    if (
+        size is None
+        or size > BED_MAX_DATA_BYTES
+        or len(value) > BED_MAX_DATA_KEYS
+        or any(not isinstance(k, str) or not k for k in value)
+    ):
+        if strict:
+            raise Refused(
+                f"{what}'s data is a JSON object of at most {BED_MAX_DATA_KEYS} fields and {BED_MAX_DATA_BYTES} bytes"
+            )
+        return None
+    return copy.deepcopy(value)
+
+
+def _name(value: Any, strict: bool, what: str) -> str | None:
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+    if not isinstance(value, str) or len(value.strip()) > MAX_WORD:
+        if strict:
+            raise Refused(f"{what} is words, at most {MAX_WORD} letters: {value!r}")
+        return None
+    return value.strip()
+
+
+def _action(value: Any, known: Known, strict: bool, what: str) -> dict[str, Any] | None:
+    """{entity, data?}; a bare entity id is {entity}. None: not one (refused when strict)."""
+    if value is None or value == "" or value == {}:
+        return None
+    if isinstance(value, str):
+        value = {"entity": value}
+    if not isinstance(value, dict) or set(value) - {"entity", "data"} or not value.get("entity"):
+        if strict:
+            raise Refused(f"{what} is {{entity, data?}} or an entity id, not {value!r}")
+        return None
+    entity = _entity(value.get("entity"), known, strict)
+    data = _data(value.get("data"), strict, what)
+    if entity is None or (data is None and value.get("data") not in (None, {})):
+        return None
+    return {"entity": entity, **({"data": data} if data else {})}
+
+
+def _presets(value: Any, known: Known, strict: bool) -> list[dict[str, Any]]:
+    if value is None or value == []:
+        return []
+    if not isinstance(value, list) or len(value) > BED_MAX_PRESETS:
+        if strict:
+            raise Refused(f"A bed side's presets are a list of at most {BED_MAX_PRESETS}")
+        return []
+    found: list[dict[str, Any]] = []
+    for preset in value:
+        if not isinstance(preset, dict) or set(preset) - {"name", "entity", "data"}:
+            if strict:
+                raise Refused(f"A preset is {{name, entity, data?}}, not {preset!r}")
+            continue
+        name = _name(preset.get("name"), strict, "A preset's name")
+        if name is None:
+            if strict:
+                raise Refused(f"A preset needs a name: {preset!r}")
+            continue
+        if any(p["name"].casefold() == name.casefold() for p in found):
+            if strict:
+                raise Refused(f"Two presets named {name}")
+            continue
+        action = _action({k: v for k, v in preset.items() if k != "name"}, known, strict, f"Preset {name}")
+        if action is None:
+            if strict:
+                raise Refused(f"Preset {name} needs an entity")
+            continue
+        found.append({"name": name, **action})
+    return found
+
+
+def _controls(value: Any, known: Known, strict: bool) -> dict[str, Any]:
+    if value is None or value == {}:
+        return {}
+    if not isinstance(value, dict) or set(value) - set(BED_CONTROLS):
+        if strict:
+            raise Refused(f"A bed side's controls are any of {', '.join(BED_CONTROLS)}, not {value!r}")
+        if not isinstance(value, dict):
+            return {}
+    out = {}
+    for key in BED_CONTROLS:
+        if (action := _action(value.get(key), known, strict, f"Control {key}")) is not None:
+            out[key] = action
+    return out
+
+
 def _bed(value: Any, known: Known, strict: bool) -> dict[str, Any] | None:
     if value is None or value == {}:
         return None
-    if not isinstance(value, dict) or set(value) - {"connected", "scripts", "positions"}:
+    if not isinstance(value, dict) or set(value) - set(BED_SIDE_KEYS):
         if strict:
-            raise Refused(f"A bed side is {{connected, scripts, positions}}, not {value!r}")
+            raise Refused(f"A bed side is {{{', '.join(BED_SIDE_KEYS)}}}, not {value!r}")
         return None
+    reliable = value.get("reliable")
+    if reliable is not None and not isinstance(reliable, bool):
+        if strict:
+            raise Refused(f"A bed side's reliable is true, false or null, not {reliable!r}")
+        reliable = None
     side = {
         "connected": _entity(value.get("connected"), known, strict),
         "scripts": _entities(value.get("scripts"), known, strict) or [],
         "positions": _entities(value.get("positions"), known, strict) or [],
+        # Since 1.2
+        "name": _name(value.get("name"), strict, "A bed side's name"),
+        "active": _entity(value.get("active"), known, strict),
+        "reliable": reliable,
+        "presets": _presets(value.get("presets"), known, strict),
+        "controls": _controls(value.get("controls"), known, strict),
     }
-    return side if side["connected"] or side["scripts"] or side["positions"] else None
+    return side if any(v not in (None, [], {}) for v in side.values()) else None
+
+
+def bed_side(side: Any) -> dict[str, Any] | None:
+    """A stored side in the document's shape: every key present (a side stored before 1.2 gets the new ones empty)."""
+    if not isinstance(side, dict):
+        return None
+    return {
+        "connected": None, "scripts": [], "positions": [], "name": None, "active": None, "reliable": None,
+        "presets": [], "controls": {}, **copy.deepcopy(side),
+    }
 
 
 def _days(value: Any) -> list[str] | None:
@@ -274,10 +395,17 @@ def rename_values(values: dict[str, Any], old: str, new: str) -> bool:
     for key in BED_KEYS:
         side = values.get(key)
         if isinstance(side, dict):
-            for part in ("connected", "scripts", "positions"):
+            for part in ("connected", "scripts", "positions", "active"):
                 if part in side:
                     side[part], did = _renamed(side[part], old, new)
                     changed |= did
+            # The presets' and controls' entities (1.2)
+            actions = [p for p in side.get("presets") or [] if isinstance(p, dict)]
+            if isinstance(controls := side.get("controls"), dict):
+                actions += [c for c in controls.values() if isinstance(c, dict)]
+            for action in actions:
+                if action.get("entity") == old:
+                    action["entity"], changed = new, True
     return changed
 
 
@@ -414,7 +542,7 @@ def build(
     def given(k: str) -> Any:
         return copy.deepcopy(v.get(k))
 
-    bed = {"left": given("bed_left"), "right": given("bed_right")}
+    bed = {"left": bed_side(v.get("bed_left")), "right": bed_side(v.get("bed_right"))}
     doc: dict[str, Any] = {
         "schema": SCHEMA,
         "served_by": domain,

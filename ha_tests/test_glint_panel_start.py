@@ -141,7 +141,7 @@ async def test_set_start_from_the_wall_stores_stamps_and_pushes(
 ) -> None:
     body = await _set_up_panel(hass, hass_client_no_auth)
     ws, doc = await _subscribe(hass_ws_client, hass, body)
-    assert doc["start"] is None and doc["schema"] == "glint.panel-config/1.1"
+    assert doc["start"] is None and doc["schema"] == "glint.panel-config/1.2"
 
     # The first time (the panel kept a Start on the tablet before the server had one): base_version null
     answer = await _send(ws, 2, body, "set_start", start={"tiles": [*ROOM, LAMP]}, base_version=None)
@@ -579,7 +579,9 @@ async def test_a_renamed_entity_is_rewritten_in_every_setting_and_house_wide_val
     target = _device(hass).id
     await hass.services.async_call(DOMAIN, "set_panel", {
         "device_id": target, "routines": [made["bedtime"]], "presence": made["kitchen_motion"],
-        "bed_left": {"connected": made["bed_left"], "scripts": [made["bedtime"]]},
+        "bed_left": {"connected": made["bed_left"], "scripts": [made["bedtime"]], "active": made["kitchen_motion"],
+                     "presets": [{"name": "night", "entity": made["bedtime"], "data": {"side": "left"}}],
+                     "controls": {"stop": made["bedtime"], "light": {"entity": made["bed_left"]}}},
         "people": [made["sam"]],
     }, blocking=True)
     await hass.services.async_call(DOMAIN, "set_panel_defaults", {
@@ -612,8 +614,12 @@ async def test_a_renamed_entity_is_rewritten_in_every_setting_and_house_wide_val
     assert pushed["doors"]["doorbell_camera"] == "camera.front_door"
     assert pushed["routines"]["entities"] == ["script.good_night"]
     assert pushed["wake"]["presence"] == "binary_sensor.kitchen_presence"
-    assert pushed["bed"]["left"] == {"connected": "switch.bed_left_side", "scripts": ["script.good_night"],
-                                     "positions": []}
+    assert pushed["bed"]["left"] == {
+        "connected": "switch.bed_left_side", "scripts": ["script.good_night"], "positions": [], "name": None,
+        "active": "binary_sensor.kitchen_presence", "reliable": None,
+        "presets": [{"name": "night", "entity": "script.good_night", "data": {"side": "left"}}],
+        "controls": {"stop": {"entity": "script.good_night"}, "light": {"entity": "switch.bed_left_side"}},
+    }
     assert pushed["panel"]["people"] == ["person.sam_rivera"]
     assert _panels(hass).room_layout(PANEL_ID)[0]["deals"] == [{"entity": "switch.bed_left_side", "when": "on"}]
     assert pushed["version"] != doc["version"]

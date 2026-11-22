@@ -345,7 +345,7 @@ async def test_a_panel_with_only_a_room_has_a_whole_document(
     _entry, client = await _household(hass, hass_client_no_auth)
     await _pair_panel(hass, client, area_id="kitchen")
     doc = _panels(hass).document(PANEL_ID)
-    assert doc["schema"] == SCHEMA == "glint.panel-config/1.1"
+    assert doc["schema"] == SCHEMA == "glint.panel-config/1.2"
     assert doc["served_by"] == "hearth"
     assert set(doc) == {
         "schema", "served_by", "version", "panel", "look", "photos", "calendars", "wake", "night", "doors",
@@ -614,7 +614,8 @@ async def test_set_panel_refuses_an_unknown_entity_by_name_and_resets_with_empty
         blocking=True, return_response=True,
     )
     assert answer["routines"]["entities"] == ["script.good_morning"] and answer["panel"]["extra_areas"] == ["bedroom"]
-    assert answer["bed"] == {"left": {"connected": None, "scripts": ["script.good_morning"], "positions": []},
+    assert answer["bed"] == {"left": {"connected": None, "scripts": ["script.good_morning"], "positions": [],
+                                      "name": None, "active": None, "reliable": None, "presets": [], "controls": {}},
                              "right": None}
     got = await hass.services.async_call(DOMAIN, "get_panel", {"device_id": target}, blocking=True, return_response=True)
     assert got["panels"][0]["settings"]["routines"] == {"value": ["script.good_morning"], "source": "set"}
@@ -627,6 +628,120 @@ async def test_set_panel_refuses_an_unknown_entity_by_name_and_resets_with_empty
     settings = got["panels"][0]["settings"]
     assert settings["routines"]["source"] == settings["extra_areas"]["source"] == "derived"
     assert got["panels"][0]["document"]["bed"] is None
+
+
+async def test_a_bed_side_takes_names_presets_and_controls(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """1.2: a side's name, active, reliable, presets [{name, entity, data?}] and controls ({entity, data?} or a bare
+    entity id, kept as the object), checked as the other bed fields; served in the document."""
+    _entry, client = await _household(hass, hass_client_no_auth)
+    await _pair_panel(hass, client, area_id="bedroom")
+    target = _device(hass).id
+    for entity_id in ("binary_sensor.bed_1_connected", "binary_sensor.bed_1_active", "button.bed_1_flat",
+                      "script.bed_preset", "script.bed_stop", "light.bed_1_light"):
+        hass.states.async_set(entity_id, "off")
+    left = {
+        "connected": "binary_sensor.bed_1_connected",
+        "name": "  Alex's side ",
+        "active": "binary_sensor.bed_1_active",
+        "reliable": False,
+        "presets": [
+            {"name": "flat", "entity": "button.bed_1_flat"},
+            {"name": "zero g", "entity": "script.bed_preset", "data": {"side": "left", "preset": "zero_g"}},
+        ],
+        "controls": {"stop": {"entity": "script.bed_stop", "data": {"side": "left"}}, "light": "light.bed_1_light"},
+    }
+    answer = await hass.services.async_call(
+        DOMAIN, "set_panel", {"device_id": target, "bed_left": left}, blocking=True, return_response=True
+    )
+    assert answer["bed"]["left"] == {
+        "connected": "binary_sensor.bed_1_connected", "scripts": [], "positions": [],
+        "name": "Alex's side", "active": "binary_sensor.bed_1_active", "reliable": False,
+        "presets": [
+            {"name": "flat", "entity": "button.bed_1_flat"},
+            {"name": "zero g", "entity": "script.bed_preset", "data": {"side": "left", "preset": "zero_g"}},
+        ],
+        "controls": {"stop": {"entity": "script.bed_stop", "data": {"side": "left"}},
+                     "light": {"entity": "light.bed_1_light"}},
+    }
+    assert answer["bed"]["right"] is None
+    # A side with only a name is a side
+    answer = await hass.services.async_call(
+        DOMAIN, "set_panel", {"device_id": target, "bed_right": {"name": "Sam's side"}}, blocking=True,
+        return_response=True,
+    )
+    assert answer["bed"]["right"]["name"] == "Sam's side" and answer["bed"]["left"]["presets"][0]["name"] == "flat"
+
+    refused = [
+        ({"controls": {"explode": "script.bed_stop"}}, "controls"),
+        ({"controls": {"stop": "script.nowhere"}}, "script.nowhere"),
+        ({"controls": {"stop": {"entity": "script.bed_stop", "extra": 1}}}, "entity, data"),
+        ({"presets": [{"name": "flat"}]}, "needs an entity"),
+        ({"presets": [{"entity": "button.bed_1_flat"}]}, "needs a name"),
+        ({"presets": [{"name": "x" * 41, "entity": "button.bed_1_flat"}]}, "at most 40"),
+        ({"presets": [{"name": "flat", "entity": "button.bed_1_flat"}, {"name": "Flat", "entity": "script.bed_preset"}]},
+         "Two presets"),
+        ({"presets": [{"name": f"p{i}", "entity": "button.bed_1_flat"} for i in range(13)]}, "at most 12"),
+        ({"presets": [{"name": "a", "entity": "script.bed_preset", "data": ["side"]}]}, "JSON object"),
+        ({"presets": [{"name": "a", "entity": "script.bed_preset", "data": {"side": "x" * 2000}}]}, "JSON object"),
+        ({"presets": [{"name": "a", "entity": "script.bed_preset", "data": {str(i): i for i in range(17)}}]},
+         "JSON object"),
+        ({"presets": [{"name": "a", "entity": "Not An Entity"}]}, "Not an entity id"),
+        ({"reliable": "yes"}, "reliable"),
+        ({"active": "binary_sensor.nowhere"}, "binary_sensor.nowhere"),
+        ({"name": 5}, "name"),
+        ({"positions_typo": []}, "A bed side is"),
+    ]
+    for side, why in refused:
+        with pytest.raises(ServiceValidationError, match=why):
+            await hass.services.async_call(DOMAIN, "set_panel", {"device_id": target, "bed_left": side}, blocking=True)
+    # Nothing refused was taken
+    assert _panels(hass).document(PANEL_ID)["bed"]["left"]["name"] == "Alex's side"
+
+
+def test_a_side_stored_before_1_2_is_served_whole_and_unchanged() -> None:
+    """The live store has sides of {connected, scripts, positions} only: they keep their values, and the document
+    adds the new keys empty."""
+    stored = {"connected": "binary_sensor.bed_2_connected", "scripts": [], "positions": []}
+    doc = document.build(
+        DOMAIN, PANEL_ID, name="Bedroom panel", area_id="bedroom", values={"bed_right": stored}, house={},
+        house_panel=False, panel_areas=["bedroom"], key=None,
+    )
+    assert doc["bed"] == {"left": None, "right": {**stored, "name": None, "active": None, "reliable": None,
+                                                   "presets": [], "controls": {}}}
+    assert stored == {"connected": "binary_sensor.bed_2_connected", "scripts": [], "positions": []}
+    # The same side through set_panel's check stores the same values (and the new ones empty)
+    known = document.Known(entity=lambda e: True, area=lambda a: True)
+    assert document.bed_side(document.panel_value("bed_right", stored, known)) == doc["bed"]["right"]
+
+
+def test_a_seed_keeps_the_right_bed_fields_and_drops_the_wrong_ones() -> None:
+    known = document.Known(entity=lambda e: not e.endswith("nowhere"), area=lambda a: True)
+    side = document.panel_value("bed_left", {
+        "name": "x" * 41, "reliable": "yes", "active": "binary_sensor.nowhere",
+        "presets": [{"name": "flat", "entity": "button.flat"}, {"name": "bad", "entity": "button.nowhere"},
+                    {"name": "flat", "entity": "button.other"}, "junk"],
+        "controls": {"stop": "script.bed_stop", "light": {"entity": "light.nowhere"}, "explode": "script.x"},
+    }, known, strict=False)
+    assert side == {"connected": None, "scripts": [], "positions": [], "name": None, "active": None,
+                    "reliable": None, "presets": [{"name": "flat", "entity": "button.flat"}],
+                    "controls": {"stop": {"entity": "script.bed_stop"}}}
+
+
+def test_a_rename_follows_into_bed_presets_controls_and_active() -> None:
+    values = {"bed_left": {
+        "connected": None, "scripts": [], "positions": [], "active": "binary_sensor.old",
+        "presets": [{"name": "flat", "entity": "script.old", "data": {"side": "left"}}],
+        "controls": {"stop": {"entity": "script.old"}, "light": {"entity": "light.keep"}},
+    }}
+    assert document.rename_values(values, "script.old", "script.new")
+    assert document.rename_values(values, "binary_sensor.old", "binary_sensor.new")
+    side = values["bed_left"]
+    assert side["presets"] == [{"name": "flat", "entity": "script.new", "data": {"side": "left"}}]
+    assert side["controls"] == {"stop": {"entity": "script.new"}, "light": {"entity": "light.keep"}}
+    assert side["active"] == "binary_sensor.new"
+    assert not document.rename_values(values, "script.gone", "script.other")
 
 
 async def test_set_panel_defaults(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
