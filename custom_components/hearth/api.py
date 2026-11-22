@@ -63,8 +63,6 @@ HEADER_PANEL_NONCE = "X-Panel-Nonce"
 
 _ID = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 _NONCE = re.compile(r"^[A-Za-z0-9_-]{32,128}$")
-# A panel's pair body may carry its settings from before it paired (glint_panel/, docs/contracts/panel-config.md)
-MAX_SEED_BYTES = 16 * 1024
 _DEFAULT_NAMES = {KIND_TV: "TV", KIND_MOBILE: "Phone", KIND_PANEL: "Panel"}
 
 
@@ -147,12 +145,9 @@ class PairStartView(HomeAssistantView):
             or not client_ok
         ):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
-        seed = body.get("seed") if kind == KIND_PANEL else None
-        if kind == KIND_PANEL and (
-            kind not in hub.pairing_kinds
-            or (seed is not None and (not isinstance(seed, dict) or len(json.dumps(seed)) > MAX_SEED_BYTES))
-        ):
-            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+        if kind == KIND_PANEL:
+            # Panels are set up over the socket (<d>/panel/hello, panel-config 1.4); this route is TVs' and phones'
+            return _error(HTTPStatus.GONE, "use_hello")
         # One id is one device: a panel never pairs over a TV or a phone, nor they over a panel
         if hub.owned_by_another_kind(device_id, kind):
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
@@ -171,7 +166,6 @@ class PairStartView(HomeAssistantView):
         )
         if pairing is None:
             return _error(HTTPStatus.TOO_MANY_REQUESTS, "try_later")
-        pairing.seed = seed
         approvers = await async_note_admins(hass)
         notify_pairing(hass, pairing.pairing_id, pairing.name, pairing)
         hass.async_create_task(

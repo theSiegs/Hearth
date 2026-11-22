@@ -61,8 +61,9 @@ hello whenever it has a socket and no secret.
    registered.
 4. **Otherwise** (no area, or one HA doesn't have): it waits for an approval in HA.
 
-**Any login.** Rules 1 to 3 are approved at once on any Home Assistant login, the panels' shared login included: a
-setup command that names a room needs no step in HA (the owner's choice). Only rule 4 waits.
+**Any login but a kid's.** Rules 1 to 3 are approved at once on any Home Assistant login, the panels' shared login
+included: a setup command that names a room needs no step in HA (the owner's choice). Rule 4 waits, and so does any
+hello on a kid's own login (a user whose person is a kid on Hearth's page), so a kid can't take a panel over.
 
 ### Approval in HA
 
@@ -78,10 +79,10 @@ apart: the model, the id's last four characters, and the login it signed in as (
   ones as `panel_hellos` (with `panels_offline` and `areas`).
 - The approved event goes to the waiting hello's open subscriptions on the login the card names.
 
-## Pairing over HTTP (before 1.4)
+## Pairing over HTTP (before 1.4, retired)
 
-TODO (H6): this route and its poll go for kind `panel` once every live panel has said hello once; TVs and phones keep
-theirs. Until then it works as before.
+From 1.4 a panel says hello instead. `POST /api/<d>/pair` with kind `panel` is refused with `410 {"error":
+"use_hello"}`; TVs and phones keep the route. What follows is kept for the record.
 
 As for TVs and phones (`docs/contracts/device-api.md`), with kind `panel`:
 

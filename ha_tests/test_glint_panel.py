@@ -11,6 +11,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import pytest
+from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.exceptions import ServiceValidationError, Unauthorized
@@ -94,16 +95,31 @@ async def _start(client, device_id: str = PANEL_ID, seed=None, **extra):
     return await client.post("/api/hearth/pair", json=body)
 
 
+async def _begin(hass: HomeAssistant, device_id: str = PANEL_ID, seed=None) -> dict:
+    """A panel's pairing as POST /api/hearth/pair used to start it (panels now say hello instead): {pairing_id}."""
+    from custom_components.hearth.attention import async_note_admins
+
+    hub = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
+    pairing = hub.start_pairing(
+        "127.0.0.1", device_id, KIND_PANEL, "glint panel", "Example tablet", "1.0.0", NONCE, None, None, None
+    )
+    assert pairing is not None
+    pairing.seed = seed
+    await async_note_admins(hass)
+    await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_INTEGRATION_DISCOVERY}, data={"pairing_id": pairing.pairing_id}
+    )
+    await hass.async_block_till_done()
+    return {"pairing_id": pairing.pairing_id}
+
+
 async def _pair_panel(
     hass: HomeAssistant, client, device_id: str = PANEL_ID, area_id: str | None = None, seed=None
 ) -> dict:
     """Pairs a panel as an administrator would on Hearth's page (with a room, or none): the approved answer."""
     # A second pairing from the test's one address would wait PAIRING_INTERVAL_PER_ADDRESS
     hass.data.get(f"{DOMAIN}_pairing", {}).get("asked_at", {}).clear()
-    response = await _start(client, device_id, seed)
-    assert response.status == 200, await response.text()
-    started = await response.json()
-    await hass.async_block_till_done()
+    started = await _begin(hass, device_id, seed)
     from custom_components.hearth.panel import async_answer_pairing
 
     hub = hass.config_entries.async_entries(DOMAIN)[0].runtime_data
@@ -193,8 +209,7 @@ async def test_the_confirm_form_asks_for_a_room_only(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
     _entry, client = await _household(hass, hass_client_no_auth)
-    started = await (await _start(client)).json()
-    await hass.async_block_till_done()
+    started = await _begin(hass)
     flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
     result = await hass.config_entries.flow.async_configure(flows[0]["flow_id"])
     assert [str(k) for k in result["data_schema"].schema] == ["area_id"]
@@ -209,9 +224,7 @@ async def test_the_secret_is_in_the_first_approved_poll_only(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
     entry, client = await _household(hass, hass_client_no_auth)
-    response = await _start(client)
-    started = await response.json()
-    await hass.async_block_till_done()
+    started = await _begin(hass)
     pending = await client.get(f"/api/hearth/pair/{started['pairing_id']}", headers={"X-Hearth-Nonce": NONCE})
     assert "secret" not in await pending.json()
     from custom_components.hearth.panel import async_answer_pairing
@@ -228,14 +241,14 @@ async def test_the_secret_is_in_the_first_approved_poll_only(
     assert (await again.json())["error"]
 
 
-async def test_a_pair_body_needs_its_device_id_and_a_small_seed(
+async def test_a_panel_no_longer_pairs_over_post(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
 ) -> None:
+    # Panels say hello over the socket (panel-config 1.4); POST /api/hearth/pair is TVs' and phones'
     _entry, client = await _household(hass, hass_client_no_auth)
-    no_id = await client.post("/api/hearth/pair", json={"kind": "panel", "name": "glint panel", "nonce": NONCE})
-    assert no_id.status == 400
-    assert (await _start(client, seed={"look": {"motion": "x" * 20000}})).status == 400
-    assert (await _start(client, seed=["not", "a", "document"])).status == 400
+    response = await _start(client)
+    assert response.status == 410 and (await response.json())["error"] == "use_hello"
+    assert not hass.config_entries.flow.async_progress_by_handler(DOMAIN)
 
 
 async def test_one_id_is_one_device(hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator) -> None:
@@ -243,7 +256,7 @@ async def test_one_id_is_one_device(hass: HomeAssistant, hass_client_no_auth: Cl
     await _pair(hass, client)
     hass.data[f"{DOMAIN}_pairing"]["asked_at"].clear()
     # A panel never pairs over a TV, nor a TV over a panel
-    assert (await _start(client, device_id=TV_ID)).status == 400
+    assert (await _start(client, device_id=TV_ID)).status == 410
     await _pair_panel(hass, client)
     hass.data[f"{DOMAIN}_pairing"]["asked_at"].clear()
     response = await client.post(
