@@ -117,12 +117,24 @@ class Panels:
                 "house": dict(house) if isinstance(house, dict) else {},
             }
             self._loaded = True
+            if self._give_keys():
+                self._save()
             self.hass.bus.async_listen(dr.EVENT_DEVICE_REGISTRY_UPDATED, self._device_updated)
             self.hass.bus.async_listen(ar.EVENT_AREA_REGISTRY_UPDATED, self._area_updated)
             self.hass.bus.async_listen(er.EVENT_ENTITY_REGISTRY_UPDATED, self._entity_updated)
             self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._stopping)
         self.host = host
         self.entry_id = host.entry_id
+
+    def _give_keys(self) -> bool:
+        """Every panel has its proxy key: one paired before every panel got one (or with a stored key that isn't one)
+        gets a fresh one. Whether any did."""
+        given = False
+        for record in self.panels.values():
+            if document.proxy_key(record.get("key")) is None:
+                record["key"] = document.new_proxy_key()
+                given = True
+        return given
 
     async def async_detach(self) -> None:
         """The serving entry unloads: saved now; subscriptions stay open for when it's back."""
@@ -297,7 +309,8 @@ class Panels:
             "paired_at": (record.get("paired_at") if record else None) or dt_util.utcnow().isoformat(),
             **({"repaired_at": dt_util.utcnow().isoformat()} if record else {}),
             "values": values,
-            "key": key or document.new_proxy_key(),
+            # The panel's ESPHome proxy key: kept across pairings (and from the seed at the first), else a fresh one
+            "key": document.proxy_key(key) or document.new_proxy_key(),
             "view": record.get("view") if record else None,
             "on_tablet": record.get("on_tablet") if record else None,
             # The panel's own Start, its last changes (undo), the room layout and page it last reported stay too
@@ -343,6 +356,12 @@ class Panels:
                 values.pop(key, None)
             else:
                 values[key] = value
+        self._save()
+        self._changed()
+
+    def set_proxy_key(self, device_id: str, key: str) -> None:
+        """A checked key (document.proxy_key) becomes the panel's proxy key; pushed, so the panel restarts its proxy."""
+        self.panels[device_id]["key"] = key
         self._save()
         self._changed()
 
@@ -658,9 +677,10 @@ class Panels:
             self.panels[device_id]["name"] = name
             self._save()
 
-    # Answers (get_panel): each value set or derived, never a secret
+    # Answers (get_panel): each value set or derived, never a secret (but the proxy key, to an administrator)
 
-    def describe(self, device_id: str) -> dict[str, Any]:
+    def describe(self, device_id: str, *, admin: bool = False) -> dict[str, Any]:
+        """The panel for get_panel; [admin] (the caller is a Home Assistant administrator) adds its proxy key."""
         from .const import PANEL_KEYS
 
         record = self.panels[device_id]
@@ -691,6 +711,8 @@ class Panels:
             # The panel's own Start (as in the document; null: the room's layout) and the changes undo can take back
             "start": copy.deepcopy(doc["start"]),
             "start_versions": self.start_versions(device_id),
+            # For HA's ESPHome entry of the panel's proxy: administrators only
+            **({"proxy_key": record.get("key")} if admin else {}),
         }
 
     def describe_house(self) -> dict[str, Any]:

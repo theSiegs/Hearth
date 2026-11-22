@@ -9,13 +9,16 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-# The document's schema: adding fields is a minor change (/1.1 start, /1.2 a bed side's name, presets and controls),
-# renaming or removing one a new major
-SCHEMA = "glint.panel-config/1.2"
+# The document's schema: adding fields is a minor change (/1.1 start, /1.2 a bed side's name, presets and controls,
+# /1.3 proxy.key for every panel, which an administrator can change), renaming or removing one a new major
+SCHEMA = "glint.panel-config/1.3"
 # A pairing's kind for a Glint Panel
 KIND = "panel"
 
 STORE_VERSION = 1
+# set_panel's field for the panel's ESPHome proxy key (administrators only), and its value that makes a fresh one
+PROXY_KEY = "proxy_key"
+NEW_PROXY_KEY = "new"
 # The Connected entity stays on this long after the panel's subscription closes (no heartbeat)
 CONNECTED_GRACE = timedelta(minutes=2)
 # Changes within this many seconds go to a panel as one document

@@ -4,7 +4,9 @@ services, the Parent PIN check, and the package's seam to the rest of Hearth."""
 
 import ast
 import asyncio
+import base64
 import json
+import logging
 from datetime import timedelta
 from pathlib import Path
 
@@ -130,6 +132,19 @@ async def _subscribe(hass_ws_client, hass, body: dict, device_id: str = PANEL_ID
     first = await ws.receive_json()
     assert first["type"] == "event" and first["id"] == 1
     return ws, first["event"]
+
+
+async def _adult(hass: HomeAssistant):
+    """Jordan: an adult on Hearth's page with a user of their own, not an administrator."""
+    from homeassistant.auth.const import GROUP_ID_USER
+
+    jordan = await hass.auth.async_create_user("Jordan", group_ids=[GROUP_ID_USER])
+    hass.states.async_set("person.jordan", "home", {"friendly_name": "Jordan", "user_id": jordan.id})
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    roles = {**entry.options.get("roles", {}), "person.jordan": "adult"}
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "roles": roles})
+    await hass.async_block_till_done()
+    return jordan
 
 
 async def _after_push(hass: HomeAssistant) -> None:
@@ -345,7 +360,7 @@ async def test_a_panel_with_only_a_room_has_a_whole_document(
     _entry, client = await _household(hass, hass_client_no_auth)
     await _pair_panel(hass, client, area_id="kitchen")
     doc = _panels(hass).document(PANEL_ID)
-    assert doc["schema"] == SCHEMA == "glint.panel-config/1.2"
+    assert doc["schema"] == SCHEMA == "glint.panel-config/1.3"
     assert doc["served_by"] == "hearth"
     assert set(doc) == {
         "schema", "served_by", "version", "panel", "look", "photos", "calendars", "wake", "night", "doors",
@@ -392,24 +407,250 @@ async def test_set_beats_derived_and_the_version_follows_the_content(
 
 
 async def test_secrets_are_never_in_answers_states_or_attributes(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client, hass_admin_user, caplog
 ) -> None:
-    _entry, client = await _household(hass, hass_client_no_auth)
+    from homeassistant.const import MATCH_ALL
+
+    from custom_components.hearth.diagnostics import async_get_config_entry_diagnostics
+
+    caplog.set_level(logging.DEBUG)
+    events: list = []
+    hass.bus.async_listen(MATCH_ALL, lambda event: events.append(event.as_dict()))
+    entry, client = await _household(hass, hass_client_no_auth)
     body = await _pair_panel(hass, client, area_id="kitchen")
     record = _panels(hass).panels[PANEL_ID]
-    secrets = (record["key"], record["secret_hash"], body["secret"])
+    first_key = record["key"]
+    jordan = await _adult(hass)
+    target = _device(hass).id
 
     got = await hass.services.async_call(DOMAIN, "get_panel", {}, blocking=True, return_response=True)
     set_answer = await hass.services.async_call(
-        DOMAIN, "set_panel", {"device_id": _device(hass).id, "motion": "calm"}, blocking=True, return_response=True
+        DOMAIN, "set_panel", {"device_id": target, "motion": "calm"}, blocking=True, return_response=True
     )
-    for answer in (got, set_answer):
+    # An adult who isn't an administrator, setting and reading
+    adult_got = await hass.services.async_call(
+        DOMAIN, "get_panel", {}, blocking=True, return_response=True, context=Context(user_id=jordan.id)
+    )
+    adult_set = await hass.services.async_call(
+        DOMAIN, "set_panel", {"device_id": target, "motion": "still"}, blocking=True, return_response=True,
+        context=Context(user_id=jordan.id),
+    )
+    # A refused key, an adult's try at a new one, and an administrator's new one (pushed to the panel)
+    ws, _doc = await _subscribe(hass_ws_client, hass, body)
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(DOMAIN, "set_panel", {"device_id": target, "proxy_key": "x" * 20},
+                                       blocking=True, context=Context(user_id=hass_admin_user.id))
+    with pytest.raises(Unauthorized):
+        await hass.services.async_call(DOMAIN, "set_panel", {"device_id": target, "proxy_key": "new"},
+                                       blocking=True, context=Context(user_id=jordan.id))
+    rotated = await hass.services.async_call(
+        DOMAIN, "set_panel", {"device_id": target, "proxy_key": "new"}, blocking=True, return_response=True,
+        context=Context(user_id=hass_admin_user.id),
+    )
+    await _after_push(hass)
+    assert (await ws.receive_json())["event"]["proxy"]["key"] == rotated["proxy_key"] == record["key"]
+    # Renames on the way
+    ar.async_get(hass).async_update(_device(hass).area_id, name="Big kitchen")
+    dr.async_get(hass).async_update_device(target, name_by_user="Wall")
+    await hass.async_block_till_done()
+
+    keys = (first_key, record["key"])
+    secrets = (*keys, record["secret_hash"], body["secret"])
+    for answer in (got, set_answer, adult_got, adult_set):
         text = json.dumps(answer)
         assert not any(s in text for s in secrets)
+        assert "proxy_key" not in text
     assert "key" not in got["panels"][0]["document"]["proxy"] and "key" not in set_answer["proxy"]
     states = [s.as_dict() for s in hass.states.async_all() if "panel" in s.entity_id]
     assert len(states) == 14
     assert not any(secret in json.dumps(states, default=str) for secret in secrets)
+    # Never in an event, a log line or the diagnostics
+    assert events and not any(k in json.dumps(events, default=str) for k in keys)
+    # Hearth's own log lines (Home Assistant's websocket_api debug log echoes every message it sends, the panel's
+    # document too, and the test harness logs its mock storage: neither is Hearth's)
+    ours = [r.getMessage() for r in caplog.records if r.name.startswith("custom_components.hearth")]
+    assert not any(k in line for line in ours for k in keys)
+    diagnostics = await async_get_config_entry_diagnostics(hass, entry)
+    assert not any(k in json.dumps(diagnostics, default=str) for k in keys)
+
+
+# The ESPHome proxy key
+
+
+async def test_the_proxy_key_is_made_at_approval_and_kept_until_the_device_goes(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    entry, client = await _household(hass, hass_client_no_auth)
+    await _pair_panel(hass, client, area_id="kitchen")
+    panels = _panels(hass)
+    key = panels.panels[PANEL_ID]["key"]
+    # 32 random bytes, standard base64 (ESPHome's api encryption key)
+    assert len(base64.b64decode(key, validate=True)) == 32
+    assert panels.document(PANEL_ID)["proxy"]["key"] == key
+    # Another panel gets its own
+    await _pair_panel(hass, client, OTHER_ID, area_id="bedroom")
+    assert panels.panels[OTHER_ID]["key"] != key
+
+    # Kept across pairing again, and through area, device and entity renames
+    await _pair_panel(hass, client)
+    assert panels.panels[PANEL_ID]["key"] == key
+    ar.async_get(hass).async_update("kitchen", name="Big kitchen")
+    dr.async_get(hass).async_update_device(_device(hass).id, name_by_user="Wall")
+    er.async_get(hass).async_get_or_create("light", "test", "lamp", suggested_object_id="lamp")
+    panels.set_values(PANEL_ID, {"routines": ["light.lamp"]})
+    er.async_get(hass).async_update_entity("light.lamp", new_entity_id="light.big_lamp")
+    await hass.async_block_till_done()
+    assert panels.value(PANEL_ID, "routines") == ["light.big_lamp"]
+    assert panels.panels[PANEL_ID]["key"] == key
+
+    # Removing the device drops it: pairing afresh makes a new one
+    device = _device(hass)
+    assert await async_remove_config_entry_device(hass, entry, device)
+    dr.async_get(hass).async_remove_device(device.id)
+    await hass.async_block_till_done()
+    assert not panels.has(PANEL_ID)
+    await _pair_panel(hass, client, area_id="kitchen")
+    assert document.proxy_key(panels.panels[PANEL_ID]["key"]) and panels.panels[PANEL_ID]["key"] != key
+
+
+async def _restart(hass: HomeAssistant, entry, hass_storage, change) -> None:
+    """Hearth unloads (the store is saved), [change] edits what is stored, and it loads again."""
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    hass.data.pop(f"{DOMAIN}_glint_panel")
+    change(hass_storage[f"{DOMAIN}.panels"]["data"]["panels"])
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+
+async def test_a_panel_paired_without_a_proxy_key_gets_one_on_load(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_storage
+) -> None:
+    entry, client = await _household(hass, hass_client_no_auth)
+    await _pair_panel(hass, client, area_id="kitchen")
+    await _pair_panel(hass, client, OTHER_ID, area_id="bedroom")
+    kept = _panels(hass).panels[OTHER_ID]["key"]
+
+    # As stored before every panel had one: a record without a key
+    await _restart(hass, entry, hass_storage, lambda stored: stored[PANEL_ID].pop("key"))
+    panels = _panels(hass)
+    made = panels.panels[PANEL_ID]["key"]
+    assert len(base64.b64decode(made, validate=True)) == 32
+    assert panels.panels[OTHER_ID]["key"] == kept
+    assert panels.document(PANEL_ID)["proxy"]["key"] == made
+    # Saved, so it stays the same
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=5))
+    await hass.async_block_till_done()
+    assert hass_storage[f"{DOMAIN}.panels"]["data"]["panels"][PANEL_ID]["key"] == made
+
+    # A stored key that isn't one counts as none
+    await _restart(hass, entry, hass_storage, lambda stored: stored[OTHER_ID].update(key="bm90IGEga2V5"))
+    assert _panels(hass).panels[PANEL_ID]["key"] == made
+    assert document.proxy_key(_panels(hass).panels[OTHER_ID]["key"])
+
+
+async def test_get_panel_shows_the_proxy_key_to_administrators_only(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_admin_user
+) -> None:
+    _entry, client = await _household(hass, hass_client_no_auth)
+    await _pair_panel(hass, client, area_id="kitchen")
+    await _pair_panel(hass, client, OTHER_ID, area_id="bedroom")
+    panels = _panels(hass)
+    jordan = await _adult(hass)
+
+    admin = await hass.services.async_call(
+        DOMAIN, "get_panel", {}, blocking=True, return_response=True, context=Context(user_id=hass_admin_user.id)
+    )
+    assert {p["device_id"]: p["proxy_key"] for p in admin["panels"]} == {
+        PANEL_ID: panels.panels[PANEL_ID]["key"], OTHER_ID: panels.panels[OTHER_ID]["key"],
+    }
+    # Still never in the document part
+    assert all("key" not in p["document"]["proxy"] for p in admin["panels"])
+    # An adult who isn't an administrator, and an automation: no proxy_key at all
+    for context in (Context(user_id=jordan.id), None):
+        got = await hass.services.async_call(
+            DOMAIN, "get_panel", {}, blocking=True, return_response=True, context=context
+        )
+        assert got["panels"] and all("proxy_key" not in p for p in got["panels"])
+    # The panels' shared login gets nothing
+    with pytest.raises(Unauthorized):
+        await hass.services.async_call(
+            DOMAIN, "get_panel", {}, blocking=True, return_response=True, context=Context(user_id=DISPLAYS[0].id)
+        )
+
+
+async def test_the_proxy_key_is_only_in_its_own_panel_s_document(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client
+) -> None:
+    _entry, client = await _household(hass, hass_client_no_auth)
+    kitchen = await _pair_panel(hass, client, area_id="kitchen")
+    bedroom = await _pair_panel(hass, client, OTHER_ID, area_id="bedroom")
+    panels = _panels(hass)
+    _ws1, kitchen_doc = await _subscribe(hass_ws_client, hass, kitchen)
+    _ws2, bedroom_doc = await _subscribe(hass_ws_client, hass, bedroom, OTHER_ID)
+    assert kitchen_doc["proxy"]["key"] == panels.panels[PANEL_ID]["key"]
+    assert bedroom_doc["proxy"]["key"] == panels.panels[OTHER_ID]["key"]
+    assert panels.panels[PANEL_ID]["key"] not in json.dumps(bedroom_doc)
+    assert panels.panels[OTHER_ID]["key"] not in json.dumps(kitchen_doc)
+
+
+async def test_set_panel_changes_the_proxy_key_for_administrators_only(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client, hass_admin_user
+) -> None:
+    _entry, client = await _household(hass, hass_client_no_auth)
+    body = await _pair_panel(hass, client, area_id="kitchen")
+    panels = _panels(hass)
+    target = _device(hass).id
+    admin = Context(user_id=hass_admin_user.id)
+    jordan = await _adult(hass)
+    ws, doc = await _subscribe(hass_ws_client, hass, body)
+    first = doc["proxy"]["key"]
+
+    # "new": a fresh key, pushed to the panel, and the answer (to the administrator) has it
+    answer = await hass.services.async_call(
+        DOMAIN, "set_panel", {"device_id": target, "proxy_key": "new"}, blocking=True, return_response=True,
+        context=admin,
+    )
+    fresh = panels.panels[PANEL_ID]["key"]
+    assert fresh != first and answer["proxy_key"] == fresh and len(base64.b64decode(fresh, validate=True)) == 32
+    assert "key" not in answer["proxy"]
+    await _after_push(hass)
+    pushed = await ws.receive_json()
+    assert pushed["event"]["proxy"]["key"] == fresh and pushed["event"]["version"] != doc["version"]
+
+    # By value, with other settings in the same call
+    answer = await hass.services.async_call(
+        DOMAIN, "set_panel", {"device_id": target, "proxy_key": PROXY_KEY, "motion": "calm"}, blocking=True,
+        return_response=True, context=admin,
+    )
+    assert panels.panels[PANEL_ID]["key"] == PROXY_KEY == answer["proxy_key"]
+    assert panels.value(PANEL_ID, "motion") == "calm"
+    await _after_push(hass)
+    assert (await ws.receive_json())["event"]["proxy"]["key"] == PROXY_KEY
+
+    # Not a key: refused without repeating it, and nothing changes (the other settings either)
+    short = base64.b64encode(b"k" * 16).decode()
+    for bad in ("not a key at all", short, PROXY_KEY + "=", "", None, 42, ["new"]):
+        with pytest.raises(ServiceValidationError) as err:
+            await hass.services.async_call(
+                DOMAIN, "set_panel", {"device_id": target, "proxy_key": bad, "motion": "still"}, blocking=True,
+                context=admin,
+            )
+        assert str(err.value) == 'proxy_key is an ESPHome API encryption key (32 bytes, base64) or "new"'
+    assert panels.panels[PANEL_ID]["key"] == PROXY_KEY and panels.value(PANEL_ID, "motion") == "calm"
+
+    # An adult who isn't an administrator, an automation and the panels' login may not, even with "new"
+    for context in (Context(user_id=jordan.id), None, Context(user_id=DISPLAYS[0].id)):
+        with pytest.raises(Unauthorized):
+            await hass.services.async_call(
+                DOMAIN, "set_panel", {"device_id": target, "proxy_key": "new", "motion": "still"}, blocking=True,
+                context=context,
+            )
+    assert panels.panels[PANEL_ID]["key"] == PROXY_KEY and panels.value(PANEL_ID, "motion") == "calm"
+    # The adult still sets the rest
+    await hass.services.async_call(
+        DOMAIN, "set_panel", {"device_id": target, "motion": "still"}, blocking=True, context=Context(user_id=jordan.id)
+    )
+    assert panels.value(PANEL_ID, "motion") == "still"
 
 
 # Subscribe and report

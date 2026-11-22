@@ -1,6 +1,6 @@
 """<domain>.set_panel, <domain>.set_panel_defaults, <domain>.get_panel, <domain>.change_panel_start and
 <domain>.undo_panel_start: administrators and adults (and automations), as the host checks its other services. Answers
-never carry a secret."""
+never carry a secret, but a panel's proxy key to a Home Assistant administrator (set_panel's proxy_key is theirs only)."""
 
 from __future__ import annotations
 
@@ -13,12 +13,21 @@ from homeassistant.core import (
     ServiceResponse,
     SupportsResponse,
 )
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import ServiceValidationError, Unauthorized
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 
 from . import document, start
-from .const import BY_SERVICE, HOUSE_KEYS, HOUSE_PANEL, IDENTIFIER_PREFIX, PANEL_KEYS, START_MAX_NAME
+from .const import (
+    BY_SERVICE,
+    HOUSE_KEYS,
+    HOUSE_PANEL,
+    IDENTIFIER_PREFIX,
+    NEW_PROXY_KEY,
+    PANEL_KEYS,
+    PROXY_KEY,
+    START_MAX_NAME,
+)
 from .manager import Panels
 
 _DEVICES = vol.All(cv.ensure_list, [cv.string])
@@ -26,6 +35,8 @@ SET_PANEL_SCHEMA = vol.Schema(
     {
         vol.Required("device_id"): _DEVICES,
         **{vol.Optional(key): vol.Any(None, object) for key in (*PANEL_KEYS, HOUSE_PANEL)},
+        # Checked by the service (a refusal never says the value)
+        vol.Optional(PROXY_KEY): object,
     }
 )
 SET_DEFAULTS_SCHEMA = vol.Schema({vol.Optional(key): vol.Any(None, object) for key in HOUSE_KEYS})
@@ -53,6 +64,23 @@ def _loaded(hass: HomeAssistant, domain: str) -> Panels:
     if panels is None:
         raise ServiceValidationError("Panels aren't set up")
     return panels
+
+
+async def _admin(hass: HomeAssistant, call: ServiceCall) -> bool:
+    """The call is a Home Assistant administrator's (an adult who isn't one, an automation or the system: not)."""
+    user_id = call.context.user_id
+    user = await hass.auth.async_get_user(user_id) if user_id else None
+    return user is not None and user.is_active and user.is_admin
+
+
+def _proxy_key(value: Any) -> str:
+    """set_panel's proxy_key: "new" makes a fresh key, else a valid key (32 bytes, base64); refused without saying
+    the value."""
+    if value == NEW_PROXY_KEY:
+        return document.new_proxy_key()
+    if (key := document.proxy_key(value)) is None:
+        raise ServiceValidationError(f'{PROXY_KEY} is an ESPHome API encryption key (32 bytes, base64) or "new"')
+    return key
 
 
 def _panel_ids(panels: Panels, registry_ids: list[str]) -> list[str]:
@@ -95,6 +123,12 @@ def async_register_services(hass: HomeAssistant, domain: str) -> None:
         targets = _panel_ids(panels, call.data["device_id"])
         if len(targets) != 1:
             raise ServiceValidationError("Target one panel")
+        new_key: str | None = None
+        if PROXY_KEY in call.data:
+            # The proxy key is administrators' only, though adults may set the rest
+            if not await _admin(hass, call):
+                raise Unauthorized(context=call.context, user_id=call.context.user_id)
+            new_key = _proxy_key(call.data[PROXY_KEY])
         known = panels.known()
         changes: dict[str, Any] = {}
         try:
@@ -109,7 +143,12 @@ def async_register_services(hass: HomeAssistant, domain: str) -> None:
                 raise ServiceValidationError("house_panel is true, false or null")
             changes[HOUSE_PANEL] = on
         panels.set_values(targets[0], changes)
-        return document.public(panels.document(targets[0]))
+        if new_key is None:
+            return document.public(panels.document(targets[0]))
+        # Pushed to the panel (its proxy restarts with it); HA's ESPHome entry needs it entered again. The answer
+        # goes to the administrator who changed it
+        panels.set_proxy_key(targets[0], new_key)
+        return {**document.public(panels.document(targets[0])), PROXY_KEY: new_key}
 
     async def set_panel_defaults(call: ServiceCall) -> ServiceResponse:
         panels = _loaded(hass, domain)
@@ -126,7 +165,8 @@ def async_register_services(hass: HomeAssistant, domain: str) -> None:
         panels = _loaded(hass, domain)
         await panels.host.check_caller(call)
         targets = _panel_ids(panels, call.data["device_id"]) if call.data.get("device_id") else sorted(panels.panels)
-        return {"panels": [panels.describe(t) for t in targets], "defaults": panels.describe_house()}
+        admin = await _admin(hass, call)
+        return {"panels": [panels.describe(t, admin=admin) for t in targets], "defaults": panels.describe_house()}
 
     async def change_panel_start(call: ServiceCall) -> ServiceResponse:
         """The ops in order on the panel's Start, all or none; a first change starts from the room's layout the panel

@@ -955,6 +955,9 @@ set_panel:
     proxy_name:
       selector:
         text:
+    proxy_key:
+      selector:
+        text:
     motion:
       selector:
         select:

@@ -1,4 +1,4 @@
-"""A panel's document (glint.panel-config/1.2), and checking every value that goes into it.
+"""A panel's document (glint.panel-config/1.3), and checking every value that goes into it.
 
 Values come from three places: set_panel / set_panel_defaults and the entities (strict: a value that isn't right is
 refused, naming it), and a pair body's seed (lax: a field that isn't right, or names an entity Home Assistant doesn't
@@ -442,6 +442,7 @@ def proxy_key(value: Any) -> str | None:
 
 
 def new_proxy_key() -> str:
+    """A fresh ESPHome API encryption key: 32 random bytes, base64 (standard, as ESPHome's api encryption key)."""
     import secrets
 
     return base64.b64encode(secrets.token_bytes(32)).decode()

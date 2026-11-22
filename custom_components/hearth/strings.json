@@ -1413,6 +1413,10 @@
           "name": "Bluetooth proxy name",
           "description": "The proxy's ESPHome name (lowercase letters, digits and dashes). Empty: from the panel's name."
         },
+        "proxy_key": {
+          "name": "Bluetooth proxy key",
+          "description": "The proxy's ESPHome API encryption key (32 bytes, base64), or new for a fresh one. Pushed to the panel; enter it again in Home Assistant's ESPHome entry for the panel. Administrators only; the answer has it."
+        },
         "motion": {
           "name": "Motion",
           "description": "still, calm, easy or lively."
@@ -1495,7 +1499,7 @@
     },
     "get_panel": {
       "name": "Get panels",
-      "description": "Each Glint Panel's settings, each marked set or derived, with Connected, View and On the tablet (no secrets). With no target: every panel. Administrators and adults only."
+      "description": "Each Glint Panel's settings, each marked set or derived, with Connected, View and On the tablet (no secrets, but each panel's Bluetooth proxy key for an administrator). With no target: every panel. Administrators and adults only."
     },
     "change_panel_start": {
       "name": "Change a panel's Start",

@@ -1,4 +1,4 @@
-# Glint Panel configuration, `glint.panel-config/1.2`
+# Glint Panel configuration, `glint.panel-config/1.3`
 
 Owner: the integration that serves it, `<d>` below (today Hearth, `hearth`). A Glint Panel is a wall tablet, one per
 room. Its settings live in Home Assistant: an administrator approves its pairing code and picks the room, and the
@@ -63,7 +63,7 @@ A later poll is 404: the secret is never given again. The panel keeps `secret` f
 
 Removing the panel's device in Home Assistant removes the panel (its secret stops working); the owner's login and
 token are left alone (revoke the token in the user's profile to shut the panel out of Home Assistant too). Pairing
-again gives a new secret; the panel's settings, room and proxy key stay, and so do its own Start, its last 10 Start
+again gives a new secret; the panel's settings, room and proxy key (`proxy.key`) stay, and so do its own Start, its last 10 Start
 changes and the room layout and page it last reported (removing the device drops them).
 
 ## The WebSocket commands
@@ -157,7 +157,7 @@ such as presence and the room's thermostat itself).
 
 ```json
 {
-  "schema": "glint.panel-config/1.2",
+  "schema": "glint.panel-config/1.3",
   "served_by": "hearth",
   "version": "9c1e04aa",
   "panel": {"device_id": "panel-1a2b3c4d", "name": "Kitchen panel", "area_id": "kitchen",
@@ -183,8 +183,9 @@ such as presence and the room's thermostat itself).
 
 - `version`: the first 8 hex digits of a SHA-256 of the rest of the document: it changes exactly when the content
   does.
-- `schema` is `glint.panel-config/1.2` (1.1 added `start`, and `room_layout` in reports; 1.2 a bed side's `name`,
-  `active`, `reliable`, `presets` and `controls`). The major is 1. Adding
+- `schema` is `glint.panel-config/1.3` (1.1 added `start`, and `room_layout` in reports; 1.2 a bed side's `name`,
+  `active`, `reliable`, `presets` and `controls`; 1.3: every panel has a `proxy.key`, and an administrator can change
+  it). The major is 1. Adding
   fields is a minor change, read by old panels. Renaming or
   removing one is a new major; old panels then keep their cached document.
 - `panel.name`: the device's name (the owner's, when they renamed it). `panel.panel_areas`: every paired panel's area,
@@ -219,14 +220,25 @@ such as presence and the room's thermostat itself).
     `null` when nothing in it is set. Anything not set is the panel's to derive (a bed controller found by
     `connected`).
 - `proxy.name`: the name the panel's seed gave (kept, so ESPHome sees the same device) or set with `set_panel`
-  `proxy_name`; else the device's name as an ESPHome name (`kitchen-panel`, at most 31 characters). `proxy.key`: a
-  32-byte ESPHome API encryption key (base64), made at the first pairing (or kept from the seed).
+  `proxy_name`; else the device's name as an ESPHome name (`kitchen-panel`, at most 31 characters).
+- `proxy.key` (every panel's since 1.3): the Noise pre-shared key of the panel's ESPHome Bluetooth proxy, 32 random
+  bytes in standard base64, as ESPHome's `api: encryption: key`. One per panel, kept in its record in `<d>.panels`:
+  made at its first pairing (or kept from the seed), and for a panel paired before 1.3 without one, when the store
+  loads. It stays across pairing again and through entity, area and device renames; removing the panel's device
+  drops it. The panel app runs the proxy with it and restarts the proxy when it changes. Home Assistant's ESPHome
+  entry for the proxy uses the same key to connect: an administrator reads it from `get_panel` and enters it there.
+  Changing it (`set_panel` `proxy_key`) pushes the new key to the panel, so the ESPHome entry must be given the new
+  key again (ESPHome asks to re-authenticate). A panel before 1.3 ignores it.
 - `news.seen`: the `input_text` where the panel keeps which news it has shown, or `null` (the panel's own
   fallback). Set with `set_panel` `news_seen`.
 - `voice` only names entities; the voice turn log, timers and the shared request entity belong to the voice
   integration (or plain helpers), never to the panel part.
-- The one secret in it is `proxy.key`. The document goes only to the panel that owns it, over its own subscription;
-  it is never in an entity's state or attributes, nor in a service's answer.
+- The one secret in it is `proxy.key`. The document goes only to the panel that owns it, over its own
+  secret-authenticated subscription; the key is never in an entity's state or attributes, an event, a log, the
+  diagnostics or an error, and in a service's answer only to a Home Assistant administrator (`get_panel`, and
+  `set_panel` when they change it). An adult who isn't an administrator, an automation and the panels' shared login
+  never get it. (Hearth never logs it; Home Assistant's own `websocket_api` debug logging, when someone turns it on,
+  prints every message it sends, this document too.)
 
 ## The panel's own Start
 
@@ -312,10 +324,16 @@ Unique ids `panel_<device_id>_<key>`.
 `device_id`: the one panel's Home Assistant device. Any of `people` (persons), `extra_areas` (areas), `routines`
 (entities), `bed_left`, `bed_right` (a bed side), `photos`, `presence`, `voice_heard`, `voice_reply`, `voice_show`,
 `news_seen` (entities), `voice_reply_attribute` (words), `proxy_name` (an ESPHome name), `motion`, `photos_every`, and every switch key above (`house_panel`
-included). Left out: unchanged. `null` or `[]`: back to derived (for a switch: its default; `house_panel: null` goes
+included), and `proxy_key` (administrators only, below). Left out: unchanged. `null` or `[]`: back to derived (for a switch: its default; `house_panel: null` goes
 back to the derived house panel). An entity or area Home Assistant doesn't have is refused, naming it; a device that
 isn't a panel is refused. The answer (`return_response`) is the effective document without its secrets (no
 `proxy.key`, no `version`).
+
+`proxy_key` (1.3): only a Home Assistant administrator may give it (anyone else, adults and automations included, gets
+`Unauthorized` and nothing changes). `"new"` makes a fresh key; a valid key (32 bytes, base64) sets that one; anything
+else is refused without repeating the value, and nothing changes. The new key is pushed to the panel, and the answer
+has it as a top-level `proxy_key`. Then enter it again in the ESPHome entry. Prefer `"new"`: a key given by value is
+in Home Assistant's own `call_service` event, as every service call's data is.
 
 ### `<d>.set_panel_defaults`
 
@@ -358,7 +376,9 @@ the `start` from before that change (any of the last 10) as a new change, pushes
 `view`, `on_the_tablet`, `signed_in_as` (`{"user", "token"}`: the names of the login its last subscription used, null
 before one), `up_to_date` (the version it reported is the current one), `document` (without secrets), `start` (as in the
 document) and `start_versions` (the kept Start changes, newest first, each `{"undo", "changed": {"by", "at"}}`);
-each house-wide value as `{"value", "source"}`. Never a secret.
+each house-wide value as `{"value", "source"}`. To a Home Assistant administrator only, each panel also has
+`proxy_key` (its `proxy.key`, for the ESPHome entry); an adult who isn't one, or an automation, gets no `proxy_key`
+key at all. Never another secret.
 
 ## Not yet built
 
