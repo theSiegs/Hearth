@@ -3,6 +3,20 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.11.52
+
+### Home Assistant integration
+
+- **Block AI companion apps (on by default).** A new rule blocks known AI companion and character role-play chat apps on kids' Android devices. An app whose name only looks like one gets a notice with Block and Not now, asked once. General assistants are left alone.
+- **Glint Panels.** Wall tablets running Glint Panel are set up and configured from Home Assistant: room, people, motion, photos, Start layout, bed sides and an ESPHome Bluetooth proxy key and MAC per panel (`glint.panel-config/1.4`). A setup that names a room is approved at once (a kid's own login always waits for an administrator); one without a room waits for an approval in Home Assistant. Panels no longer pair over `POST /api/hearth/pair`.
+- **Offer to make someone an adult.** When a person who isn't set as an adult signs in from a phone and is refused, administrators are offered a one-tap Make adult / Not now.
+- **Suggested more time** names the play time it gives, and counts bonus time already given.
+- **`hearth.explain`** names a parent's own block in Family Link or Family Safety.
+
+### TV
+
+- **A clock set by hand is disbelieved** (wall time is checked against elapsed time).
+
 ## 2026.11.51
 
 ### Home Assistant integration
