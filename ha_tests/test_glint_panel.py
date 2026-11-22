@@ -555,6 +555,21 @@ async def test_the_house_panel_is_one_at_most(hass: HomeAssistant, hass_client_n
     assert _panels(hass).document(OTHER_ID)["panel"]["panel_areas"] == ["bedroom", "kitchen"]
 
 
+async def test_pairing_again_keeps_the_derived_house_panel(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    _entry, client = await _household(hass, hass_client_no_auth)
+    await _pair_panel(hass, client, area_id="kitchen")
+    await _pair_panel(hass, client, device_id=OTHER_ID, area_id="bedroom")
+    panels = _panels(hass)
+    paired_at = panels.panels[PANEL_ID]["paired_at"]
+    assert panels.house_panel() == PANEL_ID
+    # The first panel pairs again (a reinstall, a new secret): still the first, still the house panel
+    await _pair_panel(hass, client, area_id="kitchen")
+    assert panels.panels[PANEL_ID]["paired_at"] == paired_at and panels.panels[PANEL_ID]["repaired_at"]
+    assert panels.house_panel() == PANEL_ID
+
+
 async def test_flipping_a_switch_pushes_the_document(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client
 ) -> None:

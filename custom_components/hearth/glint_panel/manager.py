@@ -293,7 +293,9 @@ class Panels:
             "secret_hash": secret_hash,
             "model": pairing.model,
             "sw_version": pairing.sw_version,
-            "paired_at": dt_util.utcnow().isoformat(),
+            # The first pairing's: the derived house panel goes by it, so pairing again never moves it
+            "paired_at": (record.get("paired_at") if record else None) or dt_util.utcnow().isoformat(),
+            **({"repaired_at": dt_util.utcnow().isoformat()} if record else {}),
             "values": values,
             "key": key or document.new_proxy_key(),
             "view": record.get("view") if record else None,
