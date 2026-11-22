@@ -61,10 +61,8 @@ hello whenever it has a socket and no secret.
    registered.
 4. **Otherwise** (no area, or one HA doesn't have): it waits for an approval in HA.
 
-**The gate.** hello is open to any login, so rules 1 to 3 approve at once only when the hello's Home Assistant user
-is an administrator or an adult on Hearth's page, or (rules 1 and 2) the user the matched panel last subscribed with
-(kept with the panel at each subscribe). Anything else (a kid's own login, the panels' shared login asking for a new
-panel) waits for an approval in HA, as rule 4.
+**Any login.** Rules 1 to 3 are approved at once on any Home Assistant login, the panels' shared login included: a
+setup command that names a room needs no step in HA (the owner's choice). Only rule 4 waits.
 
 ### Approval in HA
 
@@ -149,8 +147,7 @@ Result `null`, then an event with the whole document at once, and again on every
 or an entity, a house-wide value, the device's area or name), batched 1 s: one service call that sets three things
 is one push. A push is only sent when the document's `version` differs from the last one this subscription got.
 While a subscription is open the panel's **Connected** entity is on; it goes off 2 minutes after the last one closes.
-No heartbeat. The Home Assistant user it signed in as is kept with the panel (a hello on that login is the panel's own,
-see the gate), and the first subscribe with an approved hello's secret is that hello's acknowledgment.
+No heartbeat. The Home Assistant user it signed in as is kept with the panel, and the first subscribe with an approved hello's secret is that hello's acknowledgment.
 
 When the panel is removed or paired again, each open subscription gets one last event `{"unpaired": true}` and no
 more.

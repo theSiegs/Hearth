@@ -77,27 +77,12 @@ def test_rule_3_an_area_alone_is_a_new_panel_and_rule_4_waits() -> None:
 
 
 @pytest.mark.parametrize(
-    ("rule", "user", "trusted", "panel_user", "at_once"),
-    [
-        # Rules 1 and 2: an administrator or an adult, or the login the panel last subscribed with
-        (hello.KNOWN, "kid", True, None, True),
-        (hello.KNOWN, "displays", False, "displays", True),
-        (hello.KNOWN, "kid", False, "displays", False),
-        (hello.KNOWN, "kid", False, None, False),
-        (hello.KNOWN, None, False, None, False),
-        (hello.TAKES_PLACE, "adult", True, "displays", True),
-        (hello.TAKES_PLACE, "displays", False, "displays", True),
-        (hello.TAKES_PLACE, "kid", False, "displays", False),
-        # Rule 3: an administrator or an adult only (the panel's login isn't one yet)
-        (hello.NEW, "adult", True, None, True),
-        (hello.NEW, "displays", False, "displays", False),
-        # Rule 4: always waits
-        (hello.WAITS, "admin", True, None, False),
-    ],
+    ("rule", "at_once"),
+    [(hello.KNOWN, True), (hello.TAKES_PLACE, True), (hello.NEW, True), (hello.WAITS, False)],
 )
-def test_the_gate(rule, user, trusted, panel_user, at_once) -> None:
+def test_rules_1_to_3_are_approved_at_once(rule, at_once) -> None:
     found = hello.Match(rule, "panel-a" if rule in (hello.KNOWN, hello.TAKES_PLACE) else None)
-    assert hello.at_once(found, user, trusted, panel_user) is at_once
+    assert hello.at_once(found) is at_once
 
 
 # The proxy MAC, on its own
@@ -288,35 +273,19 @@ async def test_rule_1_on_the_panel_s_own_login_gives_a_new_secret_and_the_old_on
     assert _device(hass).area_id == "kitchen"
 
 
-async def test_a_kid_s_login_never_takes_a_panel_over(
-    hass: HomeAssistant, hass_client_no_auth, hass_ws_client, freezer
+async def test_the_panels_shared_login_with_a_room_is_a_new_panel_at_once(
+    hass: HomeAssistant, hass_client_no_auth, hass_ws_client
 ) -> None:
-    entry, client = await _household(hass, hass_client_no_auth)
-    body = await _pair_panel(hass, client, area_id="kitchen")
-    panels = _panels(hass)
-    panel = await _socket(hass_ws_client, hass, TOKENS[0])
-    assert (await panel.subscribe(PANEL_ID, body["secret"]))["success"]
-    await panel.event()
-    kid = await _socket(hass_ws_client, hass, await _kid(hass))
-
-    # Rule 1 (its id), rule 2 (its room, once it's offline) and rule 3 (a room): all wait for an approval in HA
-    _r, known, _ = await kid.hello(PANEL_ID)
-    assert known == {"status": "pending"}
-    await panel.ws.close()
-    await _offline(hass, freezer)
-    _r, takes, _ = await kid.hello(TABLET_ID, area="Kitchen")
-    _r, new, _ = await kid.hello(NEW_ID, area="Bedroom")
-    assert takes == new == {"status": "pending"}
-    # Nothing changed: the panel's secret still works, no tablet id, no new panel or device
-    assert panels.authorized(PANEL_ID, body["secret"])
-    assert "tablet_ids" not in panels.panels[PANEL_ID] and not panels.has(NEW_ID)
-    assert dr.async_get(hass).async_get_device_by_identifier((DOMAIN, f"panel:{NEW_ID}"), entry.entry_id) is None
-    assert {h["device_id"] for h in panels.waiting_hellos()} == {PANEL_ID, TABLET_ID, NEW_ID}
-    # The card says who: the id's last four and the login's names
-    waiting = {h["device_id"]: h for h in panels.waiting_hellos()}
-    assert waiting[PANEL_ID]["short_id"] == PANEL_ID[-4:]
-    assert waiting[PANEL_ID]["signed_in_as"] == {"user": "Sam", "token": "Sam's phone"}
-    assert waiting[PANEL_ID]["panel"] == {"device_id": PANEL_ID, "name": "Kitchen panel"}
+    # The owner's choice: a setup command that names a room needs no step in HA, on any login
+    entry, _client = await _household(hass, hass_client_no_auth)
+    tablet = await _socket(hass_ws_client, hass, TOKENS[0])
+    _r, event, _ = await tablet.hello(NEW_ID, area="Kitchen")
+    assert event["status"] == "approved" and event["device_id"] == NEW_ID and event["area_id"] == "kitchen"
+    assert _panels(hass).has(NEW_ID)
+    assert dr.async_get(hass).async_get_device_by_identifier((DOMAIN, f"panel:{NEW_ID}"), entry.entry_id) is not None
+    # Without a room it still waits
+    _r, waits, _ = await tablet.hello(TABLET_ID)
+    assert waits == {"status": "pending"}
 
 
 async def test_an_adult_s_login_is_approved_at_once(hass: HomeAssistant, hass_client_no_auth, hass_ws_client) -> None:
@@ -466,7 +435,7 @@ async def test_a_refused_hello_is_told_and_answered_denied_for_a_day(
 ) -> None:
     await _household(hass, hass_client_no_auth)
     tablet = await _socket(hass_ws_client, hass, TOKENS[0])
-    await tablet.hello(NEW_ID, area="Kitchen")
+    await tablet.hello(NEW_ID)
     # Refused on Hearth's page
     admin = await _socket(hass_ws_client, hass)
     await admin.ws.send_json({"id": 1, "type": "hearth/config"})
@@ -478,11 +447,11 @@ async def test_a_refused_hello_is_told_and_answered_denied_for_a_day(
     assert await tablet.event() == {"status": "denied"}
     await hass.async_block_till_done()
     assert not [f for f in hass.config_entries.flow.async_progress_by_handler(DOMAIN) if f["context"].get("unique_id") == f"panel_hello:{NEW_ID}"]
-    _r, again, _ = await tablet.hello(NEW_ID, area="Kitchen")
+    _r, again, _ = await tablet.hello(NEW_ID)
     assert again == {"status": "denied"}
     # A day later it may wait again
     freezer.tick(HELLO_DENIED_FOR + timedelta(minutes=1))
-    _r, later, _ = await tablet.hello(NEW_ID, area="Kitchen")
+    _r, later, _ = await tablet.hello(NEW_ID)
     assert later == {"status": "pending"}
 
 

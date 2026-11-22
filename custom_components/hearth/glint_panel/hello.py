@@ -1,5 +1,5 @@
 """Setting a panel up over its socket (<domain>/panel/hello): which panel a hello is, whether it may be approved at once,
-and each panel's proxy MAC. Pure: no Home Assistant state, so every rule and the gate are tested on their own.
+and each panel's proxy MAC. Pure: no Home Assistant state, so every rule is tested on its own.
 
 How a hello is matched (first rule that fits):
 
@@ -9,8 +9,8 @@ How a hello is matched (first rule that fits):
 3. it names an area HA has: a new panel in it;
 4. anything else waits for an approval in HA.
 
-The gate: hello is open to any Home Assistant login, so rules 1 to 3 approve at once only for an administrator or an
-adult, or (rules 1 and 2) the login the matched panel last subscribed with. Anyone else waits for an approval in HA.
+Rules 1 to 3 are approved at once on any Home Assistant login (the owner's choice: a setup command that names a room
+needs no step in HA); only rule 4 waits.
 """
 
 from __future__ import annotations
@@ -104,11 +104,6 @@ def match(
     return Match(NEW)
 
 
-def at_once(found: Match, user_id: str | None, trusted: bool, panel_user_id: str | None) -> bool:
-    """The gate: whether [found] is approved without an approval in HA. [trusted]: the hello's login is an
-    administrator's or an adult's; [panel_user_id]: the login the matched panel last subscribed with."""
-    if found.rule in (KNOWN, TAKES_PLACE):
-        return trusted or (user_id is not None and panel_user_id is not None and user_id == panel_user_id)
-    if found.rule == NEW:
-        return trusted
-    return False
+def at_once(found: Match) -> bool:
+    """Whether [found] is approved without an approval in HA: rules 1 to 3, on any login."""
+    return found.rule != WAITS
