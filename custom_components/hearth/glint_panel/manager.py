@@ -510,14 +510,19 @@ class Panels:
 
     @callback
     def _entity_updated(self, event: Event) -> None:
-        """An entity's id was renamed: rewritten in every panel's Start (and its kept changes), and pushed. A removed
-        entity is kept: the panel marks its tile until someone removes it."""
+        """An entity's id was renamed: rewritten in every panel's settings, Start (and its kept changes) and reported
+        room layout, and in the house-wide values; pushed. A removed entity is kept: the panel marks its tile until
+        someone removes it."""
         data = event.data
         if data.get("action") != "update" or not data.get("old_entity_id"):
             return
         old, new = data["old_entity_id"], data["entity_id"]
-        touched = False
+        touched = document.rename_house(self.house, old, new)
         for record in self.panels.values():
+            if isinstance(values := record.get("values"), dict) and document.rename_values(values, old, new):
+                touched = True
+            if isinstance(record.get("room_layout"), list) and start.rename(record["room_layout"], old, new):
+                touched = True
             stored = record.get("start")
             if isinstance(stored, dict) and start.rename(stored.get("tiles"), old, new):
                 touched = True

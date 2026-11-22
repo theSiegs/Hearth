@@ -243,7 +243,10 @@ the wall with `set_start`, or with `change_panel_start`):
 - `version`: the first 8 hex digits of a SHA-256 of `tiles` only (a new stamp alone doesn't change it); `set_start`'s
   `base_version` is checked against it. The document's own `version` changes with any part of `start`.
 - When Home Assistant renames an entity id, it is rewritten in every panel's `start` (`entity`, `entities`,
-  `deals[].entity`, and the kept changes) and pushed; the tile keeps its id. An entity removed from Home Assistant is
+  `deals[].entity`, and the kept changes) and its reported `room_layout`, in every panel setting that names entities
+  (`people`, `routines`, `photos`, `presence`, `voice_heard`, `voice_reply`, `voice_show`, `news_seen`, `bed_left`,
+  `bed_right`) and in the house-wide values (`family_calendars`, `person_calendars` (its people too), `night`,
+  `doorbell_camera`, `photos`), and pushed; the tile keeps its id. An entity removed from Home Assistant is
   kept: the panel marks its tile until someone removes it.
 - The last 10 changes are kept per panel in `<d>.panels`, each the `start` from before it with its undo id (oldest
   dropped). Pairing again keeps them; removing the panel's device drops them.

@@ -254,6 +254,54 @@ def house_value(key: str, value: Any, known: Known, strict: bool = True) -> Any:
     raise Refused(f"No house-wide panel setting {key}")
 
 
+def _renamed(value: Any, old: str, new: str) -> tuple[Any, bool]:
+    """[value] (an entity id, or a list of them) with [old] renamed to [new]; whether it changed."""
+    if value == old:
+        return new, True
+    if isinstance(value, list) and old in value:
+        return list(dict.fromkeys(new if v == old else v for v in value)), True
+    return value, False
+
+
+def rename_values(values: dict[str, Any], old: str, new: str) -> bool:
+    """A renamed entity id rewritten (in place) in a panel's values: people, routines, its entity settings and its
+    bed sides. Whether anything changed."""
+    changed = False
+    for key in ("people", *ENTITY_LIST_KEYS, *ENTITY_KEYS):
+        if key in values:
+            values[key], did = _renamed(values[key], old, new)
+            changed |= did
+    for key in BED_KEYS:
+        side = values.get(key)
+        if isinstance(side, dict):
+            for part in ("connected", "scripts", "positions"):
+                if part in side:
+                    side[part], did = _renamed(side[part], old, new)
+                    changed |= did
+    return changed
+
+
+def rename_house(house: dict[str, Any], old: str, new: str) -> bool:
+    """A renamed entity id rewritten (in place) in the house-wide values: the calendars (a person's too, and the
+    person), night, the doorbell camera and the album. Whether anything changed."""
+    changed = False
+    for key in ("family_calendars", "night", "doorbell_camera", "photos"):
+        if key in house:
+            house[key], did = _renamed(house[key], old, new)
+            changed |= did
+    people = house.get("person_calendars")
+    if isinstance(people, dict):
+        out: dict[str, Any] = {}
+        for person, calendars in people.items():
+            calendars, did = _renamed(calendars, old, new)
+            changed |= did
+            if person == old:
+                person, changed = new, True
+            out[person] = list(dict.fromkeys([*out.get(person, []), *calendars])) if isinstance(calendars, list) else calendars
+        house["person_calendars"] = out
+    return changed
+
+
 def proxy_key(value: Any) -> str | None:
     """An ESPHome API encryption key (32 bytes, base64), or None."""
     if not isinstance(value, str) or len(value) > 64:

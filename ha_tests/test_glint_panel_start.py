@@ -565,6 +565,63 @@ async def test_a_renamed_entity_is_rewritten_in_every_start_and_pushed(
     assert any(t.get("entity") == "switch.desk_lamp" for t in _panels(hass).start_tiles(PANEL_ID))
 
 
+async def test_a_renamed_entity_is_rewritten_in_every_setting_and_house_wide_value(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client
+) -> None:
+    """Not only Start: each panel's settings, the house-wide values and the reported room layout follow a rename."""
+    _entry, client = await _household(hass, hass_client_no_auth)
+    registry = er.async_get(hass)
+    made = {}
+    for domain, name in (("calendar", "family"), ("input_boolean", "night"), ("script", "bedtime"),
+                         ("binary_sensor", "kitchen_motion"), ("camera", "door"), ("switch", "bed_left"), ("person", "sam")):
+        made[name] = registry.async_get_or_create(domain, "test", name, suggested_object_id=name).entity_id
+    kitchen = await _pair_panel(hass, client, area_id="kitchen")
+    target = _device(hass).id
+    await hass.services.async_call(DOMAIN, "set_panel", {
+        "device_id": target, "routines": [made["bedtime"]], "presence": made["kitchen_motion"],
+        "bed_left": {"connected": made["bed_left"], "scripts": [made["bedtime"]]},
+        "people": [made["sam"]],
+    }, blocking=True)
+    await hass.services.async_call(DOMAIN, "set_panel_defaults", {
+        "family_calendars": [made["family"]], "person_calendars": {made["sam"]: [made["family"]]},
+        "night": made["night"], "doorbell_camera": made["door"],
+    }, blocking=True)
+    _panels(hass).panels[PANEL_ID]["room_layout"] = [
+        {"id": "room_stack", "kind": "room_stack", "col": 1, "row": 1, "w": 2, "h": 1,
+         "deals": [{"entity": made["bed_left"], "when": "on"}]},
+    ]
+    ws, doc = await _subscribe(hass_ws_client, hass, kitchen)
+
+    renames = {
+        made["family"]: "calendar.household", made["night"]: "input_boolean.night_mode",
+        made["bedtime"]: "script.good_night", made["kitchen_motion"]: "binary_sensor.kitchen_presence",
+        made["door"]: "camera.front_door", made["bed_left"]: "switch.bed_left_side", made["sam"]: "person.sam_rivera",
+    }
+    for old, new in renames.items():
+        registry.async_update_entity(old, new_entity_id=new)
+    await hass.async_block_till_done()
+    await _after_push(hass)
+    while True:
+        message = await ws.receive_json()
+        pushed = message["event"]
+        if pushed["night"]["entity"] == "input_boolean.night_mode":
+            break
+
+    assert pushed["calendars"]["family"] == ["calendar.household"]
+    assert pushed["calendars"]["person"] == {"person.sam_rivera": ["calendar.household"]}
+    assert pushed["doors"]["doorbell_camera"] == "camera.front_door"
+    assert pushed["routines"]["entities"] == ["script.good_night"]
+    assert pushed["wake"]["presence"] == "binary_sensor.kitchen_presence"
+    assert pushed["bed"]["left"] == {"connected": "switch.bed_left_side", "scripts": ["script.good_night"],
+                                     "positions": []}
+    assert pushed["panel"]["people"] == ["person.sam_rivera"]
+    assert _panels(hass).room_layout(PANEL_ID)[0]["deals"] == [{"entity": "switch.bed_left_side", "when": "on"}]
+    assert pushed["version"] != doc["version"]
+    # Nothing still names an old id
+    stored = json.dumps(_panels(hass).data)
+    assert not any(f'"{old}"' in stored for old in renames)
+
+
 # get_panel
 
 
