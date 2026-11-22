@@ -1550,6 +1550,9 @@
     "no_pin": {
       "message": "No Parent PIN is set."
     },
+    "unavailable": {
+      "message": "Hearth isn't ready: try again in {retry_in} s."
+    },
     "stale": {
       "message": "Start was changed elsewhere (now {version})."
     },

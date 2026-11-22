@@ -15,6 +15,10 @@ from .const import BY_PANEL, MAX_PAGE, MAX_STARTS, ws_type
 from .document import Refused
 from .manager import Panels
 
+# The error while the serving integration reloads or hasn't loaded: retry after this many seconds
+UNAVAILABLE = "unavailable"
+UNAVAILABLE_RETRY = 5
+
 _ID = vol.All(str, vol.Match(r"^[A-Za-z0-9_-]{8,64}$"))
 _SECRET = vol.All(str, vol.Length(min=1, max=256))
 
@@ -33,7 +37,12 @@ def _panels(hass: HomeAssistant, domain: str, connection, msg: dict[str, Any]) -
     """The panels, once the secret is the panel's; else the error sent."""
     panels = Panels.find(hass, domain)
     if panels is None:
-        connection.send_error(msg["id"], "not_set_up", "Panels aren't set up")
+        # Reloading, or not loaded yet: never "no PIN" (a panel keeps its door locked and tries again)
+        connection.send_error(
+            msg["id"], UNAVAILABLE, f"Not ready: try again in {UNAVAILABLE_RETRY} s",
+            translation_key=UNAVAILABLE, translation_domain=domain,
+            translation_placeholders={"retry_in": str(UNAVAILABLE_RETRY)},
+        )
         return None
     if not panels.authorized(msg["device_id"], msg["secret"]):
         connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Not this panel's secret")
@@ -116,7 +125,8 @@ def async_register_commands(hass: HomeAssistant, domain: str) -> None:
     )
     @websocket_api.async_response
     async def ws_verify_pin(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
-        """{person} for an adult's Parent PIN; else error wrong_pin, locked_out (retry_in) or no_pin."""
+        """{person} for an adult's Parent PIN; else error wrong_pin, locked_out (retry_in), no_pin (no adult has a
+        Parent PIN) or unavailable (not ready: retry_in)."""
         panels = _panels(hass, domain, connection, msg)
         if panels is None:
             return

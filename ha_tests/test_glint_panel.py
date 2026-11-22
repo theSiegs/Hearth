@@ -743,6 +743,35 @@ async def test_verify_pin_names_the_adult_and_locks_out(
     assert pin_lockout(hass, PANEL_ID).failures == 0
 
 
+async def test_verify_pin_while_hearth_reloads_is_unavailable_never_no_pin(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client
+) -> None:
+    """A panel opens on "no PIN"; while Hearth is unloaded or reloading it must get a retryable error instead."""
+    entry, client = await _household(hass, hass_client_no_auth)
+    body = await _pair_panel(hass, client, area_id="kitchen")
+    ws = await hass_ws_client(hass, access_token=body["ha_token"])
+    hass.config_entries.async_update_entry(
+        entry,
+        options={**entry.options, "roles": {"person.alex": "adult"},
+                 parent_pin.CONF_PARENT_PINS: {"person.alex": parent_pin.make(PIN)}},
+    )
+    await hass.async_block_till_done()
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+    for msg_id, command in enumerate(("verify_pin", "subscribe"), start=1):
+        extra = {"pin": "0000"} if command == "verify_pin" else {}
+        await ws.send_json({"id": msg_id, "type": f"hearth/panel/{command}", "device_id": PANEL_ID,
+                            "secret": body["secret"], **extra})
+        answer = await ws.receive_json()
+        assert answer["error"]["code"] == "unavailable", answer
+        assert int(answer["error"]["translation_placeholders"]["retry_in"]) > 0
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    await ws.send_json({"id": 3, "type": "hearth/panel/verify_pin", "device_id": PANEL_ID, "secret": body["secret"],
+                        "pin": PIN})
+    assert (await ws.receive_json())["result"] == {"person": "person.alex"}
+
+
 # Nothing a panel does reloads the entry or ends a TV's wait
 
 

@@ -70,6 +70,11 @@ changes and the room layout and page it last reported (removing the device drops
 On any Home Assistant login, each with the device secret, which alone says which panel it is: a wrong secret, or
 another panel's: error `unauthorized`.
 
+While `<d>` is reloading (Hearth reloads whenever a setting is saved on its page) or hasn't loaded yet, every command
+answers error `unavailable`, `translation_placeholders.retry_in` the seconds to wait (5): try again then. Right after
+Home Assistant starts, before `<d>` has loaded, the commands aren't registered yet and Home Assistant answers
+`unknown_command`: the same, try again. After a restart the panel subscribes again.
+
 ### `<d>/panel/subscribe {device_id, secret}`
 
 Result `null`, then an event with the whole document at once, and again on every change (a setting set by a service
@@ -129,7 +134,14 @@ PIN or a hash.
 - Wrong: error `wrong_pin` (`translation_placeholders.retry_in`: seconds of the lockout this guess started, `0` for
   none).
 - Locked out: error `locked_out`, `translation_placeholders.retry_in` seconds.
-- No Parent PIN set in Hearth: error `no_pin`.
+- No adult has a Parent PIN in Hearth: error `no_pin`. Only this answer means "no PIN is set".
+- Hearth isn't ready (reloading, or not loaded yet): error `unavailable`, `translation_placeholders.retry_in` seconds
+  (or `unknown_command` before it has loaded). This never means "no PIN".
+
+**The panel keeps its door locked (the adult screen shut) on every error**, and on no answer at all: only a right PIN
+opens it. `wrong_pin`, `locked_out`, `unavailable`, `unknown_command`, `unauthorized`, a lost connection or anything
+else is "not now", never "open" and never "check locally". (What the panel does on `no_pin` is its own choice; it must
+not be what it does on any other error.)
 
 (The handoff's `parent_pins` and `parent_pins_version` are not in the document: no PIN hash leaves Home Assistant.)
 
