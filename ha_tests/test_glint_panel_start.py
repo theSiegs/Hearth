@@ -263,6 +263,10 @@ async def test_a_report_keeps_the_room_layout_built_in_kinds_only(
     assert "room_layout" not in _panels(hass).panels[PANEL_ID]
     assert (await _send(ws, 2, body, "report", room_layout=ROOM))["success"]
     assert _panels(hass).panels[PANEL_ID]["room_layout"] == ROOM
+    # A kind this server doesn't know yet (a newer panel's) is left out, not the report
+    newer = {"id": "future_stack", "kind": "future_stack", "col": 1, "row": 5, "w": 2, "h": 1}
+    assert (await _send(ws, 3, body, "report", room_layout=[*ROOM, newer]))["success"]
+    assert _panels(hass).panels[PANEL_ID]["room_layout"] == ROOM
     # The room layout isn't the panel's Start: the document is unchanged
     assert _panels(hass).document(PANEL_ID)["start"] is None
 

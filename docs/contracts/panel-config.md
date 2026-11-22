@@ -178,7 +178,8 @@ holds (`get_panel` says whether it's up to date). `unpaired: true` removes the p
 `room_layout` (since 1.1; the panel sends it only to a server whose document says `glint.panel-config/1.1` or later,
 and only when it changes): the room's layout as the panel lays it out, in `start`'s tile shape, built-in kinds only.
 The server keeps the last one per panel only to start a first `change_panel_start` from; it is not the panel's Start.
-A layout that isn't right: error `invalid` (as `set_start`), nothing of the report taken. `null` forgets it.
+A tile of a kind the server doesn't know (a newer panel's) is left out of it, so a new kind never fails a report.
+Otherwise a layout that isn't right: error `invalid` (as `set_start`), nothing of the report taken. `null` forgets it.
 
 `page` (since 1.1, sent as `room_layout` is): `{"cols", "rows"}`, whole numbers 1 to 12, the panel's page in cells. The
 server keeps the last one per panel; `change_panel_start` fits tiles on it (first fit, and every op's bounds). Before

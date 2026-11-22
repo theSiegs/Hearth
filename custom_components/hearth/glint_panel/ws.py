@@ -12,7 +12,7 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
 
 from . import start
-from .const import BY_PANEL, MAX_PAGE, MAX_SEED_BYTES, MAX_STARTS, ws_type
+from .const import BY_PANEL, MAX_PAGE, MAX_SEED_BYTES, MAX_STARTS, START_KINDS, ws_type
 from .document import Refused
 from .manager import HelloRefused, Panels
 
@@ -182,8 +182,10 @@ def async_register_commands(hass: HomeAssistant, domain: str) -> None:
             connection.send_error(msg["id"], "too_often", "Report on change only")
             return
         if msg.get("room_layout") is not None:
+            # A tile of a kind this server doesn't know yet (a newer panel) is left out, not the whole report
+            known = [t for t in msg["room_layout"] if not isinstance(t, dict) or t.get("kind") in START_KINDS]
             try:
-                msg = {**msg, "room_layout": start.check_tiles(msg["room_layout"], panels.never_dealt, built_in_only=True)}
+                msg = {**msg, "room_layout": start.check_tiles(known, panels.never_dealt, built_in_only=True)}
             except Refused as err:
                 _invalid(connection, msg["id"], domain, str(err))
                 return
