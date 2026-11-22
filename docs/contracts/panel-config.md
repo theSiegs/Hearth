@@ -34,7 +34,8 @@ As for TVs and phones (`docs/contracts/device-api.md`), with kind `panel`:
   (bigger, or not an object: 400). It is untrusted: only known fields are kept, an entity Home Assistant doesn't have
   is dropped, a field of the wrong type is dropped, and a value equal to the derived default isn't kept. It is taken
   once, at the panel's first pairing; house-wide values in it (calendars, night, doorbell, routine windows, commute,
-  the photo album) are taken only while the house has none. A valid `proxy.key` is kept, so an ESPHome proxy already
+  the photo album) are taken only while the house has none. `doors.pin_to_unlock` is never taken from a seed: the PIN
+  stays on until an adult turns it off. A valid `proxy.key` is kept, so an ESPHome proxy already
   set up keeps working, and so is a valid `proxy.name` (see the document), so ESPHome sees the same device.
 - The answer is as today: `{pairing_id, code, expires_in, approvers}`.
 - A paired TV can't vouch for a panel: tickets are for TVs and phones only.
@@ -152,7 +153,7 @@ such as presence and the room's thermostat itself).
 
 ```json
 {
-  "schema": "glint.panel-config/1",
+  "schema": "glint.panel-config/1.1",
   "served_by": "hearth",
   "version": "9c1e04aa",
   "panel": {"device_id": "panel-1a2b3c4d", "name": "Kitchen panel", "area_id": "kitchen",

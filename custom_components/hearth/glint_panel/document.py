@@ -369,6 +369,9 @@ def clean_seed(seed: Any, known: Known, house: dict[str, Any]) -> tuple[dict[str
         return part.get(name) if isinstance(part, dict) else None
 
     for (section, name), key in _SEED_PANEL.items():
+        if key == "pin_to_unlock":
+            # Never from an unchecked seed: the PIN stays on until an adult turns it off
+            continue
         if (value := panel_value(key, field(section, name), known, strict=False)) is not None:
             panel[key] = value
     for (section, name), key in _SEED_HOUSE.items():

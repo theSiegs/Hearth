@@ -310,6 +310,8 @@ async def test_the_seed_is_taken_once_known_fields_and_entities_only(
         "routines": {"windows": [dict(w) for w in DEFAULT_WINDOWS]},
         "proxy": {"on": True, "key": PROXY_KEY, "name": "bedroom-tablet"},
         "news": {"seen": "input_text.panel_seen"},
+        # Never taken from a seed: the PIN stays on
+        "doors": {"pin_to_unlock": False},
     }
     hass.states.async_set("input_text.panel_seen", "")
     await _pair_panel(hass, client, area_id="kitchen", seed=seed)

@@ -231,6 +231,9 @@ def _approved(hass: HomeAssistant, pairing, secret: str) -> dict[str, Any]:
     options = entries[0].options if entries else {}
     roles = options.get(CONF_ROLES, {})
     return {
+        # What the device's kind adds to its answer, handed over once with the secret (none so far): first, so it
+        # never replaces one of Hearth's own fields below
+        **pairing.answer,
         "status": "approved",
         "contract": CONTRACT,
         "device_id": pairing.device_id,
@@ -242,8 +245,6 @@ def _approved(hass: HomeAssistant, pairing, secret: str) -> dict[str, Any]:
         "push": push_answer(_server(options), pairing.push_topic) if pairing.kind == KIND_MOBILE else None,
         # The client locked with this pairing ({"id", "companions"}), null when the device sent none
         "client": locked(pairing.client),
-        # What the device's kind adds to its answer, handed over once with the secret (none so far)
-        **pairing.answer,
     }
 
 

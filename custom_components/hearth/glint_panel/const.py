@@ -21,7 +21,6 @@ CONNECTED_GRACE = timedelta(minutes=2)
 PUSH_DELAY = 1.0
 # A pair body's seed (the panel's settings before it paired), as JSON
 MAX_SEED_BYTES = 16 * 1024
-# A panel's long-lived access token: the lifespan Home Assistant's own profile page offers at most
 # A panel may report this many times a minute (it reports on change only)
 MAX_REPORTS = 30
 REPORT_WINDOW = timedelta(seconds=60)

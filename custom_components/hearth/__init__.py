@@ -1495,9 +1495,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> b
     # Work under way (a Family Link write, a store write) finishes first, so the flush saves what it did
     await async_wait_for_entry_tasks(hass, entry.entry_id)
     await entry.runtime_data.async_flush()
-    await glint_panel.Panels.get(hass, DOMAIN).async_detach()
     platforms = [*PLATFORMS, *PANEL_PLATFORMS] if hass.data.pop(_PANEL_PLATFORMS_LOADED, False) else PLATFORMS
-    return await hass.config_entries.async_unload_platforms(entry, platforms)
+    unloaded = await hass.config_entries.async_unload_platforms(entry, platforms)
+    if unloaded:
+        # Only then: an entry that stays loaded keeps serving its panels
+        await glint_panel.Panels.get(hass, DOMAIN).async_detach()
+    return unloaded
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
