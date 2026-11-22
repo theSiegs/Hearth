@@ -898,3 +898,18 @@ pairing_answer:
       selector:
         entity:
           domain: person
+
+adult_offer_answer:
+  fields:
+    person:
+      required: true
+      selector:
+        entity:
+          domain: person
+    answer:
+      required: true
+      selector:
+        select:
+          options:
+            - adult
+            - not_now

@@ -47,6 +47,7 @@ from homeassistant.helpers import llm
 from homeassistant.util import dt as dt_util
 from homeassistant.util.json import JsonObjectType
 
+from .adult_offer import note_refused
 from .auth import is_adult_user
 from .client_settings import SettingsError
 from .const import CONF_KIND, DOMAIN, KIND_TV
@@ -681,6 +682,8 @@ def _adult(hass: HomeAssistant, connection, msg):
         connection.send_error(msg["id"], "not_set_up", "Hearth isn't set up")
         return None
     if not is_adult_user(hass, hub, connection.user):
+        # Maybe an adult nobody marked yet: the administrators are asked once (adult_offer.py)
+        note_refused(hass, hub, connection.user)
         connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Unauthorized")
         return None
     return hub, hub.glint_agent.reachable(own_person(hass, connection.user))

@@ -1274,6 +1274,20 @@
           "description": "Whose phone it is (a phone only)."
         }
       }
+    },
+    "adult_offer_answer": {
+      "name": "Answer an offer to make someone an adult",
+      "description": "Answers Hearth's offer for a person who signed in from a phone: adult makes them an adult on Hearth's page, not_now never asks again. Administrators only.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "The person Hearth asked about."
+        },
+        "answer": {
+          "name": "Answer",
+          "description": "adult or not_now."
+        }
+      }
     }
   },
   "issues": {

@@ -314,6 +314,8 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
         "seen_profiles": household.seen_profiles(),
         "devices": devices,
         "pairings": pairings,
+        # People who signed in from a phone, that Hearth asks the administrators about (adult_offer.py)
+        "adult_offers": hub.adult_offers.open_offers(),
         "groups": groups,
         "builtin_groups": [g.id for g in BUILTIN_GROUPS],
         "budgets": budgets,

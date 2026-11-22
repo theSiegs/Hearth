@@ -1154,6 +1154,17 @@ class HearthPanel extends HTMLElement {
         await this._setOption("roles", roles, `${this._personName(d.person)}: ${d.role || "not in Hearth"}`);
         return;
       }
+      case "adult-offer": {
+        // Make adult sets the role (the entry reloads with it); Not now: never asked again
+        await this._service(
+          "adult_offer_answer",
+          { person: d.person, answer: d.answer },
+          d.answer === "adult" ? `${this._personName(d.person)}: adult` : "Not asked again"
+        );
+        await new Promise((r) => setTimeout(r, 900));
+        await this._loadConfig();
+        return;
+      }
       case "approve":
       case "deny": {
         const person = this._value(`#pair-person-${CSS.escape(d.pairing)}`) || null;
@@ -2585,9 +2596,28 @@ class HearthPanel extends HTMLElement {
     return lines.join("");
   }
 
+  // Someone who signed in from a phone and could be an adult (adult_offer.py): Make adult or Not now
+  _adultOfferCards() {
+    return (this._config.adult_offers || [])
+      .map(
+        (o) => `<div class="card attention">
+          <div class="row">
+            <ha-icon icon="mdi:account-question-outline"></ha-icon>
+            <div class="grow"><div class="strong">${esc(o.name)} signed in from a phone. Make them an adult in Hearth?</div>
+              <div class="muted">Adults see the kids' time and can give more.</div></div>
+          </div>
+          <div class="actions">
+            <button class="btn" data-action="adult-offer" data-person="${esc(o.person)}" data-answer="not_now">Not now</button>
+            <button class="btn primary" data-action="adult-offer" data-person="${esc(o.person)}" data-answer="adult">Make adult</button>
+          </div>
+        </div>`
+      )
+      .join("");
+  }
+
   _pairingCards() {
     const pairings = this._config.pairings || [];
-    if (!pairings.length) return "";
+    if (!pairings.length) return this._adultOfferCards();
     const persons = this._config.persons || [];
     return pairings
       .map(
@@ -2606,7 +2636,7 @@ class HearthPanel extends HTMLElement {
           </div>
         </div>`
       )
-      .join("");
+      .join("") + this._adultOfferCards();
   }
 
   // Today (the redesign, docs/home-assistant-integration.md and the design review): does anything need an adult, in one
