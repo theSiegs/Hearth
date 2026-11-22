@@ -1104,6 +1104,8 @@ const APP_BLOCKS = {
   ],
   browsers: { "org.mozilla.firefox": "Firefox" },
   app_stores: { "com.sec.android.app.samsungapps": "Galaxy Store" },
+  ai_companion_rule: true,
+  ai_companions: { "ai.character.app": "Character AI", "ai.replika.app": "Replika" },
   kids: [
     {
       person: "person.sam",
@@ -1112,6 +1114,7 @@ const APP_BLOCKS = {
       blocks: [
         { app: "org.mozilla.firefox", name: "Firefox", why: ["browser"], state: "blocked" },
         { app: "com.example.chat", name: "Chat", why: ["adult"], state: "parent" },
+        { app: "ai.character.app", name: "Character AI", why: ["ai_companion"], state: "blocked" },
       ],
       exempt: [],
       web_filter: { entity_id: "switch.sam_web_filtering", on: true },
@@ -1133,6 +1136,9 @@ test("Blocked by Hearth: the browser rule, where Hearth filters sites, each kid'
   assert.match(html, /data-change="block-browsers" checked> Block browsers Hearth doesn't support/);
   assert.match(html, /Hearth filters sites in: Chrome on Android, Microsoft Edge on Windows, Microsoft Edge on Xbox/);
   assert.match(html, /Galaxy Store/);
+  assert.match(html, /data-change="block-ai-companions" checked> Block AI companion apps/);
+  assert.match(html, /Character AI, Replika, and apps named like them/);
+  assert.match(html, /an AI companion app · blocked/);
   assert.match(html, /a browser Hearth doesn&#39;t support · blocked/);
   assert.match(html, /by an adult · blocked by a parent in Family Link/);
   assert.match(html, /data-action="app-unblock" data-app="org.mozilla.firefox" data-name="Firefox" data-person="person.sam">Unblock/);
@@ -1161,6 +1167,7 @@ test("Block and Unblock go through hearth.block_app and hearth.unblock_app; the 
     await p._act("app-block", { dataset: { app: "com.example.game", name: "Game" } });
     await p._act("app-unblock", { dataset: { app: "org.mozilla.firefox", name: "Firefox", person: "person.sam" } });
     await p._act("block-browsers", { checked: false, dataset: {} });
+    await p._act("block-ai-companions", { checked: false, dataset: {} });
   } finally {
     globalThis.setTimeout = realTimeout;
   }
@@ -1168,7 +1175,10 @@ test("Block and Unblock go through hearth.block_app and hearth.unblock_app; the 
     ["hearth", "block_app", { app: "com.example.game" }],
     ["hearth", "unblock_app", { app: "org.mozilla.firefox", people: ["person.sam"] }],
   ]);
-  assert.deepEqual(ws, [{ type: "hearth/config/set", key: "block_unsupported_browsers", value: false }]);
+  assert.deepEqual(ws, [
+    { type: "hearth/config/set", key: "block_unsupported_browsers", value: false },
+    { type: "hearth/config/set", key: "block_ai_companions", value: false },
+  ]);
 });
 
 test("a category's row: +15 min of its own bonus beside Raise limit, with Undo; a bonus line for a category without a limit", async () => {

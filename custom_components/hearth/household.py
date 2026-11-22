@@ -2376,7 +2376,7 @@ class Household:
         else:
             packages = set()
         blocked += self.sync.app_limits_reached(person, packages, midnight)
-        # Hearth's own block of the app (hearth.block_app, or the browser rule): no allow lifts it
+        # Hearth's own block of the app (hearth.block_app, or a block rule: browsers, AI companion apps): no allow lifts it
         if app is not None:
             blocked += self.blocks.explain(person, app)
             # A parent's own block, made in Family Link or Family Safety: no allow lifts it either

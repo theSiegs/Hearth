@@ -67,6 +67,7 @@ from .notifications import clear_pairing
 from .schooldays import CALENDAR_OFF, CALENDAR_SCHOOL, CONF_SCHOOL_DAYS, SCHOOL_BUDGET
 from .schedule import CONF_SCHEDULE, CONF_SITE_LIST
 from .backstop import CONF_FL_BACKSTOP, CONF_FL_BACKSTOP_MARGIN
+from .app_blocks import CONF_BLOCK_AI_COMPANIONS, CONF_BLOCK_UNSUPPORTED_BROWSERS
 from .time_model import BACKSTOP_MARGIN
 from .asks import AMOUNTS, CONF_OFFER_MORE
 from .suggest_push import CONF_SUGGEST_PUSH, pairs as suggest_pairs
@@ -180,6 +181,7 @@ class HearthOptionsFlow(OptionsFlow):
                 "remove_group",
                 "app_categories",
                 "voice_assistants",
+                "blocked_apps",
                 "parent_pin",
                 "push",
             ],
@@ -332,6 +334,30 @@ class HearthOptionsFlow(OptionsFlow):
             {vol.Optional("enabled", default=bool(options.get(CONF_VOICE_ASSISTANTS))): BooleanSelector()}
         )
         return self.async_show_form(step_id="voice_assistants", data_schema=schema)
+
+    async def async_step_blocked_apps(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """The household's block rules (app_blocks.py): browsers Hearth doesn't support (off unless chosen) and AI
+        companion apps (on unless turned off). Turning one off unblocks only what it blocked."""
+        options = self._options()
+        if user_input is not None:
+            return self.async_create_entry(
+                data={
+                    **options,
+                    CONF_BLOCK_UNSUPPORTED_BROWSERS: bool(user_input.get(CONF_BLOCK_UNSUPPORTED_BROWSERS)),
+                    CONF_BLOCK_AI_COMPANIONS: bool(user_input.get(CONF_BLOCK_AI_COMPANIONS)),
+                }
+            )
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    CONF_BLOCK_UNSUPPORTED_BROWSERS, default=bool(options.get(CONF_BLOCK_UNSUPPORTED_BROWSERS))
+                ): BooleanSelector(),
+                vol.Optional(
+                    CONF_BLOCK_AI_COMPANIONS, default=bool(options.get(CONF_BLOCK_AI_COMPANIONS, True))
+                ): BooleanSelector(),
+            }
+        )
+        return self.async_show_form(step_id="blocked_apps", data_schema=schema)
 
     async def async_step_push(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """The ntfy server the phones are pinged through when their state changes (push.py); empty: no pings."""

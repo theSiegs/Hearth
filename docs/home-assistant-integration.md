@@ -810,8 +810,8 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
   below) or `app_limit` (a parent's own Family Link app limit used up on a device: by the Apps with time limits
   sensor, with `app`, `device`, `limit_minutes` and `used_minutes`, until midnight; Hearth's allows and bonuses don't
   raise it, so an adult raises or removes it in Family Link; Hearth's own pauses aren't listed here) or `blocked_app`
-  (Hearth's own block of the app, [Blocked apps](#blocked-apps): `by` is `hearth.block_app` or
-  `block_unsupported_browsers`, with `app` and `why`, until null; no allow lifts it; or a parent's own block made in
+  (Hearth's own block of the app, [Blocked apps](#blocked-apps): `by` is `hearth.block_app`,
+  `block_unsupported_browsers` or `block_ai_companions`, with `app` and `why`, until null; no allow lifts it; or a parent's own block made in
   Family Link or Family Safety, not by Hearth: `by` is `family_link` or the Family Safety Applications sensor, with
   `provider`, `app` and `why: ["parent"]`, until null; only unblocking it there lifts it, since `hearth.unblock_app` leaves a parent's own block). `place` is kept for place rules (none are built yet: a place only ends an exception so far). `until` is when it's allowed again (the latest of the blocks, null when one doesn't
   say), or, when allowed thanks to an exception, when that ends. `lifted` lists the holds an allow lifts now.
@@ -873,7 +873,24 @@ so Hearth's pauses, its schedule and its blocks stay in step (`app_blocks.py`).
   Store, Amazon Appstore, Aptoide, APKPure, F-Droid, AppGallery, Uptodown, GetApps). An app an adult unblocks stays
   unblocked. A browser added to the supported list later, and everything when the rule is turned off, is unblocked,
   only where Hearth was the one that blocked it.
-- **Hearth's page** (Apps > Blocked by Hearth): the rule, the browsers Hearth filters sites in, each kid's blocks (why,
+- **Block AI companion apps** (option `block_ai_companions`, **on** unless an adult turns it off; Configure > Blocked
+  apps, next to the browser rule, or Hearth's page > Apps > Blocked by Hearth). AI companion and character role-play
+  chat apps on a kid's Android devices are blocked as soon as Family Link lists them (why: `ai_companion`, "an AI
+  companion app" on the page), with everything above (an adult's unblock is kept, a parent's own block stays theirs,
+  one not installed waits). Hearth knows one by:
+  - its package (`AI_COMPANIONS`, each checked on Google Play): Character AI, Talkie, Chai, Replika, Nomi, Kindroid,
+    PolyBuzz, Linky AI, Saylo, Botify AI, Paradot, EVA AI, HiWaifu;
+  - or its name (Hearth's app catalog's or Family Link's, and Hearth's app categories'): "AI" followed by companion,
+    girlfriend, boyfriend, friend, character, role-play, waifu, lover, soulmate or crush; "Character AI"; "chat with
+    (AI) characters"; "virtual girlfriend/boyfriend"; "companion/girlfriend/waifu AI"; "role-play AI/chat". "AI chat"
+    alone isn't enough: general assistants are named like that too.
+
+  General assistants and tools are never blocked by this rule, whatever their names say: Google Gemini, Microsoft
+  Copilot and Microsoft 365 Copilot, ChatGPT, Claude, Perplexity, Meta AI, Grok, and Google Chat; nor is an app whose
+  name sounds like an assistant, a tool, a messaging or a school app, or one Hearth's app categories know as messaging
+  or education. To block one of those, block it with `hearth.block_app`. Turning the rule off unblocks only what this
+  rule blocked: the browser rule's blocks, an adult's and a parent's stay.
+- **Hearth's page** (Apps > Blocked by Hearth): the rules, the browsers Hearth filters sites in, each kid's blocks (why,
   where it stands, Unblock), and Windows and Xbox: "covered by Family Safety web filtering: on", or a warning when a
   kid's Family Safety web filtering switch is off or not found. Every Android app's row in Every app has Block (every
   kid with Family Link). `hearth/config`'s `app_blocks` carries it all.
