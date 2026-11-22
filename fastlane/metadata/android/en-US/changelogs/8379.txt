@@ -1,0 +1,1 @@
+Home Assistant: Glint Panels get a to-do lists tile on Start; tapping the "make adult" offer opens Hearth's page, at home or away.

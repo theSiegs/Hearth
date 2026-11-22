@@ -3,6 +3,13 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.11.53
+
+### Home Assistant integration
+
+- **Glint Panels: a to-do lists tile on Start** (`lists_stack`, at most once). A panel's reported room layout leaves out a tile kind Hearth doesn't know yet instead of refusing the whole report.
+- **The Make adult offer opens Hearth's page** when tapped, by a relative path, so it works away from home too.
+
 ## 2026.11.52
 
 ### Home Assistant integration
