@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import HomeAssistant
 
-from .attention import ADMINS, ADULTS, NOTICE, Action, Item, attention
+from .attention import ADMINS, NOTICE, Action, Item, attention
 
 if TYPE_CHECKING:
     from .hub import Pairing
@@ -90,8 +90,9 @@ def panel_hello_notification_id(device_id: str) -> str:
 
 
 def notify_panel_hello(hass: HomeAssistant, device_id: str, title: str) -> None:
-    """A Glint Panel being set up with no room (or on a login that can't approve it) waits: the adults are told where to
-    pick its room. The notice never approves it by itself: no buttons."""
+    """A Glint Panel being set up waits for an approval in HA (no room, a kid's login, an old tablet, a panel that is
+    connected, or an approval another login asked for): the administrators (only they can approve it) are told where
+    to pick its room. The notice never approves it by itself: no buttons."""
     short = device_id[-4:]
     attention(hass).notify(
         Item(
@@ -99,7 +100,7 @@ def notify_panel_hello(hass: HomeAssistant, device_id: str, title: str) -> None:
             f"A panel wants to join ({title}, …{short}): pick its room on Hearth's page or in Devices & services.",
             title="A panel wants to join",
             urgency=NOTICE,
-            audience=ADULTS,
+            audience=ADMINS,
             bell=True,
             phone=True,
             once=True,
@@ -113,4 +114,4 @@ def notify_panel_hello(hass: HomeAssistant, device_id: str, title: str) -> None:
 
 def clear_panel_hello(hass: HomeAssistant, device_id: str) -> None:
     """The panel's hello was approved or refused: its notice goes, from the bell and the phones."""
-    attention(hass).clear(panel_hello_notification_id(device_id), audience=ADULTS, bell_too=True, phone=True)
+    attention(hass).clear(panel_hello_notification_id(device_id), audience=ADMINS, bell_too=True, phone=True)

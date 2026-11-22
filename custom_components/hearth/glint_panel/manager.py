@@ -101,6 +101,12 @@ class Panels:
         self._live: dict[str, _Live] = {}
         # Open hello subscriptions, by the hello's device id: {key: (its login's user id, send)}
         self._hello_subs: dict[str, dict[int, tuple[str | None, Callable[[dict[str, Any]], None]]]] = {}
+        # An approved hello's secret until the panel takes it up, by the hello's device id: never stored (after a
+        # restart the hello gets a fresh one, and the old one stops)
+        self._hello_secrets: dict[str, str] = {}
+        # When the serving entry last attached: for CONNECTED_GRACE after, every panel counts as connected for a hello
+        # (seems_connected), since a healthy panel's socket isn't back yet
+        self._attached_at: datetime | None = None
         self._dirty = False
         self._push_timer: CALLBACK_TYPE | None = None
         self._grace_timers: dict[str, CALLBACK_TYPE] = {}
@@ -137,7 +143,7 @@ class Panels:
             self._loaded = True
             # The registry's names (a proxy's name comes from its device's) need the entry before the host serves
             self.entry_id = host.entry_id
-            if self._give_keys() | self._give_macs() | self._prune_hellos():
+            if self._give_keys() | self._give_macs() | self._forget_secrets() | self._prune_hellos(host):
                 self._save()
             self.hass.bus.async_listen(dr.EVENT_DEVICE_REGISTRY_UPDATED, self._device_updated)
             self.hass.bus.async_listen(ar.EVENT_AREA_REGISTRY_UPDATED, self._area_updated)
@@ -145,11 +151,21 @@ class Panels:
             self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._stopping)
         self.host = host
         self.entry_id = host.entry_id
+        self._attached_at = dt_util.utcnow()
         if first:
             # Hellos still waiting when Home Assistant stopped: their discovered cards again (no second notice)
             for device_id, entry in self.hellos.items():
                 if entry.get("status") == "pending":
                     host.hello_waiting(device_id, self._hello_title(entry), again=True)
+
+    def _forget_secrets(self) -> bool:
+        """An approved hello's secret is never kept in the store: one stored before (the secret in plain text) is
+        dropped (its hello gets a fresh secret). Whether any was."""
+        dropped = False
+        for entry in self.hellos.values():
+            if entry.pop("secret", None) is not None:
+                dropped = True
+        return dropped
 
     def _give_keys(self) -> bool:
         """Every panel has its proxy key: one paired before every panel got one (or with a stored key that isn't one)
@@ -241,7 +257,7 @@ class Panels:
 
     def note_login(self, device_id: str, user: str | None, token: str | None, user_id: str | None = None) -> None:
         """Who the panel's subscription signed in as (the user's name and the token's name), for get_panel; the user's
-        id is kept with the panel (a hello on the same login is the panel's own: hello.at_once)."""
+        id is kept with the panel (a hello on the same login is the panel's own: hello.at_once's own_login)."""
         live = self._live.setdefault(device_id, _Live())
         live.login = {"user": user, "token": token}
         record = self.panels.get(device_id)
@@ -365,8 +381,9 @@ class Panels:
         name = device.name_by_user or device.name or "Panel"
 
         if record is not None:
-            # Pairing again: the old secret's subscriptions end
+            # Pairing again: the old secret's subscriptions end, and so does an approved hello not taken up yet
             self._end_subscriptions(device_id)
+            self._drop_approvals(device_id)
 
         values: dict[str, Any] = dict(record.get("values", {})) if record else {}
         key = record.get("key") if record else None
@@ -391,7 +408,8 @@ class Panels:
             # The panel's ESPHome proxy MAC, kept for life: a new panel's derived from its id
             "mac": hello.clean_mac(record.get("mac") if record else None) or hello.mac_from_id(device_id),
             # The panel's own Start, its last changes (undo), the room layout and page it last reported stay too, and
-            # so do its tablets' ids, the login it last subscribed with and when it was last connected
+            # so do its tablets' ids, the login it last subscribed with and when it was last connected (pairing is
+            # from the panel's own id: that is its current tablet again)
             **{
                 k: record[k]
                 for k in ("start", "start_versions", "room_layout", "page", "tablet_ids", "user_id", "last_connected")
@@ -417,6 +435,7 @@ class Panels:
         # An approved hello not yet taken up goes with it (its secret is dead)
         for gone in [h for h, entry in self.hellos.items() if entry.get("target") == device_id]:
             self.hellos.pop(gone)
+            self._hello_secrets.pop(gone, None)
         if from_registry and (device := self.registry_device(device_id)) is not None:
             dr.async_get(self.hass).async_remove_device(device.id)
         await self.async_flush()
@@ -698,6 +717,13 @@ class Panels:
             return True
         return live.closed_at is not None and dt_util.utcnow() - live.closed_at < CONNECTED_GRACE
 
+    def seems_connected(self, device_id: str) -> bool:
+        """connected, or the serving entry attached (Home Assistant started) less than CONNECTED_GRACE ago: a healthy
+        panel's socket may not be back yet, so a hello never takes its place or its secret as if it were offline."""
+        if self._attached_at is not None and dt_util.utcnow() - self._attached_at < CONNECTED_GRACE:
+            return True
+        return self.connected(device_id)
+
     @callback
     def _changed(self) -> None:
         """Something in the documents may have changed: entities now, subscriptions in one push a moment later."""
@@ -777,8 +803,10 @@ class Panels:
     def hellos(self) -> dict[str, dict[str, Any]]:
         return self.data["hellos"]
 
-    def _prune_hellos(self) -> bool:
-        """A hello unseen for HELLO_UNSEEN goes, and an approved one whose panel is gone. Whether any did."""
+    def _prune_hellos(self, host: PanelHost | None = None) -> bool:
+        """A hello unseen for HELLO_UNSEEN goes, and an approved one whose panel is gone; a waiting one's card and
+        notice go with it. Whether any did (the caller saves)."""
+        host = host or self.host
         now = dt_util.utcnow()
         gone = []
         for device_id, entry in self.hellos.items():
@@ -788,7 +816,10 @@ class Panels:
             elif entry.get("status") == "approved" and entry.get("target") not in self.panels:
                 gone.append(device_id)
         for device_id in gone:
-            self.hellos.pop(device_id)
+            entry = self.hellos.pop(device_id)
+            self._hello_secrets.pop(device_id, None)
+            if entry.get("status") == "pending" and host is not None:
+                host.hello_answered(device_id)
         return bool(gone)
 
     def _hello_area(self, value: Any) -> ar.AreaEntry | None:
@@ -814,7 +845,8 @@ class Panels:
         hello_id = request["device_id"]
         if host.taken(hello_id):
             raise HelloRefused("taken", "That id is another device's: a panel never takes a TV's or a phone's")
-        self._prune_hellos()
+        if self._prune_hellos():
+            self._save()
         now = dt_util.utcnow().isoformat()
         user_id = user.id if user is not None else None
         trusted = host.trusted(user)
@@ -825,25 +857,42 @@ class Panels:
             entry["last_seen"] = now
             self._save()
             if trusted or user_id == entry.get("user_id"):
-                # Not taken up yet (no subscribe with its secret): the same answer again
-                send(self._approved(entry))
-            else:
-                # Another login never gets the secret
-                send({"status": "pending"})
-            return self._hello_sub(hello_id, user_id, send)
+                # Not taken up yet (no subscribe with its secret): approved again (a fresh secret after a restart)
+                send(self._approved(hello_id, entry))
+                return self._hello_sub(hello_id, user_id, send)
+            # Another login never gets the secret: the approval stops (its secret with it) and the hello waits for an
+            # approval in HA, on this login, with its card and notice
+            self._stop_approval(hello_id, entry)
+            return self._wait(hello_id, entry, request, user_id, login, now, send, new=True)
+
+        # A refusal stands for HELLO_DENIED_FOR, whatever the hello names now
+        denied_at = dt_util.parse_datetime((entry or {}).get("denied_at") or "")
+        if entry is not None and entry.get("status") == "denied" and denied_at is not None:
+            if dt_util.utcnow() - denied_at < HELLO_DENIED_FOR:
+                entry["last_seen"] = now
+                self._save()
+                send({"status": "denied"})
+                return self._hello_sub(hello_id, user_id, send)
 
         area = self._hello_area(request.get("area"))
         found = hello.match(
-            hello_id, area.id if area else None, request.get("replaces"), self.panels, self.area_id, self.connected
+            hello_id, area.id if area else None, request.get("replaces"), self.panels, self.area_id, self.seems_connected
         )
-        if hello.at_once(found) and not host.kid(user):
+        gate: dict[str, bool] = {}
+        if found.rule == hello.KNOWN and found.device_id is not None:
+            record = self.panels[found.device_id]
+            gate = {
+                "own_login": user_id is not None and user_id == record.get("user_id"),
+                "connected": self.seems_connected(found.device_id),
+                "current": hello_id == hello.current_tablet(found.device_id, record),
+            }
+        if hello.at_once(found, kid=host.kid(user), trusted=trusted, **gate):
             # A known panel, or one whose place it takes, keeps its room
             target, secret = self._take(found, hello_id, area if found.rule == hello.NEW else None, request)
             was_waiting = entry is not None and entry.get("status") == "pending"
             entry = {
                 "status": "approved",
                 "target": target,
-                "secret": secret,
                 "user_id": user_id,
                 "signed_in_as": login,
                 "name": request.get("name"),
@@ -852,23 +901,33 @@ class Panels:
                 "last_seen": now,
             }
             self.hellos[hello_id] = entry
+            self._hello_secrets[hello_id] = secret
             self._save()
             if was_waiting:
                 host.hello_answered(hello_id)
-            send(self._approved(entry))
+            send(self._approved(hello_id, entry))
             return self._hello_sub(hello_id, user_id, send)
 
-        denied_at = dt_util.parse_datetime((entry or {}).get("denied_at") or "")
-        if entry is not None and entry.get("status") == "denied" and denied_at is not None:
-            if dt_util.utcnow() - denied_at < HELLO_DENIED_FOR:
-                entry["last_seen"] = now
-                self._save()
-                send({"status": "denied"})
-                return self._hello_sub(hello_id, user_id, send)
         new = entry is None or entry.get("status") != "pending"
-        before = entry if not new and entry is not None else {}
         if new and sum(1 for e in self.hellos.values() if e.get("status") == "pending") >= MAX_HELLOS:
             raise HelloRefused("try_later", "Too many panels are waiting: approve or refuse them in Home Assistant")
+        return self._wait(hello_id, None if new else entry, request, user_id, login, now, send, new=new)
+
+    def _wait(
+        self,
+        hello_id: str,
+        before: dict[str, Any] | None,
+        request: dict[str, Any],
+        user_id: str | None,
+        login: dict[str, str | None],
+        now: str,
+        send: Callable[[dict[str, Any]], None],
+        *,
+        new: bool,
+    ) -> Callable[[], None]:
+        """The hello waits for an approval in HA ([before]: the entry it was, whose first sighting and seed it keeps);
+        [new]: its card and the administrators' notice."""
+        before = before or {}
         entry = {
             "status": "pending",
             "first_seen": before.get("first_seen") or now,
@@ -887,9 +946,17 @@ class Panels:
         self.hellos[hello_id] = entry
         self._save()
         if new:
-            host.hello_waiting(hello_id, self._hello_title(entry))
+            assert self.host is not None
+            self.host.hello_waiting(hello_id, self._hello_title(entry))
         send({"status": "pending"})
         return self._hello_sub(hello_id, user_id, send)
+
+    def _stop_approval(self, hello_id: str, entry: dict[str, Any]) -> None:
+        """An approved hello not taken up stops: its secret no longer opens its panel (the panel gets one nobody
+        holds, until an approval in HA)."""
+        self._hello_secrets.pop(hello_id, None)
+        if (target := entry.get("target")) in self.panels:
+            self._rekey(target)
 
     def _hello_sub(
         self, hello_id: str, user_id: str | None, send: Callable[[dict[str, Any]], None]
@@ -912,28 +979,50 @@ class Panels:
             if not only or sub_user == user_id:
                 send(message)
 
+    def _rekey(self, target: str) -> str:
+        """The panel [target] gets a new secret, returned: the old one stops at once (its subscriptions are told)."""
+        assert self.host is not None
+        secret = secrets.token_urlsafe(32)
+        record = self.panels[target]
+        record["secret_hash"] = self.host.hash_secret(secret)
+        record["repaired_at"] = dt_util.utcnow().isoformat()
+        self._end_subscriptions(target)
+        self._save()
+        return secret
+
+    def _drop_approvals(self, target: str, keep: str | None = None) -> None:
+        """Approved hellos for [target] not taken up (but [keep]'s) go: the panel's secret changed, theirs is dead."""
+        for hello_id in [
+            h
+            for h, entry in self.hellos.items()
+            if h != keep and entry.get("status") == "approved" and entry.get("target") == target
+        ]:
+            self.hellos.pop(hello_id)
+            self._hello_secrets.pop(hello_id, None)
+
     def _take(
         self, found: hello.Match, hello_id: str, area: ar.AreaEntry | None, request: dict[str, Any]
     ) -> tuple[str, str]:
         """The hello becomes [found]'s panel with a new secret (the old one stops at once): the same panel (KNOWN), the
         offline panel whose place it takes (TAKES_PLACE; its id joins the panel's tablet ids), or a new panel in
-        [area] (NEW). A known panel given an [area] (an approval in HA) moves there. (The panel's device id, the
-        secret.)"""
+        [area] (NEW). The hello's id is the panel's current tablet from now on. A known panel given an [area] (an
+        approval in HA) moves there. (The panel's device id, the secret.)"""
         host = self.host
         assert host is not None
-        secret = secrets.token_urlsafe(32)
-        secret_hash = host.hash_secret(secret)
         if found.rule == hello.NEW:
             assert area is not None
-            self._put_panel(hello_id, request.get("model"), request.get("version"), request.get("seed"), secret_hash, area)
+            secret = secrets.token_urlsafe(32)
+            self._put_panel(
+                hello_id, request.get("model"), request.get("version"), request.get("seed"), host.hash_secret(secret), area
+            )
             return hello_id, secret
         target = found.device_id
         assert target is not None
         record = self.panels[target]
         # Its settings, room, Start, proxy key and MAC and name stay; the old secret's subscriptions end
-        record["secret_hash"] = secret_hash
-        record["repaired_at"] = dt_util.utcnow().isoformat()
-        self._end_subscriptions(target)
+        secret = self._rekey(target)
+        self._drop_approvals(target, keep=hello_id)
+        record["current_tablet"] = hello_id
         updates: dict[str, Any] = {}
         for key, said in (("model", "model"), ("sw_version", "version")):
             if isinstance(request.get(said), str) and request[said] and request[said] != record.get(key):
@@ -965,13 +1054,17 @@ class Panels:
         self._changed()
         return target, secret
 
-    def _approved(self, entry: dict[str, Any]) -> dict[str, Any]:
+    def _approved(self, hello_id: str, entry: dict[str, Any]) -> dict[str, Any]:
+        """The approved answer. Its secret is kept in memory only: after a restart the panel gets a fresh one (the
+        old one stops)."""
         target = entry["target"]
         assert self.host is not None
+        if (secret := self._hello_secrets.get(hello_id)) is None:
+            secret = self._hello_secrets[hello_id] = self._rekey(target)
         return {
             "status": "approved",
             "device_id": target,
-            "secret": entry["secret"],
+            "secret": secret,
             "name": self.name(target),
             "area_id": self.area_id(target),
             "urls": self.host.urls(),
@@ -984,6 +1077,7 @@ class Panels:
         ]
         for hello_id in gone:
             self.hellos.pop(hello_id)
+            self._hello_secrets.pop(hello_id, None)
         if gone:
             self._save()
 
@@ -1016,10 +1110,11 @@ class Panels:
         return next((h for h in self.waiting_hellos() if h["device_id"] == hello_id), None)
 
     def offline_panels(self) -> list[dict[str, Any]]:
-        """The panels a waiting hello may take the place of (not connected), newest offline first."""
+        """The panels a waiting hello may take the place of (not connected: seems_connected, so none right after Home
+        Assistant starts), newest offline first."""
         out = []
         for device_id in self.panels:
-            if self.connected(device_id):
+            if self.seems_connected(device_id):
                 continue
             live = self._live.get(device_id)
             since = live.closed_at.isoformat() if live and live.closed_at else self.panels[device_id].get("last_connected")
@@ -1035,9 +1130,9 @@ class Panels:
         return out
 
     def approve_hello(self, hello_id: str, area_id: str | None, replaces: str | None = None) -> bool:
-        """An adult approved a waiting hello in HA, in the room [area_id] (required): as the panel it already is, in
-        the place of the offline panel [replaces], or as a new panel. False: not waiting, no such room, or that panel
-        is gone or connected now."""
+        """An administrator approved a waiting hello in HA, in the room [area_id] (required): as the panel it already
+        is (its id becomes the panel's current tablet), in the place of the offline panel [replaces], or as a new
+        panel. False: not waiting, no such room, or that panel is gone or connected now (seems_connected)."""
         entry = self.hellos.get(hello_id)
         host = self.host
         if host is None or entry is None or entry.get("status") != "pending" or host.taken(hello_id):
@@ -1048,7 +1143,7 @@ class Panels:
         if (known := hello.panel_of(hello_id, self.panels)) is not None:
             found = hello.Match(hello.KNOWN, known)
         elif replaces:
-            if replaces not in self.panels or self.connected(replaces):
+            if replaces not in self.panels or self.seems_connected(replaces):
                 return False
             found = hello.Match(hello.TAKES_PLACE, replaces)
         else:
@@ -1057,7 +1152,6 @@ class Panels:
         approved = {
             "status": "approved",
             "target": target,
-            "secret": secret,
             "user_id": entry.get("user_id"),
             "signed_in_as": entry.get("signed_in_as"),
             "name": entry.get("name"),
@@ -1066,14 +1160,15 @@ class Panels:
             "last_seen": entry.get("last_seen"),
         }
         self.hellos[hello_id] = approved
+        self._hello_secrets[hello_id] = secret
         self._save()
         host.hello_answered(hello_id)
         # Only to the login that said hello (the one the card named)
-        self._tell_hello(hello_id, self._approved(approved), approved["user_id"], only=True)
+        self._tell_hello(hello_id, self._approved(hello_id, approved), approved["user_id"], only=True)
         return True
 
     def deny_hello(self, hello_id: str) -> bool:
-        """An adult refused a waiting hello: it is told, and answered "denied" for HELLO_DENIED_FOR."""
+        """An administrator refused a waiting hello: it is told, and answered "denied" for HELLO_DENIED_FOR."""
         entry = self.hellos.get(hello_id)
         if self.host is None or entry is None or entry.get("status") != "pending":
             return False

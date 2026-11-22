@@ -10,7 +10,11 @@ How a hello is matched (first rule that fits):
 4. anything else waits for an approval in HA.
 
 Rules 1 to 3 are approved at once on any Home Assistant login but a kid's own (the owner's choice: a setup command
-that names a room needs no step in HA); rule 4, and any hello on a kid's login, waits.
+that names a room needs no step in HA); rule 4, and any hello on a kid's login, waits. Rule 1 has two limits (at_once),
+so a healthy panel is never taken over from another tablet: an id that isn't the panel's current tablet (an old
+tablet) waits unless the login is an administrator's or an adult's, and so does a hello for a panel that is connected
+now, unless the login is also the panel's own. Right after Home Assistant starts every panel counts as connected (its
+socket isn't back yet), so rule 2 never takes a healthy panel's place then.
 """
 
 from __future__ import annotations
@@ -104,6 +108,28 @@ def match(
     return Match(NEW)
 
 
-def at_once(found: Match) -> bool:
-    """Whether [found] is approved without an approval in HA: rules 1 to 3, on any login."""
-    return found.rule != WAITS
+def current_tablet(device_id: str, record: Mapping[str, Any]) -> str:
+    """The id of the tablet the panel [device_id] is on now: the one that last got its secret (the panel's own id until
+    another tablet does)."""
+    current = record.get("current_tablet")
+    return current if isinstance(current, str) and current else device_id
+
+
+def at_once(
+    found: Match,
+    *,
+    kid: bool = False,
+    trusted: bool = False,
+    own_login: bool = False,
+    connected: bool = False,
+    current: bool = True,
+) -> bool:
+    """Whether [found] is approved without an approval in HA. Never rule 4, never on a kid's login ([kid]); rules 2 and
+    3 on any other login. Rule 1 (a known panel): from an id that isn't the panel's [current] tablet (an old one) only
+    on a [trusted] login (an administrator's or an adult's); for a panel [connected] now only on a [trusted] login or
+    the panel's own ([own_login]: the login its subscription last signed in with); else (a reinstall) on any login."""
+    if found.rule == WAITS or kid:
+        return False
+    if found.rule != KNOWN or trusted:
+        return True
+    return current and (own_login or not connected)

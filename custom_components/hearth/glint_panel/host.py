@@ -53,8 +53,8 @@ class PanelHost(Protocol):
         """Where Home Assistant answers, {"internal", "external"} (either None when not known), for an approved hello."""
 
     def hello_waiting(self, device_id: str, title: str, *, again: bool = False) -> None:
-        """A hello waits for an approval in HA: the discovered card, and (unless [again], after a restart) the adults'
-        notice that opens it. [title]: what the card is called."""
+        """A hello waits for an approval in HA: the discovered card, and (unless [again], after a restart) the
+        administrators' notice that opens it (only they can approve it). [title]: what the card is called."""
 
     def hello_answered(self, device_id: str) -> None:
         """The hello was approved or refused: its card and notice go."""

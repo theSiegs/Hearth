@@ -38,21 +38,31 @@ hello whenever it has a socket and no secret.
   - `{"status": "pending"}`: waiting for an approval in HA (below); the answer comes later on the same subscription;
   - `{"status": "approved", "device_id", "secret", "name", "area_id", "urls": {"internal", "external"}}`.
     `device_id` may differ from the one sent (the tablet took a panel's place): the panel keeps it from then on;
-  - `{"status": "denied"}`: refused in HA. A refused hello is answered `denied` for a day, then may wait again.
+  - `{"status": "denied"}`: refused in HA. A refused hello is answered `denied` for a day, whatever it names and on
+    any login, then may wait again.
 - Errors: `taken` (the id is a TV's or a phone's: one id is one device), `try_later` (20 panels wait already),
   `unavailable` (as for the other commands).
 - **The acknowledgment is the panel's first `<d>/panel/subscribe` with that secret.** Until then every hello (an app
-  restart, a reinstall, Home Assistant restarting, a dropped socket) is sent the same approved event again, on the
-  login it was approved for (or an administrator's or an adult's; any other login gets `pending`). Nothing is handed
-  over once.
+  restart, a reinstall, Home Assistant restarting, a dropped socket) is sent the approved event again, on the login it
+  was approved for (or an administrator's or an adult's). Nothing is handed over once. The secret is kept in memory
+  only, never in `<d>.panels`: after Home Assistant restarts the hello gets a fresh secret for that panel and the old
+  one stops. A hello for it on any other login stops the approval (its secret no longer opens the panel) and waits for
+  an approval in HA on that login, with its card and notice.
 - A waiting hello is kept in `<d>.panels` (it outlives a restart) and never times out; one unseen for 30 days is
-  dropped. The same `device_id` saying hello again is the same entry, never a second one.
+  dropped, with its card and notice. The same `device_id` saying hello again is the same entry, never a second one.
 
 ### How a hello is matched (first rule that fits)
 
 1. **A known panel**: `device_id` is a panel's id or one of its `tablet_ids`. The same panel, with a new secret: the
    old secret stops at once (its subscriptions get `{"unpaired": true}`, and it is `unknown_panel` from then on).
-   Settings, room, Start, proxy key and MAC, and name stay.
+   Settings, room, Start, proxy key and MAC, and name stay. The panel's **current tablet** is the id that last got its
+   secret (by rule 1 or 2, or an approval in HA; the panel's own id until then). Two limits, so a healthy panel is
+   never taken over:
+   - an id that isn't the current tablet (an old tablet) waits for an approval in HA, unless the login is an
+     administrator's or an adult's; approving it makes it the current tablet;
+   - a panel that is connected now waits too, unless the login is an administrator's, an adult's or the panel's own
+     (the one its subscription last signed in with). A panel that isn't connected (a reinstall) is set up again at
+     once on any login but a kid's.
 2. **Taking an offline panel's place**: `area` is an area HA has, `replaces` isn't `false`, and exactly one panel in
    that area isn't connected. The answer carries that panel's `device_id`; the hello's id joins the panel's
    `tablet_ids` (so rule 1 finds it after the next reinstall). Same device, entities, settings, Start, proxy key and
@@ -61,14 +71,19 @@ hello whenever it has a socket and no secret.
    registered.
 4. **Otherwise** (no area, or one HA doesn't have): it waits for an approval in HA.
 
+For 2 minutes after Hearth loads (Home Assistant starting, or the entry reloading) every panel counts as connected, as
+its socket may not be back yet: rule 2 takes no panel's place then (a hello naming a room is a new panel), rule 1
+waits as for a connected panel, and no panel is offered as offline on the card or in `panels_offline`.
+
 **Any login but a kid's.** Rules 1 to 3 are approved at once on any Home Assistant login, the panels' shared login
-included: a setup command that names a room needs no step in HA (the owner's choice). Rule 4 waits, and so does any
-hello on a kid's own login (a user whose person is a kid on Hearth's page), so a kid can't take a panel over.
+included (rule 1 within its two limits): a setup command that names a room needs no step in HA (the owner's choice).
+Rule 4 waits, and so does any hello on a kid's own login (a user whose person is a kid on Hearth's page), so a kid
+can't take a panel over.
 
 ### Approval in HA
 
 The discovered card (Settings › Devices & services › Discovered) and the same card on Hearth's page (Today), which the
-adults' notice points to (it never approves by itself: no buttons). The line under the title tells two waiting panels
+administrators' notice points to (only an administrator can approve) (it never approves by itself: no buttons). The line under the title tells two waiting panels
 apart: the model, the id's last four characters, and the login it signed in as (the user's and the token's names).
 
 - **Room** (required), and **This panel is**: a new panel, or taking the place of a panel that isn't connected

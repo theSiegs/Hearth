@@ -28,9 +28,11 @@ from test_glint_panel import (  # noqa: F401  (_displays: the shared panels' log
 )
 from test_init import TV_ID, _pair
 
+from custom_components.hearth.attention import attention
 from custom_components.hearth.const import DOMAIN
 from custom_components.hearth.glint_panel import hello, manager
 from custom_components.hearth.glint_panel.const import CONNECTED_GRACE, HELLO_DENIED_FOR, HELLO_UNSEEN
+from custom_components.hearth.notifications import panel_hello_notification_id
 
 NEW_ID = "panel-00000000aaaa1111"
 TABLET_ID = "panel-00000000bbbb2222"
@@ -382,7 +384,7 @@ async def test_a_second_tablet_is_a_new_panel_when_the_first_is_on_or_replaces_i
 
 
 async def test_a_waiting_hello_is_approved_in_ha_sent_again_until_subscribed_and_outlives_restarts(
-    hass: HomeAssistant, hass_client_no_auth, hass_ws_client
+    hass: HomeAssistant, hass_client_no_auth, hass_ws_client, hass_storage
 ) -> None:
     entry, _client = await _household(hass, hass_client_no_auth)
     tablet = await _socket(hass_ws_client, hass, TOKENS[0])
@@ -416,27 +418,37 @@ async def test_a_waiting_hello_is_approved_in_ha_sent_again_until_subscribed_and
     assert panels.value(NEW_ID, "motion") == "lively"
     assert _device(hass, NEW_ID).name == "Bedroom panel"
 
-    # Lost before it subscribed (a dropped socket, a restart): the same answer on the next hello
-    await _restart(hass, entry)
+    # Lost before it subscribed (a dropped socket): the same answer on the next hello
     tablet = await _socket(hass_ws_client, hass, TOKENS[0])
     _r, again, _ = await tablet.hello(NEW_ID)
     assert again == approved
-    # Another login never gets it
-    kid = await _socket(hass_ws_client, hass, await _kid(hass))
-    _r, other, _ = await kid.hello(NEW_ID)
-    assert other == {"status": "pending"}
+    # A restart: the secret was never stored (finding 6), so the next hello gets a fresh one and the old one stops
+    await _restart(hass, entry)
+    stored = hass_storage[f"{DOMAIN}.panels"]["data"]["hellos"][NEW_ID]
+    assert stored["status"] == "approved" and "secret" not in stored
+    assert approved["secret"] not in str(hass_storage[f"{DOMAIN}.panels"])
+    tablet = await _socket(hass_ws_client, hass, TOKENS[0])
+    _r, fresh, _ = await tablet.hello(NEW_ID)
+    assert fresh["status"] == "approved" and fresh["device_id"] == NEW_ID and fresh["secret"] != approved["secret"]
+    panels = _panels(hass)
+    assert not panels.authorized(NEW_ID, approved["secret"]) and panels.authorized(NEW_ID, fresh["secret"])
+    _r, same, _ = await tablet.hello(NEW_ID)
+    assert same == fresh
     # The ack: the panel's first subscribe with that secret; it is never sent again
-    assert (await tablet.subscribe(NEW_ID, approved["secret"]))["success"]
+    assert (await tablet.subscribe(NEW_ID, fresh["secret"]))["success"]
     assert _panels(hass).hellos == {}
 
 
 async def test_a_waiting_hello_takes_an_offline_panel_s_place_from_the_card(
-    hass: HomeAssistant, hass_client_no_auth, hass_ws_client
+    hass: HomeAssistant, hass_client_no_auth, hass_ws_client, freezer
 ) -> None:
     _entry, client = await _household(hass, hass_client_no_auth)
     await _pair_panel(hass, client, area_id="kitchen")
     panels = _panels(hass)
     tablet = await _socket(hass_ws_client, hass, await _kid(hass))
+    # Past the start-up window (right after Hearth loads, here again for the kid's role, every panel counts as
+    # connected)
+    await _offline(hass, freezer)
     _r, event, _ = await tablet.hello(TABLET_ID)
     assert event == {"status": "pending"}
     await hass.async_block_till_done()
@@ -530,6 +542,277 @@ async def test_waiting_hellos_are_capped_and_dropped_after_30_days_unseen(
     assert later == {"status": "pending"}
     # TABLET_ID was unseen for more than 30 days; NEW_ID was seen 25 days ago
     assert set(_panels(hass).hellos) == {NEW_ID, "panel-00000000cccc3333"}
+
+
+# The review's findings (2026-11-22)
+
+
+async def _guest(hass: HomeAssistant) -> str:
+    """A token on a plain login: no administrator, no adult, no kid (a guest's, or a second shared login)."""
+    guest = await hass.auth.async_create_user("Guest", group_ids=[GROUP_ID_USER])
+    return await _token(hass, guest, "Hall tablet")
+
+
+def _hello_flows(hass: HomeAssistant, device_id: str) -> list:
+    return [
+        f for f in hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+        if f["context"].get("unique_id") == f"panel_hello:{device_id}"
+    ]
+
+
+def _notice(hass: HomeAssistant, device_id: str):
+    return attention(hass).item(panel_hello_notification_id(device_id))
+
+
+async def _connected_panel(hass: HomeAssistant, hass_client_no_auth, hass_ws_client, freezer):
+    """The kitchen panel, connected on the shared displays login, past the start-up window: (its socket, its secret)."""
+    _entry, client = await _household(hass, hass_client_no_auth)
+    body = await _pair_panel(hass, client, area_id="kitchen")
+    panel = await _socket(hass_ws_client, hass, TOKENS[0])
+    assert (await panel.subscribe(PANEL_ID, body["secret"]))["success"]
+    await panel.event()
+    await _offline(hass, freezer)
+    assert _panels(hass).connected(PANEL_ID)
+    return panel, body["secret"]
+
+
+@pytest.mark.parametrize(
+    ("gate", "at_once"),
+    [
+        # The panel is offline and the hello is its current tablet: a reinstall, on any login
+        ({}, True),
+        ({"connected": True}, False),
+        ({"connected": True, "own_login": True}, True),
+        ({"connected": True, "trusted": True}, True),
+        # An old tablet: an administrator's or an adult's login only
+        ({"current": False}, False),
+        ({"current": False, "own_login": True}, False),
+        ({"current": False, "trusted": True}, True),
+        # A kid's login never
+        ({"kid": True, "trusted": True}, False),
+    ],
+)
+def test_rule_1_waits_for_a_connected_panel_or_an_old_tablet(gate, at_once) -> None:
+    assert hello.at_once(hello.Match(hello.KNOWN, "panel-a"), **gate) is at_once
+    # Rules 2 and 3 never look at them
+    assert hello.at_once(hello.Match(hello.NEW), **{k: v for k, v in gate.items() if k != "kid"})
+
+
+def test_the_current_tablet_is_the_panel_s_own_id_until_another_takes_its_secret() -> None:
+    assert hello.current_tablet("panel-a", {}) == "panel-a"
+    assert hello.current_tablet("panel-a", {"current_tablet": "tab-1"}) == "tab-1"
+    assert hello.current_tablet("panel-a", {"current_tablet": None}) == "panel-a"
+
+
+async def test_finding_1_a_connected_panel_is_never_taken_over_from_another_login(
+    hass: HomeAssistant, hass_client_no_auth, hass_ws_client, freezer
+) -> None:
+    panel, secret = await _connected_panel(hass, hass_client_no_auth, hass_ws_client, freezer)
+    panels = _panels(hass)
+    # Its id on a login that is neither trusted nor the panel's own: waits, and the panel keeps its secret
+    guest = await _socket(hass_ws_client, hass, await _guest(hass))
+    _r, waits, _ = await guest.hello(PANEL_ID)
+    assert waits == {"status": "pending"}
+    assert panels.authorized(PANEL_ID, secret)
+    await hass.async_block_till_done()
+    assert len(_hello_flows(hass, PANEL_ID)) == 1 and _notice(hass, PANEL_ID) is not None
+    assert panels.waiting_hello(PANEL_ID)["panel"]["device_id"] == PANEL_ID
+    # An adult's login may, at once (the card and notice go)
+    adult = await _socket(hass_ws_client, hass, await _token(hass, await _adult(hass), "Setup"))
+    _r, event, _ = await adult.hello(PANEL_ID)
+    assert event["status"] == "approved" and event["device_id"] == PANEL_ID
+    assert await panel.event() == {"unpaired": True}
+    await hass.async_block_till_done()
+    assert not _hello_flows(hass, PANEL_ID) and _notice(hass, PANEL_ID) is None
+
+
+async def test_finding_1_a_panel_that_isn_t_connected_is_set_up_again_at_once_on_any_login(
+    hass: HomeAssistant, hass_client_no_auth, hass_ws_client, freezer
+) -> None:
+    # The reinstall case: the panel's id, the panel offline, a plain login
+    panel, secret = await _connected_panel(hass, hass_client_no_auth, hass_ws_client, freezer)
+    await panel.ws.close()
+    await _offline(hass, freezer)
+    guest = await _socket(hass_ws_client, hass, await _guest(hass))
+    _r, event, _ = await guest.hello(PANEL_ID)
+    assert event["status"] == "approved" and event["device_id"] == PANEL_ID
+    assert not _panels(hass).authorized(PANEL_ID, secret)
+
+
+async def test_finding_2_right_after_a_restart_every_panel_counts_as_connected(
+    hass: HomeAssistant, hass_client_no_auth, hass_ws_client, freezer
+) -> None:
+    entry, client = await _household(hass, hass_client_no_auth)
+    body = await _pair_panel(hass, client, area_id="kitchen")
+    old = await _socket(hass_ws_client, hass, TOKENS[0])
+    assert (await old.subscribe(PANEL_ID, body["secret"]))["success"]
+    await old.ws.close()
+    await _offline(hass, freezer)
+    assert [p["device_id"] for p in _panels(hass).offline_panels()] == [PANEL_ID]
+
+    # Home Assistant restarts: the panel's socket isn't back yet, but it is never offline for a hello
+    await _restart(hass, entry)
+    panels = _panels(hass)
+    assert panels.offline_panels() == [] and not panels.connected(PANEL_ID)
+    admin = await _socket(hass_ws_client, hass)
+    await admin.ws.send_json({"id": 1, "type": "hearth/config"})
+    assert (await admin.ws.receive_json())["result"]["panels_offline"] == []
+    # A hello naming its room is a new panel, never the kitchen panel's place (rule 2)
+    tablet = await _socket(hass_ws_client, hass, TOKENS[1])
+    _r, event, _ = await tablet.hello(TABLET_ID, area="Kitchen")
+    assert event["status"] == "approved" and event["device_id"] == TABLET_ID
+    assert "tablet_ids" not in panels.panels[PANEL_ID] and panels.authorized(PANEL_ID, body["secret"])
+    # Its own id on another login waits (rule 1 for a panel that counts as connected)
+    guest = await _socket(hass_ws_client, hass, await _guest(hass))
+    _r, waits, _ = await guest.hello(PANEL_ID)
+    assert waits == {"status": "pending"} and panels.authorized(PANEL_ID, body["secret"])
+    # Once the window is over, a panel that didn't come back is offline
+    await _offline(hass, freezer)
+    assert PANEL_ID in [p["device_id"] for p in panels.offline_panels()]
+
+
+async def test_finding_3_an_old_tablet_never_takes_its_panel_back_on_its_own(
+    hass: HomeAssistant, hass_client_no_auth, hass_ws_client, freezer
+) -> None:
+    _entry, client = await _household(hass, hass_client_no_auth)
+    body = await _pair_panel(hass, client, area_id="kitchen")
+    panels = _panels(hass)
+    first = await _socket(hass_ws_client, hass, TOKENS[0])
+    assert (await first.subscribe(PANEL_ID, body["secret"]))["success"]
+    await first.ws.close()
+    await _offline(hass, freezer)
+    # A new tablet takes the offline panel's place: it is the current tablet
+    second = await _socket(hass_ws_client, hass, TOKENS[1])
+    _r, moved, _ = await second.hello(TABLET_ID, area="Kitchen")
+    assert moved["device_id"] == PANEL_ID and panels.panels[PANEL_ID]["current_tablet"] == TABLET_ID
+    assert (await second.subscribe(PANEL_ID, moved["secret"]))["success"]
+    await second.ws.close()
+    await _offline(hass, freezer)
+
+    # The old tablet (the panel's own id), on the same shared login, with the panel offline: waits
+    old = await _socket(hass_ws_client, hass, TOKENS[0])
+    _r, waits, _ = await old.hello(PANEL_ID)
+    assert waits == {"status": "pending"} and panels.authorized(PANEL_ID, moved["secret"])
+    # Approved in HA, it is the current tablet again
+    admin = await _socket(hass_ws_client, hass)
+    await admin.ws.send_json(
+        {"id": 1, "type": "hearth/panel_hello", "device_id": PANEL_ID, "answer": "approve", "area_id": "kitchen"}
+    )
+    assert (await admin.ws.receive_json())["success"]
+    admin.next_id = 2
+    back = await old.event()
+    assert back["status"] == "approved" and back["device_id"] == PANEL_ID
+    assert panels.panels[PANEL_ID]["current_tablet"] == PANEL_ID
+    assert (await old.subscribe(PANEL_ID, back["secret"]))["success"]
+    await old.ws.close()
+    await _offline(hass, freezer)
+
+    # Now the other one is the old tablet: it waits too, but an administrator's login may at once
+    again = await _socket(hass_ws_client, hass, TOKENS[1])
+    _r, waits, _ = await again.hello(TABLET_ID)
+    assert waits == {"status": "pending"} and panels.authorized(PANEL_ID, back["secret"])
+    _r, taken, _ = await admin.hello(TABLET_ID)
+    assert taken["status"] == "approved" and panels.panels[PANEL_ID]["current_tablet"] == TABLET_ID
+
+
+async def test_finding_4_a_refused_hello_stays_refused_when_it_names_a_room(
+    hass: HomeAssistant, hass_client_no_auth, hass_ws_client
+) -> None:
+    await _household(hass, hass_client_no_auth)
+    tablet = await _socket(hass_ws_client, hass, TOKENS[0])
+    await tablet.hello(NEW_ID)
+    admin = await _socket(hass_ws_client, hass)
+    await admin.ws.send_json({"id": 1, "type": "hearth/panel_hello", "device_id": NEW_ID, "answer": "deny"})
+    assert (await admin.ws.receive_json())["success"]
+    assert await tablet.event() == {"status": "denied"}
+    admin.next_id = 2
+    for socket in (tablet, admin):
+        _r, again, _ = await socket.hello(NEW_ID, area="Kitchen")
+        assert again == {"status": "denied"}
+    assert not _panels(hass).has(NEW_ID)
+
+
+async def test_finding_5_an_approval_asked_for_from_another_login_stops_and_waits_for_an_administrator(
+    hass: HomeAssistant, hass_client_no_auth, hass_ws_client
+) -> None:
+    await _household(hass, hass_client_no_auth)
+    panels = _panels(hass)
+    tablet = await _socket(hass_ws_client, hass, TOKENS[0])
+    _r, approved, _ = await tablet.hello(NEW_ID, area="Kitchen")
+    assert approved["status"] == "approved"
+    # Not taken up yet, and asked for on a login that is neither trusted nor the one it was approved for
+    guest = await _socket(hass_ws_client, hass, await _guest(hass))
+    _r, waits, _ = await guest.hello(NEW_ID, name="hall tablet")
+    assert waits == {"status": "pending"}
+    # The approval's secret stops; the hello waits on the guest's login, with its card and the notice
+    assert not panels.authorized(NEW_ID, approved["secret"])
+    entry = panels.hellos[NEW_ID]
+    assert entry["status"] == "pending" and entry["signed_in_as"]["token"] == "Hall tablet"
+    await hass.async_block_till_done()
+    assert len(_hello_flows(hass, NEW_ID)) == 1 and _notice(hass, NEW_ID) is not None
+    assert panels.waiting_hello(NEW_ID)["panel"]["device_id"] == NEW_ID
+    # A tablet can't make it subscribe with the stopped secret
+    refused = await tablet.subscribe(NEW_ID, approved["secret"])
+    assert not refused["success"] and refused["error"]["code"] == "unknown_panel"
+    # An administrator approves it: the secret goes to the login the card names
+    admin = await _socket(hass_ws_client, hass)
+    await admin.ws.send_json(
+        {"id": 1, "type": "hearth/panel_hello", "device_id": NEW_ID, "answer": "approve", "area_id": "kitchen"}
+    )
+    assert (await admin.ws.receive_json())["success"]
+    got = await guest.event()
+    assert got["status"] == "approved" and got["device_id"] == NEW_ID and panels.authorized(NEW_ID, got["secret"])
+    await hass.async_block_till_done()
+    assert not _hello_flows(hass, NEW_ID) and _notice(hass, NEW_ID) is None
+
+
+async def test_finding_6_a_secret_stored_by_an_older_version_is_dropped(
+    hass: HomeAssistant, hass_client_no_auth, hass_ws_client, hass_storage
+) -> None:
+    entry, _client = await _household(hass, hass_client_no_auth)
+    tablet = await _socket(hass_ws_client, hass, TOKENS[0])
+    _r, approved, _ = await tablet.hello(NEW_ID, area="Kitchen")
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    hass.data.pop(f"{DOMAIN}_glint_panel")
+    # As an older version stored it: the plain secret in the entry
+    hass_storage[f"{DOMAIN}.panels"]["data"]["hellos"][NEW_ID]["secret"] = approved["secret"]
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert "secret" not in _panels(hass).hellos[NEW_ID]
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=5))
+    await hass.async_block_till_done()
+    assert approved["secret"] not in str(hass_storage[f"{DOMAIN}.panels"])
+
+
+async def test_finding_7_the_join_notice_is_the_administrators(
+    hass: HomeAssistant, hass_client_no_auth, hass_ws_client
+) -> None:
+    await _household(hass, hass_client_no_auth)
+    tablet = await _socket(hass_ws_client, hass, TOKENS[0])
+    await tablet.hello(NEW_ID)
+    await hass.async_block_till_done()
+    item = _notice(hass, NEW_ID)
+    assert item is not None and item.audience == "admins" and not item.actions
+
+
+async def test_finding_8_a_pruned_waiting_hello_takes_its_card_and_notice_and_is_saved(
+    hass: HomeAssistant, hass_client_no_auth, hass_ws_client, hass_storage, freezer
+) -> None:
+    await _household(hass, hass_client_no_auth)
+    tablet = await _socket(hass_ws_client, hass, TOKENS[0])
+    await tablet.hello(NEW_ID)
+    await hass.async_block_till_done()
+    assert _hello_flows(hass, NEW_ID) and _notice(hass, NEW_ID) is not None
+    freezer.tick(HELLO_UNSEEN + timedelta(days=1))
+    # Any hello prunes
+    other = await _socket(hass_ws_client, hass, TOKENS[1])
+    await other.hello(TABLET_ID)
+    await hass.async_block_till_done()
+    assert NEW_ID not in _panels(hass).hellos
+    assert not _hello_flows(hass, NEW_ID) and _notice(hass, NEW_ID) is None
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=5))
+    await hass.async_block_till_done()
+    assert NEW_ID not in hass_storage[f"{DOMAIN}.panels"]["data"]["hellos"]
 
 
 # The proxy MAC (1.4)
