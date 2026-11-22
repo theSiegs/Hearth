@@ -27,7 +27,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 
-from .app_blocks import CONF_BLOCK_UNSUPPORTED_BROWSERS
+from .app_blocks import CONF_BLOCK_AI_COMPANIONS, CONF_BLOCK_UNSUPPORTED_BROWSERS
 from .backstop import CONF_FL_BACKSTOP, CONF_FL_BACKSTOP_MARGIN
 from .time_model import BACKSTOP_MARGIN
 from .apps import CONF_APP_WATCH, CONF_ASK_NOTIFY
@@ -446,6 +446,8 @@ OPTION_SCHEMAS: dict[str, Any] = {
         {_PERSON: vol.All([vol.All(cv.string, vol.Length(min=3, max=200))], vol.Length(max=AWAY_MAX_APPS))}
     ),
     CONF_BLOCK_UNSUPPORTED_BROWSERS: bool,
+    # Block AI companion apps (app_blocks.py): on unless turned off
+    CONF_BLOCK_AI_COMPANIONS: bool,
     # Family Link's daily limit as a backstop (backstop.py)
     CONF_FL_BACKSTOP: bool,
     CONF_FL_BACKSTOP_MARGIN: vol.All(vol.Coerce(int), vol.Range(min=0, max=240)),

@@ -1325,6 +1325,9 @@ class HearthPanel extends HTMLElement {
       case "block-browsers":
         await this._setOption("block_unsupported_browsers", el.checked, el.checked ? "Browsers Hearth doesn't support get blocked" : "Browser rule off: Hearth unblocks what it blocked for it");
         return;
+      case "block-ai-companions":
+        await this._setOption("block_ai_companions", el.checked, el.checked ? "AI companion apps get blocked" : "AI companion rule off: Hearth unblocks what it blocked for it");
+        return;
       case "app-block": {
         // Every kid with Family Link (the service's default); Hearth keeps the block and puts it back when the app returns
         const name = d.name || d.app;
@@ -3942,7 +3945,7 @@ class HearthPanel extends HTMLElement {
   }
 
   _blockWhyLabel(why) {
-    return (why || []).map((w) => ({ adult: "by an adult", browser: "a browser Hearth doesn't support", app_store: "another app store" }[w] || w)).join(", ");
+    return (why || []).map((w) => ({ adult: "by an adult", browser: "a browser Hearth doesn't support", app_store: "another app store", ai_companion: "an AI companion app" }[w] || w)).join(", ");
   }
 
   // Blocked by Hearth: the browser rule, the browsers Hearth filters sites in, each kid's blocks (Unblock), and Windows
@@ -3964,6 +3967,8 @@ class HearthPanel extends HTMLElement {
       <p class="muted">Apps Hearth blocks through Family Link. Hearth blocks one again when it's installed again, never pauses or resumes a blocked app, and an allow doesn't lift a block. Unblock here: Hearth only ever unblocks what it blocked, so a parent's own block in Family Link stays, and a block a parent takes back in the Family Link app stays unblocked until you block it again here.</p>
       <label class="check"><input type="checkbox" data-change="block-browsers" ${b.rule ? "checked" : ""}> Block browsers Hearth doesn't support</label>
       <div class="muted small">Hearth filters sites in: ${esc(supported)}. With this on, any other browser on a kid's Android devices is blocked as soon as Family Link lists it, and so are other app stores that skip Family Link's approval (${esc(Object.values(b.app_stores || {}).filter((v, i, all) => all.indexOf(v) === i).join(", "))}).</div>
+      <label class="check"><input type="checkbox" data-change="block-ai-companions" ${b.ai_companion_rule !== false ? "checked" : ""}> Block AI companion apps</label>
+      <div class="muted small">AI companion and character role-play chat apps (${esc(Object.values(b.ai_companions || {}).join(", "))}, and apps named like them) are blocked as soon as Family Link lists them. General assistants (Gemini, ChatGPT, Copilot, Claude), messaging and school apps never are.</div>
       ${kids.length ? `<ul class="list compact">${kids
         .map((k) => `<li><div class="grow"><div>${esc(k.name)}</div>
           ${k.family_link ? "" : `<div class="muted small">No Family Link set up (Kids tab, parental controls): nothing to block on Android</div>`}

@@ -223,7 +223,7 @@ def find_target(household: Household, person: str, given: Any) -> dict[str, Any]
 def parent_blocks(household: Household, person: str) -> list[dict[str, str]]:
     """The apps and games a parent blocked for the person in Family Link (its Blocked Apps sensor) or Family Safety (an
     app it reports blocked that Hearth's own pause_app didn't block): [{app, name, in}]. Hearth's allows never lift
-    these, and nothing here may ask to. Hearth's own blocks (hearth.block_app, the browser rule: app_blocks.py) are
+    these, and nothing here may ask to. Hearth's own blocks (hearth.block_app, the browser and AI companion rules: app_blocks.py) are
     in it too, as in Hearth: an allow doesn't lift them either."""
     hass = household.hass
     found: list[dict[str, str]] = []

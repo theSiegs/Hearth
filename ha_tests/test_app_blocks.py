@@ -30,11 +30,13 @@ def settled(monkeypatch):
     monkeypatch.setattr(enforce, "SETTLE", timedelta(0))
 
 
-def _lists(hass: HomeAssistant, installed: list[str], blocked: list[str] = ()) -> None:
-    """Sam's Family Link app lists: [blocked] in Blocked apps, the rest without limits."""
+def _lists(hass: HomeAssistant, installed: list[str], blocked: list[str] = (), names: dict[str, str] | None = None) -> None:
+    """Sam's Family Link app lists: [blocked] in Blocked apps (without names), the rest without limits (with their
+    [names])."""
     free = [p for p in installed if p not in blocked]
+    named = lambda p: {"package": p, **({"name": names[p]} if names and p in names else {})}  # noqa: E731
     hass.states.async_set("sensor.sam_blocked_apps", str(len(blocked)), {"child_id": CHILD, "apps": [{"package": p} for p in blocked]})
-    hass.states.async_set("sensor.sam_apps_without_limits", str(len(free)), {"child_id": CHILD, "apps": [{"package": p} for p in free]})
+    hass.states.async_set("sensor.sam_apps_without_limits", str(len(free)), {"child_id": CHILD, "apps": [named(p) for p in free]})
     hass.states.async_set("sensor.sam_apps_with_time_limits", "0", {"child_id": CHILD, "apps": []})
     hass.states.async_set("sensor.sam_always_allowed_apps", "0", {"child_id": CHILD, "apps": []})
 
@@ -419,3 +421,162 @@ def test_chrome_is_blocked_like_any_app_but_android_s_own_parts_are_not() -> Non
     assert not enforce.essential("com.android.chrome")
     for package in ("com.android.systemui", "com.android.phone", "com.android.launcher3", "com.android.settings", "android"):
         assert app_blocks.never_blocked(package) and enforce.essential(package)
+
+
+# The AI companion rule (block_ai_companions): on unless turned off
+CHARACTER_AI = "ai.character.app"
+REPLIKA = "ai.replika.app"
+PAL = "com.example.pal"
+GEMINI = "com.google.android.apps.bard"
+CHATGPT = "com.openai.chatgpt"
+COPILOT = "com.microsoft.copilot"
+CLAUDE = "com.anthropic.claude"
+GOOGLE_CHAT = "com.google.android.apps.dynamite"
+HELPER = "com.example.helper"
+TEXTS = "com.example.texts"
+HOMEWORK = "com.example.homework"
+COMPANION_NAMES = {
+    PAL: "Pal: AI Girlfriend & Roleplay",
+    HELPER: "Helper - AI Chat Assistant",
+    TEXTS: "Texts: Messages with AI friends",
+    HOMEWORK: "Homework Buddy: AI Friend for School",
+    # Assistants named like a companion app are never blocked by the rule
+    GEMINI: "Gemini: chat with AI characters",
+    CHATGPT: "ChatGPT",
+    COPILOT: "Copilot - AI companion",
+    CLAUDE: "Claude by Anthropic",
+    GOOGLE_CHAT: "Google Chat",
+}
+ASSISTANTS = [GEMINI, CHATGPT, COPILOT, CLAUDE, GOOGLE_CHAT, HELPER, TEXTS, HOMEWORK]
+
+
+async def test_ai_companion_apps_are_blocked_by_default_and_assistants_never(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client, monkeypatch
+) -> None:
+    monkeypatch.setattr(app_blocks, "QUIET", timedelta(0))
+    installed = [GAME, CHARACTER_AI, PAL, *ASSISTANTS]
+    calls = await _sam(hass, hass_client_no_auth)
+    # A household that never set it: on
+    assert "block_ai_companions" not in hass.config_entries.async_entries(DOMAIN)[0].options
+    _lists(hass, installed, names=COMPANION_NAMES)
+    await _recompute(hass)
+    # A known package, and an app named like one; never a general assistant, a messaging or a school app
+    assert sorted(_packages(calls["block"])) == sorted([CHARACTER_AI, PAL])
+
+    # Family Link lists them blocked (its Blocked apps list without names): they stay blocked
+    _lists(hass, installed, [CHARACTER_AI, PAL], names=COMPANION_NAMES)
+    for _ in range(3):
+        await _recompute(hass)
+    assert calls["unblock"] == [] and len(calls["block"]) == 2
+    page = await _page(hass, hass_ws_client)
+    assert page["ai_companion_rule"] is True and page["rule"] is False
+    assert page["ai_companions"][CHARACTER_AI] == "Character AI"
+    assert {b["app"]: (b["why"], b["state"]) for b in page["kids"][0]["blocks"]} == {
+        CHARACTER_AI: (["ai_companion"], "blocked"),
+        PAL: (["ai_companion"], "blocked"),
+    }
+    why = await _call(hass, "explain", {"person": "person.sam", "app": CHARACTER_AI}, True)
+    assert {"kind": "blocked_app", "by": "block_ai_companions", "app": CHARACTER_AI, "why": ["ai_companion"], "until": None} in why["blocked_by"]
+
+    # An adult unblocks one: it stays unblocked, and the other stays blocked
+    await _call(hass, "unblock_app", {"app": PAL})
+    assert _packages(calls["unblock"]) == [PAL]
+    _lists(hass, installed, [CHARACTER_AI], names=COMPANION_NAMES)
+    await _recompute(hass)
+    assert len(calls["block"]) == 2
+    assert (await _page(hass, hass_ws_client))["kids"][0]["exempt"] == [PAL]
+
+
+async def test_turning_the_ai_companion_rule_off_unblocks_only_its_own(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client, monkeypatch
+) -> None:
+    monkeypatch.setattr(app_blocks, "QUIET", timedelta(0))
+    # Replika was blocked by a parent in Family Link: theirs
+    installed = [GAME, CHROME, FIREFOX, CHARACTER_AI, REPLIKA]
+    calls = await _sam(hass, hass_client_no_auth, installed=installed, blocked=[REPLIKA])
+    await _set_option(hass, hass_ws_client, "block_unsupported_browsers", True)
+    await _call(hass, "block_app", {"app": GAME})
+    await _recompute(hass)
+    assert set(_packages(calls["block"])) == {GAME, FIREFOX, CHARACTER_AI}
+    _lists(hass, installed, [GAME, FIREFOX, CHARACTER_AI, REPLIKA])
+    await _recompute(hass)
+
+    await _set_option(hass, hass_ws_client, "block_ai_companions", False)
+    await _recompute(hass)
+    # Only what the rule blocked: not the browser rule's, an adult's or a parent's
+    assert _packages(calls["unblock"]) == [CHARACTER_AI]
+    _lists(hass, installed, [GAME, FIREFOX, REPLIKA])
+    await _recompute(hass)
+    assert _packages(calls["unblock"]) == [CHARACTER_AI]
+    page = await _page(hass, hass_ws_client)
+    assert page["ai_companion_rule"] is False
+    assert {b["app"] for b in page["kids"][0]["blocks"]} == {GAME, FIREFOX}
+
+    # On again (in Configure, next to the browser rule): blocked again
+    before = _packages(calls["block"]).count(CHARACTER_AI)
+    await _option(hass, "blocked_apps", {"block_unsupported_browsers": True, "block_ai_companions": True})
+    await _recompute(hass)
+    assert _packages(calls["block"]).count(CHARACTER_AI) > before
+    assert REPLIKA not in _packages(calls["block"])
+    assert hass.config_entries.async_entries(DOMAIN)[0].options["block_unsupported_browsers"] is True
+
+
+async def test_what_the_ai_companion_rule_takes_for_one(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, monkeypatch
+) -> None:
+    from custom_components.hearth.categories import Hit
+
+    await _sam(hass, hass_client_no_auth, installed=[GAME])
+    blocks = _household(hass).blocks
+    companions = [
+        "Pal: AI Companion",
+        "AI Girlfriend: Virtual Love",
+        "My AI Boyfriend",
+        "Character AI: Chat, Talk, Text",
+        "Character.AI",
+        "Chat with AI Characters",
+        "Anime: chat with characters",
+        "AI Waifu Chat",
+        "Virtual Girlfriend Simulator",
+        "AI Roleplay Stories",
+        "AI role-play chat",
+        "Roleplay Chat: Stories",
+        "Waifu AI",
+    ]
+    others = [
+        "AI Chat - Ask Anything",
+        "Nova: AI Chat Assistant",
+        "Gemini",
+        "Microsoft Copilot: AI Chat",
+        "Google Chat",
+        "AI Friend: Learn English",
+        "Homework AI: math tutor",
+        "Messages: AI friends",
+        "Roblox",
+        "AI Photo Editor",
+        "Friendly AI keyboard",
+        "Air Friends",
+    ]
+    for name in companions:
+        assert blocks.rule_reason("com.example.x", name) == "ai_companion", name
+    for name in others:
+        assert blocks.rule_reason("com.example.x", name) is None, name
+    # Known packages need no name; the assistants are never one, whatever they're called
+    for package in app_blocks.AI_COMPANIONS:
+        assert blocks.rule_reason(package) == "ai_companion"
+    for package in app_blocks.NOT_AI_COMPANIONS:
+        assert blocks.rule_reason(package, "AI Girlfriend") is None
+    assert not set(app_blocks.AI_COMPANIONS) & app_blocks.NOT_AI_COMPANIONS
+    assert all(app_blocks.android_package(p) for p in app_blocks.AI_COMPANIONS)
+
+    # A name Hearth's categories know counts too, but not for an app they know as messaging or education
+    names = {"com.example.pal": "Pal: AI Friend", "com.example.chatty": "Chatty: AI Friend", "com.example.tutor": "Tutor: AI Friend"}
+    kinds = {"com.example.chatty": ("messaging", None), "com.example.tutor": ("productivity", "education")}
+    monkeypatch.setattr(
+        blocks.household.categories_book,
+        "lookup",
+        lambda item: Hit(item, True, *kinds.get(item, ("social", None)), names.get(item)),
+    )
+    assert blocks.rule_reason("com.example.pal") == "ai_companion"
+    assert blocks.rule_reason("com.example.chatty") is None
+    assert blocks.rule_reason("com.example.tutor") is None

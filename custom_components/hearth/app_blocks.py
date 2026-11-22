@@ -11,6 +11,11 @@ familylink.block_app directly, so Hearth's pauses, its schedule and its blocks s
   name a browser) is blocked, but the ones Hearth supports (SUPPORTED_BROWSERS: the browsers whose sites Hearth's
   controls actually filter). The rule also blocks OTHER_APP_STORES: stores that install apps without Family Link's
   approval (the Galaxy Store). An app an adult unblocks stays unblocked (exempt) until an adult blocks it again.
+- The household rule "Block AI companion apps" (option block_ai_companions, on unless an adult turns it off): AI
+  companion and character role-play chat apps (AI_COMPANIONS by package, or an app whose name, Family Link's or
+  Hearth's app categories', says so) are blocked the same way, with the same exemptions. General assistants and tools
+  (NOT_AI_COMPANIONS: Gemini, Copilot, ChatGPT, Claude, Perplexity, Meta AI, Grok), messaging and school apps are never
+  blocked by it. Each rule's blocks are its own: turning one off unblocks only what it blocked.
 
 What Hearth blocked itself is kept (applied), so:
 - Hearth only ever unblocks an app it blocked: an app a parent blocked in the Family Link app before Hearth wanted it
@@ -24,7 +29,7 @@ What Hearth blocked itself is kept (applied), so:
   the card says "Family Link didn't block <app>". hearth_app_blocked fires once, when Family Link lists it blocked.
 - Only what Family Link lists as blocked (Hearth's confirmed blocks and a parent's) is left out of Hearth's pauses; a
   block Hearth wants that isn't confirmed stays subject to them, so the app is still held meanwhile.
-- A browser added to SUPPORTED_BROWSERS later (or the rule turned off) is unblocked, only where Hearth blocked it.
+- A browser added to SUPPORTED_BROWSERS later (or a rule turned off) is unblocked, only where Hearth blocked it.
 
 A blocked app is never paused or resumed by Hearth's holds (enforce.py: a budget, a pause, School time, the schedule):
 Family Link's resume_app skips a blocked app and keeps its saved setting, and Hearth leaves its own record of the pause
@@ -62,13 +67,16 @@ _LOGGER = logging.getLogger(__name__)
 
 FL_DOMAIN = "familylink"
 FS_DOMAIN = "microsoft_family_safety"
-# Options: the household rule (off unless chosen)
+# Options: the household rules (browsers: off unless chosen; AI companions: on unless turned off)
 CONF_BLOCK_UNSUPPORTED_BROWSERS = "block_unsupported_browsers"
+CONF_BLOCK_AI_COMPANIONS = "block_ai_companions"
 
-# Why an app is blocked: an adult's block, or the rule (a browser Hearth doesn't support, another app store)
+# Why an app is blocked: an adult's block, or a rule (a browser Hearth doesn't support, another app store; an AI
+# companion app)
 ADULT = "adult"
 BROWSER = "browser"
 APP_STORE = "app_store"
+AI_COMPANION = "ai_companion"
 # Where a wanted block stands
 BLOCKED = "blocked"  # blocked by Hearth in Family Link
 PARENT = "parent"  # already blocked in Family Link by a parent: theirs, Hearth leaves it alone
@@ -148,6 +156,59 @@ OTHER_APP_STORES: dict[str, str] = {
     "com.uptodown": "Uptodown",
     "com.xiaomi.mipicks": "GetApps",
 }
+# AI companion and character role-play chat apps by package (each checked on its Google Play page)
+AI_COMPANIONS: dict[str, str] = {
+    "ai.character.app": "Character AI",
+    "com.weaver.app.prod": "Talkie",
+    "com.Beauchamp.Messenger.external": "Chai",
+    "ai.replika.app": "Replika",
+    "ai.nomi.twa": "Nomi",
+    "com.kindroid.app": "Kindroid",
+    "ai.socialapps.speakmaster": "PolyBuzz",
+    "com.aigc.ushow.ichat": "Linky AI",
+    "com.xverse.aistory": "Saylo",
+    "ai.botify.app": "Botify AI",
+    "com.withfeelingai.test": "Paradot",
+    "com.ifriend.app": "EVA AI",
+    "com.hiwaifu.app": "HiWaifu",
+}
+# Never blocked by the AI companion rule, whatever their names say: general assistants and tools (a separate
+# decision), and Google Chat
+NOT_AI_COMPANIONS = frozenset(
+    {
+        "com.google.android.apps.bard",  # Gemini
+        "com.microsoft.copilot",
+        "com.microsoft.office.officehubrow",  # Microsoft 365 Copilot
+        "com.openai.chatgpt",
+        "com.anthropic.claude",
+        "ai.perplexity.app.android",
+        "com.facebook.stella",  # Meta AI
+        "ai.x.grok",
+        "com.google.android.apps.dynamite",  # Google Chat
+    }
+)
+# An app named like this is an AI companion or character role-play chat app (conservative: "AI chat" alone is a
+# general assistant's name too, so it isn't enough)
+_AI_COMPANION_NAME = re.compile(
+    r"\bAI[\s-]+(companions?|girl ?friends?|boy ?friends?|gf|bf|friends?|characters?|role[\s-]?play(ing|s)?|waifus?"
+    r"|husbandos?|lovers?|soul ?mates?|crush(es)?)\b"
+    r"|\bcharacter[\s.]*ai\b"
+    r"|\bchat\s+with\s+(ai\s+)?(characters?|personas?)\b"
+    r"|\bvirtual\s+(girl ?friends?|boy ?friends?)\b"
+    r"|\b(companion|girlfriend|boyfriend|waifu)\s+(ai|chat\s*bot)\b"
+    r"|\brole[\s-]?play\s+(ai|chat|chat\s*bot)s?\b",
+    re.IGNORECASE,
+)
+# Never one, whatever else the name says: assistants and tools, messaging, school and learning
+_NOT_AI_COMPANION_NAME = re.compile(
+    r"gemini|copilot|chat\s*gpt|\bclaude\b|perplexity|\bmeta ai\b|\bgrok\b|google chat|assistant|messag|whatsapp"
+    r"|telegram|\bsignal\b|discord|school|classroom|homework|tutor|study|learn|\bmath|keyboard|translat|language"
+    r"|english|\boffice\b",
+    re.IGNORECASE,
+)
+# Hearth's app categories that are never an AI companion app by name (messaging; school and learning)
+_NOT_AI_COMPANION_KINDS = frozenset({"messaging", "education"})
+
 # An app Hearth's categories know by a name like this (and as none of the ten kinds) is a browser
 _BROWSER_NAME = re.compile(r"\b(web )?browser\b", re.IGNORECASE)
 _NOT_A_WEB_BROWSER = re.compile(r"\bfiles?\b|photo|music|video|gallery|document|\bpdf\b", re.IGNORECASE)
@@ -258,7 +319,17 @@ class AppBlocks:
 
     @property
     def rule_on(self) -> bool:
+        """The browser rule (off unless chosen)."""
         return bool(self.household.options.get(CONF_BLOCK_UNSUPPORTED_BROWSERS))
+
+    @property
+    def companion_rule_on(self) -> bool:
+        """The AI companion rule: on for a household that hasn't set it."""
+        return bool(self.household.options.get(CONF_BLOCK_AI_COMPANIONS, True))
+
+    def _rule_of(self, reason: str) -> bool:
+        """Whether the rule behind [reason] is on."""
+        return self.companion_rule_on if reason == AI_COMPANION else self.rule_on
 
     def kids(self) -> list[str]:
         """The household's people who aren't adults."""
@@ -296,31 +367,82 @@ class AppBlocks:
             and not _NOT_A_WEB_BROWSER.search(name)
         )
 
-    def rule_reason(self, package: str) -> str | None:
-        """Why the rule blocks [package] (browser, app_store), None when it doesn't."""
+    def is_ai_companion(self, package: str, name: str | None = None) -> bool:
+        """A known AI companion app's package, or an app whose name ([name]: Hearth's catalog's or Family Link's, and
+        Hearth's categories') says it is one. Never one of NOT_AI_COMPANIONS, an app named like an assistant, a tool,
+        a messaging or school app, or one Hearth's categories know as messaging or education."""
+        if package in AI_COMPANIONS:
+            return True
+        if package in NOT_AI_COMPANIONS:
+            return False
+        names = [name] if isinstance(name, str) and name else []
+        try:
+            hit = self.household.categories_book.lookup(package)
+        except Exception:  # noqa: BLE001 - the categories are a hint only
+            hit = None
+        if hit is not None:
+            if hit.category in _NOT_AI_COMPANION_KINDS or hit.detail in _NOT_AI_COMPANION_KINDS:
+                return False
+            if isinstance(hit.name, str) and hit.name:
+                names.append(hit.name)
+        if any(_NOT_AI_COMPANION_NAME.search(n) for n in names):
+            return False
+        return any(_AI_COMPANION_NAME.search(n) for n in names)
+
+    def _reasons(self, package: str, name: str | None = None) -> list[str]:
+        """Every rule that would block [package], on or off, the one shown first."""
         if never_blocked(package) or package in SUPPORTED_ANDROID:
-            return None
+            return []
+        found = []
         if package in OTHER_APP_STORES:
-            return APP_STORE
-        if self.is_browser(package):
-            return BROWSER
-        return None
+            found.append(APP_STORE)
+        elif self.is_browser(package):
+            found.append(BROWSER)
+        if self.is_ai_companion(package, name):
+            found.append(AI_COMPANION)
+        return found
+
+    def rule_reason(self, package: str, name: str | None = None) -> str | None:
+        """Why a rule (on or off) blocks [package] (browser, app_store, ai_companion), None when none does."""
+        return next(iter(self._reasons(package, name)), None)
+
+    def active_reason(self, package: str, name: str | None = None) -> str | None:
+        """Why a rule that is on blocks [package], None when none does."""
+        return next((r for r in self._reasons(package, name) if self._rule_of(r)), None)
 
     def wanted(self, person: str, listed: set[str] | None = None) -> dict[str, set[str]]:
-        """The apps Hearth blocks for [person] now, with why: an adult's blocks, and (the rule on) the browsers and
-        stores among the apps Family Link lists for them ([listed]) or Hearth blocked for the rule before."""
+        """The apps Hearth blocks for [person] now, with why: an adult's blocks, and (a rule on) the browsers and
+        stores, and the AI companion apps, among the apps Family Link lists for them ([listed]) or Hearth blocked for a
+        rule before."""
         # A block a parent took back in the Family Link app stays theirs (until an adult blocks it again in Hearth)
         taken_back = set(self.parent_unblocked.get(person, {}))
         found: dict[str, set[str]] = {
             p: {ADULT} for p in self.adult.get(person, {}) if not never_blocked(p) and p not in taken_back
         }
-        if self.rule_on:
+        if self.rule_on or self.companion_rule_on:
             if listed is None:
                 target = self.target_of(person)
                 listed = fl.app_lists(self.hass, target[1])[0] if target else set()
             exempt = self.exempt.get(person, set()) | taken_back
-            for package in (listed | set(self.applied.get(person, {}))) - exempt:
-                if (reason := self.rule_reason(package)) is not None:
+            applied = self.applied.get(person, {})
+            candidates = (listed | set(applied)) - exempt
+            # Their names (Hearth's catalog, else Family Link's lists), read once: the AI companion rule goes by them
+            names = self.household.app_names(candidates, person) if self.companion_rule_on and candidates else {}
+            for package in candidates:
+                name = names.get(package)
+                reason = self.active_reason(package, name)
+                if (
+                    reason is None
+                    and name is None
+                    and self.companion_rule_on
+                    and AI_COMPANION in (applied.get(package, {}).get("why") or ())
+                    and not never_blocked(package)
+                    and package not in NOT_AI_COMPANIONS
+                ):
+                    # Blocked for its name, which no list names now (a list of blocked apps without names, say):
+                    # still one, so Hearth doesn't unblock it and block it again
+                    reason = AI_COMPANION
+                if reason is not None:
                     found.setdefault(package, set()).add(reason)
         return found
 
@@ -365,8 +487,9 @@ class AppBlocks:
         for person in people:
             for package in packages:
                 self.adult.get(person, {}).pop(package, None)
-                if self.rule_on and self.rule_reason(package) is not None:
-                    # The rule would block it again: an adult said no
+                name = self.household.app_names({package}, person).get(package)
+                if self.active_reason(package, name) is not None or self.wanted(person).get(package, set()) - {ADULT}:
+                    # A rule would block it again: an adult said no
                     self.exempt.setdefault(person, set()).add(package)
                 self._called.pop((person, package), None)
                 self._errors.pop((person, package), None)
@@ -521,6 +644,8 @@ class AppBlocks:
             return BROWSERS[package]
         if package in OTHER_APP_STORES:
             return OTHER_APP_STORES[package]
+        if package in AI_COMPANIONS:
+            return AI_COMPANIONS[package]
         return self.household.app_names({package}, person).get(package) or package
 
     def views(self, person: str) -> list[dict[str, Any]]:
@@ -564,9 +689,11 @@ class AppBlocks:
         return {"entity_id": None, "on": None}
 
     def page(self) -> dict[str, Any]:
-        """For Hearth's page: the rule, the supported browsers, the lists, and each kid's blocks and web filter."""
+        """For Hearth's page: the rules, the supported browsers, the lists, and each kid's blocks and web filter."""
         return {
             "rule": self.rule_on,
+            "ai_companion_rule": self.companion_rule_on,
+            "ai_companions": dict(AI_COMPANIONS),
             "supported": [dict(b) for b in SUPPORTED_BROWSERS],
             "browsers": dict(BROWSERS),
             "app_stores": dict(OTHER_APP_STORES),
@@ -596,7 +723,11 @@ class AppBlocks:
         return [
             {
                 "kind": "blocked_app",
-                "by": "hearth.block_app" if ADULT in why else CONF_BLOCK_UNSUPPORTED_BROWSERS,
+                "by": "hearth.block_app"
+                if ADULT in why
+                else CONF_BLOCK_UNSUPPORTED_BROWSERS
+                if why & {BROWSER, APP_STORE}
+                else CONF_BLOCK_AI_COMPANIONS,
                 "app": app,
                 "why": sorted(why),
                 "until": None,

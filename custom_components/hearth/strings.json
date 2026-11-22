@@ -232,6 +232,7 @@
           "remove_group": "Remove a category",
           "app_categories": "App categories",
           "voice_assistants": "Voice assistants",
+          "blocked_apps": "Blocked apps (browsers, AI companion apps)",
           "parent_pin": "Parent PINs",
           "push": "Push to phones (ntfy)",
           "schedule": "Schedule (days off, half days)",
@@ -300,6 +301,18 @@
         "description": "Let voice assistants use Hearth: an Assist pipeline (a voice satellite) with Hearth among its LLM APIs answers questions about the kids' screen time, and its actions (more time, a pause, an allow) go to the adults' phones to approve first. Off: voice gets nothing from Hearth. Adults signed in to Home Assistant (Assist chat, the MCP Server) use Hearth either way.",
         "data": {
           "enabled": "Let voice assistants use Hearth"
+        }
+      },
+      "blocked_apps": {
+        "title": "Blocked apps",
+        "description": "Household rules Hearth blocks apps by, through Family Link, on the kids' Android devices. An app an adult unblocks in Hearth stays unblocked, a parent's own block in Family Link stays the parent's, and turning a rule off unblocks only what that rule blocked.",
+        "data": {
+          "block_unsupported_browsers": "Block browsers Hearth doesn't support",
+          "block_ai_companions": "Block AI companion apps"
+        },
+        "data_description": {
+          "block_unsupported_browsers": "Every browser but Chrome (the one Family Link's site filters work in), and app stores that skip Family Link's approval.",
+          "block_ai_companions": "AI companion and character role-play chat apps (Character AI, Replika, Talkie, Chai and the like). General assistants (Gemini, ChatGPT, Copilot, Claude), messaging and school apps are never blocked by it. On unless turned off."
         }
       },
       "remove_group": {
