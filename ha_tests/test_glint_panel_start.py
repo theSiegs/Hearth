@@ -96,6 +96,9 @@ def test_a_whole_layout_is_checked_and_the_first_problem_said() -> None:
     assert why([{**LAMP, "id": "x" * 33}]).startswith("not a tile id")
     assert why([LAMP, {**LAMP, "col": 1}]) == "two tiles are called test_lamp"
     assert why([ROOM[0], {**ROOM[0], "id": "clock2", "row": 4}]) == "only one clock on Start"
+    lists = {"id": "lists_stack", "kind": "lists_stack", "col": 1, "row": 1, "w": 2, "h": 1}
+    assert start.check_tiles([lists], _never) == [lists]
+    assert why([lists, {**lists, "id": "lists2", "row": 2}]) == "only one lists stack on Start"
     assert why([ROOM[0], {**LAMP, "col": 2, "row": 1}]) == "tiles test_lamp and clock overlap"
     assert why([{**LAMP, "col": 0}]) == "tile test_lamp's col is a whole number from 1"
     assert why([{**LAMP, "w": True}]) == "tile test_lamp's w is a whole number from 1"

@@ -353,7 +353,7 @@ the wall with `set_start`, or with `change_panel_start`):
   `row + h - 1 <= 8` (or a larger reported page's larger side). Tiles may not overlap. The panel leaves out a tile that
   is off its page. The services' ops fit tiles on the reported page (8 x 5 until one is reported).
 - `kind`: `clock`, `calendar`, `weather`, `climate_stack`, `family`, `arrivals`, `media_stack`, `room_stack`,
-  `routines_stack` (each at most once), `entity` (needs `entity`), `stack` (hand-made: needs `name`, at most 40
+  `routines_stack`, `lists_stack` (the house's to-do lists; each at most once), `entity` (needs `entity`), `stack` (hand-made: needs `name`, at most 40
   letters, and `entities`, 1 to 12 different ones). Anything else is refused. Other fields of a tile are dropped.
 - `id`: `[a-z0-9_]{1,32}`, unique. A built-in kind's id is its kind; a new entity tile's is its entity's object id, a new
   stack's `stack`, with a number added on a clash (`stack2`).

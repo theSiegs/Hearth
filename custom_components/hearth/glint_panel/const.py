@@ -160,6 +160,7 @@ START_BUILT_IN = (
     "media_stack",
     "room_stack",
     "routines_stack",
+    "lists_stack",
 )
 START_KINDS = (*START_BUILT_IN, "entity", "stack")
 # Only these tiles say when one of their devices is dealt out
