@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
-from homeassistant.core import ServiceCall
+from homeassistant.core import Context, ServiceCall
 
 
 class PanelHost(Protocol):
@@ -30,6 +30,9 @@ class PanelHost(Protocol):
 
     async def check_caller(self, call: ServiceCall) -> None:
         """Raises Unauthorized unless the call is an administrator's, an adult's or an automation's."""
+
+    async def check_context(self, context: Context | None) -> None:
+        """check_caller for an entity's service call (its context): no user (an automation, the system) may."""
 
     def page_url(self, device_id: str) -> str:
         """The panel's card on the integration's page (the device's configuration_url)."""

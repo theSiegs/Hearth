@@ -239,7 +239,8 @@ the wall with `set_start`, or with `change_panel_start`):
 ## Entities on each panel device
 
 They show the panel part's store and write to it; nothing is restored from the state machine, so a restart shows what
-the store has.
+the store has. Changing a setting entity is checked as the services are: an administrator, an adult, or a call with no
+user (an automation); anyone else (the panels' shared login, a kid's own login) gets Home Assistant's `Unauthorized`.
 
 | Entity (key) | Type | Category | Values |
 |---|---|---|---|

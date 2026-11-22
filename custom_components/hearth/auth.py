@@ -11,7 +11,7 @@ from collections.abc import Awaitable, Callable
 import inspect
 from typing import Any
 
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import Context, HomeAssistant, ServiceCall
 from homeassistant.exceptions import Unauthorized
 
 from .const import CONF_ROLES, DOMAIN
@@ -39,12 +39,18 @@ def _hub(hass: HomeAssistant):
 
 async def async_check_caller(hass: HomeAssistant, call: ServiceCall) -> None:
     """Raises Unauthorized unless the call is an automation's, an administrator's or an adult's."""
-    user_id = call.context.user_id
+    await async_check_context(hass, call.context)
+
+
+async def async_check_context(hass: HomeAssistant, context: Context | None) -> None:
+    """async_check_caller for a [context] (an entity's service call, say): no user (or no context) is the
+    household's own and may; else an administrator or an adult only."""
+    user_id = context.user_id if context is not None else None
     if user_id is None:
         return
     user = await hass.auth.async_get_user(user_id)
     if user is None or not is_adult_user(hass, _hub(hass), user):
-        raise Unauthorized(context=call.context, user_id=user_id)
+        raise Unauthorized(context=context, user_id=user_id)
 
 
 def adults_only(hass: HomeAssistant, handler: Callable[[ServiceCall], Any]) -> Callable[[ServiceCall], Awaitable[Any]]:

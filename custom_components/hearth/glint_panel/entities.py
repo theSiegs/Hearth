@@ -15,6 +15,7 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -49,6 +50,14 @@ class PanelEntity(Entity):
     def available(self) -> bool:
         return self.panels.has(self.device_id)
 
+    async def _check_caller(self) -> None:
+        """A setting is the adults' to change, as set_panel's: an administrator, an adult, or no user (an
+        automation); else Unauthorized."""
+        host = self.panels.host
+        if host is None:
+            raise HomeAssistantError("Panels aren't set up")
+        await host.check_context(self._context)
+
     async def async_added_to_hass(self) -> None:
         self.async_on_remove(
             async_dispatcher_connect(self.hass, signal(self.panels.domain, self.device_id), self.async_write_ha_state)
@@ -63,9 +72,11 @@ class PanelSwitch(PanelEntity, SwitchEntity):
         return bool(self.panels.value(self.device_id, self.key))
 
     async def async_turn_on(self, **kwargs) -> None:
+        await self._check_caller()
         self.panels.set_values(self.device_id, {self.key: True if self.key == HOUSE_PANEL else self._kept(True)})
 
     async def async_turn_off(self, **kwargs) -> None:
+        await self._check_caller()
         self.panels.set_values(self.device_id, {self.key: False if self.key == HOUSE_PANEL else self._kept(False)})
 
     def _kept(self, on: bool) -> bool | None:
@@ -86,6 +97,7 @@ class PanelSelect(PanelEntity, SelectEntity):
         return str(self.panels.value(self.device_id, self.key))
 
     async def async_select_option(self, option: str) -> None:
+        await self._check_caller()
         value: object = int(option) if isinstance(self._default, int) else option
         self.panels.set_values(self.device_id, {self.key: None if value == self._default else value})
 

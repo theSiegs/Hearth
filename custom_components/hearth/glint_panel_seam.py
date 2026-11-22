@@ -6,11 +6,11 @@ from __future__ import annotations
 import hmac
 from typing import Any
 
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import Context, HomeAssistant, ServiceCall
 from homeassistant.util import dt as dt_util
 
 from . import parent_pin
-from .auth import async_check_caller
+from .auth import async_check_caller, async_check_context
 from .const import DOMAIN
 from .hub import HearthHub, hash_secret, pin_lockout
 from .panel import URL_PATH
@@ -53,6 +53,9 @@ class HearthPanelHost:
 
     async def check_caller(self, call: ServiceCall) -> None:
         await async_check_caller(self._hass, call)
+
+    async def check_context(self, context: Context | None) -> None:
+        await async_check_context(self._hass, context)
 
     def page_url(self, device_id: str) -> str:
         return f"homeassistant://{URL_PATH}#panel-{device_id}"

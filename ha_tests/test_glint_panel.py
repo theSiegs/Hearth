@@ -668,6 +668,39 @@ async def test_only_adults_call_the_panel_services(
     assert _panels(hass).value(PANEL_ID, "motion") == "calm"
 
 
+async def test_only_adults_flip_the_panel_s_switches_and_selects(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_admin_user
+) -> None:
+    """The settings' entities check the caller as set_panel does: the shared non-admin panel login (any user who
+    may control entities) is refused; an administrator and a call with no user (an automation) may."""
+    _entry, client = await _household(hass, hass_client_no_auth)
+    await _pair_panel(hass, client, area_id="kitchen")
+    pin, motion = _eid(hass, "switch", "pin_to_unlock"), _eid(hass, "select", "motion")
+    displays = Context(user_id=DISPLAYS[0].id)
+    with pytest.raises(Unauthorized):
+        await hass.services.async_call("switch", "turn_off", {"entity_id": pin}, blocking=True, context=displays)
+    with pytest.raises(Unauthorized):
+        await hass.services.async_call(
+            "select", "select_option", {"entity_id": motion, "option": "calm"}, blocking=True, context=displays
+        )
+    house = _eid(hass, "switch", "house_panel")
+    with pytest.raises(Unauthorized):
+        await hass.services.async_call("switch", "turn_off", {"entity_id": house}, blocking=True, context=displays)
+    assert hass.states.get(pin).state == "on" and hass.states.get(house).state == "on"
+    assert _panels(hass).document(PANEL_ID)["doors"]["pin_to_unlock"] is True
+    assert _panels(hass).value(PANEL_ID, "motion") == "easy"
+
+    await hass.services.async_call(
+        "switch", "turn_off", {"entity_id": pin}, blocking=True, context=Context(user_id=hass_admin_user.id)
+    )
+    assert _panels(hass).document(PANEL_ID)["doors"]["pin_to_unlock"] is False
+    # No user: an automation's
+    await hass.services.async_call("switch", "turn_on", {"entity_id": pin}, blocking=True)
+    await hass.services.async_call("select", "select_option", {"entity_id": motion, "option": "calm"}, blocking=True)
+    assert _panels(hass).document(PANEL_ID)["doors"]["pin_to_unlock"] is True
+    assert _panels(hass).value(PANEL_ID, "motion") == "calm"
+
+
 # verify_pin
 
 
