@@ -20,12 +20,38 @@
           "person": "For a phone or tablet: the person it belongs to. Its screen time counts for them.",
           "area_id": "For a Glint Panel: the room it hangs in (optional). It's named for the room."
         }
+      },
+      "panel_hello": {
+        "title": "A panel wants to join",
+        "description": "{model} · …{short_id} · signed in as {signed_in_as}\n\n{again}",
+        "menu_options": {
+          "panel_add": "Add it: pick its room",
+          "panel_refuse": "Refuse it"
+        }
+      },
+      "panel_add": {
+        "title": "Add {name}",
+        "description": "{model} · …{short_id} · signed in as {signed_in_as}\n\n{again}",
+        "data": {
+          "area_id": "Room",
+          "replaces": "This panel is"
+        },
+        "data_description": {
+          "area_id": "The room it hangs in. The panel and its entities are named for it.",
+          "replaces": "A new panel, or taking the place of a panel that isn't connected: it keeps that panel's settings, Start, proxy key and MAC."
+        }
       }
     },
     "abort": {
       "single_instance_allowed": "Hearth is already set up. TVs and phones pair from their own settings.",
       "expired": "This request has ended. Ask again from the TV or phone.",
-      "paired": "{name} is paired."
+      "paired": "{name} is paired.",
+      "panel_added": "{name} is added.",
+      "panel_refused": "{name} was refused.",
+      "already_in_progress": "This is already waiting for an answer."
+    },
+    "error": {
+      "panel_not_added": "It wasn't added: pick a room that exists, and a panel that isn't connected again."
     }
   },
   "entity": {
@@ -1417,6 +1443,10 @@
           "name": "Bluetooth proxy key",
           "description": "The proxy's ESPHome API encryption key (32 bytes, base64), or new for a fresh one. Pushed to the panel; enter it again in Home Assistant's ESPHome entry for the panel. Administrators only; the answer has it."
         },
+        "proxy_mac": {
+          "name": "Bluetooth proxy MAC",
+          "description": "The MAC the panel's ESPHome proxy uses (02:00:5e:10:00:01, unicast). Kept for life; change it only to match an ESPHome entry. Administrators only."
+        },
         "motion": {
           "name": "Motion",
           "description": "still, calm, easy or lively."
@@ -1579,6 +1609,12 @@
     },
     "invalid": {
       "message": "Not a Start layout: {why}."
+    },
+    "hello_taken": {
+      "message": "That id is a TV's or a phone's: a panel never takes it."
+    },
+    "hello_try_later": {
+      "message": "Too many panels are waiting: approve or refuse them in Home Assistant."
     }
   }
 }

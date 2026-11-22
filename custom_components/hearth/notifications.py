@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import HomeAssistant
 
-from .attention import ADMINS, NOTICE, Action, Item, attention
+from .attention import ADMINS, ADULTS, NOTICE, Action, Item, attention
 
 if TYPE_CHECKING:
     from .hub import Pairing
@@ -83,3 +83,34 @@ def notify_pairing(hass: HomeAssistant, pairing_id: str, name: str, pairing: Pai
 def clear_pairing(hass: HomeAssistant, pairing_id: str) -> None:
     """The pairing was answered: its notification goes, from the bell and the phones."""
     attention(hass).clear(pairing_notification_id(pairing_id), audience=ADMINS, bell_too=True, phone=True)
+
+
+def panel_hello_notification_id(device_id: str) -> str:
+    return f"hearth_panel_hello_{device_id}"
+
+
+def notify_panel_hello(hass: HomeAssistant, device_id: str, title: str) -> None:
+    """A Glint Panel being set up with no room (or on a login that can't approve it) waits: the adults are told where to
+    pick its room. The notice never approves it by itself: no buttons."""
+    short = device_id[-4:]
+    attention(hass).notify(
+        Item(
+            panel_hello_notification_id(device_id),
+            f"A panel wants to join ({title}, …{short}): pick its room on Hearth's page or in Devices & services.",
+            title="A panel wants to join",
+            urgency=NOTICE,
+            audience=ADULTS,
+            bell=True,
+            phone=True,
+            once=True,
+            bell_text=(
+                f"**A panel wants to join** ({title}, …{short}). Pick its room on [Hearth's page]({PAIRING_PAGE}) or "
+                "under Discovered in [Devices & services](/config/integrations/dashboard)."
+            ),
+        )
+    )
+
+
+def clear_panel_hello(hass: HomeAssistant, device_id: str) -> None:
+    """The panel's hello was approved or refused: its notice goes, from the bell and the phones."""
+    attention(hass).clear(panel_hello_notification_id(device_id), audience=ADULTS, bell_too=True, phone=True)

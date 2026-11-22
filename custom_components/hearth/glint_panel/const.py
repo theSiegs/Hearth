@@ -10,8 +10,9 @@ from __future__ import annotations
 from datetime import timedelta
 
 # The document's schema: adding fields is a minor change (/1.1 start, /1.2 a bed side's name, presets and controls,
-# /1.3 proxy.key for every panel, which an administrator can change), renaming or removing one a new major
-SCHEMA = "glint.panel-config/1.3"
+# /1.3 proxy.key for every panel, which an administrator can change, /1.4 proxy.mac beside it), renaming or removing one
+# a new major
+SCHEMA = "glint.panel-config/1.4"
 # A pairing's kind for a Glint Panel
 KIND = "panel"
 
@@ -19,6 +20,15 @@ STORE_VERSION = 1
 # set_panel's field for the panel's ESPHome proxy key (administrators only), and its value that makes a fresh one
 PROXY_KEY = "proxy_key"
 NEW_PROXY_KEY = "new"
+# set_panel's field for the panel's ESPHome proxy MAC (administrators only, since 1.4)
+PROXY_MAC = "proxy_mac"
+# hello (setup over the socket): a waiting hello unseen this long is dropped; a refused one is answered "denied" this
+# long, then a hello may wait again; at most this many wait at once
+HELLO_UNSEEN = timedelta(days=30)
+HELLO_DENIED_FOR = timedelta(days=1)
+MAX_HELLOS = 20
+# The ESPHome integration's domain: its entries' unique ids are their devices' MACs (a live proxy's MAC is adopted)
+ESPHOME = "esphome"
 # The Connected entity stays on this long after the panel's subscription closes (no heartbeat)
 CONNECTED_GRACE = timedelta(minutes=2)
 # Changes within this many seconds go to a panel as one document

@@ -958,6 +958,9 @@ set_panel:
     proxy_key:
       selector:
         text:
+    proxy_mac:
+      selector:
+        text:
     motion:
       selector:
         select:

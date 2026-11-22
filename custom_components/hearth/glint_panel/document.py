@@ -532,6 +532,7 @@ def build(
     panel_areas: list[str],
     key: str | None,
     start: dict[str, Any] | None = None,
+    mac: str | None = None,
 ) -> dict[str, Any]:
     """The whole document for one panel: every key present, null or [] where the panel derives it. [start]: the
     panel's own Start section ({tiles, changed, version}), None for the room's layout."""
@@ -578,7 +579,7 @@ def build(
             "commute": copy.deepcopy(house.get("commute_window") or DEFAULT_COMMUTE),
         },
         "bed": bed if bed["left"] or bed["right"] else None,
-        "proxy": {"on": switch("bluetooth_proxy"), "name": v.get("proxy_name") or proxy_name(name), "key": key},
+        "proxy": {"on": switch("bluetooth_proxy"), "name": v.get("proxy_name") or proxy_name(name), "key": key, "mac": mac},
         "voice": {
             "heard": v.get("voice_heard"),
             "reply": v.get("voice_reply"),
@@ -601,8 +602,10 @@ def version_of(doc: dict[str, Any]) -> str:
 
 
 def public(doc: dict[str, Any]) -> dict[str, Any]:
-    """The document without its secrets (the proxy key), for a service's answer."""
+    """The document without its secrets (the proxy key) and the proxy's MAC, for a service's answer (an administrator
+    reads both from get_panel)."""
     out = copy.deepcopy(doc)
     out["proxy"].pop("key", None)
+    out["proxy"].pop("mac", None)
     out.pop("version", None)
     return out

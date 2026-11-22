@@ -1,6 +1,7 @@
 """<domain>.set_panel, <domain>.set_panel_defaults, <domain>.get_panel, <domain>.change_panel_start and
 <domain>.undo_panel_start: administrators and adults (and automations), as the host checks its other services. Answers
-never carry a secret, but a panel's proxy key to a Home Assistant administrator (set_panel's proxy_key is theirs only)."""
+never carry a secret, but a panel's proxy key (and its proxy MAC and tablet ids) to a Home Assistant administrator
+(set_panel's proxy_key and proxy_mac are theirs only)."""
 
 from __future__ import annotations
 
@@ -17,7 +18,7 @@ from homeassistant.exceptions import ServiceValidationError, Unauthorized
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 
-from . import document, start
+from . import document, hello, start
 from .const import (
     BY_SERVICE,
     HOUSE_KEYS,
@@ -26,6 +27,7 @@ from .const import (
     NEW_PROXY_KEY,
     PANEL_KEYS,
     PROXY_KEY,
+    PROXY_MAC,
     START_MAX_NAME,
 )
 from .manager import Panels
@@ -37,6 +39,7 @@ SET_PANEL_SCHEMA = vol.Schema(
         **{vol.Optional(key): vol.Any(None, object) for key in (*PANEL_KEYS, HOUSE_PANEL)},
         # Checked by the service (a refusal never says the value)
         vol.Optional(PROXY_KEY): object,
+        vol.Optional(PROXY_MAC): object,
     }
 )
 SET_DEFAULTS_SCHEMA = vol.Schema({vol.Optional(key): vol.Any(None, object) for key in HOUSE_KEYS})
@@ -83,6 +86,13 @@ def _proxy_key(value: Any) -> str:
     return key
 
 
+def _proxy_mac(value: Any) -> str:
+    """set_panel's proxy_mac: a unicast MAC ("aa:bb:cc:dd:ee:ff", or with dashes or none), stored lowercase with colons."""
+    if (mac := hello.clean_mac(value)) is None:
+        raise ServiceValidationError(f'{PROXY_MAC} is a MAC address such as "02:00:5e:10:00:01" (unicast)')
+    return mac
+
+
 def _panel_ids(panels: Panels, registry_ids: list[str]) -> list[str]:
     """The panels of Home Assistant devices (the service's target); refused, naming it, when one isn't a panel."""
     registry = dr.async_get(panels.hass)
@@ -124,11 +134,15 @@ def async_register_services(hass: HomeAssistant, domain: str) -> None:
         if len(targets) != 1:
             raise ServiceValidationError("Target one panel")
         new_key: str | None = None
-        if PROXY_KEY in call.data:
-            # The proxy key is administrators' only, though adults may set the rest
+        new_mac: str | None = None
+        if PROXY_KEY in call.data or PROXY_MAC in call.data:
+            # The proxy key and MAC are administrators' only, though adults may set the rest
             if not await _admin(hass, call):
                 raise Unauthorized(context=call.context, user_id=call.context.user_id)
-            new_key = _proxy_key(call.data[PROXY_KEY])
+            if PROXY_KEY in call.data:
+                new_key = _proxy_key(call.data[PROXY_KEY])
+            if PROXY_MAC in call.data:
+                new_mac = _proxy_mac(call.data[PROXY_MAC])
         known = panels.known()
         changes: dict[str, Any] = {}
         try:
@@ -143,12 +157,17 @@ def async_register_services(hass: HomeAssistant, domain: str) -> None:
                 raise ServiceValidationError("house_panel is true, false or null")
             changes[HOUSE_PANEL] = on
         panels.set_values(targets[0], changes)
+        answer = document.public(panels.document(targets[0]))
+        if new_mac is not None:
+            # Pushed to the panel; ESPHome sees another device unless it is the MAC its entry has
+            panels.set_proxy_mac(targets[0], new_mac)
+            answer = {**document.public(panels.document(targets[0])), PROXY_MAC: new_mac}
         if new_key is None:
-            return document.public(panels.document(targets[0]))
+            return answer
         # Pushed to the panel (its proxy restarts with it); HA's ESPHome entry needs it entered again. The answer
         # goes to the administrator who changed it
         panels.set_proxy_key(targets[0], new_key)
-        return {**document.public(panels.document(targets[0])), PROXY_KEY: new_key}
+        return {**answer, **document.public(panels.document(targets[0])), PROXY_KEY: new_key}
 
     async def set_panel_defaults(call: ServiceCall) -> ServiceResponse:
         panels = _loaded(hass, domain)

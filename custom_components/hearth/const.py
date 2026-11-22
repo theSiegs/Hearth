@@ -54,6 +54,8 @@ SIGNAL_DEVICE_ADDED = "hearth_device_added"
 KIND_TV = "tv"
 KIND_MOBILE = "mobile"
 KIND_PANEL = "panel"
+# A Glint Panel waiting after its hello (setup over the socket): its discovered card's flow unique id
+PANEL_HELLO = "panel_hello:"
 KINDS = (KIND_TV, KIND_MOBILE, KIND_PANEL)
 # The kinds a paired TV may vouch for with a ticket (never a panel: its room is an administrator's to choose)
 TICKET_KINDS = (KIND_TV, KIND_MOBILE)

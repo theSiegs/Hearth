@@ -36,3 +36,22 @@ class PanelHost(Protocol):
 
     def page_url(self, device_id: str) -> str:
         """The panel's card on the integration's page (the device's configuration_url)."""
+
+    def hash_secret(self, secret: str) -> str:
+        """The hash of a device secret, as secret_matches compares it."""
+
+    def trusted(self, user: Any) -> bool:
+        """Whether a Home Assistant user is an administrator or an adult (a hello of theirs is approved at once)."""
+
+    def taken(self, device_id: str) -> bool:
+        """One id is one device: [device_id] is already another kind's (a TV's or a phone's), never a panel's."""
+
+    def urls(self) -> dict[str, str | None]:
+        """Where Home Assistant answers, {"internal", "external"} (either None when not known), for an approved hello."""
+
+    def hello_waiting(self, device_id: str, title: str, *, again: bool = False) -> None:
+        """A hello waits for an approval in HA: the discovered card, and (unless [again], after a restart) the adults'
+        notice that opens it. [title]: what the card is called."""
+
+    def hello_answered(self, device_id: str) -> None:
+        """The hello was approved or refused: its card and notice go."""

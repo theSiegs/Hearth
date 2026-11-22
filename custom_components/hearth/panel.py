@@ -23,6 +23,7 @@ from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse, callback
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError, Unauthorized
+from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
@@ -241,6 +242,19 @@ def _screen_time_sensors(hass: HomeAssistant, hub) -> dict[str, str]:
     return found
 
 
+def _panel_hellos(hass: HomeAssistant, hub) -> dict[str, Any]:
+    panels = getattr(hub, "glint_panel", None)
+    if panels is None or not panels.waiting_hellos():
+        return {"panel_hellos": [], "panels_offline": [], "areas": []}
+    return {
+        "panel_hellos": panels.waiting_hellos(),
+        "panels_offline": panels.offline_panels(),
+        "areas": sorted(
+            ({"id": a.id, "name": a.name} for a in ar.async_get(hass).async_list_areas()), key=lambda a: a["name"].lower()
+        ),
+    }
+
+
 def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
     """Everything the page sets, as it's set now."""
     household = hub.household
@@ -315,6 +329,9 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
         "seen_profiles": household.seen_profiles(),
         "devices": devices,
         "pairings": pairings,
+        # Glint Panels waiting after their hello (no room, or a login that can't approve one): each needs a room, and
+        # may take the place of a panel that isn't connected (glint_panel/)
+        **_panel_hellos(hass, hub),
         # People who signed in from a phone, that Hearth asks the administrators about (adult_offer.py)
         "adult_offers": hub.adult_offers.open_offers(),
         "groups": groups,
@@ -714,6 +731,38 @@ async def ws_pairing(hass: HomeAssistant, connection: websocket_api.ActiveConnec
     connection.send_result(msg["id"], {"answer": msg["answer"], "person": person, "device_id": pairing.device_id})
 
 
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hearth/panel_hello",
+        vol.Required("device_id"): cv.string,
+        vol.Required("answer"): vol.In(("approve", "deny")),
+        # The room (required to approve), and the panel that isn't connected whose place it takes (none: a new panel)
+        vol.Optional("area_id"): vol.Any(None, cv.string),
+        vol.Optional("replaces"): vol.Any(None, cv.string),
+    }
+)
+@callback
+def ws_panel_hello(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """An administrator approves (with a room) or refuses a Glint Panel waiting after its hello, from Hearth's page."""
+    hub = _hub(hass)
+    panels = getattr(hub, "glint_panel", None) if hub is not None else None
+    if panels is None:
+        connection.send_error(msg["id"], "not_set_up", "Hearth isn't set up")
+        return
+    if msg["answer"] == "deny":
+        done = panels.deny_hello(msg["device_id"])
+    elif not msg.get("area_id"):
+        connection.send_error(msg["id"], "invalid_format", "Pick the panel's room")
+        return
+    else:
+        done = panels.approve_hello(msg["device_id"], msg["area_id"], msg.get("replaces") or None)
+    if not done:
+        connection.send_error(msg["id"], "expired", "That panel isn't waiting, or that room or panel is gone")
+        return
+    connection.send_result(msg["id"])
+
+
 def async_register_pairing_service(hass: HomeAssistant) -> None:
     """hearth.pairing_answer {pairing_id, answer: approve | deny, person?}: an administrator's Approve or Deny, from
     the notification on their phone (attention.py runs it as them). Administrators only: an automation, or anyone
@@ -931,6 +980,7 @@ def async_register_commands(hass: HomeAssistant) -> None:
         ws_app_category,
         ws_budget,
         ws_pairing,
+        ws_panel_hello,
         ws_parent_pin,
         ws_nintendo_bonus,
         ws_nintendo_bonus_cancel,

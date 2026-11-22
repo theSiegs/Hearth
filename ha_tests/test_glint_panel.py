@@ -28,7 +28,7 @@ from custom_components.hearth import (
     parent_pin,
 )
 from custom_components.hearth.const import DOMAIN, KIND_PANEL
-from custom_components.hearth.glint_panel import document
+from custom_components.hearth.glint_panel import document, hello
 from custom_components.hearth.glint_panel.const import (
     CONNECTED_GRACE,
     DEFAULT_COMMUTE,
@@ -360,7 +360,7 @@ async def test_a_panel_with_only_a_room_has_a_whole_document(
     _entry, client = await _household(hass, hass_client_no_auth)
     await _pair_panel(hass, client, area_id="kitchen")
     doc = _panels(hass).document(PANEL_ID)
-    assert doc["schema"] == SCHEMA == "glint.panel-config/1.3"
+    assert doc["schema"] == SCHEMA == "glint.panel-config/1.4"
     assert doc["served_by"] == "hearth"
     assert set(doc) == {
         "schema", "served_by", "version", "panel", "look", "photos", "calendars", "wake", "night", "doors",
@@ -378,6 +378,8 @@ async def test_a_panel_with_only_a_room_has_a_whole_document(
     assert doc["bed"] is None
     assert doc["proxy"]["on"] is False and doc["proxy"]["name"] == "kitchen-panel"
     assert document.proxy_key(doc["proxy"]["key"])
+    # 1.4: the proxy's MAC beside its key, a new panel's derived from its id (locally administered, unicast)
+    assert doc["proxy"]["mac"] == hello.mac_from_id(PANEL_ID) and int(doc["proxy"]["mac"][:2], 16) & 0x03 == 0x02
     assert doc["voice"] == {"heard": None, "reply": None, "reply_attribute": None, "show": None}
     assert doc["news"] == {"seen": None}
     # The panel's own Start: the room's layout until something is placed

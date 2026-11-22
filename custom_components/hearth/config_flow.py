@@ -17,6 +17,7 @@ from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResu
 from homeassistant.const import CONF_NAME
 from homeassistant.core import callback
 from homeassistant.helpers import entity_registry as er
+from homeassistant.util import dt as dt_util
 from homeassistant.helpers.selector import (
     AreaSelector,
     BooleanSelector,
@@ -30,6 +31,7 @@ from homeassistant.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
+    SelectSelectorMode,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -48,6 +50,7 @@ from .const import (
     DOMAIN,
     KIND_MOBILE,
     KIND_PANEL,
+    PANEL_HELLO,
 )
 from .counting import ALL
 from .limits import BUILTIN_GROUPS, CONF_POOLS, GAMES, POOLS_VERSION, one_pool_per_app, slug
@@ -100,6 +103,7 @@ class HearthConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     _pairing_id: str
+    _hello_id: str
 
     @staticmethod
     @callback
@@ -123,7 +127,9 @@ class HearthConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_integration_discovery(self, discovery_info: dict[str, Any]) -> ConfigFlowResult:
-        """A device asked to pair (see api.PairStartView)."""
+        """A device asked to pair (see api.PairStartView), or a Glint Panel's hello waits for its room."""
+        if "panel_hello" in discovery_info:
+            return await self._panel_hello_found(discovery_info["panel_hello"])
         self._pairing_id = discovery_info["pairing_id"]
         pairing = self._hub_pairing()
         if pairing is None:
@@ -159,6 +165,101 @@ class HearthConfigFlow(ConfigFlow, domain=DOMAIN):
     def _hub_pairing(self):
         hub = _loaded_hub(self.hass)
         return hub.pairing(self._pairing_id) if hub else None
+
+    # A Glint Panel's hello with no room, or on a login that can't approve it (glint_panel/hello.py): its room is
+    # required here; "taking the place of" lists only panels that aren't connected
+
+    def _panels(self):
+        hub = _loaded_hub(self.hass)
+        return hub.glint_panel if hub is not None else None
+
+    def _waiting_hello(self) -> dict[str, Any] | None:
+        panels = self._panels()
+        return panels.waiting_hello(self._hello_id) if panels is not None else None
+
+    async def _panel_hello_found(self, device_id: str) -> ConfigFlowResult:
+        self._hello_id = device_id
+        await self.async_set_unique_id(f"{PANEL_HELLO}{device_id}")
+        waiting = self._waiting_hello()
+        if waiting is None:
+            return self.async_abort(reason="expired")
+        self.context["title_placeholders"] = {"name": f"{_hello_name(waiting)} …{waiting['short_id']}"}
+        return await self.async_step_panel_hello()
+
+    async def async_step_panel_hello(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        waiting = self._waiting_hello()
+        if waiting is None:
+            return self.async_abort(reason="expired")
+        return self.async_show_menu(
+            step_id="panel_hello",
+            menu_options=["panel_add", "panel_refuse"],
+            description_placeholders=_hello_placeholders(waiting),
+        )
+
+    async def async_step_panel_add(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        waiting = self._waiting_hello()
+        panels = self._panels()
+        if waiting is None or panels is None:
+            return self.async_abort(reason="expired")
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            replaces = user_input.get("replaces")
+            if panels.approve_hello(
+                self._hello_id, user_input.get("area_id"), None if replaces in (None, "new") else replaces
+            ):
+                return self.async_abort(reason="panel_added", description_placeholders={"name": _hello_name(waiting)})
+            errors["base"] = "panel_not_added"
+        fields: dict[Any, Any] = {vol.Required("area_id"): AreaSelector()}
+        if waiting["panel"] is None:
+            # A new panel, or one that isn't connected whose place it takes
+            choices = [SelectOptionDict(value="new", label="a new panel")] + [
+                SelectOptionDict(
+                    value=p["device_id"], label=f"taking the place of {p['name']} ({_offline_since(p['offline_since'])})"
+                )
+                for p in panels.offline_panels()
+            ]
+            fields[vol.Required("replaces", default="new")] = SelectSelector(
+                SelectSelectorConfig(options=choices, mode=SelectSelectorMode.LIST)
+            )
+        return self.async_show_form(
+            step_id="panel_add",
+            data_schema=vol.Schema(fields),
+            errors=errors,
+            description_placeholders=_hello_placeholders(waiting),
+        )
+
+    async def async_step_panel_refuse(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        panels = self._panels()
+        waiting = self._waiting_hello()
+        if panels is None or waiting is None or not panels.deny_hello(self._hello_id):
+            return self.async_abort(reason="expired")
+        return self.async_abort(reason="panel_refused", description_placeholders={"name": _hello_name(waiting)})
+
+
+def _hello_name(waiting: dict[str, Any]) -> str:
+    return waiting.get("name") or waiting.get("model") or "Panel"
+
+
+def _offline_since(when: str | None) -> str:
+    at = dt_util.parse_datetime(when or "")
+    return f"offline since {dt_util.as_local(at).strftime('%H:%M')}" if at else "offline"
+
+
+def _hello_placeholders(waiting: dict[str, Any]) -> dict[str, str]:
+    """The line under the title that tells two waiting panels apart: the model, the id's last four characters and
+    the login it signed in as (the user's and the token's names)."""
+    login = waiting.get("signed_in_as") or {}
+    who = " ".join(
+        part for part in (login.get("user") or "", f"({login['token']})" if login.get("token") else "") if part
+    )
+    again = waiting.get("panel")
+    return {
+        "name": _hello_name(waiting),
+        "model": waiting.get("model") or "tablet",
+        "short_id": waiting["short_id"],
+        "signed_in_as": who or "unknown",
+        "again": f"It is {again['name']} again: approving gives it a new secret." if again else "",
+    }
 
 
 class HearthOptionsFlow(OptionsFlow):

@@ -1,9 +1,10 @@
 """The panel's WebSocket commands, on any Home Assistant login with the panel's device secret: subscribe (its document), report
-(what it shows), verify_pin (a Parent PIN typed on it), set_start (its own Start, edited on the wall). Types are
-<domain>/panel/<name>."""
+(what it shows), verify_pin (a Parent PIN typed on it), set_start (its own Start, edited on the wall); and hello, with no
+secret yet (a tablet being set up asks for one). Types are <domain>/panel/<name>."""
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import voluptuous as vol
@@ -11,9 +12,9 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
 
 from . import start
-from .const import BY_PANEL, MAX_PAGE, MAX_STARTS, ws_type
+from .const import BY_PANEL, MAX_PAGE, MAX_SEED_BYTES, MAX_STARTS, ws_type
 from .document import Refused
-from .manager import Panels
+from .manager import HelloRefused, Panels
 
 # The error while the serving integration reloads or hasn't loaded: retry after this many seconds
 UNAVAILABLE = "unavailable"
@@ -37,16 +38,30 @@ def _side(value: Any) -> int:
 _PAGE = vol.Schema({vol.Required("cols"): _side, vol.Required("rows"): _side})
 
 
+def _seed(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict) or len(json.dumps(value)) > MAX_SEED_BYTES:
+        raise vol.Invalid(f"an object of at most {MAX_SEED_BYTES} bytes as JSON")
+    return value
+
+
+def _words(most: int):
+    return vol.All(str, vol.Length(max=most))
+
+
+def _not_ready(connection, msg: dict[str, Any], domain: str) -> None:
+    connection.send_error(
+        msg["id"], UNAVAILABLE, f"Not ready: try again in {UNAVAILABLE_RETRY} s",
+        translation_key=UNAVAILABLE, translation_domain=domain,
+        translation_placeholders={"retry_in": str(UNAVAILABLE_RETRY)},
+    )
+
+
 def _panels(hass: HomeAssistant, domain: str, connection, msg: dict[str, Any]) -> Panels | None:
     """The panels, once the secret is the panel's; else the error sent."""
     panels = Panels.find(hass, domain)
     if panels is None:
         # Reloading, or not loaded yet: never "no PIN" (a panel keeps its door locked and tries again)
-        connection.send_error(
-            msg["id"], UNAVAILABLE, f"Not ready: try again in {UNAVAILABLE_RETRY} s",
-            translation_key=UNAVAILABLE, translation_domain=domain,
-            translation_placeholders={"retry_in": str(UNAVAILABLE_RETRY)},
-        )
+        _not_ready(connection, msg, domain)
         return None
     if not panels.authorized(msg["device_id"], msg["secret"]):
         connection.send_error(
@@ -59,6 +74,55 @@ def _panels(hass: HomeAssistant, domain: str, connection, msg: dict[str, Any]) -
 
 def async_register_commands(hass: HomeAssistant, domain: str) -> None:
     @websocket_api.websocket_command(
+        {
+            vol.Required("type"): ws_type(domain, "hello"),
+            vol.Required("device_id"): _ID,
+            vol.Optional("name"): vol.Any(None, _words(64)),
+            vol.Optional("model"): vol.Any(None, _words(64)),
+            vol.Optional("version"): vol.Any(None, _words(32)),
+            # The room: an area id or an area's name
+            vol.Optional("area"): vol.Any(None, _words(100)),
+            vol.Optional("seed"): vol.Any(None, _seed),
+            # false: never take an offline panel's place (a second tablet in the room)
+            vol.Optional("replaces"): vol.Any(None, bool),
+        }
+    )
+    @callback
+    def ws_hello(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+        """A tablet being set up, on any login, with no secret yet: result null, then {"status": "pending"},
+        {"status": "approved", device_id, secret, name, area_id, urls} or {"status": "denied"} (a pending one is
+        answered later on the same subscription). Errors: taken (the id is a TV's or a phone's), try_later (too many
+        wait), unavailable."""
+        panels = Panels.find(hass, domain)
+        if panels is None:
+            _not_ready(connection, msg, domain)
+            return
+        msg_id = msg["id"]
+        token = hass.auth.async_get_refresh_token(connection.refresh_token_id) if connection.refresh_token_id else None
+        # The first answer comes right after the result null; later ones (an approval or a refusal in HA) straight out
+        queued: list[dict[str, Any]] | None = []
+
+        @callback
+        def send(event: dict[str, Any]) -> None:
+            if queued is not None:
+                queued.append(event)
+            else:
+                connection.send_message(websocket_api.event_message(msg_id, event))
+
+        try:
+            unsubscribe = panels.hello(msg, connection.user, token.client_name if token else None, send)
+        except HelloRefused as err:
+            connection.send_error(
+                msg_id, err.code, str(err), translation_key=f"hello_{err.code}", translation_domain=domain
+            )
+            return
+        connection.subscriptions[msg_id] = unsubscribe
+        connection.send_result(msg_id)
+        first, queued = queued, None
+        for event in first:
+            connection.send_message(websocket_api.event_message(msg_id, event))
+
+    @websocket_api.websocket_command(
         {vol.Required("type"): ws_type(domain, "subscribe"), vol.Required("device_id"): _ID, vol.Required("secret"): _SECRET}
     )
     @callback
@@ -69,9 +133,13 @@ def async_register_commands(hass: HomeAssistant, domain: str) -> None:
             return
         msg_id = msg["id"]
         token = hass.auth.async_get_refresh_token(connection.refresh_token_id) if connection.refresh_token_id else None
+        user = connection.user
         panels.note_login(
-            msg["device_id"], connection.user.name if connection.user else None, token.client_name if token else None
+            msg["device_id"], user.name if user else None, token.client_name if token else None,
+            user.id if user else None,
         )
+        # The ack of an approved hello: its secret is never sent again
+        panels.taken_up(msg["device_id"])
         connection.send_result(msg_id)
 
         @callback
@@ -188,7 +256,7 @@ def async_register_commands(hass: HomeAssistant, domain: str) -> None:
         version, undo = panels.set_start(device_id, tiles, BY_PANEL)
         connection.send_result(msg["id"], {"version": version, "undo": undo})
 
-    for command in (ws_subscribe, ws_report, ws_verify_pin, ws_set_start):
+    for command in (ws_hello, ws_subscribe, ws_report, ws_verify_pin, ws_set_start):
         websocket_api.async_register_command(hass, command)
 
 

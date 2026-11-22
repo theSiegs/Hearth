@@ -6,13 +6,15 @@ from __future__ import annotations
 import hmac
 from typing import Any
 
+from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY
 from homeassistant.core import Context, HomeAssistant, ServiceCall
 from homeassistant.util import dt as dt_util
 
 from . import parent_pin
-from .auth import async_check_caller, async_check_context
-from .const import DOMAIN
+from .auth import async_check_caller, async_check_context, is_adult_user
+from .const import DOMAIN, KIND_PANEL, PANEL_HELLO
 from .hub import HearthHub, hash_secret, pin_lockout
+from .notifications import clear_panel_hello, notify_panel_hello
 from .panel import URL_PATH
 
 
@@ -59,3 +61,42 @@ class HearthPanelHost:
 
     def page_url(self, device_id: str) -> str:
         return f"homeassistant://{URL_PATH}#panel-{device_id}"
+
+    def hash_secret(self, secret: str) -> str:
+        return hash_secret(secret)
+
+    def trusted(self, user: Any) -> bool:
+        return user is not None and user.is_active and not user.system_generated and is_adult_user(
+            self._hass, self._hub, user
+        )
+
+    def taken(self, device_id: str) -> bool:
+        # hub.owned_by_another_kind: one id is one device, a TV's or a phone's id is never a panel's
+        return self._hub.owned_by_another_kind(device_id, KIND_PANEL)
+
+    def urls(self) -> dict[str, str | None]:
+        from .api import _urls
+
+        return _urls(self._hass)
+
+    def hello_waiting(self, device_id: str, title: str, *, again: bool = False) -> None:
+        if not again:
+            notify_panel_hello(self._hass, device_id, title)
+        unique_id = f"{PANEL_HELLO}{device_id}"
+        if any(
+            flow.get("context", {}).get("unique_id") == unique_id
+            for flow in self._hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+        ):
+            return
+        self._hass.async_create_task(
+            self._hass.config_entries.flow.async_init(
+                DOMAIN, context={"source": SOURCE_INTEGRATION_DISCOVERY}, data={"panel_hello": device_id}
+            )
+        )
+
+    def hello_answered(self, device_id: str) -> None:
+        clear_panel_hello(self._hass, device_id)
+        unique_id = f"{PANEL_HELLO}{device_id}"
+        for flow in self._hass.config_entries.flow.async_progress_by_handler(DOMAIN):
+            if flow.get("context", {}).get("unique_id") == unique_id:
+                self._hass.config_entries.flow.async_abort(flow["flow_id"])

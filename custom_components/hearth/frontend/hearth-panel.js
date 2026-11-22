@@ -1165,6 +1165,17 @@ class HearthPanel extends HTMLElement {
         await this._loadConfig();
         return;
       }
+      case "panel-hello": {
+        const area = this._value(`#hello-area-${CSS.escape(d.hello)}`) || null;
+        const replaces = this._value(`#hello-replaces-${CSS.escape(d.hello)}`) || null;
+        if (d.answer === "approve" && !area) return this._notify("Pick the panel's room first");
+        await this._ws(
+          { type: "hearth/panel_hello", device_id: d.hello, answer: d.answer, area_id: area, replaces },
+          d.answer === "approve" ? "Panel added" : "Refused"
+        );
+        await this._loadConfig();
+        return;
+      }
       case "approve":
       case "deny": {
         const person = this._value(`#pair-person-${CSS.escape(d.pairing)}`) || null;
@@ -2560,7 +2571,7 @@ class HearthPanel extends HTMLElement {
   }
 
   _pendingCount() {
-    return (this._config?.pairings || []).length;
+    return (this._config?.pairings || []).length + (this._config?.panel_hellos || []).length;
   }
 
   _avatar(id, size = 44) {
@@ -2618,9 +2629,42 @@ class HearthPanel extends HTMLElement {
       .join("");
   }
 
+  // A Glint Panel waiting after its hello: its room is required; it is a new panel or takes the place of one that
+  // isn't connected. The line under the title tells two waiting panels apart (the id's last four, the login's names)
+  _panelHelloCards() {
+    const hellos = this._config.panel_hellos || [];
+    const areas = this._config.areas || [];
+    const offline = this._config.panels_offline || [];
+    const since = (t) => (t ? `offline since ${esc(new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }))}` : "offline");
+    return hellos
+      .map((h) => {
+        const id = esc(h.device_id);
+        const login = h.signed_in_as || {};
+        const who = [login.user, login.token ? `(${login.token})` : ""].filter(Boolean).map(esc).join(" ");
+        const picked = areas.find((a) => a.id === h.area || a.name.toLowerCase() === String(h.area || "").toLowerCase());
+        return `<div class="card attention">
+          <div class="row">
+            <ha-icon icon="mdi:tablet"></ha-icon>
+            <div class="grow"><div class="strong">A panel wants to join</div>
+              <div class="muted">${esc(h.model || h.name || "tablet")} · …${esc(h.short_id)}${who ? ` · signed in as ${who}` : ""}</div>
+              ${h.panel ? `<div class="muted small">It is ${esc(h.panel.name)} again: approving gives it a new secret.</div>` : ""}</div>
+          </div>
+          <label class="field">Room
+            <select id="hello-area-${id}"><option value="">Choose…</option>${areas.map((a) => `<option value="${esc(a.id)}"${picked && picked.id === a.id ? " selected" : ""}>${esc(a.name)}</option>`).join("")}</select></label>
+          ${h.panel ? "" : `<label class="field">This panel is
+            <select id="hello-replaces-${id}"><option value="">a new panel</option>${offline.map((p) => `<option value="${esc(p.device_id)}">taking the place of ${esc(p.name)} (${since(p.offline_since)})</option>`).join("")}</select></label>`}
+          <div class="actions">
+            <button class="btn" data-action="panel-hello" data-answer="deny" data-hello="${id}">Refuse</button>
+            <button class="btn primary" data-action="panel-hello" data-answer="approve" data-hello="${id}">Add panel</button>
+          </div>
+        </div>`;
+      })
+      .join("");
+  }
+
   _pairingCards() {
     const pairings = this._config.pairings || [];
-    if (!pairings.length) return this._adultOfferCards();
+    if (!pairings.length) return this._panelHelloCards() + this._adultOfferCards();
     const persons = this._config.persons || [];
     return pairings
       .map(
@@ -2639,7 +2683,7 @@ class HearthPanel extends HTMLElement {
           </div>
         </div>`
       )
-      .join("") + this._adultOfferCards();
+      .join("") + this._panelHelloCards() + this._adultOfferCards();
   }
 
   // Today (the redesign, docs/home-assistant-integration.md and the design review): does anything need an adult, in one

@@ -141,7 +141,7 @@ async def test_set_start_from_the_wall_stores_stamps_and_pushes(
 ) -> None:
     body = await _set_up_panel(hass, hass_client_no_auth)
     ws, doc = await _subscribe(hass_ws_client, hass, body)
-    assert doc["start"] is None and doc["schema"] == "glint.panel-config/1.3"
+    assert doc["start"] is None and doc["schema"] == "glint.panel-config/1.4"
 
     # The first time (the panel kept a Start on the tablet before the server had one): base_version null
     answer = await _send(ws, 2, body, "set_start", start={"tiles": [*ROOM, LAMP]}, base_version=None)
