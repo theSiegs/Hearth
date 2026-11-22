@@ -1,8 +1,9 @@
-# Glint Panel configuration, `glint.panel-config/1.3`
+# Glint Panel configuration, `glint.panel-config/1.4`
 
 Owner: the integration that serves it, `<d>` below (today Hearth, `hearth`). A Glint Panel is a wall tablet, one per
-room. Its settings live in Home Assistant: an administrator approves its pairing code and picks the room, and the
-panel gets one versioned document over a WebSocket subscription.
+room. Its settings live in Home Assistant. It is set up over its WebSocket (`hello`, below; a room named in it, on an
+administrator's or an adult's login, approves it at once, else an adult picks its room in Home Assistant), and it gets
+one versioned document over a WebSocket subscription.
 
 **Signing in to Home Assistant is the owner's, not pairing's.** The panel uses a long-lived access token the owner
 made (Profile > Security), any user's; panels may share one non-administrator user, a token each. Pairing makes
@@ -20,7 +21,69 @@ comes through one interface (`glint_panel/host.py`, `PanelHost`), and a test che
 `(<d>, "panel:<device_id>")`. Nothing a panel does touches Hearth's config entry: saving a panel's settings never
 reloads it, and never ends a TV's `/wait`.
 
-## Pairing
+## Setting a panel up over its socket: `<d>/panel/hello` (since 1.4)
+
+The panel signs in to Home Assistant before it is set up (its owner's long-lived token, as for every command), so it
+asks for its secret on the WebSocket it already holds: no HTTP route, no code, no nonce, no poll. The panel sends
+hello whenever it has a socket and no secret.
+
+    {"type": "<d>/panel/hello", "device_id": "panel-1a2b3c4d5e6f7a8b", "name": "glint panel", "model": "Example tablet",
+     "version": "2.0.0", "area": "Kitchen"?, "seed": {...}?, "replaces": false?}
+
+- `device_id` as for pairing (8 to 64 of `A-Z a-z 0-9 _ -`); `name`, `model` (at most 64 letters) and `version` (32)
+  are shown on the approval card; `area` is an area id or an area's name (any case), at most 100 letters; `seed` as for
+  pairing (taken only when a new panel is made; at most 16 KB as JSON); `replaces: false` never takes an offline
+  panel's place (a second tablet in a room).
+- A subscription, on any login. Result `null`, then events:
+  - `{"status": "pending"}`: waiting for an approval in HA (below); the answer comes later on the same subscription;
+  - `{"status": "approved", "device_id", "secret", "name", "area_id", "urls": {"internal", "external"}}`.
+    `device_id` may differ from the one sent (the tablet took a panel's place): the panel keeps it from then on;
+  - `{"status": "denied"}`: refused in HA. A refused hello is answered `denied` for a day, then may wait again.
+- Errors: `taken` (the id is a TV's or a phone's: one id is one device), `try_later` (20 panels wait already),
+  `unavailable` (as for the other commands).
+- **The acknowledgment is the panel's first `<d>/panel/subscribe` with that secret.** Until then every hello (an app
+  restart, a reinstall, Home Assistant restarting, a dropped socket) is sent the same approved event again, on the
+  login it was approved for (or an administrator's or an adult's; any other login gets `pending`). Nothing is handed
+  over once.
+- A waiting hello is kept in `<d>.panels` (it outlives a restart) and never times out; one unseen for 30 days is
+  dropped. The same `device_id` saying hello again is the same entry, never a second one.
+
+### How a hello is matched (first rule that fits)
+
+1. **A known panel**: `device_id` is a panel's id or one of its `tablet_ids`. The same panel, with a new secret: the
+   old secret stops at once (its subscriptions get `{"unpaired": true}`, and it is `unknown_panel` from then on).
+   Settings, room, Start, proxy key and MAC, and name stay.
+2. **Taking an offline panel's place**: `area` is an area HA has, `replaces` isn't `false`, and exactly one panel in
+   that area isn't connected. The answer carries that panel's `device_id`; the hello's id joins the panel's
+   `tablet_ids` (so rule 1 finds it after the next reinstall). Same device, entities, settings, Start, proxy key and
+   MAC. The logbook says `<Area> panel moved to a new tablet`.
+3. **A new panel**: `area` is an area HA has. Its device `<Area> panel` is made in that area before any entity is
+   registered.
+4. **Otherwise** (no area, or one HA doesn't have): it waits for an approval in HA.
+
+**The gate.** hello is open to any login, so rules 1 to 3 approve at once only when the hello's Home Assistant user
+is an administrator or an adult on Hearth's page, or (rules 1 and 2) the user the matched panel last subscribed with
+(kept with the panel at each subscribe). Anything else (a kid's own login, the panels' shared login asking for a new
+panel) waits for an approval in HA, as rule 4.
+
+### Approval in HA
+
+The discovered card (Settings › Devices & services › Discovered) and the same card on Hearth's page (Today), which the
+adults' notice points to (it never approves by itself: no buttons). The line under the title tells two waiting panels
+apart: the model, the id's last four characters, and the login it signed in as (the user's and the token's names).
+
+- **Room** (required), and **This panel is**: a new panel, or taking the place of a panel that isn't connected
+  (`<name> (offline since hh:mm)`, newest offline first). A hello whose id is a panel's already is approved as that
+  panel again (a new secret, moved to the room picked).
+- Hearth's page: `{"type": "hearth/panel_hello", "device_id", "answer": "approve" | "deny", "area_id", "replaces"?}`
+  (administrators; `area_id` required to approve; `replaces` a panel's `device_id`). `hearth/config` lists the waiting
+  ones as `panel_hellos` (with `panels_offline` and `areas`).
+- The approved event goes to the waiting hello's open subscriptions on the login the card names.
+
+## Pairing over HTTP (before 1.4)
+
+TODO (H6): this route and its poll go for kind `panel` once every live panel has said hello once; TVs and phones keep
+theirs. Until then it works as before.
 
 As for TVs and phones (`docs/contracts/device-api.md`), with kind `panel`:
 
@@ -86,7 +149,8 @@ Result `null`, then an event with the whole document at once, and again on every
 or an entity, a house-wide value, the device's area or name), batched 1 s: one service call that sets three things
 is one push. A push is only sent when the document's `version` differs from the last one this subscription got.
 While a subscription is open the panel's **Connected** entity is on; it goes off 2 minutes after the last one closes.
-No heartbeat.
+No heartbeat. The Home Assistant user it signed in as is kept with the panel (a hello on that login is the panel's own,
+see the gate), and the first subscribe with an approved hello's secret is that hello's acknowledgment.
 
 When the panel is removed or paired again, each open subscription gets one last event `{"unpaired": true}` and no
 more.
@@ -157,7 +221,7 @@ such as presence and the room's thermostat itself).
 
 ```json
 {
-  "schema": "glint.panel-config/1.3",
+  "schema": "glint.panel-config/1.4",
   "served_by": "hearth",
   "version": "9c1e04aa",
   "panel": {"device_id": "panel-1a2b3c4d", "name": "Kitchen panel", "area_id": "kitchen",
@@ -174,7 +238,7 @@ such as presence and the room's thermostat itself).
                             "days": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"], "after_bedtimes": false}],
                "commute": {"from": "07:00", "until": "08:30", "days": ["mon", "tue", "wed", "thu", "fri"]}},
   "bed": null,
-  "proxy": {"on": false, "name": "kitchen-panel", "key": "...base64..."},
+  "proxy": {"on": false, "name": "kitchen-panel", "key": "...base64...", "mac": "02:00:5e:10:00:01"},
   "voice": {"heard": null, "reply": null, "reply_attribute": null, "show": null},
   "news": {"seen": null},
   "start": null
@@ -183,9 +247,9 @@ such as presence and the room's thermostat itself).
 
 - `version`: the first 8 hex digits of a SHA-256 of the rest of the document: it changes exactly when the content
   does.
-- `schema` is `glint.panel-config/1.3` (1.1 added `start`, and `room_layout` in reports; 1.2 a bed side's `name`,
+- `schema` is `glint.panel-config/1.4` (1.1 added `start`, and `room_layout` in reports; 1.2 a bed side's `name`,
   `active`, `reliable`, `presets` and `controls`; 1.3: every panel has a `proxy.key`, and an administrator can change
-  it). The major is 1. Adding
+  it; 1.4: `proxy.mac`, and setting a panel up over its socket, `hello`). The major is 1. Adding
   fields is a minor change, read by old panels. Renaming or
   removing one is a new major; old panels then keep their cached document.
 - `panel.name`: the device's name (the owner's, when they renamed it). `panel.panel_areas`: every paired panel's area,
@@ -229,11 +293,18 @@ such as presence and the room's thermostat itself).
   entry for the proxy uses the same key to connect: an administrator reads it from `get_panel` and enters it there.
   Changing it (`set_panel` `proxy_key`) pushes the new key to the panel, so the ESPHome entry must be given the new
   key again (ESPHome asks to re-authenticate). A panel before 1.3 ignores it.
+- `proxy.mac` (1.4): the MAC the panel's ESPHome proxy uses, lowercase with colons. One per panel, for life, so ESPHome
+  sees the same device and needs no re-add: a panel stored before 1.4 takes the MAC of the ESPHome entry whose name,
+  title or host is its `proxy.name` (the entry's unique id), when Home Assistant loads the store; a new panel's (and a
+  panel with no such entry) is derived from its `device_id`: the first 6 bytes of SHA-256 of it, the first byte's low
+  two bits set to `10` (locally administered, unicast). A tablet that takes a panel's place gets that panel's MAC and
+  key. It never changes on its own; an administrator can set it (`set_panel` `proxy_mac`). The panel uses it when
+  present; without one (an older Home Assistant) it keeps its own.
 - `news.seen`: the `input_text` where the panel keeps which news it has shown, or `null` (the panel's own
   fallback). Set with `set_panel` `news_seen`.
 - `voice` only names entities; the voice turn log, timers and the shared request entity belong to the voice
   integration (or plain helpers), never to the panel part.
-- The one secret in it is `proxy.key`. The document goes only to the panel that owns it, over its own
+- The one secret in it is `proxy.key` (`proxy.mac` isn't a secret, but services show it to administrators only). The document goes only to the panel that owns it, over its own
   secret-authenticated subscription; the key is never in an entity's state or attributes, an event, a log, the
   diagnostics or an error, and in a service's answer only to a Home Assistant administrator (`get_panel`, and
   `set_panel` when they change it). An adult who isn't an administrator, an automation and the panels' shared login
@@ -315,7 +386,10 @@ user (an automation); anyone else (the panels' shared login, a kid's own login) 
 | `view` | sensor (enum) | diagnostic | photos · tiles · night · off · dark_clock · pairing |
 | `on_the_tablet` | sensor | diagnostic | words, e.g. `allow turning the screen off`; `none` |
 
-Unique ids `panel_<device_id>_<key>`.
+Unique ids `panel_<device_id>_<key>`. A new entity's id is its device's name and its key,
+`<domain>.<area>_panel_<key>` (`switch.kitchen_panel_photo_caption`): the device is made, named for its room and in it,
+before any entity is registered, and the id never has the area twice (Home Assistant's own naming puts the area before
+the device's name). An entity registered already keeps its id; names come from translation keys.
 
 ## Services (administrators and adults, and automations, as Hearth's other services check)
 
@@ -324,7 +398,7 @@ Unique ids `panel_<device_id>_<key>`.
 `device_id`: the one panel's Home Assistant device. Any of `people` (persons), `extra_areas` (areas), `routines`
 (entities), `bed_left`, `bed_right` (a bed side), `photos`, `presence`, `voice_heard`, `voice_reply`, `voice_show`,
 `news_seen` (entities), `voice_reply_attribute` (words), `proxy_name` (an ESPHome name), `motion`, `photos_every`, and every switch key above (`house_panel`
-included), and `proxy_key` (administrators only, below). Left out: unchanged. `null` or `[]`: back to derived (for a switch: its default; `house_panel: null` goes
+included), and `proxy_key` and `proxy_mac` (administrators only, below). Left out: unchanged. `null` or `[]`: back to derived (for a switch: its default; `house_panel: null` goes
 back to the derived house panel). An entity or area Home Assistant doesn't have is refused, naming it; a device that
 isn't a panel is refused. The answer (`return_response`) is the effective document without its secrets (no
 `proxy.key`, no `version`).
@@ -334,6 +408,11 @@ isn't a panel is refused. The answer (`return_response`) is the effective docume
 else is refused without repeating the value, and nothing changes. The new key is pushed to the panel, and the answer
 has it as a top-level `proxy_key`. Then enter it again in the ESPHome entry. Prefer `"new"`: a key given by value is
 in Home Assistant's own `call_service` event, as every service call's data is.
+
+`proxy_mac` (1.4): administrators only, as `proxy_key`. A unicast MAC (`02:00:5e:10:00:01`, or with dashes or none,
+any case), stored lowercase with colons; anything else is refused and nothing changes. Pushed to the panel; the
+answer has it as a top-level `proxy_mac` (the document part never has `proxy.mac`). Change it only to match an
+ESPHome entry: ESPHome sees another device otherwise.
 
 ### `<d>.set_panel_defaults`
 
@@ -377,8 +456,9 @@ the `start` from before that change (any of the last 10) as a new change, pushes
 before one), `up_to_date` (the version it reported is the current one), `document` (without secrets), `start` (as in the
 document) and `start_versions` (the kept Start changes, newest first, each `{"undo", "changed": {"by", "at"}}`);
 each house-wide value as `{"value", "source"}`. To a Home Assistant administrator only, each panel also has
-`proxy_key` (its `proxy.key`, for the ESPHome entry); an adult who isn't one, or an automation, gets no `proxy_key`
-key at all. Never another secret.
+`proxy_key` (its `proxy.key`, for the ESPHome entry), `mac` (its `proxy.mac`) and `tablet_ids` (the ids of the
+tablets that took its place, hello rule 2); an adult who isn't one, or an automation, gets none of these keys at all.
+Never another secret.
 
 ## Not yet built
 
