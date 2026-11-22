@@ -20,6 +20,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import Entity
+from homeassistant.util import slugify
 
 from .const import (
     HOUSE_PANEL,
@@ -37,6 +38,8 @@ from .manager import Panels
 class PanelEntity(Entity):
     _attr_has_entity_name = True
     _attr_should_poll = False
+    # The entity platform's domain (each kind's own)
+    _panel_platform = ""
 
     def __init__(self, panels: Panels, device_id: str, key: str) -> None:
         self.panels = panels
@@ -45,6 +48,12 @@ class PanelEntity(Entity):
         self._attr_unique_id = unique_id(device_id, key)
         self._attr_translation_key = "connected" if key == "connected" else f"panel_{key}"
         self._attr_device_info = DeviceInfo(identifiers={identifier(panels.domain, device_id)})
+        # A new entity's id is its device's name and its key: switch.kitchen_panel_photo_caption. Never left to Home
+        # Assistant's naming, which puts the area before the device's name (the area twice: kitchen_kitchen_panel_*).
+        # An entity registered already keeps the id it has
+        device = panels.registry_device(device_id)
+        if device is not None and (name := device.name_by_user or device.name) and self._panel_platform:
+            self.entity_id = f"{self._panel_platform}.{slugify(name)}_{key}"
 
     @property
     def available(self) -> bool:
@@ -66,6 +75,7 @@ class PanelEntity(Entity):
 
 class PanelSwitch(PanelEntity, SwitchEntity):
     _attr_entity_category = EntityCategory.CONFIG
+    _panel_platform = "switch"
 
     @property
     def is_on(self) -> bool:
@@ -86,6 +96,7 @@ class PanelSwitch(PanelEntity, SwitchEntity):
 
 class PanelSelect(PanelEntity, SelectEntity):
     _attr_entity_category = EntityCategory.CONFIG
+    _panel_platform = "select"
 
     def __init__(self, panels: Panels, device_id: str, key: str) -> None:
         super().__init__(panels, device_id, key)
@@ -105,6 +116,7 @@ class PanelSelect(PanelEntity, SelectEntity):
 class PanelConnected(PanelEntity, BinarySensorEntity):
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _panel_platform = "binary_sensor"
 
     @property
     def is_on(self) -> bool:
@@ -114,6 +126,7 @@ class PanelConnected(PanelEntity, BinarySensorEntity):
 class PanelView(PanelEntity, SensorEntity):
     _attr_device_class = SensorDeviceClass.ENUM
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _panel_platform = "sensor"
 
     def __init__(self, panels: Panels, device_id: str, key: str) -> None:
         super().__init__(panels, device_id, key)
@@ -126,6 +139,7 @@ class PanelView(PanelEntity, SensorEntity):
 
 class PanelOnTablet(PanelEntity, SensorEntity):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _panel_platform = "sensor"
 
     @property
     def native_value(self) -> str:
