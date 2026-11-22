@@ -1137,7 +1137,8 @@ test("Blocked by Hearth: the browser rule, where Hearth filters sites, each kid'
   assert.match(html, /Hearth filters sites in: Chrome on Android, Microsoft Edge on Windows, Microsoft Edge on Xbox/);
   assert.match(html, /Galaxy Store/);
   assert.match(html, /data-change="block-ai-companions" checked> Block AI companion apps/);
-  assert.match(html, /Character AI, Replika, and apps named like them/);
+  assert.match(html, /Hearth knows \(Character AI, Replika\) are blocked/);
+  assert.match(html, /only named like one isn.t blocked: the adults get a notice with Block and Not now/);
   assert.match(html, /an AI companion app · blocked/);
   assert.match(html, /a browser Hearth doesn&#39;t support · blocked/);
   assert.match(html, /by an adult · blocked by a parent in Family Link/);

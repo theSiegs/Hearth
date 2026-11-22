@@ -875,17 +875,22 @@ so Hearth's pauses, its schedule and its blocks stay in step (`app_blocks.py`).
   only where Hearth was the one that blocked it.
 - **Block AI companion apps** (option `block_ai_companions`, **on** unless an adult turns it off; Configure > Blocked
   apps, next to the browser rule, or Hearth's page > Apps > Blocked by Hearth). AI companion and character role-play
-  chat apps on a kid's Android devices are blocked as soon as Family Link lists them (why: `ai_companion`, "an AI
-  companion app" on the page), with everything above (an adult's unblock is kept, a parent's own block stays theirs,
-  one not installed waits). Hearth knows one by:
-  - its package (`AI_COMPANIONS`, each checked on Google Play): Character AI, Talkie, Chai, Replika, Nomi, Kindroid,
-    PolyBuzz, Linky AI, Saylo, Botify AI, Paradot, EVA AI, HiWaifu;
-  - or its name (Hearth's app catalog's or Family Link's, and Hearth's app categories'): "AI" followed by companion,
-    girlfriend, boyfriend, friend, character, role-play, waifu, lover, soulmate or crush; "Character AI"; "chat with
-    (AI) characters"; "virtual girlfriend/boyfriend"; "companion/girlfriend/waifu AI"; "role-play AI/chat". "AI chat"
-    alone isn't enough: general assistants are named like that too.
+  chat apps Hearth knows by package on a kid's Android devices are blocked as soon as Family Link lists them (why:
+  `ai_companion`, "an AI companion app" on the page), with everything above (an adult's unblock is kept, a parent's
+  own block stays theirs, one not installed waits):
+  - only its package blocks (`AI_COMPANIONS`, each checked on Google Play): Character AI, Talkie, Chai, Replika, Nomi,
+    Kindroid, PolyBuzz, Linky AI, Saylo, Botify AI, Paradot, EVA AI, HiWaifu, Romantic AI, PixelChat (by SpicyChat's
+    maker; SpicyChat and CrushOn have no Play app Hearth could check);
+  - an app that is one only by its name (Hearth's app catalog's or Family Link's, and Hearth's app categories'): "AI"
+    followed by companion, girlfriend, boyfriend, friend, character, role-play, waifu, lover, soulmate or crush;
+    "Character AI"; "chat with (AI) characters"; "virtual girlfriend/boyfriend"; "companion/girlfriend/waifu AI";
+    "role-play AI/chat" ("AI chat" alone isn't enough: general assistants are named like that too) is **never
+    blocked** by the rule. The adults get one notice per app and kid ("Sam: Pal: AI Friend may be an AI companion
+    app"), with **Block** (`hearth.block_app` for that kid and app: an adult's block from then on) and **Not now**.
+    Either way that app isn't asked about again for that kid (kept across restarts; Hearth's page lists them as
+    `asked`). `hearth_ai_companion_asked` (`person`, `app`, `name`) fires for each.
 
-  General assistants and tools are never blocked by this rule, whatever their names say: Google Gemini, Microsoft
+  General assistants and tools are never blocked or asked about by this rule, whatever their names say: Google Gemini, Microsoft
   Copilot and Microsoft 365 Copilot, ChatGPT, Claude, Perplexity, Meta AI, Grok, and Google Chat; nor is an app whose
   name sounds like an assistant, a tool, a messaging or a school app, or one Hearth's app categories know as messaging
   or education. To block one of those, block it with `hearth.block_app`. Turning the rule off unblocks only what this

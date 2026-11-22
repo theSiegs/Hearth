@@ -3968,7 +3968,7 @@ class HearthPanel extends HTMLElement {
       <label class="check"><input type="checkbox" data-change="block-browsers" ${b.rule ? "checked" : ""}> Block browsers Hearth doesn't support</label>
       <div class="muted small">Hearth filters sites in: ${esc(supported)}. With this on, any other browser on a kid's Android devices is blocked as soon as Family Link lists it, and so are other app stores that skip Family Link's approval (${esc(Object.values(b.app_stores || {}).filter((v, i, all) => all.indexOf(v) === i).join(", "))}).</div>
       <label class="check"><input type="checkbox" data-change="block-ai-companions" ${b.ai_companion_rule !== false ? "checked" : ""}> Block AI companion apps</label>
-      <div class="muted small">AI companion and character role-play chat apps (${esc(Object.values(b.ai_companions || {}).join(", "))}, and apps named like them) are blocked as soon as Family Link lists them. General assistants (Gemini, ChatGPT, Copilot, Claude), messaging and school apps never are.</div>
+      <div class="muted small">The AI companion and character role-play chat apps Hearth knows (${esc(Object.values(b.ai_companions || {}).join(", "))}) are blocked as soon as Family Link lists them. An app only named like one isn't blocked: the adults get a notice with Block and Not now, once per app and kid. General assistants (Gemini, ChatGPT, Copilot, Claude), messaging and school apps get neither.</div>
       ${kids.length ? `<ul class="list compact">${kids
         .map((k) => `<li><div class="grow"><div>${esc(k.name)}</div>
           ${k.family_link ? "" : `<div class="muted small">No Family Link set up (Kids tab, parental controls): nothing to block on Android</div>`}

@@ -450,21 +450,28 @@ COMPANION_NAMES = {
 ASSISTANTS = [GEMINI, CHATGPT, COPILOT, CLAUDE, GOOGLE_CHAT, HELPER, TEXTS, HOMEWORK]
 
 
+def _asked(hass: HomeAssistant) -> dict:
+    """The notices asking the adults about an app named like an AI companion app, by key."""
+    attention = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.attention
+    return {i.key: i for i in attention.items() if i.key.startswith("ai_companion_")}
+
+
 async def test_ai_companion_apps_are_blocked_by_default_and_assistants_never(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client, monkeypatch
 ) -> None:
     monkeypatch.setattr(app_blocks, "QUIET", timedelta(0))
-    installed = [GAME, CHARACTER_AI, PAL, *ASSISTANTS]
+    installed = [GAME, CHARACTER_AI, REPLIKA, PAL, *ASSISTANTS]
     calls = await _sam(hass, hass_client_no_auth)
     # A household that never set it: on
     assert "block_ai_companions" not in hass.config_entries.async_entries(DOMAIN)[0].options
     _lists(hass, installed, names=COMPANION_NAMES)
     await _recompute(hass)
-    # A known package, and an app named like one; never a general assistant, a messaging or a school app
-    assert sorted(_packages(calls["block"])) == sorted([CHARACTER_AI, PAL])
+    # Only the known packages are blocked: an app named like one isn't, nor a general assistant, a messaging or a
+    # school app
+    assert sorted(_packages(calls["block"])) == sorted([CHARACTER_AI, REPLIKA])
 
     # Family Link lists them blocked (its Blocked apps list without names): they stay blocked
-    _lists(hass, installed, [CHARACTER_AI, PAL], names=COMPANION_NAMES)
+    _lists(hass, installed, [CHARACTER_AI, REPLIKA], names=COMPANION_NAMES)
     for _ in range(3):
         await _recompute(hass)
     assert calls["unblock"] == [] and len(calls["block"]) == 2
@@ -473,18 +480,74 @@ async def test_ai_companion_apps_are_blocked_by_default_and_assistants_never(
     assert page["ai_companions"][CHARACTER_AI] == "Character AI"
     assert {b["app"]: (b["why"], b["state"]) for b in page["kids"][0]["blocks"]} == {
         CHARACTER_AI: (["ai_companion"], "blocked"),
-        PAL: (["ai_companion"], "blocked"),
+        REPLIKA: (["ai_companion"], "blocked"),
     }
     why = await _call(hass, "explain", {"person": "person.sam", "app": CHARACTER_AI}, True)
     assert {"kind": "blocked_app", "by": "block_ai_companions", "app": CHARACTER_AI, "why": ["ai_companion"], "until": None} in why["blocked_by"]
 
     # An adult unblocks one: it stays unblocked, and the other stays blocked
-    await _call(hass, "unblock_app", {"app": PAL})
-    assert _packages(calls["unblock"]) == [PAL]
+    await _call(hass, "unblock_app", {"app": REPLIKA})
+    assert _packages(calls["unblock"]) == [REPLIKA]
     _lists(hass, installed, [CHARACTER_AI], names=COMPANION_NAMES)
     await _recompute(hass)
     assert len(calls["block"]) == 2
-    assert (await _page(hass, hass_ws_client))["kids"][0]["exempt"] == [PAL]
+    assert (await _page(hass, hass_ws_client))["kids"][0]["exempt"] == [REPLIKA]
+
+
+async def test_an_app_only_named_like_a_companion_is_asked_about_once_never_blocked(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client, monkeypatch
+) -> None:
+    monkeypatch.setattr(app_blocks, "QUIET", timedelta(0))
+    other = "com.example.crush"
+    names = {**COMPANION_NAMES, other: "Crush: AI Lovers"}
+    installed = [GAME, CHARACTER_AI, PAL, other, *ASSISTANTS]
+    calls = await _sam(hass, hass_client_no_auth)
+    fired = []
+    hass.bus.async_listen("hearth_ai_companion_asked", fired.append)
+    _lists(hass, installed, names=names)
+    await _recompute(hass)
+    assert _packages(calls["block"]) == [CHARACTER_AI]
+
+    # One notice per app and kid, for the ones named like a companion app only: never a known package (blocked) nor
+    # an assistant
+    asked = _asked(hass)
+    assert sorted(asked) == ["ai_companion_person.sam_com.example.crush", "ai_companion_person.sam_com.example.pal"]
+    pal = asked["ai_companion_person.sam_com.example.pal"]
+    assert "Pal: AI Girlfriend & Roleplay" in pal.title and pal.audience == "adults" and pal.once
+    block, not_now = pal.actions
+    assert (block.label, block.service, dict(block.data)) == (
+        "Block", "hearth.block_app", {"people": ["person.sam"], "apps": [PAL]}
+    )
+    assert not_now.label == "Not now" and not_now.dismiss and not_now.service is None
+    assert sorted(e.data["app"] for e in fired) == sorted([PAL, other])
+
+    # Asked once: not again on later looks, nor after Not now took it off the phones
+    attention = hass.config_entries.async_entries(DOMAIN)[0].runtime_data.attention
+    attention.clear(pal.key)
+    for _ in range(3):
+        await _recompute(hass)
+    assert len(fired) == 2 and pal.key not in _asked(hass)
+    page = await _page(hass, hass_ws_client)
+    assert [a["app"] for a in page["kids"][0]["asked"]] == [other, PAL]
+    assert {b["app"] for b in page["kids"][0]["blocks"]} == {CHARACTER_AI}
+    # Kept: a restart doesn't ask again
+    assert set(_household(hass).blocks._data()["asked"]["person.sam"]) == {PAL, other}
+
+    # Block, pressed: the app is the adult's block
+    crush = _asked(hass)["ai_companion_person.sam_com.example.crush"]
+    assert await attention.run(crush.actions[0], None)
+    await hass.async_block_till_done()
+    assert other in _packages(calls["block"])
+    _lists(hass, installed, [CHARACTER_AI, other], names=names)
+    await _recompute(hass)
+    assert {b["app"]: b["why"] for b in (await _page(hass, hass_ws_client))["kids"][0]["blocks"]}[other] == ["adult"]
+    assert PAL not in _packages(calls["block"]) and calls["unblock"] == []
+
+    # The rule off: nobody is asked
+    await _set_option(hass, hass_ws_client, "block_ai_companions", False)
+    _lists(hass, [*installed, "com.example.waifu"], [other], names={**names, "com.example.waifu": "AI Waifu Chat"})
+    await _recompute(hass)
+    assert len(fired) == 2
 
 
 async def test_turning_the_ai_companion_rule_off_unblocks_only_its_own(
@@ -557,19 +620,24 @@ async def test_what_the_ai_companion_rule_takes_for_one(
         "Friendly AI keyboard",
         "Air Friends",
     ]
+    # A name alone is asked about, never a rule's reason to block
     for name in companions:
-        assert blocks.rule_reason("com.example.x", name) == "ai_companion", name
+        assert blocks.named_ai_companion("com.example.x", name), name
+    assert blocks.rule_reason("com.example.x") is None
     for name in others:
-        assert blocks.rule_reason("com.example.x", name) is None, name
-    # Known packages need no name; the assistants are never one, whatever they're called
+        assert not blocks.named_ai_companion("com.example.x", name), name
+    # Known packages need no name, and are blocked (never asked about); the assistants are never one, whatever
+    # they're called
     for package in app_blocks.AI_COMPANIONS:
         assert blocks.rule_reason(package) == "ai_companion"
+        assert not blocks.named_ai_companion(package, "AI Girlfriend")
     for package in app_blocks.NOT_AI_COMPANIONS:
-        assert blocks.rule_reason(package, "AI Girlfriend") is None
+        assert blocks.rule_reason(package) is None
+        assert not blocks.named_ai_companion(package, "AI Girlfriend")
     assert not set(app_blocks.AI_COMPANIONS) & app_blocks.NOT_AI_COMPANIONS
     assert all(app_blocks.android_package(p) for p in app_blocks.AI_COMPANIONS)
 
-    # A name Hearth's categories know counts too, but not for an app they know as messaging or education
+    # A name Hearth's categories know counts too (for asking), but not for an app they know as messaging or education
     names = {"com.example.pal": "Pal: AI Friend", "com.example.chatty": "Chatty: AI Friend", "com.example.tutor": "Tutor: AI Friend"}
     kinds = {"com.example.chatty": ("messaging", None), "com.example.tutor": ("productivity", "education")}
     monkeypatch.setattr(
@@ -577,6 +645,7 @@ async def test_what_the_ai_companion_rule_takes_for_one(
         "lookup",
         lambda item: Hit(item, True, *kinds.get(item, ("social", None)), names.get(item)),
     )
-    assert blocks.rule_reason("com.example.pal") == "ai_companion"
-    assert blocks.rule_reason("com.example.chatty") is None
-    assert blocks.rule_reason("com.example.tutor") is None
+    assert blocks.named_ai_companion("com.example.pal")
+    assert not blocks.named_ai_companion("com.example.chatty")
+    assert not blocks.named_ai_companion("com.example.tutor")
+    assert blocks.rule_reason("com.example.pal") is None
