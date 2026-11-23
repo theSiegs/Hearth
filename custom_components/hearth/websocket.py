@@ -378,12 +378,12 @@ def _hub(hass: HomeAssistant):
     return entries[0].runtime_data if entries else None
 
 
-def _may_read(hass: HomeAssistant, hub, user) -> bool:
+def _may_read(hass: HomeAssistant, hub, user, connection=None) -> bool:
     """An administrator, or a user whose person is an adult on Hearth's page (auth.py). Someone refused may be an
     adult nobody marked yet: the administrators are asked once (adult_offer.py)."""
     if is_adult_user(hass, hub, user):
         return True
-    note_refused(hass, hub, user)
+    note_refused(hass, hub, user, connection)
     return False
 
 
@@ -399,7 +399,7 @@ def _for_reader(body: dict[str, Any], user) -> dict[str, Any]:
 @callback
 def ws_household(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
     hub = _hub(hass)
-    if hub is not None and not _may_read(hass, hub, connection.user):
+    if hub is not None and not _may_read(hass, hub, connection.user, connection):
         connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Unauthorized")
         return
     if hub is None:
@@ -422,7 +422,7 @@ def ws_household(hass: HomeAssistant, connection: websocket_api.ActiveConnection
 def ws_activity(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
     """The action log (activity.py), newest first: adults only, as the household summary."""
     hub = _hub(hass)
-    if hub is not None and not _may_read(hass, hub, connection.user):
+    if hub is not None and not _may_read(hass, hub, connection.user, connection):
         connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Unauthorized")
         return
     if hub is None:
@@ -440,7 +440,7 @@ def ws_household_subscribe(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     hub = _hub(hass)
-    if hub is not None and not _may_read(hass, hub, connection.user):
+    if hub is not None and not _may_read(hass, hub, connection.user, connection):
         connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Unauthorized")
         return
     if hub is None:
@@ -505,7 +505,7 @@ def ws_answer(hass: HomeAssistant, connection: websocket_api.ActiveConnection, m
     """An adult answers a request for more time: minutes (any amount) or deny. The first answer wins. Administrators and
     the adults on Hearth's page may."""
     hub = _hub(hass)
-    if hub is not None and not _may_read(hass, hub, connection.user):
+    if hub is not None and not _may_read(hass, hub, connection.user, connection):
         connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "Unauthorized")
         return
     if hub is None:

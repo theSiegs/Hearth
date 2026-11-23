@@ -221,16 +221,26 @@ subscription, Glint's `hearth/glint/*`) only when that user is an administrator,
 `user_id` is that user) is an adult on Hearth's page.
 
 That step is easy to miss, so Hearth asks. When a user is refused one of those reads, and all of this holds, the
-administrators get one notice (their phones, and a card on Hearth's page): "Alex signed in from a phone. Make them an
-adult in Hearth? Adults see the kids' time and can give more.", with **Make adult** and **Not now**:
+administrators get one notice (their phones, and a card on Hearth's page): "Alex (Home Assistant login alex) signed in
+from Alex's Pixel. Make them an adult in Hearth? Adults see the kids' time and can give more.", with **Make adult** and
+**Not now**. It names the login (its username) and where it signed in from (the name of the token the read came with,
+when it has one, else the user's own companion apps), so an administrator can tell a device's login from a person's:
 
 - the user is active, not one Home Assistant made itself, and not an administrator;
+- the user has a phone of their own: at least one companion app (`mobile_app`) registered by that user. A login with
+  none, such as one shared by wall tablets or TVs, is never offered;
+- it isn't a device's login. Not one a Glint Panel signs in with (the user its subscription signed in as, kept with
+  the panel, or a tablet saying hello as one; or a token named as a panel's is), and not one a paired TV signs in with
+  (a token named as a paired TV, or one a Hearth TV made for another TV, "Hearth household: ..."). Both the user's
+  tokens and the token the refused read came with are looked at. A paired phone is its person's own and doesn't count;
 - exactly one person has that `user_id`;
 - that person has no role yet (a kid, or any choice made on Hearth's page, is never overridden);
 - nothing about the person is a kid's: no Family Link, Family Safety or Nintendo account (`enforce`), no screen time
   source, no lock, no budget, schedule or bonus. Anyone with any of these is never offered.
 
-**Make adult** sets the role as Hearth's page does (the options; the entry reloads), and the next read succeeds.
+**Make adult** looks at all of the above again first (refused when the user no longer qualifies, for example a panel
+signs in as it now, or it has no phone of its own any more), then sets the role as Hearth's page does (the options; the
+entry reloads), and the next read succeeds.
 **Not now** takes the notice away. Either way, and once asked at all, the person is never asked again: asked, declined
 and made are kept in Hearth's store (`hearth.adult_offers.<entry>`) across restarts, and an offer still open after a
 restart keeps working. The role can still be set or changed by hand on Hearth's page at any time; an offer settled
