@@ -98,7 +98,7 @@ class SearchResult {
 /// Only the search text goes to Wikidata; results are cached for the session.
 class SearchService {
   static const _api = "https://www.wikidata.org/w/api.php";
-  static const _userAgent = "Hearth/1.0 (https://github.com/theSiegs/Hearth)";
+  static const _userAgent = "Hearth/1.0 (https://github.com/theSiegs/HearthTV)";
 
   final Future<dynamic> Function(Uri uri) _getJson;
   final Map<String, List<SearchResult>> _cache = {};

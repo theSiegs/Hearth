@@ -106,7 +106,7 @@ class HearthAboutDialog extends StatelessWidget {
             icon: Icons.code,
             label: localizations.aboutHearthOnGitHub,
             autofocus: true,
-            onPressed: () => context.read<FLauncherChannel>().openUrl("https://github.com/theSiegs/Hearth"),
+            onPressed: () => context.read<FLauncherChannel>().openUrl("https://github.com/theSiegs/HearthTV"),
           ),
           // TMDB's terms: its logo (less prominent than Hearth's) and this notice, word for word. It's a legal notice,
           // so it stays in English in every language.

@@ -307,14 +307,16 @@ public class PinRecipeFileTest {
     @Test
     public void onlyHearthsOwnRepositoryCanStandInForTheAddress() {
         assertTrue(PinRecipes.validOverride(
-                "https://raw.githubusercontent.com/theSiegs/Hearth/feature/pin-recipes-data/pin-entry/recipes.json"));
+                "https://raw.githubusercontent.com/theSiegs/HearthTV/feature/pin-recipes-data/pin-entry/recipes.json"));
         assertFalse(PinRecipes.validOverride(null));
-        assertFalse(PinRecipes.validOverride("https://raw.githubusercontent.com/someone/Hearth/master/x.json"));
-        assertFalse(PinRecipes.validOverride("http://raw.githubusercontent.com/theSiegs/Hearth/master/x.json"));
-        assertFalse(PinRecipes.validOverride("https://raw.githubusercontent.com/theSiegs/Hearth/../../x/y.json"));
-        assertFalse(PinRecipes.validOverride("https://raw.githubusercontent.com/theSiegs/Hearth/master/x.json?a=b"));
-        assertFalse(PinRecipes.validOverride("https://raw.githubusercontent.com/theSiegs/Hearth/master/x.txt"));
-        assertFalse(PinRecipes.validOverride("https://raw.githubusercontent.com/theSiegs/Hearth@evil.example/x.json"));
+        assertFalse(PinRecipes.validOverride("https://raw.githubusercontent.com/someone/HearthTV/master/x.json"));
+        // The repository before Hearth TV moved out of it: no longer Hearth TV's own
+        assertFalse(PinRecipes.validOverride("https://raw.githubusercontent.com/theSiegs/Hearth/master/pin-entry/recipes.json"));
+        assertFalse(PinRecipes.validOverride("http://raw.githubusercontent.com/theSiegs/HearthTV/master/x.json"));
+        assertFalse(PinRecipes.validOverride("https://raw.githubusercontent.com/theSiegs/HearthTV/../../x/y.json"));
+        assertFalse(PinRecipes.validOverride("https://raw.githubusercontent.com/theSiegs/HearthTV/master/x.json?a=b"));
+        assertFalse(PinRecipes.validOverride("https://raw.githubusercontent.com/theSiegs/HearthTV/master/x.txt"));
+        assertFalse(PinRecipes.validOverride("https://raw.githubusercontent.com/theSiegs/HearthTV@evil.example/x.json"));
     }
 
     // ---- Phrases: what the Java recipes' regular expressions found, without one ----

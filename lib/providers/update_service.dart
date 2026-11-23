@@ -92,7 +92,7 @@ class UpdateService extends ChangeNotifier {
       {bool Function()? includePrereleases, GitHubReleases? releases, UpdateDeferral? deferral})
       : _includePrereleases = includePrereleases ?? (() => false),
         _deferral = deferral,
-        _releases = releases ?? GitHubReleases("theSiegs/Hearth", userAgent: "Hearth-UpdateChecker") {
+        _releases = releases ?? GitHubReleases("theSiegs/HearthTV", userAgent: "Hearth-UpdateChecker") {
     _loadCurrentVersion();
   }
 

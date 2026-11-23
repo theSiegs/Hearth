@@ -36,7 +36,7 @@ final class PinSafety {
     private static final String LIST_KEY = "disabled_list";
     private static final String LIST_AT_KEY = "disabled_list_at";
     private static final String LOG_KEY = "log";
-    static final String LIST_URL = "https://raw.githubusercontent.com/theSiegs/Hearth/master/pin-entry/disabled.json";
+    static final String LIST_URL = "https://raw.githubusercontent.com/theSiegs/HearthTV/master/pin-entry/disabled.json";
     static final long REFRESH_MS = 12 * 60 * 60_000L;
     static final int LOG_SIZE = 20;
     private static final ExecutorService FETCH = Executors.newSingleThreadExecutor();

@@ -38,13 +38,13 @@ final class PinRecipes {
     private static final String AT_KEY = "fetched_at";
     private static final String URL_KEY = "fetched_url";
     static final String ASSET = "pin-recipes.json";
-    static final String URL_DEFAULT = "https://raw.githubusercontent.com/theSiegs/Hearth/master/pin-entry/recipes.json";
+    static final String URL_DEFAULT = "https://raw.githubusercontent.com/theSiegs/HearthTV/master/pin-entry/recipes.json";
     /**
      * For a TV test of recipes not yet on master: {@code adb shell settings put global hearth_pin_recipes_url <url>}.
-     * Only a file in Hearth's own repository is taken ({@link #URL_PREFIX}); only adb can write this setting.
+     * Only a file in Hearth TV's own repository is taken ({@link #URL_PREFIX}); only adb can write this setting.
      */
     static final String URL_SETTING = "hearth_pin_recipes_url";
-    static final String URL_PREFIX = "https://raw.githubusercontent.com/theSiegs/Hearth/";
+    static final String URL_PREFIX = "https://raw.githubusercontent.com/theSiegs/HearthTV/";
     static final long REFRESH_MS = PinSafety.REFRESH_MS;
     private static final ExecutorService FETCH = Executors.newSingleThreadExecutor();
 
