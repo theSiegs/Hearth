@@ -16,13 +16,14 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
 
 from . import HearthConfigEntry
-from .const import KIND_MOBILE, KIND_TV, SIGNAL_WATCH, TV_STATES
+from .const import DOMAIN, KIND_MOBILE, KIND_TV, SIGNAL_WATCH, TV_STATES
 from .counting import ALL
 from .limits import never_held_group
 from .schooldays import DAY_TYPES
@@ -152,7 +153,13 @@ class HearthSensor(HearthEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any] | None:
         if self.status is None or self.entity_description.attributes is None:
             return None
-        return self.entity_description.attributes(self.status)
+        attrs = self.entity_description.attributes(self.status)
+        if self.entity_description.key == "profile":
+            # A TV's sibling entities by id (docs/contracts/tv-entities.md), so a reader never guesses unique-id suffixes
+            registry = er.async_get(self.hass)
+            for name, key in (("state_entity", "state"), ("media_title_entity", "media_title")):
+                attrs[name] = registry.async_get_entity_id("sensor", DOMAIN, f"{self.device_id}_{key}")
+        return attrs
 
 
 def _minutes(seconds: float) -> int:

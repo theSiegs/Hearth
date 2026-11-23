@@ -8,6 +8,8 @@ the provider contract HearthTube reads, household sync between TVs, PIN recipes)
 - [Hearth TV contract](contracts/hearth-tv.md): everything a Hearth TV and the integration say to each other, and what
   the TV does without Home Assistant. A change to it needs the page and the contract tests here and in HearthTV
   updated together
+- [A TV's entities](contracts/tv-entities.md): which entities of a paired TV other integrations may read, and how to
+  find them
 - [Contracts](contracts/): the device API (`device-api.md`), the time model, client settings, panel config, app facts
 - [Dashboard parity](dashboard-parity.md): Hearth's page next to the parental control integrations' dashboards
 - [Message hub](message-hub.md): design for the household message hub
