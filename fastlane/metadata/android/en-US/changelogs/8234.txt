@@ -1,2 +1,0 @@
-- Early development pre-release.
-- Groundwork for grown-up profiles that share the TV's main user.

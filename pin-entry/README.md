@@ -1,9 +1,13 @@
 # Streaming PIN entry: the files Hearth reads from here
 
+> **Moved to [HearthTV](https://github.com/theSiegs/HearthTV/tree/master/pin-entry).** Hearth TV builds from
+> the bridge release on read these files from HearthTV. Older builds still read the copies here, so until every TV
+> runs the bridge build or later, change a file in HearthTV first and copy it here unchanged. Then they go.
+
 ## Recipes
 
 `recipes.json` holds the recipes Hearth follows to type a saved PIN in each streaming app. Hearth ships its own
-copy and uses one from here only when it's newer and passes every check; see [PIN recipes](../docs/pin-recipes.md)
+copy and uses one from here only when it's newer and passes every check; see [PIN recipes](https://github.com/theSiegs/HearthTV/blob/master/docs/pin-recipes.md)
 for the format, the checks and how to fix a recipe.
 
 ## App versions Hearth doesn't type PINs in

@@ -1,1 +1,0 @@
-Home Assistant: outside app changes are now told for Family Safety and Nintendo too.

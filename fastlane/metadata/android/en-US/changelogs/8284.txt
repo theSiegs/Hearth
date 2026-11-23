@@ -1,2 +1,0 @@
-- Early development pre-release.
-- Update automatically now updates Hearth itself while the TV is off.

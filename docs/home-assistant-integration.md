@@ -6,8 +6,8 @@
 > [The device's side of the API](#the-devices-side-of-the-api)). Hearth TV pairs and reports to it; Hearth
 > Mobile doesn't yet. The rest is
 > written so another person or agent can pick it up: what Hearth does with Home Assistant today, what the integration
-> should be, and what is still undecided. Read [home-assistant.md](home-assistant.md) first (what exists) and
-> [household-sync.md](household-sync.md) (the mailbox's first user).
+> should be, and what is still undecided. Read [home-assistant.md](https://github.com/theSiegs/HearthTV/blob/master/docs/home-assistant.md) first (what exists) and
+> [household-sync.md](https://github.com/theSiegs/HearthTV/blob/master/docs/household-sync.md) (the mailbox's first user).
 
 ## What it's for
 
@@ -102,7 +102,7 @@ tickets give a parent's phone its own pairing in one tap (TV remote API, Version
 
 Each device posts its status: when something changes (within about 2 seconds) and as a heartbeat (a paired TV every 2
 minutes, a phone as its battery allows). The body is the JSON a TV already posts to its webhook
-([home-assistant.md](home-assistant.md#tv-status)), so there is no second contract; a phone posts the fields that fit
+([home-assistant.md](https://github.com/theSiegs/HearthTV/blob/master/docs/home-assistant.md#tv-status)), so there is no second contract; a phone posts the fields that fit
 it (`screen`, `app`, `app_package`, `media_*`, `day`, `seconds_today`, `app_seconds_today`, `playing_seconds_today`).
 The integration keeps only known fields, cleaned, and keeps the last status across restarts. **Connected** turns off
 after 15 minutes without a post; the device's other entities show unavailable then.
@@ -1756,7 +1756,7 @@ Who can approve doesn't change.
 
 ### Household sync mailbox
 
-Not built yet. [household-sync.md](household-sync.md): `POST .../household/outbox` and `GET .../household/inbox?since=<version>`,
+Not built yet. [household-sync.md](https://github.com/theSiegs/HearthTV/blob/master/docs/household-sync.md): `POST .../household/outbox` and `GET .../household/inbox?since=<version>`,
 sealed blobs the integration can't read (it never has the household key), kept with Home Assistant's storage helper so
 they survive restarts, 2 MB per household, oldest dropped first. Pictures don't go through it. Devices still exchange
 directly on the home network; the mailbox is for devices that are rarely on at the same time.
@@ -3243,13 +3243,14 @@ Assistant reads the 21 digits as a number and loses some. Hearth passes it as te
 
 ## Releasing
 
-`manifest.json` `version` is the release version, pubspec's name without the build number (`2026.11.08`): set it with
-`python3 .github/scripts/integration_version.py --write` after bumping `pubspec.yaml`, and CI and the release workflow
-refuse a mismatch. A device reports its version
+`manifest.json` `version` is the release version, CalVer `YYYY.MM.NN` (`2026.12.01`), raised by hand with a
+`## <version>` section in `CHANGELOG.md`. CI checks it with `python3 .github/scripts/integration_version.py`, and the
+release workflow refuses a tag that isn't the manifest's version. Hearth TV has its own version in theSiegs/HearthTV.
+A device reports its version
 at pairing; the integration is to raise a repair issue when the two are too far apart (not built yet). HACS reads the release tag.
 
 The integration's icon (`brand/icon.png`, 256x256, and `brand/icon@2x.png`, 512x512) is Hearth's launcher icon,
-made by `tool/generate_icons.py`; Home Assistant 2026.3 and later shows a custom integration's own `brand/` images.
+made by Hearth TV's `tool/generate_icons.py` (in theSiegs/HearthTV); Home Assistant 2026.3 and later shows a custom integration's own `brand/` images.
 
 ## Build order
 

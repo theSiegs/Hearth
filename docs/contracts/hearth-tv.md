@@ -152,7 +152,7 @@ long poll.
 The TV's local port 7676 (TV: HaNotificationServer.java:20-34, 128-160: `msg`, `title`, `duration`, `camera`,
 `actions`, `for`, `tag`; local network only, no secret) is **not part of this contract**: the integration never calls
 it (no reference in `custom_components/hearth`). It is for a household's own `rest_command`s
-([home-assistant.md, Notifications](../home-assistant.md#notifications)); the integration's way is `notices`. Likewise
+([Hearth TV's home-assistant.md, Notifications](https://github.com/theSiegs/HearthTV/blob/master/docs/home-assistant.md#notifications)); the integration's way is `notices`. Likewise
 the TV's panel token calls (`/api/services`, `/api/states`, `/api/websocket` for `mobile_app_notification_action`,
 TV: HaApi.java:139-180; HaEventSession.java) use Home Assistant's own API, not Hearth's.
 

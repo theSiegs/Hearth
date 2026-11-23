@@ -1,3 +1,0 @@
-- Early development pre-release.
-- Dismissing one notification no longer dismisses the app's others.
-- Weather in the top bar by default.

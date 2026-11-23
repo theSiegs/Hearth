@@ -3,6 +3,15 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Repository
+
+- **Hearth TV's code has left this repository** for [theSiegs/HearthTV](https://github.com/theSiegs/HearthTV), which
+  builds, tests and releases the TV app. Releases here carry the integration only, no APKs, and the integration's
+  version is kept in `custom_components/hearth/manifest.json` alone. `pin-entry/` stays for TVs older than the bridge
+  build.
+
 ## 2026.11.55
 
 ### TV

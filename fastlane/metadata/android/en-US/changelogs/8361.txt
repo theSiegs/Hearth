@@ -1,1 +1,0 @@
-Bedtime and School time hold apps however they are opened, even when Home Assistant is out of reach; apps already open are sent home when time runs out; the TV tells Home Assistant when its accessibility service is off.

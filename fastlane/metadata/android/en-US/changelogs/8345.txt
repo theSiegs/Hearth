@@ -1,1 +1,0 @@
-Phone approval keeps the request on your phone, follows you to every TV, and works through the Hearth integration. Typing uses the on-screen keyboard and voice first; type on your phone only when one is connected.

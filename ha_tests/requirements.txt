@@ -1,0 +1,3 @@
+# What ha_tests needs (CI installs these; the local WSL venv has the same versions)
+pytest-homeassistant-custom-component==0.13.363
+ruff

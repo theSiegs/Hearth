@@ -1,2 +1,0 @@
-Home Assistant: Glint Panels set up from Home Assistant; AI companion apps blocked on kids' devices by default.
-TV: a clock set by hand is no longer trusted.

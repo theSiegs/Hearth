@@ -1,4 +1,7 @@
-name: Release APK
+name: Release
+
+# A release of the Home Assistant integration, which HACS installs from its tag. Hearth TV's APKs are released from
+# theSiegs/HearthTV, not here.
 
 on:
   push:
@@ -7,17 +10,17 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Tag name for the release (e.g. v1.0.0)'
+        description: 'Tag name for the release (e.g. v2026.12.01)'
         required: true
-        default: 'v-dev'
 
 permissions:
   contents: write
 
 jobs:
-  build-and-release:
+  release:
     runs-on: ubuntu-latest
     env:
+      TAG_NAME: ${{ github.event.inputs.tag_name || github.ref_name }}
       # Only tags containing '-' (v2026.11.24-rc1) are pre-releases. A version tag is a full release, so the Home
       # Assistant Marketplace offers it by its version (it hides pre-releases unless "Show beta versions" is on)
       PRERELEASE: ${{ contains(github.event.inputs.tag_name || github.ref_name, '-') }}
@@ -26,73 +29,20 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v7
         with:
-          fetch-depth: 0
+          ref: ${{ github.event.inputs.tag_name || github.ref }}
 
-      # HACS installs the integration from this tag: refuse a release whose manifest version isn't pubspec's.
+      # HACS installs the integration from this tag: refuse a release whose manifest version isn't the tag's.
       - name: Check integration version
-        run: python3 .github/scripts/integration_version.py
+        run: python3 .github/scripts/integration_version.py --tag "$TAG_NAME"
 
-      - name: Set up Java
-        uses: actions/setup-java@v6
-        with:
-          distribution: 'zulu'
-          java-version: '21'
+      - name: Release notes
+        run: python3 .github/scripts/integration_version.py --notes "$TAG_NAME" > release_notes.md
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.47.8'
-
-      - name: Install Dependencies
-        run: flutter pub get
-
-      - name: Generate Mocks
-        run: dart run build_runner build
-
-      - name: Generate Database Migrations Schema
-        run: dart run drift_dev schema generate drift_schemas/ test/generated_migrations/
-
-      - name: Configure Keystore Signing
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        if: ${{ env.KEYSTORE_BASE64 != '' }}
-        run: |
-          python3 -c "import os, base64; s = os.environ['KEYSTORE_BASE64']; s = ''.join(s.split()); m = len(s) % 4; s += '=' * (4 - m) if m else ''; open('android/my-release-key.jks', 'wb').write(base64.b64decode(s))"
-
-      - name: Build Release APKs
-        env:
-          KEYSTORE_FILE: "../my-release-key.jks"
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          # Optional: posters and "streaming on" in search (TMDB). Without it, search has no posters.
-          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
-          # Whether this build is a pre-release: Hearth's "Include pre-releases" starts on in one, off in a release
-          HEARTH_PRERELEASE: ${{ env.PRERELEASE }}
-        run: |
-          # Build universal APK first
-          flutter build apk --release --target-platform=android-arm,android-arm64 --dart-define=TMDB_API_KEY="$TMDB_API_KEY" --dart-define=HEARTH_PRERELEASE="$HEARTH_PRERELEASE"
-          # Rename/save it temporarily
-          mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/app-release.apk.temp
-          # Build split APKs
-          flutter build apk --release --split-per-abi --target-platform=android-arm,android-arm64 --dart-define=TMDB_API_KEY="$TMDB_API_KEY" --dart-define=HEARTH_PRERELEASE="$HEARTH_PRERELEASE"
-          # Rename to final Hearth-* names
-          mv build/app/outputs/flutter-apk/app-release.apk.temp build/app/outputs/flutter-apk/Hearth-universal-release.apk
-          mv build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk build/app/outputs/flutter-apk/Hearth-armeabi-v7a-release.apk
-          mv build/app/outputs/flutter-apk/app-arm64-v8a-release.apk build/app/outputs/flutter-apk/Hearth-arm64-v8a-release.apk
-
-      - name: Generate Release Notes
-        env:
-          TAG_NAME: ${{ github.event.inputs.tag_name || github.ref_name }}
-        run: python3 .github/scripts/generate_release_notes.py
-
-      - name: Create GitHub Release and Upload APKs
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
+          tag_name: ${{ env.TAG_NAME }}
           body_path: release_notes.md
-          files: |
-            build/app/outputs/flutter-apk/Hearth-*.apk
           draft: false
           prerelease: ${{ env.PRERELEASE == 'true' }}
         env:

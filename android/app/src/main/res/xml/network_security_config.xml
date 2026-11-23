@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Home Assistant on the home network usually has no HTTPS. Native clients (HaApi, HaStatusReporter,
-     WatchNextPosters) refuse plain HTTP to non-local hosts. -->
-<network-security-config>
-    <base-config cleartextTrafficPermitted="true" />
-</network-security-config>

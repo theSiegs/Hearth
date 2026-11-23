@@ -1,2 +1,0 @@
-- Early development pre-release.
-- Home Assistant settings: text fields need OK before editing.

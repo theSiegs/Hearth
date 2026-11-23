@@ -48,6 +48,9 @@ lib/generated_plugin_registrant.dart
 app.*.symbols
 app.*.map.json
 
+# Hearth TV moved to theSiegs/HearthTV; an older checkout keeps its untracked build files here
+/android/
+
 # Android Build & Secrets
 /android/app/debug
 /android/app/profile

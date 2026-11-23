@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
 
+# The Home Assistant integration only. Hearth TV (the TV app) builds, tests and releases in theSiegs/HearthTV.
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -16,76 +17,28 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v7
 
-      # HACS installs the integration from the release tag, so its manifest must carry the release version.
+      # HACS installs the integration from the release tag, so its manifest must be valid and carry a version.
       - name: Check integration version
         run: python3 .github/scripts/integration_version.py
 
-      - name: Set up Java
-        uses: actions/setup-java@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
         with:
-          distribution: 'zulu'
-          java-version: '21'
-          # Gradle's downloads (the wrapper, plugins, libraries) kept between runs: fewer chances for a network blip
-          cache: 'gradle'
+          python-version: '3.14'
+          cache: 'pip'
+          cache-dependency-path: ha_tests/requirements.txt
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.47.8'
-          # The SDK and the pub cache, kept between runs
-          cache: true
+      - name: Install test dependencies
+        run: pip install -r ha_tests/requirements.txt
 
-      - name: Install Dependencies
-        run: flutter pub get
+      # Errors only (syntax, undefined names), not style
+      - name: Lint
+        run: ruff check --select E9,F63,F7,F82 custom_components ha_tests tool
 
-      - name: Generate Mocks
-        run: dart run build_runner build
+      - name: Test the integration
+        working-directory: ha_tests
+        run: python -m pytest -q -p no:cacheprovider .
 
-      - name: Generate Database Migrations Schema
-        run: dart run drift_dev schema generate drift_schemas/ test/generated_migrations/
-
-      - name: Analyze
-        run: flutter analyze --no-fatal-infos
-
-      - name: Test
-        run: flutter test
-
-      # The phone pages' encryption, against Node's own ChaCha20-Poly1305
-      - name: Test phone page encryption
-        run: node test/js/phone_seal_test.js
-
-      # Hearth's page in Home Assistant, drawn without a browser
+      # Hearth's page in Home Assistant, drawn without a browser, and the words people read on it
       - name: Test Hearth's Home Assistant page
-        run: node --test test/js/hearth_panel_test.mjs
-
-      # The NDK Flutter asks for isn't on the runner: the build used to fetch it itself, which once hung for ten
-      # minutes and failed on a broken zip. Fetched here instead, each try time-limited, three tries.
-      - name: Install the NDK
-        run: |
-          ndk=$(sed -n 's/.*val ndkVersion: String = "\([0-9.]*\)".*/\1/p' \
-            "$FLUTTER_ROOT/packages/flutter_tools/gradle/src/main/kotlin/FlutterExtension.kt")
-          if [ -z "$ndk" ]; then echo "Flutter's NDK version not found: the build fetches it"; exit 0; fi
-          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          for try in 1 2 3; do
-            if timeout 300 "$sdkmanager" --install "ndk;$ndk" > /dev/null; then exit 0; fi
-            echo "::warning::Installing NDK $ndk failed (try $try)"
-            rm -rf "$ANDROID_HOME/ndk/$ndk"
-            sleep 20
-          done
-          exit 1
-
-      # Compiles the Java side too, which nothing else checks before a release. Built a second time only when the
-      # first build failed on a download, never on a compile error.
-      - name: Build Debug APK
-        shell: bash
-        run: |
-          for try in 1 2; do
-            if flutter build apk --debug --target-platform=android-arm64 2>&1 | tee build.log; then exit 0; fi
-            if [ $try = 2 ] || ! grep -qE 'downloading artifacts from the network|Could not (GET|HEAD|resolve|download)|Connection reset|Read timed out|sdkmanager' build.log; then exit 1; fi
-            echo "::warning::The build failed on a download: building again in 30 s"
-            sleep 30
-          done
-
-      - name: Test Java
-        working-directory: android
-        run: ./gradlew :app:testDebugUnitTest
+        run: node --test test/js/hearth_panel_test.mjs test/js/wording_test.mjs

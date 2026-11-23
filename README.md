@@ -1,203 +1,62 @@
-<p align="center">
-  <img src="assets/logo.png" width="128" alt="Hearth logo">
-</p>
-
-<h1 align="center">Hearth TV</h1>
+<h1 align="center">Hearth</h1>
 
 <p align="center">
-  An ad-free home screen for Google TV that keeps everyone's profile and kids' limits working.
+  Family screen time for Home Assistant: one set of rules for the kids' TVs, tablets, phones, Xbox and Switch.
 </p>
 
-<p align="center">
-  <a href="https://github.com/theSiegs/Hearth/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/theSiegs/Hearth?style=flat-square&label=release"></a>
-  <a href="LICENSE"><img alt="License: GPL v3" src="https://img.shields.io/badge/license-GPL--3.0-blue?style=flat-square"></a>
-</p>
+**Hearth:** the family rules (budgets, bedtime, School time, pauses, asks and approvals, Parent PINs, chores), kept
+in Home Assistant; not the TV home screen, which is [Hearth TV](https://github.com/theSiegs/HearthTV).
 
 > [!WARNING]
-> **Early development.** Hearth TV is built and tested on one Google TV device. Expect rough edges and breaking
-> changes between versions. Not ready for general use yet.
+> **Early development.** Expect rough edges and breaking changes between versions.
 
-<p align="center">
-  <img src="docs/images/home.png" width="49%" alt="Hearth TV's home screen: a gradient wallpaper with the Favorites dock along the bottom">
-  <img src="docs/images/updates.png" width="49%" alt="Settings, System, Updates: Hearth TV, HearthTube and the Include pre-releases switch">
-</p>
+## What's here
 
-## Why Hearth TV
-
-Google TV's home is mostly ads and "for you" rows. Other launchers remove them, but they also lose what makes
-Google TV work for a family: each person's profile, kids profiles, and Family Link's bedtime and screen time.
-
-Hearth TV keeps all of that:
-
-- **Everyone gets their own home.** Hearth TV follows Google TV's profiles: each has its own apps, wallpaper and
-  Continue Watching, and Netflix, Disney+ and others open on the right profile.
-- **Kids stay in their limits.** Family Link's bedtime and time's-up screens still show, kids can't undo your setup
-  without the parent PIN, and YouTube runs in HearthTube with a daily time limit.
-- **Private by default.** No ads, analytics or account. Hearth TV talks only to the few services listed under
-  [Privacy](#privacy), and to your Home Assistant if you have one.
-
-It's free software (GPL-3.0).
-
-## Features
-
-**Profiles**
-- Follows Google TV's own profiles, kids' and adults': a home layout, wallpaper and Continue Watching per person.
-- **Profile Pairing** (optional): opening Netflix, Disney+, Apple TV, HBO Max or Paramount+ from Hearth TV picks your
-  profile in that app, by name or the one you pair it with.
-- **Lock now** with Google TV's own lock: hold the profile button (on remotes that have one), from Settings, or
-  when the TV goes to sleep.
-
-**Kids & Family Link**
-- Works with Family Link: Hearth TV steps aside for Google TV's bedtime and time's-up screens, and comes back after.
-- Hearth TV (and HearthTube) goes on each kids profile and stays there. **Settings → Family → Kids profiles**
-  shows each kid as Ready or Needs a fix, and holds each kid's settings, like their YouTube time per day.
-- A parent PIN guards anything in a kids profile that could undo your setup.
-- With HearthTube, kids watch YouTube only there, where their daily time applies.
-
-**A calm home screen**
-- Wallpaper first: Bing's photo of the day, your own pictures, a gradient or black, per profile.
-- A Favorites dock, **Continue Watching** with cover art (including shows from apps that don't use Google's list),
-  and your apps in rows or grids.
-- A top bar with the time and your Google calendars, and the weather (Open-Meteo, or the Breezy Weather app).
-- **Search** for a film or show and see where it streams (US availability data); it opens in Netflix, Apple TV,
-  HBO Max or Paramount+ directly, other services through Google TV's title page.
-
-**The remote**
-- Remap any spare button (press and hold) to an app, a TV input, a profile switch or lock, search or sleep.
-- The Home button opens Hearth TV, every time.
-
-**Also:** a notifications panel, sleep when idle, TV inputs (on TVs that have them), daily backups on the TV,
-updates from GitHub releases. If you ever want
-Google TV's home back for a while, **Settings → TV & power → Use Google TV's home**.
-
-## With Home Assistant
-
-Hearth TV works fully without Home Assistant. If you have it, each side gets more from the other. Everything stays on
-your home network, and each part is set up separately in **Settings → Home Assistant**
-([details](docs/home-assistant.md)).
-
-**What Hearth TV gains**
-- **Pop-ups over any app**: the doorbell with a live camera view, the washer being done, a reminder, with buttons
-  that act (unlock the door, turn on the porch light).
-- **A dashboard one press away** (Right at the right edge of the home), drawn by Hearth TV so every control works with
-  the remote: lights, climate, covers, media, cameras, and people on a map. Each profile can have its own dashboard,
-  or none.
-- **Remote buttons that run Home Assistant**: a scene, a script, a button or a toggle, on a press or a hold.
-- **Approve from your phone**: a switch into your PIN-locked profile asks your phone first (see below).
-- **Screen time shared across devices**: paired with Hearth's integration, Home Assistant sets each kid's budgets for
-  the TV, tablets and phones together, and its rules win over the TV's own.
-
-**What Home Assistant gains**
-- **The TV as a notification target**, through the standard *Notifications for Android TV / Fire TV* integration.
-- **The TV's status for automations**, through Hearth's own integration, within seconds of a change: screen on or off, the app in
-  front, playing or paused and what's playing, whose profile is on, whether it's a kids profile, Google TV's
-  bedtime or time's-up screen and when it unlocks, and each profile's usage today per app. Dim the lights when a
-  film starts, pause it when the doorbell rings, or count a kid's screen time with their other devices.
-- **A say in kids' screen time**, through Hearth's own integration: budgets, bedtime, pauses and asks for more.
-
-## Optional features that act on your behalf
-
-These are off until you turn them on. Each works through an Android service with real power over the TV, so here's
-exactly what they do.
-
-- **Streaming app PINs.** If an app profile has a PIN, Hearth TV can type it for you, through its Profile Pairing
-  accessibility service pressing the app's on-screen keys (Netflix, Disney+, Apple TV and HBO Max profile PINs;
-  Paramount+'s content PIN). PINs are encrypted with a key that never leaves the TV, belong to the Google TV profile
-  that saved them, and in an adult's profile are typed only when that profile has its own Google TV PIN. After two
-  rejected profile PINs (one for Paramount+'s content PIN) Hearth TV stops. You can save them from your phone (encrypted on the phone first). One switch turns it
-  all off. Streaming services' terms may not allow an app to do this for you.
-- **Approve from your phone** (new, experimental; needs Home Assistant and its phone app). When someone opens your
-  PIN-locked Google TV profile, your phone asks Allow or Deny; Allow has Hearth TV type your Google TV PIN, which you
-  save on the TV for this (encrypted). The remote always works too.
-- **Hearth TV on kids profiles.** Google TV removes apps that didn't come from the Play Store from kids profiles each
-  time the profile starts. Once you press **Fix**, Hearth TV puts itself (and HearthTube) on your kids profiles and
-  keeps them there, using the TV's own debugging connection. That means **debugging stays on**, with "Disable adb
-  authorization timeout" set, so the TV keeps trusting Hearth TV. It only installs, keeps and removes Hearth TV's own two
-  apps. Uninstall from **Settings → System → Uninstall Hearth TV**, or copies stay behind on the kids
-  profiles.
-
-## What setup takes
-
-- **Sideloading.** Hearth TV isn't on the Play Store.
-- **One Android block to lift.** Android doesn't let sideloaded apps turn on accessibility services until you allow
-  it, and Google TV has no button for that. With debugging on, Hearth TV can lift it itself (it shows you the command
-  first); otherwise run once from a computer:
-  `adb shell appops set com.thesiegs.hearth ACCESS_RESTRICTED_SETTINGS allow`
-- **Debugging on**, for the kids profile features above.
-- **Google TV in English**, for now, to tell adults' profiles apart.
-
-Hearth TV's first-run setup walks through each step and opens the right Android screen; skip anything you don't want.
+- `custom_components/hearth`: the Home Assistant integration (domain `hearth`). It counts screen time from several
+  sources, applies each kid's budgets, schedule, bedtime, pauses and blocks, and enforces them through Family Link,
+  Microsoft Family Safety, Nintendo parental controls, Hearth TVs and paired phones.
+- `ha_tests`: its tests (`pytest-homeassistant-custom-component`).
+- `blueprints`: automation blueprints that use it.
+- `pin-entry`: the streaming PIN-entry files older Hearth TV builds still read from this repository. Hearth TV now
+  reads them from [HearthTV](https://github.com/theSiegs/HearthTV/tree/master/pin-entry); these copies go once every
+  TV runs a build that reads from there.
 
 ## Install
 
-Download an APK from the [latest release](https://github.com/theSiegs/Hearth/releases/latest):
+With [HACS](https://hacs.xyz): add this repository as a custom repository (type Integration), install **Hearth**,
+restart Home Assistant, then Settings → Devices & services → Add integration → Hearth. Details:
+[docs/home-assistant-integration.md](docs/home-assistant-integration.md).
 
-| File | For |
-|---|---|
-| `Hearth-universal-release.apk` | Any device. Start here if you're not sure (larger) |
-| `Hearth-armeabi-v7a-release.apk` | Devices with a 32-bit system, which includes most Google TV sticks (Chromecast with Google TV, onn 4K and 4K Pro) |
-| `Hearth-arm64-v8a-release.apk` | Devices with a 64-bit system |
+## Hearth and Hearth TV
 
-(`adb shell getprop ro.product.cpu.abilist` tells you which: `arm64-v8a` first means 64-bit.)
+The two live in separate repositories and are released on their own:
 
-Sideload it with the Downloader app (enter the APK's URL), or from a computer:
+- **This repository** releases the integration. Its version is CalVer (`2026.12.01`), kept in
+  `custom_components/hearth/manifest.json` and tagged `v<version>`; HACS installs from that tag.
+- **[HearthTV](https://github.com/theSiegs/HearthTV)** releases the TV app's APKs (`com.thesiegs.hearth`), which
+  installed TVs update from, and owns the APIs the TV serves (its remote API, provider contract and household sync).
 
-```sh
-adb install Hearth-universal-release.apk
-```
-
-Open Hearth TV and follow its setup. Run it again any time from **Settings → System → Set up Hearth TV**. The
-[user guide](docs/user-guide.md) covers every feature.
-
-Hearth TV is developed and tested on an onn 4K Pro (Google TV, Android 14). Other Google TV devices should work.
-Android TV devices without Google TV get the home screen, but not the profile and kids features.
-
-Hearth TV updates itself from **Settings → System → Updates**. While Hearth TV is in early development every release is
-a pre-release, so keep **Include pre-releases** on.
-
-## Companion app: HearthTube
-
-[HearthTube](https://github.com/theSiegs/HearthTube) is an ad-free YouTube app for Google TV, made for families, based
-on SmartTube. It follows Hearth TV's profiles, wallpaper and kids settings, and enforces each kid's YouTube time. Hearth TV installs and
-updates it from **Settings → System → Updates**.
-
-## Privacy
-
-No ads, analytics, crash reporting or account. Settings, layouts, watch history and backups stay on the TV. Hearth TV
-connects only for the features you use:
-
-- Bing's photo of the day (`www.bing.com`)
-- Weather (`api.open-meteo.com`, and `geocoding-api.open-meteo.com` to look up a place), unless you use the Breezy Weather app
-- Search: what you type, to Wikidata and TMDB (`www.wikidata.org`, `api.themoviedb.org`, `image.tmdb.org`)
-- Continue Watching: the title of a card that has no poster Hearth TV can read, to the same two, once per title
-- Continue Watching artwork, from the image hosts the apps name
-- The Home Assistant map: OpenStreetMap tiles around home, fetched once (`tile.openstreetmap.org`)
-- Updates of Hearth TV and HearthTube, a list of streaming-app versions not to type PINs in, and updated PIN-entry steps (GitHub)
-- Your own Home Assistant
-
-Details, and every Android permission Hearth TV asks for and why: [docs/privacy.md](docs/privacy.md).
+The contract between the two (pairing, the state document, what the TV posts, and what the TV does without Home
+Assistant) is [docs/contracts/hearth-tv.md](docs/contracts/hearth-tv.md). **A change to that contract needs the page
+and the contract tests updated together:** `ha_tests/test_client_contract.py` and
+`ha_tests/test_hearth_tv_contract.py` here, HearthTV's `TvStateDocumentFixtureTest` and `TvStateDocumentContractTest`,
+with `ha_tests/contract_fixtures/tv_state_document.json` kept identical to HearthTV's copy
+(`android/app/src/test/resources/contract_fixtures/tv_state_document.json`).
 
 ## Documentation
 
-- [User guide](docs/user-guide.md): setup and every feature
-- [Home Assistant](docs/home-assistant.md): notifications, dashboard, the Hearth integration, phone approval
-- [Privacy](docs/privacy.md): what Hearth TV sends where, and its permissions
-- For contributors: [development](docs/development.md) and the [provider contract](docs/provider-contract.md)
-- [Hearth TV contract](docs/contracts/hearth-tv.md): every call between Hearth TV and the Hearth integration. A change to the Hearth TV contract needs docs/contracts/hearth-tv.md and both contract tests (ha_tests here, the fixture test in HearthTV) updated together.
-  HearthTube reads
+- [Documentation index](docs/README.md)
+- [Hearth TV contract](docs/contracts/hearth-tv.md): every call between Hearth TV and the Hearth integration
+- [Hardened components](docs/hardened-components.md): parts to change only in place, with their tests
 
-## Credits
+## Releasing
 
-Hearth TV includes code from these GPL-3.0 projects, whose copyright notices its source files keep:
-
-- [FLauncher](https://gitlab.com/flauncher/flauncher) by Étienne Fesser, and as
-  [continued](https://github.com/osrosal/flauncher) by Oscar Rojas;
-- [LTvLauncher](https://github.com/leanbitlab-org/LtvLauncher) by LeanBitLab.
-
-Search artwork comes from [TMDB](https://www.themoviedb.org). Hearth TV uses the TMDB API but is not endorsed or
-certified by TMDB. Map tiles © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors.
+1. Raise `version` in `custom_components/hearth/manifest.json` (`2026.12.01`; it only goes up) and add a
+   `## 2026.12.01` section to [CHANGELOG.md](CHANGELOG.md).
+2. Run `ha_tests` and read the result.
+3. Commit, tag `v2026.12.01` (annotated), push the branch and the tag. `.github/workflows/release.yml` checks the tag
+   against the manifest and publishes the release HACS offers. It needs no secrets.
 
 ## License
 
-Hearth TV is free software under the [GNU General Public License v3.0](LICENSE), like the projects it builds on.
-Hearth TV is developed with AI assistance.
+Hearth is free software under the [GNU General Public License v3.0](LICENSE). It is developed with AI assistance.

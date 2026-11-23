@@ -1,1 +1,0 @@
-Uninstall Hearth is now at the end of Settings > System; the Kids profiles page only removes Hearth from kids profiles.

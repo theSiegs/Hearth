@@ -1,2 +1,0 @@
-- Early development pre-release.
-- Paramount+ content PIN typed for PIN-locked grown-up profiles.

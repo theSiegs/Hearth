@@ -1,3 +1,0 @@
-- Early development pre-release.
-- Profile button: press for the chooser, hold to lock.
-- Steadier profile switches.

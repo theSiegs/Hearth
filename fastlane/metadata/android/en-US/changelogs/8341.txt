@@ -1,1 +1,0 @@
-Updates wait while a kids profile is in use (up to a week), so a package change can't sign a kid out of an app; an update an adult starts from Settings still installs at once.

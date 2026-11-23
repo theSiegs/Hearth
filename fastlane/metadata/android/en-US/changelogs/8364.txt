@@ -1,1 +1,0 @@
-Home Assistant: an arrival with one precise location fix counts after 10 minutes.

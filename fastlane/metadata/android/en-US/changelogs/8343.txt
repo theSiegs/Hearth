@@ -1,1 +1,0 @@
-Phones such as Glint can control the TV over the home network (remote API version 2, first part).
