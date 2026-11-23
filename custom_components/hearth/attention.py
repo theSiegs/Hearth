@@ -15,6 +15,10 @@ HEARTH_APP| buttons are passed through as they are (phones already hold them).
 Items are kept outside the entry (an options change reloads it, and a button pressed meanwhile must still find its
 item), not across a restart: each source puts its items back then (asks have their own store; suggestions are
 worked out again).
+
+Each item shown, replaced or cleared is also announced on Home Assistant's bus as a hearth_notice event
+(docs/contracts/notice-event.md), read-only: its words, who it's for and its buttons' labels, never a button's service
+or data. Announcing never stops or slows a delivery: a failure is logged.
 """
 
 from __future__ import annotations
@@ -30,7 +34,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
 from . import phones
-from .const import DOMAIN, SIGNAL_NOTICES
+from .const import CONF_ROLES, DOMAIN, SIGNAL_NOTICES
 from .delivery import bell, companion
 from .activity import call_service
 
@@ -54,6 +58,47 @@ CHOSEN_PHONE = "chosen_phone"
 SCHEDULE_PHONE = "schedule_phone"
 ADMINS = "admins"
 PERSON = "person:"
+
+# hearth.notify's (notify_service.py): everyone on Hearth's page (their companion apps), and every TV that shows notices
+HOUSEHOLD = "household"
+# hearth.notify's to chosen devices: the phones in Item.to, the TVs in Item.tvs
+DEVICES = "devices"
+
+# The read-only announcement of an item shown, updated or cleared (docs/contracts/notice-event.md)
+EVENT_NOTICE = "hearth_notice"
+NOTICE_EVENT_VERSION = 1
+SHOWN = "shown"
+UPDATED = "updated"
+CLEARED = "cleared"
+# An item's kind in the event, by its key's or tag's start (the sources keep their own keys); "other" when none fits.
+# An item that names its own (Item.kind) goes by that.
+KINDS_BY_PREFIX = (
+    ("hearth_more_fs_", "ask_failed"),
+    ("hearth_more_", "ask"),
+    ("hearth_adult_offer_", "adult_offer"),
+    ("outside_app_", "outside_change"),
+    ("ai_companion_", "app_check"),
+    ("hearth_check_", "device_check"),
+    ("hearth_clock_", "device_clock"),
+    ("hearth_pairing_", "pairing"),
+    ("hearth_paired_", "pairing"),
+    ("hearth_panel_hello_", "pairing"),
+    ("hearth_bedtime_", "bedtime"),
+    ("hearth_new_apps", "new_app"),
+    ("hearth_app_", "new_app"),
+    ("hearth_rules_", "rules"),
+    ("hearth_place_", "place"),
+    ("hearth_chore_", "chore"),
+    ("hearth_schedule_check", "schedule"),
+    ("hearth_school_time_watchdog", "schedule"),
+    ("hearth_unlimited_", "unlimited"),
+    ("hearth_suggest", "suggestion"),
+    ("approve:", "approval"),
+    ("hearth_approve:", "approval"),
+    ("voice:", "approval"),
+    ("hearth_voice:", "approval"),
+    ("hearth_notify_", "notify"),
+)
 
 # A phone button that runs an item's action: HEARTH_ACT|<item key>|<n>
 ACT_PREFIX = "HEARTH_ACT|"
@@ -113,6 +158,12 @@ class Item:
     once: bool = False
     # Called once it's cleared or replaced (its source's own timer, say)
     on_clear: Callable[[], None] | None = field(default=None, repr=False, compare=False)
+    # The phones it goes to, in place of its audience's (hearth.notify's chosen devices)
+    to: tuple[phones.Phone, ...] | None = None
+    # Only these TVs (Hearth device ids) show it (tv); None: every TV that shows notices
+    tvs: frozenset[str] | None = None
+    # What it is, for the hearth_notice event; None: told by its key (KINDS_BY_PREFIX)
+    kind: str | None = None
 
     @property
     def channel_tag(self) -> str:
@@ -180,42 +231,53 @@ class Attention:
     def notify(self, item: Item) -> None:
         """Keeps [item] (in place of one with its key or tag) and sends it out on its channels."""
         items = _items(self.hass)
+        replaced: list[Item] = []
         for key in [k for k, i in items.items() if k == item.key or i.channel_tag == item.channel_tag]:
-            _cleared(items.pop(key))
+            replaced.append(old := items.pop(key))
+            _cleared(old)
         if item.bell:
             bell.show(self.hass, item)
         if item.phone:
-            targets = self.targets(item.audience)
+            targets = self.item_targets(item)
             item.reached = frozenset(self._users(targets))
             companion.send(self.hass, self.options, targets, item)
         items[item.key] = item
         self._tidy()
         if item.tv:
             self._tvs_changed()
+        # One of another key it replaced (by its tag) is gone; this one is new, or new words for the same key or tag
+        for old in replaced:
+            if old.key != item.key:
+                self._announce(CLEARED, old)
+        self._announce(UPDATED if replaced else SHOWN, item)
 
     def adopt(self, item: Item) -> None:
         """Keeps [item] without sending it: one its source sent before Home Assistant restarted, still on the phones,
         so its buttons work again and clearing it takes it off them."""
         if item.phone:
-            item.reached = frozenset(self._users(self.targets(item.audience)))
+            item.reached = frozenset(self._users(self.item_targets(item)))
         _items(self.hass)[item.key] = item
         self._tidy()
         if item.tv:
             self._tvs_changed()
 
-    def tv_items(self, people: set[str]) -> list[Item]:
+    def tv_items(self, people: set[str], device_id: str | None = None) -> list[Item]:
         """The items a TV shows (Item.tv), oldest first: every adult's, and one person's only when that person is one
-        of the TV's ([people])."""
-        return [
-            item
-            for item in self.items()
-            if item.tv
-            and (item.audience == ADULTS or (item.audience.startswith(PERSON) and item.audience[len(PERSON):] in people))
-        ]
+        of the TV's ([people]); one for chosen TVs (Item.tvs) only on those ([device_id])."""
+        return [item for item in self.items() if self.on_tv(item, people, device_id)]
 
-    def tv_notices(self, people: set[str]) -> list[dict[str, Any]]:
+    @staticmethod
+    def on_tv(item: Item, people: set[str], device_id: str | None = None) -> bool:
+        """Whether the TV [device_id], whose profiles are [people]'s, shows [item]."""
+        if not item.tv or (item.tvs is not None and device_id not in item.tvs):
+            return False
+        return item.audience in (ADULTS, HOUSEHOLD, DEVICES) or (
+            item.audience.startswith(PERSON) and item.audience[len(PERSON):] in people
+        )
+
+    def tv_notices(self, people: set[str], device_id: str | None = None) -> list[dict[str, Any]]:
         """tv_items as a TV's state document has them (its notices)."""
-        return [item.notice() for item in self.tv_items(people)]
+        return [item.notice() for item in self.tv_items(people, device_id)]
 
     def _tvs_changed(self) -> None:
         """A TV item came or went: the TVs' waits look again (their document's notices changed)."""
@@ -226,6 +288,8 @@ class Attention:
         since), off the channels given."""
         items = _items(self.hass)
         found = [i for i in items.values() if key_or_tag in (i.key, i.channel_tag)]
+        # Only items that were kept are announced as cleared (one made up here was never announced)
+        kept = bool(found)
         if not found:
             found = [Item(key_or_tag, "", audience=audience, bell=bell_too, phone=phone)]
         for item in found:
@@ -234,15 +298,82 @@ class Attention:
             if item.tv:
                 self._tvs_changed()
             if item.phone:
-                companion.clear(self.hass, self.options, self.targets(item.audience), item.channel_tag)
+                companion.clear(self.hass, self.options, self.item_targets(item), item.channel_tag)
             if item.bell:
                 bell.dismiss(self.hass, item.channel_tag)
+            if kept:
+                self._announce(CLEARED, item)
         # And what belonged to them (a phone approval of a TV notice's button)
         gone = {item.key for item in found}
         for follower in [i for i in items.values() if i.follows in gone]:
             self.clear(follower.key)
 
+    # The announcement (hearth_notice)
+
+    def _announce(self, change: str, item: Item) -> None:
+        """Fires hearth_notice for [item]. Never raises: no delivery depends on it."""
+        try:
+            self.hass.bus.async_fire(EVENT_NOTICE, self.notice_event(change, item))
+        except Exception:  # noqa: BLE001 - the notice went out; only its announcement failed
+            _LOGGER.exception("Hearth couldn't announce the notice %s", item.key)
+
+    def notice_event(self, change: str, item: Item) -> dict[str, Any]:
+        """The hearth_notice event's data (docs/contracts/notice-event.md): the item's words, who it's for and its
+        buttons' labels. Never a button's service or data: those stay looked up here (act)."""
+        about = {k: item.about[k] for k in ("person", "group") if isinstance(item.about.get(k), str)}
+        channels = [name for name, on in (("phone", item.phone), ("bell", item.bell), ("tv", item.tv)) if on]
+        return {
+            "v": NOTICE_EVENT_VERSION,
+            "change": change,
+            "key": item.key,
+            "tag": item.channel_tag,
+            "kind": item.kind or notice_kind(item),
+            "urgency": item.urgency if item.urgency in URGENCIES else INFO,
+            "title": item.title or "",
+            "text": item.text,
+            "audience": {
+                "kind": PERSON[:-1] if item.audience.startswith(PERSON) else item.audience,
+                "people": self.audience_people(item),
+            },
+            "about": about,
+            "actions": [{"n": n, "label": action.label} for n, action in enumerate(item.actions)],
+            # What a tap on the phone opens: its page, or a request's (phones.page_link)
+            "link": item.link or (phones.page_link(item.opens) if item.opens else None),
+            "channels": channels,
+            "sent": item.sent.isoformat(),
+            "expires": item.expires.isoformat() if item.expires is not None else None,
+        }
+
+    def audience_people(self, item: Item) -> list[str]:
+        """The person entity ids an item is for: the adults on Hearth's page who get notices, everyone on it (the
+        household), the person, the administrators' persons; else the persons behind the phones it goes to."""
+        audience = item.audience
+        options = self.options
+        if audience == ADULTS:
+            off = set(options.get(phones.CONF_ASK_NOTIFY_OFF) or [])
+            return [p for p in phones.adults(options) if p not in off]
+        if audience == HOUSEHOLD:
+            return [p for p, _role in _household(options)]
+        if audience.startswith(PERSON):
+            return [audience[len(PERSON):]]
+        if audience == ADMINS:
+            found: set[str] = set()
+            users = self.hass.data.get(ADMIN_USERS) or set()
+        else:
+            targets = self.item_targets(item)
+            found = {p.person for p in targets if p.person}
+            users = self._users(targets)
+        return sorted(
+            found | {s.entity_id for s in self.hass.states.async_all("person") if s.attributes.get("user_id") in users}
+        )
+
     # Audiences
+
+    def item_targets(self, item: Item) -> list[phones.Phone]:
+        """The phones [item] goes to: its own (Item.to), only ones that are there; else its audience's."""
+        if item.to is not None:
+            return [p for p in item.to if self.hass.services.has_service(p.domain, p.service)]
+        return self.targets(item.audience)
 
     def targets(self, audience: str) -> list[phones.Phone]:
         """The phones an audience's items go to, each once, only ones that are there."""
@@ -267,6 +398,13 @@ class Attention:
                 for service, os in phones.person_phones(self.hass, person)
                 if self.hass.services.has_service("notify", service)
             ]
+        if audience == HOUSEHOLD:
+            found: list[phones.Phone] = []
+            for person, _role in _household(options):
+                for service, os in phones.person_phones(self.hass, person):
+                    if self.hass.services.has_service("notify", service) and all(p.service != service for p in found):
+                        found.append(phones.Phone(service, person, os))
+            return found
         return []
 
     def _service_phone(self, service: str | None) -> phones.Phone | None:
@@ -393,6 +531,19 @@ def admin_phones(hass: HomeAssistant) -> tuple[list[phones.Phone], dict[str, lis
         if (user_id := entry.data.get("user_id")) in ids:
             add(user_id, phones.service_of(entry), None, phones._os(entry))
     return found, by_user
+
+
+def _household(options: Mapping[str, Any]) -> list[tuple[str, str]]:
+    """Everyone on Hearth's page, adults and kids: (person entity id, role)."""
+    return sorted((p, role) for p, role in (options.get(CONF_ROLES) or {}).items() if role in ("adult", "kid"))
+
+
+def notice_kind(item: Item) -> str:
+    """An item's kind by its key's or tag's start (KINDS_BY_PREFIX); "other" when none fits."""
+    for prefix, kind in KINDS_BY_PREFIX:
+        if item.key.startswith(prefix) or item.channel_tag.startswith(prefix):
+            return kind
+    return "other"
 
 
 def attention(hass: HomeAssistant) -> Attention:

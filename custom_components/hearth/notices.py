@@ -44,7 +44,7 @@ def shown(hub: HearthHub, device_id: str) -> dict[str, Item]:
     if hub.kind(device_id) != KIND_TV or not hub.has_cap(device_id, CAP_NOTICES):
         return {}
     people = {p for p in hub.household.device_profile_people(device_id).values() if p}
-    return {item.key: item for item in hub.attention.tv_items(people)}
+    return {item.key: item for item in hub.attention.tv_items(people, device_id)}
 
 
 async def adult_user(hass: HomeAssistant, hub: HearthHub, person: str) -> str | None:
