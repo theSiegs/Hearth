@@ -31,7 +31,7 @@ async def test_a_kid_reads_only_their_own_document(
     answer = await ws.receive_json()
     assert answer["success"], answer
     me = answer["result"]
-    assert set(me) == {"person", "media_rooms", "version", "contract"}
+    assert set(me) == {"person", "media_rooms", "category_values", "version", "contract"}
     assert me["contract"] == 3
     assert me["person"]["person"] == "person.sam" and me["person"]["kind"] == "kid" and me["person"]["kind_set"]
     # The same document a paired phone of Sam's would get

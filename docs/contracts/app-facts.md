@@ -19,7 +19,8 @@ Hearth keeps app categories itself (`custom_components/hearth/categories.py`; th
 
 What each value is (its label, default pool, whether it loosens a limit, and System screens' counted-nowhere mark) is
 built into Hearth (`categories.BUILTIN_VALUES`), as the dataset's values table was. The household's map from a value
-to a pool (`catalog_pools`) is unchanged.
+to a pool (`catalog_pools`) is unchanged. Paired phones get the table in their state document (`category_values`,
+[device-api.md](device-api.md#category_values-additive-within-contract-3)).
 
 ## What leaves the house now
 

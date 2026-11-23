@@ -3,6 +3,13 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **Phones get Hearth's app-category values** (`category_values`, `hearth.values/1`) in their state document and `hearth/me`, so a paired client needn't carry its own copy. The TV's document is unchanged. See `docs/contracts/device-api.md`.
+- **The old message design document is gone**: `docs/message-routing.md` now says what Hearth offers a message router (`hearth.notify` and the `hearth_notice` event).
+
 ## 2026.11.55
 
 ### TV

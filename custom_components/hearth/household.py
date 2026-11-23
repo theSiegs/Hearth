@@ -51,7 +51,7 @@ from .apps import (
     update_notification,
 )
 from .counting import ALL, DeviceUsage, Reading, group_seconds, merge, minus, without
-from .categories import CategoryBook
+from .categories import CategoryBook, values_document
 from .client import exempt_packages
 from .limits import (
     CONF_APP_GROUPS,
@@ -2153,6 +2153,9 @@ class Household:
             body["person"]["kind_set"] = role is not None
         # What's playing where in the house is anyone's to see: every room's players, for a phone's Music
         body["media_rooms"] = media_rooms(self.hass)
+        # Hearth's app-category values (label, default pool, loose, ...), so a client shows and sorts apps by Hearth's
+        # own table instead of a copy of its own. Phones only: the TV's part of the document is unchanged
+        body["category_values"] = values_document()
         return body
 
     def own_document(self, person: str) -> dict[str, Any]:
