@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.11.55
+
+### TV
+
+- **Hearth TV moves to its own repository, [theSiegs/HearthTV](https://github.com/theSiegs/HearthTV).** This build looks for its updates there and reads the PIN-entry recipes and safety list from there. It is the last TV build released from this repository; nothing else changes on the TV.
+
 ## 2026.11.54
 
 ### Home Assistant integration

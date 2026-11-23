@@ -1,0 +1,1 @@
+Hearth TV now gets its updates from its own repository (theSiegs/HearthTV). Nothing else changes.
