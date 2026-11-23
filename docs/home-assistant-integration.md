@@ -2419,38 +2419,64 @@ Hearth's page opens on a tab from its link: `/hearth#today`, `#kids`, `#devices`
 
 #### Today on Hearth's page
 
-Today follows the redesign of 2026-11-13: does anything need an adult, in one sentence; one row per kid; what's
-playing; the rest one tap away. Every action applies at once with a 6-second **Undo** instead of a confirm (a gift
-undoes with `hearth.remove_bonus`, a pause with `hearth.pause_end`, an allow with `hearth.allow_end`; "Not today" and
-"No" to a request wait for their Undo to pass before they're sent, and are sent at once when the page closes).
+Today follows the redesign of 2026-11-13, with the More time sheet of 2026-11-22: does anything need an adult, in one
+sentence; one row per kid; what's playing; the rest one tap away. Every action applies at once with a 9-second
+**Undo** instead of a confirm (a gift undoes with `hearth.remove_time`, a raise with `hearth.end_grant` of its origin, a
+pause with `hearth.pause_end`, an allow with `hearth.allow_end`; ending an extra gives it back where it can be told
+exactly; "Not today" and "No" to a request wait for their Undo to pass before they're sent, and are sent at once when
+the page closes). The page is redrawn only when the summary changed (or the minute did), the toast lives outside the
+redrawn part, and focus stays on the same button across a redraw.
 
 - **The header**: "Today", "Tonight" once the earliest kid's cutoff has passed (their bedtime, else 9:00 pm), and one
-  line: `11:00 pm · 2 of 3 in bedtime · Sam still up`; Pause everyone (15, 30, 60 or 90 min and a reason).
+  line: `11:00 pm · 2 of 3 in bedtime · Sam still up`; **Pause 30 min** pauses everyone at once (with Undo), and its
+  caret opens the length (15, 30, 60 or 90 min, or until a time) and a reason.
 - **For you**: requests and the suggestions showing, one row per kid (a request first, then a pool that ran out, then a
-  device's own limit), each a sentence (`sentence`), a detail line and its buttons under the text (+15 min, 30 min,
-  Not today; a request: Give 30 min, 15 min, No), with "+1 more for Sam · See". Nothing waiting: "Nothing needs you"
-  (or "Nothing needs you tonight"), with "6 suggestions held back · why" folding `household.suggestions_held` and
-  each one's `why`.
-- **Kids**: a row per kid, bedtime last and faded: a ring around the initial (All screen time used of its limit, in
-  Hearth's warm accent; amber when a pool ran out, red when All did, indigo with a moon in bedtime, blue with a cap in
-  School time), the name and one status line (`Bedtime till 6:00`, `Games ran out · 31 min left overall`, `2 h 23
-  left · YouTube 49 min · bedtime 9:30`). A +15 only when time is what stops them, they're awake, it's before their
-  cutoff and For you doesn't already have them.
+  device's own limit), each a sentence (`sentence`), a detail line and its buttons under the text (+15 min, the "+"
+  box, Not today; a request: Give 30 min, 15 min, No), with "+1 more for Sam · See". Nothing waiting: one quiet line,
+  "Nothing needs you" (or "Nothing needs you tonight"), with "6 suggestions held back · why" folding
+  `household.suggestions_held` and each one's `why`.
+- **Kids**: a row per kid, bedtime last and faded, in two lines that wrap, never cut off: the name and the big number
+  (`1 h 10 left`, `12 min left`, `Bedtime`, `Free play`), then the reason or what's next (`Games done · bedtime 9:00`,
+  `On Xbox · Minecraft`, `Till 7:00 am`). A ring around the person's picture, else the initial (two letters when two
+  kids start the same: `Al`, `An`), showing daily time used of today's (amber when a category ran out, red when daily
+  time did, indigo with a moon in bedtime, blue with a cap in School time). A **+15 min** button beside the row (its own
+  target, not inside it) only when time is what stops them, they're awake, not in free play, before their cutoff and
+  For you doesn't already have them.
 - **Screens now**: what plays (Hearth's TVs and phones, consoles and Switches from `playing`), one row "Nothing
   playing · 3 TVs off · no console or Switch in use" when nothing does (it opens to the TVs); a TV on Hearth's home
   reads "Home screen", and a TV that's off has no profile.
 - **Adults** get one muted line: `Adults today: Robin 2 h · Jordan 31 min · no limits`.
-- **The kid's sheet** (a tap on their row): a bottom sheet on a phone (closed by the scrim, Esc, a swipe down or ×),
-  the column beside the list from 900 px of the page. Their lock (who set it, and why time wouldn't help), their
-  request or suggestions, the actions that help now (Give time with a pool and 15, 30 or 60; Pause 30 min; in a lock
-  Allow an app… instead, with Give time anyway under ⋯, as are No School time today while School time is still ahead
-  and Change limits), **Today** (All screen time split by pool, a lane per limited pool that opens to its apps, a
-  console as "On Switch 2", and +15 / +30 of that pool), **Devices** grouped by what they're doing (`3 TVs, 2 tablets ·
-  Follows screen time · 31 min left`, `All 9 screens · Bedtime till 6:00`), each by its `display_name` without the
-  kid's name, opening to each device and whose limit applies, **Exceptions** in plain sentences ("26 apps are allowed
-  without a limit till midnight. Someone changed their limits in the Family Link app.", "Hearth is blocking 46 apps
-  on Sam's Family Link devices because Games ran out."), **This week** (only the days Hearth recorded, the day's limit
-  dashed; "Hearth started counting today" while there are fewer than 3), and their to-do list.
+- **The kid's sheet** (a tap on their row): a bottom sheet on a phone (closed by the scrim, Esc, a swipe down from its
+  head or ×), the column beside the list from 900 px of the page. The head: the name, a big `1 h 10 min left` (or the
+  lock) and a why line ("Games: done for today (2 h used). Other apps still work. Bedtime 9:00.", a device stopped by
+  its own limit, School time ahead). Their lock box (who set it; More time pauses bedtime while it lasts), their request
+  or suggestions, then three buttons: **More time**, **Pause** (30 min at once, with Undo) and **⋯** (Allow an app…,
+  No School time today while it's ahead, Free play…, Change limits). In bedtime or School time: **Allow an app**,
+  **More time anyway** and ⋯. Allow an app finds any app the kid used today or Hearth knows, by typing.
+  **Today's extras**: every extra still on, each with End (bonus time given, raised limits and free play by their
+  origin with `hearth.end_grant`, allows, extra time on a device) and No School time today with Undo. **Today**: left
+  first, `2 h 50 of 4 h` small, daily time split by category with each limit as a marker, and a read-only lane per
+  limited category (`Games · Done · 2 h limit`) that opens to its apps (a console as "On Switch 2"). **Devices** grouped
+  by what they're doing (`3 TVs, 2 tablets · Follows daily time · 31 min left`), each by its `display_name` without the
+  kid's name, **Holds and notes** in plain sentences ("26 apps are allowed without a limit till midnight. Someone
+  changed their limits in the Family Link app.", "Hearth is blocking 46 apps on Sam's Family Link devices because
+  Games ran out."), **This week** and their to-do list.
+- **More time** (one sheet for every kind of extra time: a second bottom sheet on a phone, a dialog on a wide page):
+  **For** the category that's stopping them or **Anything** (other limited categories as "Or for: YouTube ·
+  Streaming"; no row when the kid has no category limits), **+15 min / +30 min / +1 h**, a **rest of today** button,
+  a line saying what the choice will do (and "25 min over: +30 leaves 5"), then **Take 15 min away** and **Free play
+  until a time (not counted) ›** (until a time or turned off, with or without bedtime). One tap gives, with Undo; the
+  toast says what happened ("+15 min of Games for Sam"). The page picks the service:
+
+  | Choice | Daily time left? | Service |
+  |---|---|---|
+  | Anything +N | any | `hearth.add_time` (bonus time) |
+  | A category +N | yes | `hearth.raise_cap` by N |
+  | A category +N | no | `hearth.add_time` with `category` (its own bonus, past daily time) |
+  | A category, rest of today | yes | `hearth.raise_cap` `no_cap` |
+  | A category, rest of today | no | `hearth.unlimited` until the end of the day (a raise wouldn't help) |
+  | Anything, rest of today | any | `hearth.unlimited` until the end of the day |
+  | Take 15 min away | any | `hearth.remove_time` (only what was given today; it says when there's none) |
 
 Family today, by pool is on the Family tab. Every length of time on the page is in the one format (`45 min`, `2 h
 10`), and times of day as `till 6:30`. Ids (packages, entities) are only ever in a tooltip.

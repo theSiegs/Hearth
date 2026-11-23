@@ -41,6 +41,25 @@ const amount = (minutes) => {
   return m < 60 ? String(m) : fmtMinutes(m);
 };
 
+// In a sentence or a big number, with its unit: "45 min", "1 h 10 min", "2 h"
+const longMinutes = (minutes) => {
+  const m = Math.max(0, Math.round(minutes || 0));
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  return r ? `${h} h ${r} min` : `${h} h`;
+};
+
+// On a button: "+15 min", "+30 min", "+1 h"
+const plusLabel = (minutes) => (minutes % 60 === 0 ? `+${minutes / 60} h` : `+${minutes} min`);
+
+// "19:00" (a time input's value) as people read it: "7:00 pm"
+const hhmmWords = (value) => {
+  const [h, m] = String(value || "").split(":").map(Number);
+  if (!Number.isFinite(h)) return String(value || "");
+  return `${h % 12 || 12}:${String(m || 0).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`;
+};
+
 // A time of day as the glance writes it: "6:30" (local, 12-hour, no am/pm), "midnight", "noon"
 const clock = (iso) => {
   const t = iso ? new Date(iso) : null;
@@ -96,10 +115,6 @@ const WORDS = {
   origin: "Where this came from",
   noOrigin: "Set by Hearth's rules",
   outOfTime: "No time left today",
-  catBonusMinutes: [5, 15, 30, 60],
-  // "+15 min Messaging bonus"
-  catBonus: (minutes, name) => `+${minutes} min ${name} bonus`,
-  catBonusHint: "Bonus time for this category only: it can go on past daily time and its limit for that long.",
   activity: "Activity",
   activityHint: "What Hearth did: its calls to Family Link, Family Safety and the Switch, the holds it started and ended, TV commands and Glint requests. Kept 14 days.",
   activityAll: "Everyone",
@@ -135,6 +150,7 @@ const ICONS = {
   pause: '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   chev: '<path d="M9 6l6 6-6 6"/>',
+  down: '<path d="M6 9l6 6 6-6"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
@@ -149,8 +165,8 @@ const ICONS = {
 };
 const icon = (name, cls = "") => `<svg class="svg ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ""}</svg>`;
 
-// How long an Undo stays on offer
-const UNDO_MS = 6000;
+// How long an Undo stays on offer: long enough for a phone in one hand while talking to a kid
+const UNDO_MS = 9000;
 
 const money = (cents) => `${cents < 0 ? "−" : ""}$${(Math.abs(cents) / 100).toFixed(2)}`;
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -295,6 +311,12 @@ class HearthPanel extends HTMLElement {
         clearTimeout(this._filterTimer);
         this._filterTimer = setTimeout(() => this._render(), 250);
       }
+      // Allow an app: the kid's apps, filtered as it's typed
+      if (t.id === "allow-q") {
+        this._allowQ = t.value.trim().toLowerCase();
+        clearTimeout(this._filterTimer);
+        this._filterTimer = setTimeout(() => this._render(), 200);
+      }
       if (t.id && !t.dataset.change) this._drafts[t.id] = t.type === "checkbox" ? t.checked : t.value;
     });
     this.shadowRoot.addEventListener(
@@ -320,6 +342,11 @@ class HearthPanel extends HTMLElement {
         [...(this.shadowRoot.querySelectorAll?.('[data-action="give-menu"]') || [])].find((b) => b.dataset.menu === key)?.focus();
         return;
       }
+      // Esc closes the More time sheet, back to the kid's sheet
+      if (e.key === "Escape" && this._mt) {
+        this._act("mt-close", e.target);
+        return;
+      }
       // Esc closes a kid's sheet on a phone
       if (e.key === "Escape" && this._sheetOpen) this._act("sheet-close", e.target);
       // and the schedule's dialog, then its day sheet
@@ -342,7 +369,8 @@ class HearthPanel extends HTMLElement {
     // Swiped down from its top, the sheet closes
     let swipeFrom = null;
     this.shadowRoot.addEventListener("touchstart", (e) => {
-      const sheet = e.target.closest?.(".detail.on");
+      // Only from the sheet's handle or head: a drag on its buttons doesn't close it
+      const sheet = e.target.closest?.(".handle, .dhead") ? e.target.closest?.(".detail.on") : null;
       swipeFrom = sheet && sheet.scrollTop <= 0 && !this._wide ? e.touches[0].clientY : null;
     }, { passive: true });
     this.shadowRoot.addEventListener("touchend", (e) => {
@@ -403,6 +431,13 @@ class HearthPanel extends HTMLElement {
     await this._loadConfig();
     this._unsub = this._hass.connection
       .subscribeMessage((summary) => {
+        // The same summary again (it's pushed up to every 2 s): nothing to redraw, unless the minute moved (the header's
+        // clock, "bedtime in 20 min")
+        const json = JSON.stringify(summary);
+        const minute = Math.floor(Date.now() / 60000);
+        if (json === this._summaryJson && minute === this._summaryMinute) return;
+        this._summaryJson = json;
+        this._summaryMinute = minute;
         const before = this._summary;
         this._summary = summary;
         // Devices waiting to pair, or a new one: the settings side shows them too
@@ -707,20 +742,121 @@ class HearthPanel extends HTMLElement {
 
   _resetChoosers() {
     this._giveMenu = null;
-    this._giveOpen = false;
     this._allowOpen = false;
     this._moreOpen = false;
-    this._giveGroup = null;
-    this._giveAmt = 15;
     this._allowPick = null;
     this._allowLen = 30;
-    this._raiseOpen = false;
-    this._raiseCat = null;
-    this._raiseHow = "30";
-    this._unlimitedOpen = false;
+    this._allowQ = "";
     this._unlimitedUntil = "end_of_day";
     this._unlimitedBed = false;
     this._originOpen = null;
+    // The More time sheet: {kid, for: a category's id or "all", view: "main" or "free"} while it's open
+    this._mt = null;
+  }
+
+  // More time (the kid's sheet's one button for more time): what's stopping the kid, the categories it can be for, and
+  // what a choice does. The page works out which service helps now (no new server work):
+  //   Anything +N                       hearth.add_time (bonus time, any app)
+  //   a category +N, daily time left    hearth.raise_cap by N (its limit, inside daily time)
+  //   a category +N, daily time is out  hearth.add_time with the category (its own bonus, past daily time)
+  //   a category, rest of today         hearth.raise_cap no_cap; daily time out: free play (a raise wouldn't help)
+  //   Anything, rest of today           hearth.unlimited until the end of the day (free play, not counted)
+  //   Take 15 min away                  hearth.remove_time (takes back extra time given today, never more)
+  _mtState(s) {
+    const t = s?.time || {};
+    const all = s?.all || {};
+    const dailyLimited = all.minutes_left !== null && all.minutes_left !== undefined;
+    const dailyOut = dailyLimited && (all.minutes_left <= 0 || all.state === "out");
+    const cats = (t.categories || []).filter((c) => c.limit_today !== null && c.limit_today !== undefined);
+    const b = this._binding(s);
+    // The category that's stopping them, else the one closest to its limit
+    const stopping = cats.find((c) => b && c.id === b.id) || cats.find((c) => c.left === 0) || null;
+    const closest = [...cats].sort((x, y) => (x.left ?? 1e9) - (y.left ?? 1e9))[0] || null;
+    return { t, all, dailyLimited, dailyOut, cats, stopping, closest };
+  }
+
+  // The category (or "all") the More time sheet is for now: the one picked, else the one that's stopping them
+  _mtFor(s) {
+    const { cats, stopping } = this._mtState(s);
+    const picked = this._mt?.for;
+    if (picked === "all" || cats.some((c) => c.id === picked)) return picked;
+    return stopping ? stopping.id : "all";
+  }
+
+  // What a More time choice does: {service, data, text, undo, note}. [how]: minutes, or "rest" (the rest of today)
+  _mtPlan(person, forId, how) {
+    const s = this._summaryPerson(person);
+    const name = s?.name || this._personName(person);
+    const { dailyOut } = this._mtState(s);
+    const rest = how === "rest";
+    const minutes = rest ? 0 : Number(how) || 0;
+    if (forId === "all" || (rest && dailyOut)) {
+      if (rest)
+        return {
+          service: "unlimited",
+          data: { people: [person], until: "end_of_day", include_bedtime: false },
+          text: `Free play for ${name} till midnight (not counted)`,
+          undo: () => this._call("unlimited_end", { people: [person] }),
+        };
+      return {
+        service: "add_time",
+        data: { person, minutes },
+        text: `${plusLabel(minutes)} for ${name}`,
+        undo: () => this._call("remove_time", { person, minutes }),
+      };
+    }
+    const cat = this._groupName(forId);
+    if (rest)
+      return { service: "raise_cap", data: { person, category: forId, no_cap: true }, text: `No ${cat} limit for ${name} till midnight`, raise: true };
+    if (dailyOut)
+      return {
+        service: "add_time",
+        data: { person, minutes, category: forId },
+        text: `${plusLabel(minutes)} of ${cat} for ${name} (past daily time)`,
+        undo: () => this._call("remove_time", { person, minutes, category: forId }),
+      };
+    return { service: "raise_cap", data: { person, category: forId, minutes }, text: `${plusLabel(minutes)} of ${cat} for ${name}`, raise: true };
+  }
+
+  // One tap gives, with Undo. A raise's Undo ends just that raise (its origin), else every raise of the category
+  async _mtGive(person, forId, how) {
+    const plan = this._mtPlan(person, forId, how);
+    let response = null;
+    try {
+      const r = await this._hass.callWS({ type: "call_service", domain: "hearth", service: plan.service, service_data: plan.data, return_response: true });
+      response = r?.response || null;
+    } catch (err) {
+      this._notify(this._message(err));
+      return;
+    }
+    this._mt = null;
+    this._drafts = {};
+    let undo = plan.undo;
+    if (plan.raise) {
+      const origin = response?.origin_id || response?.origin_ids?.[person] || null;
+      undo = origin ? () => this._call("end_grant", { origin_id: origin }) : () => this._call("raise_cap_end", { person, category: plan.data.category });
+    }
+    this._offerUndo(plan.text, undo);
+  }
+
+  // Take 15 min away: takes back extra time given today (hearth.remove_time never cuts daily time itself)
+  async _mtTake(person, minutes = 15) {
+    const name = this._personName(person);
+    let removed = minutes;
+    try {
+      const r = await this._hass.callWS({ type: "call_service", domain: "hearth", service: "remove_time", service_data: { person, minutes }, return_response: true });
+      const said = r?.response?.removed?.[person];
+      if (typeof said === "number") removed = said;
+    } catch (err) {
+      this._notify(this._message(err));
+      return;
+    }
+    this._mt = null;
+    if (!removed) {
+      this._notify(`No extra time to take back from ${name} today`);
+      return;
+    }
+    this._offerUndo(`−${longMinutes(removed)} for ${name}`, () => this._call("add_time", { person, minutes: removed }));
   }
 
   // Events
@@ -776,13 +912,58 @@ class HearthPanel extends HTMLElement {
         this._sheetOpen = true;
         this._render();
         this.shadowRoot.querySelector?.(".detail")?.scrollTo?.(0, 0);
+        // On a phone the sheet is a dialog: focus goes into it
+        if (!this._wide) this.shadowRoot.querySelector?.(".detail .closebtn")?.focus?.({ preventScroll: true });
         return;
-      case "sheet-close":
+      case "sheet-close": {
+        const was = this._sel;
         this._sheetOpen = false;
         if (!this._wide) this._sel = null;
         this._resetChoosers();
         this._render();
+        // and back to the kid's row
+        if (was) [...(this.shadowRoot.querySelectorAll?.('[data-action="kid-sheet"]') || [])].find((b) => b.dataset.kid === was)?.focus?.({ preventScroll: true });
         return;
+      }
+      case "mt-open":
+        // The More time sheet over the kid's sheet; [view] "free" opens on Free play until a time
+        this._mt = { kid: d.person, for: null, view: d.view || "main" };
+        this._moreOpen = false;
+        this._allowOpen = false;
+        this._render();
+        this.shadowRoot.querySelector?.(".mt button")?.focus?.({ preventScroll: true });
+        return;
+      case "mt-close":
+        this._mt = null;
+        this._render();
+        this.shadowRoot.querySelector?.('[data-action="mt-open"]')?.focus?.({ preventScroll: true });
+        return;
+      case "mt-for":
+        if (this._mt) this._mt.for = d.group;
+        this._render();
+        return;
+      case "mt-view":
+        if (this._mt) this._mt.view = d.view;
+        this._render();
+        return;
+      case "mt-give":
+        await this._mtGive(d.person, d.group, d.how);
+        return;
+      case "mt-take":
+        await this._mtTake(d.person, Number(d.minutes) || 15);
+        return;
+      case "pause-quick":
+        // The header's Pause: everyone, 30 minutes, at once, with Undo (its caret opens the length and reason)
+        this._pauseOpen = false;
+        await this._undoable("pause", { minutes: 30 }, "Paused everyone for 30 min", () => this._call("pause_end", {}));
+        return;
+      case "extra-end": {
+        // One of Today's extras ends (hearth.end_grant by its origin), with Undo when it can be given again
+        const s = this._summaryPerson(d.person);
+        const o = (s?.time?.origins || []).find((x) => x.id === d.origin);
+        await this._undoable("end_grant", { origin_id: d.origin }, `Ended: ${this._extraText(o || {}, s)}`, this._extraUndo(d.person, o, s));
+        return;
+      }
       case "exp":
         if (this._exp.has(d.key)) this._exp.delete(d.key);
         else this._exp.add(d.key);
@@ -793,12 +974,19 @@ class HearthPanel extends HTMLElement {
         this._render();
         return;
       case "pause-len":
-        this._pauseMinutes = Number(d.minutes);
+        this._pauseMinutes = d.minutes === "until" ? "until" : Number(d.minutes);
         this._render();
         return;
       case "pause-go": {
-        const minutes = this._pauseMinutes || 30;
         const reason = this._value("#pause-reason");
+        if (this._pauseMinutes === "until") {
+          const until = this._value("#pause-until");
+          if (!until) return this._notify("Pick a time");
+          this._pauseOpen = false;
+          await this._undoable("pause", reason ? { until, reason } : { until }, `Paused everyone till ${hhmmWords(until)}`, () => this._call("pause_end", {}));
+          return;
+        }
+        const minutes = this._pauseMinutes || 30;
         this._pauseOpen = false;
         await this._undoable("pause", reason ? { minutes, reason } : { minutes }, `Paused everyone's screens for ${fmtMinutes(minutes)}`, () => this._call("pause_end", {}));
         return;
@@ -813,25 +1001,12 @@ class HearthPanel extends HTMLElement {
         );
         return;
       }
-      case "give-open":
-        this._giveOpen = !this._giveOpen;
-        this._allowOpen = false;
-        this._moreOpen = false;
-        this._render();
-        return;
-      case "give-pool":
-        this._giveGroup = d.group;
-        this._render();
-        return;
-      case "give-amt":
-        this._giveAmt = Number(d.minutes);
-        this._render();
-        return;
       case "allow-open":
         this._allowOpen = !this._allowOpen;
-        this._giveOpen = false;
         this._moreOpen = false;
+        this._mt = null;
         this._render();
+        if (this._allowOpen) this.shadowRoot.getElementById?.("allow-q")?.focus?.({ preventScroll: true });
         return;
       case "allow-pick":
         this._allowPick = d.pick;
@@ -852,7 +1027,6 @@ class HearthPanel extends HTMLElement {
       case "give": {
         // Bonus time now (no category); Undo takes back just that (hearth.remove_time)
         const minutes = Number(d.minutes);
-        this._giveOpen = false;
         await this._undoable(
           "add_time",
           { person: d.person, minutes },
@@ -861,35 +1035,9 @@ class HearthPanel extends HTMLElement {
         );
         return;
       }
-      case "raise-open":
-        // From a category's line: that category, open
-        if (d.group) this._raiseCat = d.group;
-        this._raiseOpen = d.group ? true : !this._raiseOpen;
-        this._giveOpen = this._allowOpen = this._moreOpen = this._unlimitedOpen = false;
-        this._render();
-        return;
-      case "raise-cat":
-        this._raiseCat = d.group;
-        this._render();
-        return;
-      case "raise-how":
-        this._raiseHow = d.how;
-        this._render();
-        return;
-      case "raise": {
-        this._raiseOpen = false;
+      case "raise":
         await this._raise(d.person, d.group, d.how);
         return;
-      }
-      case "cat-bonus": {
-        // Bonus time for one category; Undo takes back just that (hearth.remove_time with the category)
-        const minutes = Number(d.minutes || 15);
-        const data = { person: d.person, minutes, category: d.group };
-        await this._undoable("add_time", data, WORDS.catBonus(minutes, this._groupName(d.group)), () =>
-          this._call("remove_time", { person: d.person, minutes, category: d.group })
-        );
-        return;
-      }
       case "activity-who":
         this._activityWho = el.value || "";
         await this._loadActivity();
@@ -902,11 +1050,6 @@ class HearthPanel extends HTMLElement {
       case "raise-end":
         await this._service("raise_cap_end", { person: d.person, category: d.group }, `${this._groupName(d.group)} limit back as set`);
         return;
-      case "unlimited-open":
-        this._unlimitedOpen = !this._unlimitedOpen;
-        this._giveOpen = this._allowOpen = this._moreOpen = this._raiseOpen = false;
-        this._render();
-        return;
       case "unlimited-until":
         this._unlimitedUntil = d.until;
         this._render();
@@ -916,11 +1059,19 @@ class HearthPanel extends HTMLElement {
         this._render();
         return;
       case "unlimited": {
+        // Free play until a time (the More time sheet's own view): not counted, ends at midnight at the latest
         let until = this._unlimitedUntil || "end_of_day";
         if (until === "time") until = this._value(`#unlimited-time`) || "end_of_day";
         const bed = Boolean(this._unlimitedBed);
-        this._unlimitedOpen = false;
-        await this._unlimited(d.person, until, bed);
+        this._mt = null;
+        const name = this._personName(d.person);
+        const when = until === "turned_off" ? "until turned off" : until === "end_of_day" ? "till midnight" : `till ${hhmmWords(until)}`;
+        await this._undoable(
+          "unlimited",
+          { people: [d.person], until, include_bedtime: bed },
+          `Free play for ${name} ${when} (not counted)`,
+          () => this._call("unlimited_end", { people: [d.person] })
+        );
         return;
       }
       case "unlimited-end": {
@@ -932,7 +1083,8 @@ class HearthPanel extends HTMLElement {
           this._notify(this._message(err));
           return;
         }
-        this._notify(ended || WORDS.limitsBack);
+        const was = this._summaryPerson(d.person)?.time?.unlimited;
+        this._offerUndo(ended || WORDS.limitsBack, was ? () => this._call("unlimited", this._unlimitedAgain(d.person, was)) : null);
         return;
       }
       case "origin": {
@@ -985,7 +1137,7 @@ class HearthPanel extends HTMLElement {
       case "sugg-dismiss": {
         const a = this._glanceAction(d.id, d.person);
         const data = a?.data || { person: d.person, key: d.key };
-        this._defer(`${d.person}|${d.key}`, `Dismissed for ${this._personName(d.person)}`, () => this._call("dismiss_suggestion", data));
+        this._defer(`${d.person}|${d.key}`, `Not today for ${this._personName(d.person)}`, () => this._call("dismiss_suggestion", data));
         return;
       }
       case "allow": {
@@ -995,8 +1147,9 @@ class HearthPanel extends HTMLElement {
         const minutes = Number(d.minutes);
         const until = minutes ? new Date(this._now().getTime() + minutes * 60000).toISOString() : "end_of_day";
         const s = this._summaryPerson(d.person);
-        const name = kind === "app" ? (s?.apps_today || []).find((a) => a.package === value)?.name || value : this._groupName(value);
+        const name = kind === "app" ? (s?.apps_today || []).find((a) => a.package === value)?.name || this._config?.known_apps?.[value] || value : this._groupName(value);
         this._allowOpen = false;
+        this._allowQ = "";
         await this._undoable(
           "allow",
           { people: [d.person], [kind]: value, until },
@@ -1005,9 +1158,14 @@ class HearthPanel extends HTMLElement {
         );
         return;
       }
-      case "allow-end":
-        await this._undoable("allow_end", { people: [d.person], ...(d.app ? { app: d.app } : { group: d.group }) }, "Ended the allow", null);
+      case "allow-end": {
+        // Undo allows it again till the same time
+        const a = (this._summaryPerson(d.person)?.allows || []).find((x) => (d.app ? x.app === d.app : x.group === d.group));
+        const what = d.app ? { app: d.app } : { group: d.group };
+        const again = a && (a.until || a.ends_on) ? () => this._call("allow", { people: [d.person], ...what, ...(a.ends_on ? { ends_on: a.ends_on } : { until: a.until }) }) : null;
+        await this._undoable("allow_end", { people: [d.person], ...what }, "Ended the allow", again);
         return;
+      }
       case "undo": {
         const u = this._undo;
         this._undo = null;
@@ -1040,7 +1198,7 @@ class HearthPanel extends HTMLElement {
         this._loadTodo(d.kid);
         return;
       case "grant-end":
-        await this._undoable("allow_end", { id: d.grant }, "Ended what the parent gave: Hearth's hold is back", null);
+        await this._undoable("allow_end", { id: d.grant }, "Ended the extra time from the parent's app: Hearth's hold is back", null);
         return;
       case "bonus":
         this._open.delete(`more-${d.person}`);
@@ -1662,14 +1820,51 @@ class HearthPanel extends HTMLElement {
 
   // Rendering
 
+  // A button's identity across a redraw: its id, else its action and data (the same button draws the same data)
+  _focusKey(el) {
+    if (!el) return null;
+    if (el.id) return `#${el.id}`;
+    if (!el.dataset?.action) return null;
+    return `${el.dataset.action}|${JSON.stringify({ ...el.dataset })}`;
+  }
+
+  // The page is drawn whole, but only when it changed: an unchanged page isn't touched (open menus, focus and a tap in
+  // flight stay), and the toast lives outside the redrawn part, so its countdown runs on and it isn't announced again
   _render() {
     const root = this.shadowRoot;
+    const html = this._body();
+    const toast = this._toastHtml();
+    let body = root.querySelector?.(".hp-body");
+    let slot = root.querySelector?.(".hp-toast");
+    if (!body || !slot) {
+      root.innerHTML = `<style>${STYLE}</style><div class="hp-body"></div><div class="hp-toast" aria-live="polite"></div>`;
+      body = root.querySelector?.(".hp-body");
+      slot = root.querySelector?.(".hp-toast");
+      this._lastBody = null;
+      this._lastToast = null;
+    }
+    if (!body || !slot) {
+      // No DOM to keep (a test's stand-in): the whole page
+      root.innerHTML = `<style>${STYLE}</style>${html}${toast}`;
+    } else {
+      // By what it says, not its markup (its bar's delay moves with the clock)
+      const toastKey = this._undo ? `undo|${this._undo.at}|${this._undo.text}` : this._toast || "";
+      if (toastKey !== this._lastToast) {
+        slot.innerHTML = toast;
+        this._lastToast = toastKey;
+      }
+      if (html === this._lastBody) {
+        this._afterRender(false);
+        return;
+      }
+      this._lastBody = html;
+    }
     const focused = root.activeElement;
-    const focusId = focused && focused.id;
+    const focusKey = this._focusKey(focused);
     const focusValue = focused && "value" in focused ? focused.value : null;
     // The kid's sheet keeps its place when the numbers move under it
     const sheetTop = root.querySelector?.(".detail")?.scrollTop || 0;
-    root.innerHTML = `<style>${STYLE}</style>${this._page()}`;
+    if (body && slot) body.innerHTML = html;
     const sheet = root.querySelector?.(".detail");
     if (sheet && sheetTop) sheet.scrollTop = sheetTop;
     for (const [id, value] of Object.entries(this._drafts)) {
@@ -1682,14 +1877,23 @@ class HearthPanel extends HTMLElement {
       const el = root.getElementById(id);
       if (el) el.open = true;
     }
-    if (focusId) {
-      const again = root.getElementById(focusId);
+    if (focusKey) {
+      const again = focusKey.startsWith("#")
+        ? root.getElementById(focusKey.slice(1))
+        : [...(root.querySelectorAll?.("[data-action]") || [])].find((el) => this._focusKey(el) === focusKey);
       if (again) {
-        again.focus();
+        again.focus({ preventScroll: true });
         if (focusValue !== null && again.value !== focusValue && again.tagName === "INPUT") again.value = focusValue;
+        // A search box keeps typing at its end
+        if (again.tagName === "INPUT" && again.type === "search" && again.setSelectionRange) again.setSelectionRange(again.value.length, again.value.length);
       }
     }
-    if (this._tab === "schedule" && this._sched && this._setupStep === null) this._schBindDrag();
+    this._afterRender(true);
+  }
+
+  // [drawn]: the page was replaced (the schedule's handles need their listeners again)
+  _afterRender(drawn) {
+    if (drawn && this._tab === "schedule" && this._sched && this._setupStep === null) this._schBindDrag();
     this._placeGiveMenu();
     this._showAsk();
   }
@@ -1718,7 +1922,7 @@ class HearthPanel extends HTMLElement {
     setTimeout(() => this._notify("That request has already been answered"), 0);
   }
 
-  _page() {
+  _body() {
     const toolbar = `
       <header class="toolbar">
         ${this._narrow ? `<button class="icon-btn" data-action="menu" aria-label="Menu"><ha-icon icon="mdi:menu"></ha-icon></button>` : ""}
@@ -1738,10 +1942,19 @@ class HearthPanel extends HTMLElement {
     else if (!this._config) body = `<div class="loading">Loading Hearth…</div>`;
     else if (this._setupStep !== null) body = this._setup();
     else body = { today: () => this._today(), kids: () => this._kidsTab(), schedule: () => this._scheduleTab(), devices: () => this._devicesTab(), apps: () => this._appsTab(), family: () => this._familyTab() }[this._tab]();
-    const toast = this._undo
-      ? `<div class="toast undo" role="status"><span>${esc(this._undo.text)}</span>${this._undo.undo || this._undo.key ? `<button data-action="undo">Undo</button>` : ""}<i class="tbar" style="animation-duration:${UNDO_MS}ms;animation-delay:-${Math.max(0, Date.now() - this._undo.at)}ms"></i></div>`
-      : this._toast ? `<div class="toast" role="status">${esc(this._toast)}</div>` : "";
-    return `${toolbar}<main class="content ${["today", "schedule"].includes(this._tab) && this._setupStep === null ? "wide" : ""}">${body}</main>${toast}`;
+    return `${toolbar}<main class="content ${["today", "schedule"].includes(this._tab) && this._setupStep === null ? "wide" : ""}">${body}</main>`;
+  }
+
+  // The toast: a message, or what was just done with its Undo and a bar that runs down
+  _toastHtml() {
+    if (this._undo)
+      return `<div class="toast undo" role="status"><span>${esc(this._undo.text)}</span>${this._undo.undo || this._undo.key ? `<button data-action="undo">Undo</button>` : ""}<i class="tbar" style="animation-duration:${UNDO_MS}ms;animation-delay:-${Math.max(0, Date.now() - this._undo.at)}ms"></i></div>`;
+    return this._toast ? `<div class="toast" role="status">${esc(this._toast)}</div>` : "";
+  }
+
+  // The whole page, the toast included
+  _page() {
+    return this._body() + this._toastHtml();
   }
 
   // Schedule (the weekly schedule, weekly.py): each kid's week of modes and limits, the editor with drag, copy,
@@ -2688,7 +2901,7 @@ class HearthPanel extends HTMLElement {
 
   // Today (the redesign, docs/home-assistant-integration.md and the design review): does anything need an adult, in one
   // sentence; one row per kid; what's playing; the rest one tap away in the kid's sheet (a bottom sheet on a phone, a
-  // column beside the list from 900 px). Every action applies at once with a 6-second Undo instead of a confirm.
+  // column beside the list from 900 px). Every action applies at once with an Undo (UNDO_MS) instead of a confirm.
   _today() {
     const kids = this._kids();
     const parts = [this._pairingCards(), this._controlsAttention()];
@@ -2709,6 +2922,7 @@ class HearthPanel extends HTMLElement {
         <aside class="detail ${open ? "on" : ""}" role="dialog" aria-modal="${open && !this._wide}" aria-label="${esc(sel ? `${sel.name}'s day` : "A kid's day")}">${sheet}</aside>
       </div>
       <div class="scrim ${open ? "on" : ""}" data-action="sheet-close"></div>
+      ${sel && this._mt && this._mt.kid === sel.id ? this._moreTimeSheet() : ""}
     </div>`;
   }
 
@@ -2801,58 +3015,143 @@ class HearthPanel extends HTMLElement {
     else if (all?.state === "low" || binding?.state === "low") tone = "low";
     const badgeIcon = lock ? { bedtime: "moon", school_time: "school", paused: "pause", other: "lock" }[lock.kind] : "";
     const badge = badgeIcon ? `<span class="badge tone-${tone === "accent" ? "accent" : tone}">${icon(badgeIcon)}</span>` : "";
-    const name = s?.name || "";
+    // The person's picture inside the ring, else their initials (two letters when two kids share the first)
+    const pic = s?.id && this._hass?.states ? this._picture(s.id) : null;
+    const inner = pic
+      ? `<img class="ini pic" src="${esc(pic)}" alt="">`
+      : `<span class="ini ${lock?.kind === "bedtime" ? "dim" : ""}">${esc(this._initials(s?.id, s?.name || ""))}</span>`;
     return `<span class="ring tone-${tone}" style="width:${size}px;height:${size}px" aria-hidden="true">
       <svg width="${size}" height="${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" class="track"/>
       <circle cx="${size / 2}" cy="${size / 2}" r="${r}" class="arc" stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${(c * (1 - frac)).toFixed(2)}"/></svg>
-      <span class="ini ${lock?.kind === "bedtime" ? "dim" : ""}">${esc(name.slice(0, 1).toUpperCase())}</span>${badge}</span>`;
+      ${inner}${badge}</span>`;
   }
 
-  // One status line: what stops them now, else what's left (and the pool that binds, and bedtime)
-  _kidLine(s) {
+  // A kid's initials: the first letter, or two ("Al", "An") when another kid's name starts the same: the first letter
+  // and the first one after it that tells them apart
+  _initials(id, name) {
+    const mine = String(name || "").trim();
+    const first = mine.slice(0, 1).toUpperCase();
+    const others = this._kids()
+      .filter((k) => k.id !== id)
+      .map((k) => String(k.name || "").trim().toLowerCase())
+      .filter((n) => n.slice(0, 1).toUpperCase() === first);
+    if (!others.length || !first) return first;
+    const lower = mine.toLowerCase();
+    for (let i = 1; i < lower.length; i++) {
+      if (others.every((o) => o[i] !== lower[i]) && /\p{L}/u.test(lower[i])) return first + lower[i];
+    }
+    return first + (lower[1] || "");
+  }
+
+  // A kid's row, line 1: the big number on the right ("1 h 10 left", "12 min left"), or the lock ("Bedtime")
+  _rowNumber(s) {
+    if (!s) return { text: "", tone: "" };
     const lock = this._lockOf(s);
-    const all = s?.all;
-    const binding = this._binding(s);
-    if (!s) return "";
-    if (lock?.kind === "paused") return `<b>${esc(WORDS.screensPaused)}</b>${lock.reason ? ` · ${esc(lock.reason)}` : ""}${lock.until ? ` till ${esc(clock(lock.until))}` : ""}`;
-    if (lock) return `${esc(LOCK_WORDS[lock.kind])}${lock.until ? ` till ${esc(clock(lock.until))}` : ""}`;
-    const t = s.time;
-    // Unlimited: its own line ("Unlimited until 6 PM")
-    if (t?.unlimited) return `<b>${esc(t.unlimited.text)}</b>`;
-    // Bonus time an adult gave at bedtime lifts it while it lasts
-    if (s.bedtime_lifted) return `Bedtime paused until ${esc(clock(s.bedtime_lifted.until))} for bonus time`;
-    const allLimited = all && all.minutes_left !== null && all.minutes_left !== undefined;
-    if (all?.state === "out") return `<b class="t-out">${esc(WORDS.outOfTime)}</b>`;
-    // A category at its limit while daily time remains: "Games are done for today · 40 min left for other things"
-    const done = (t?.categories || []).find((c) => c.left === 0 && t.today_left);
-    if (done?.text) return `<b class="t-out">${esc(done.text)}</b>`;
-    if (binding && binding.id !== "all" && binding.state === "out")
-      return `<b class="t-out">${esc(binding.name)} are done for today</b> · ${allLimited ? `${esc(fmtMinutes(all.minutes_left))} left for other things` : "no daily time set"}`;
-    if (!allLimited && !binding) return `${esc(fmtMinutes(all?.used_minutes || 0))} today · no limit`;
-    const parts = [];
-    // One number: the time they can use, bonus included ("1 h 10 min left today (includes 30 min bonus)")
-    if (t?.adult_text && allLimited) parts.push(`<b>${esc(t.adult_text)}</b>`);
-    else if (allLimited) parts.push(`<b>${esc(fmtMinutes(all.minutes_left))} left</b>`);
-    if (binding && binding.id !== "all") parts.push(`${esc(binding.name)} ${esc(fmtMinutes(binding.minutes_left))}`);
-    const start = s.bedtime ? new Date(s.bedtime.start) : null;
+    if (lock?.kind === "paused") return { text: "Paused", tone: "lock" };
+    if (lock) return { text: LOCK_WORDS[lock.kind], tone: "lock" };
+    const all = s.all || {};
+    if (s.time?.unlimited) return { text: "Free play", tone: "" };
+    const limited = all.minutes_left !== null && all.minutes_left !== undefined;
+    if (!limited) return { text: `${fmtMinutes(all.used_minutes || 0)} used`, tone: "" };
+    if (all.state === "out" || all.minutes_left <= 0) return { text: "No time left", tone: "out" };
+    const left = Math.round(all.minutes_left);
+    const b = this._binding(s);
+    const tone = all.state === "low" || (b && (b.state === "low" || b.state === "out")) ? "low" : "";
+    return { text: left < 60 ? `${left} min left` : `${fmtMinutes(left)} left`, tone };
+  }
+
+  // A kid's row, line 2: the reason or what's next ("Games done · bedtime 9:00"), never cut off
+  _rowReason(s) {
+    if (!s) return "No screen time reported yet today";
+    const lock = this._lockOf(s);
+    if (lock?.kind === "paused") return [lock.reason, lock.until ? `till ${clock(lock.until)}` : ""].filter(Boolean).join(" · ") || WORDS.screensPaused;
+    if (lock) return lock.until ? `Till ${clockAmPm(new Date(lock.until))}` : "";
+    const t = s.time || {};
+    const all = s.all || {};
     const now = this._now();
+    const parts = [];
+    if (t.unlimited) parts.push(`${t.unlimited.open ? "until turned off" : t.unlimited.until ? `till ${clock(t.unlimited.until)}` : ""}${t.unlimited.open || t.unlimited.until ? " · " : ""}not counted`);
+    if (s.bedtime_lifted) parts.push(`Bedtime paused till ${clock(s.bedtime_lifted.until)} for extra time`);
+    const play = (this._summary?.playing || []).find((p) => p.person === s.id);
+    if (play) {
+      const target = (s.targets || []).find((x) => x.id === play.target);
+      const where = target ? this._deviceName(target, s.name) : play.device || "";
+      parts.push([where ? `On ${where}` : "", cap(play.text || play.item || "")].filter(Boolean).join(" · "));
+    }
+    const done = t.unlimited ? [] : (t.categories || []).filter((c) => c.left === 0).map((c) => c.name);
+    if (done.length) parts.push(`${listWords(done)} done`);
+    const b = this._binding(s);
+    if (b && b.id !== "all" && b.state === "low" && b.minutes_left !== null && b.minutes_left !== undefined)
+      parts.push(`${b.name} ${fmtMinutes(b.minutes_left)} left`);
+    const start = s.bedtime ? new Date(s.bedtime.start) : null;
     if (start && start > now) {
       const mins = Math.round((start - now) / 60000);
-      parts.push(mins <= 60 ? `bedtime in ${mins} min` : `bedtime ${esc(clock(s.bedtime.start))}`);
+      parts.push(mins <= 60 ? `bedtime in ${mins} min` : `bedtime ${clock(s.bedtime.start)}`);
     }
-    return parts.join(" · ");
+    const limited = all.minutes_left !== null && all.minutes_left !== undefined;
+    if (!parts.length) parts.push(limited ? (all.used_minutes ? `${fmtMinutes(all.used_minutes)} used today` : "No screen time yet today") : "no limit");
+    return cap(parts.join(" · "));
+  }
+
+  // The kid's sheet, big: "1 h 10 min left", or the lock
+  _bigLeft(s) {
+    const lock = this._lockOf(s);
+    if (lock?.kind === "paused") return WORDS.screensPaused;
+    if (lock) return LOCK_WORDS[lock.kind];
+    const all = s?.all || {};
+    if (s?.time?.unlimited) return "Free play";
+    if (all.minutes_left === null || all.minutes_left === undefined) return "No limit today";
+    if (all.state === "out" || all.minutes_left <= 0) return WORDS.outOfTime;
+    return `${longMinutes(all.minutes_left)} left`;
+  }
+
+  // The kid's sheet, why: what's stopped or soon, in short sentences that wrap ("Games are done for today (2 h used).
+  // Other apps still work. Bedtime 9:00.")
+  _why(s) {
+    if (!s) return "";
+    const lock = this._lockOf(s);
+    const t = s.time || {};
+    const all = s.all || {};
+    const now = this._now();
+    const out = [];
+    if (lock?.kind === "paused") return [lock.reason, lock.until ? `Till ${clockAmPm(new Date(lock.until))}.` : ""].filter(Boolean).join(". ");
+    if (lock) return lock.until ? `Till ${clockAmPm(new Date(lock.until))}.` : "";
+    if (t.unlimited) out.push(`${t.unlimited.text}. Time used now isn't counted.`);
+    const limited = all.minutes_left !== null && all.minutes_left !== undefined;
+    const dailyOut = limited && (all.state === "out" || all.minutes_left <= 0);
+    if (dailyOut && !t.unlimited) out.push("Daily time is used up for today.");
+    const done = t.unlimited ? [] : (t.categories || []).filter((c) => c.left === 0);
+    for (const c of done) out.push(`${c.name}: done for today (${longMinutes(c.used || 0)} used).`);
+    if (done.length && limited && !dailyOut) out.push("Other apps still work.");
+    const b = this._binding(s);
+    if (b && b.id !== "all" && b.state === "low" && b.minutes_left !== null && b.minutes_left !== undefined) out.push(`${b.name}: ${longMinutes(b.minutes_left)} left.`);
+    // Devices stopped by their own limit or a parent's lock
+    for (const x of (s.targets || []).filter((y) => !y.same_as)) {
+      const company = { google: "Google", microsoft: "Microsoft", nintendo: "Nintendo" }[x.left_by] || "";
+      if (x.locked_kind === "parent_lock") out.push(`${this._deviceName(x, s.name)} is locked in ${company ? `${company}'s` : "a parent's"} app.`);
+      else if (x.locked_kind === "device_limit") out.push(`${this._deviceName(x, s.name)}: its own limit reached.`);
+    }
+    if (s.bedtime_lifted) out.push(`Bedtime paused till ${clock(s.bedtime_lifted.until)} for extra time.`);
+    const start = s.bedtime ? new Date(s.bedtime.start) : null;
+    if (start && start > now) {
+      const mins = Math.round((start - now) / 60000);
+      out.push(mins <= 60 ? `Bedtime in ${mins} min.` : `Bedtime ${clock(s.bedtime.start)}.`);
+    }
+    const school = s.school_time && !(s.school_time_off || []).length ? new Date(s.school_time.start) : null;
+    if (school && school > now && school - now < 12 * 3600000) out.push(`School time ${clock(s.school_time.start)} to ${clock(s.school_time.end)}.`);
+    return out.join(" ");
   }
 
   // Where a kid is while they're out, by name only: "Away · apart from adults since 6:47 PM · Messages open" or
   // "Practice · with Alex" (presence.py; nothing while they're home or not known)
-  _presenceLine(s) {
+  _presenceLine(s, tag = "div") {
     const p = s?.presence;
     if (!p || !p.away) return "";
     const parts = [esc(p.place || "Away")];
     if (p.apart) parts.push(`apart from adults${p.apart_since ? ` since ${esc(clockAmPm(new Date(p.apart_since)))}` : ""}`);
     else if ((p.with_adults || []).length) parts.push(`with ${esc(p.with_adults.join(", "))}`);
     if ((p.open || []).length) parts.push(`${esc(p.open.join(", "))} open`);
-    return `<div class="line muted small presence">${parts.join(" · ")}</div>`;
+    return `<${tag} class="line muted small presence">${parts.join(" · ")}</${tag}>`;
   }
 
   _todayHeader(kids) {
@@ -2869,14 +3168,16 @@ class HearthPanel extends HTMLElement {
     if (sub.length === 1) sub.push(awake.length === people.length ? "everyone has time left" : "");
     return `<header class="top"><div class="grow"><h1>${night ? "Tonight" : "Today"}</h1>
       <div class="sub">${esc(sub.filter(Boolean).join(" · "))}</div><div class="live"><i></i>Live</div></div>
-      <button class="ibtn" data-action="pause-open" aria-expanded="${Boolean(this._pauseOpen)}">${icon("pause", "sm")}${esc(WORDS.pauseScreens)}</button></header>`;
+      <div class="split"><button class="ibtn sl" data-action="pause-quick" aria-label="Pause every kid's screens for 30 min">${icon("pause", "sm")}Pause 30 min</button><button class="ibtn sr" data-action="pause-open" aria-expanded="${Boolean(this._pauseOpen)}" aria-label="Pause: how long, and why">${icon("down", "sm")}</button></div></header>`;
   }
 
   _pauseBox() {
     if (!this._pauseOpen) return "";
     const m = this._pauseMinutes || 30;
+    const lens = [15, 30, 60, 90].map((x) => `<button class="chip-t" data-action="pause-len" data-minutes="${x}" aria-pressed="${x === m}">${esc(fmtMinutes(x))}</button>`).join("");
     return `<div class="card pausebox"><div class="strong">Pause every kid's screens</div>
-      <div class="chips">${[15, 30, 60, 90].map((x) => `<button class="chip-t" data-action="pause-len" data-minutes="${x}" aria-pressed="${x === m}">${esc(fmtMinutes(x))}</button>`).join("")}</div>
+      <div class="chips">${lens}<button class="chip-t" data-action="pause-len" data-minutes="until" aria-pressed="${m === "until"}">Until a time</button></div>
+      ${m === "until" ? `<label class="field">Until<input id="pause-until" type="time" value="19:00"></label>` : ""}
       <label class="field">Reason they'll see (optional)<input id="pause-reason" placeholder="Dinner" data-enter="pause-go"></label>
       <div class="acts"><button class="b primary" data-action="pause-go">${esc(WORDS.pauseScreens)} now</button><button class="b ghost" data-action="pause-open">Cancel</button></div></div>`;
   }
@@ -2920,9 +3221,8 @@ class HearthPanel extends HTMLElement {
     const now = this._now();
     const night = kids.some((k) => now >= this._cutoff(this._summaryPerson(k.id)));
     if (!rows.length) {
-      return `<div class="sec"><span>For you</span></div><div class="card flat"><div class="quiet ${night ? "" : "day"}"><span class="qic">${icon(night ? "moon" : "check")}</span>
-        <div><div class="strong">${night ? "Nothing needs you tonight" : "Nothing needs you"}</div>
-        <div class="d">${night ? "Hearth holds suggestions after bedtime. A kid's request would still show here." : "Suggestions show here when a kid runs out while they're using a screen."}</div></div></div>${this._heldFold(held)}</div>`;
+      // One quiet line, with what's held back folded beside it
+      return `<div class="quietline"><span>${night ? "Nothing needs you tonight" : "Nothing needs you"}</span>${this._heldFold(held)}</div>`;
     }
     const title = rows.length === 1 ? "1 thing for you" : `${rows.length} things for you`;
     return `<div class="sec"><span>${title}</span></div><div class="card flat needs">${rows
@@ -2976,7 +3276,7 @@ class HearthPanel extends HTMLElement {
         const over = device ? 0 : typeof x.over === "number" ? x.over : this._overOf(row, s?.groups);
         acts += this._giveBox(`${inSheet ? "sheet" : "list"}|${item.person}|${x.key}`, { person: item.person, group, device, over });
       }
-      if (dismiss) acts += `<button class="b ghost" data-action="sugg-dismiss" data-person="${esc(item.person)}" data-key="${esc(x.key)}" data-id="${esc(dismiss.id)}" title="Hides it until tomorrow">Dismiss</button>`;
+      if (dismiss) acts += `<button class="b ghost" data-action="sugg-dismiss" data-person="${esc(item.person)}" data-key="${esc(x.key)}" data-id="${esc(dismiss.id)}" title="Hides it until tomorrow">Not today</button>`;
     }
     const moreLine = more ? `<div class="more">+${more} more for ${esc(name)} · <button class="lnk" data-action="kid-sheet" data-kid="${esc(item.person)}">See</button></div>` : "";
     return `<div class="need ${item.type === "ask" ? "ask" : ""} ${inSheet ? "insheet" : ""}" ${item.type === "ask" && !inSheet ? `id="ask-${esc(item.ask.id)}"` : ""}>
@@ -2993,19 +3293,25 @@ class HearthPanel extends HTMLElement {
       .map((k) => {
         const s = this._summaryPerson(k.id);
         const asleep = this._lockOf(s)?.kind === "bedtime";
-        return `<div class="card kid ${asleep ? "asleep" : ""}" role="button" tabindex="0" data-action="kid-sheet" data-enter="kid-sheet" data-kid="${esc(k.id)}" aria-current="${Boolean(sel && sel.id === k.id && this._wide)}">
-          ${this._ring(s || { name: k.name })}<div class="grow"><div class="name">${esc(k.name)}</div><div class="line">${this._kidLine(s) || "No word yet"}${this._originButton(s, `row|${k.id}`)}</div>${this._presenceLine(s)}${this._originList(s, `row|${k.id}`)}</div>
-          ${covered.has(k.id) ? "" : this._rowGive(s)}<span class="chev">${icon("chev")}</span></div>`;
+        const num = this._rowNumber(s);
+        const reason = this._rowReason(s);
+        const outish = s && !this._lockOf(s) && !s.time?.unlimited && (s.time?.categories || []).some((c) => c.left === 0);
+        // The row opens the sheet; its +15 min is a button beside it, never inside it
+        return `<div class="card kid ${asleep ? "asleep" : ""}" aria-current="${Boolean(sel && sel.id === k.id && this._wide)}">
+          <button class="kopen" data-action="kid-sheet" data-kid="${esc(k.id)}" aria-label="${esc(`${k.name}: ${num.text}${reason ? `, ${reason}` : ""}`)}">
+          ${this._ring(s || { id: k.id, name: k.name })}<span class="grow"><span class="l1"><span class="name">${esc(k.name)}</span><span class="num ${num.tone ? `t-${num.tone}` : ""}">${esc(num.text)}</span></span>
+          <span class="line ${outish ? "t-out" : ""}">${esc(reason)}</span>${this._presenceLine(s, "span")}</span></button>
+          ${covered.has(k.id) ? "" : this._rowGive(s)}</div>`;
       })
       .join("")}</div>`;
   }
 
-  // The row's +15: only when time is what stops them, they're awake and it's before their cutoff
+  // The row's +15 min: only when time is what stops them, they're awake and it's before their cutoff
   _rowGive(s) {
-    if (!s || this._lockOf(s) || this._now() >= this._cutoff(s)) return "";
+    if (!s || this._lockOf(s) || s.time?.unlimited || this._now() >= this._cutoff(s)) return "";
     const b = this._binding(s);
     if (!b || (b.state !== "out" && b.state !== "low")) return "";
-    return `<button class="b primary give" data-action="give" data-person="${esc(s.id)}" data-minutes="15" aria-label="${esc(`Give ${s.name} 15 min ${WORDS.bonusShort}`)}">+15</button>`;
+    return `<button class="b give" data-action="give" data-person="${esc(s.id)}" data-minutes="15" aria-label="${esc(`Give ${s.name} 15 min ${WORDS.bonusShort}`)}">+15 min</button>`;
   }
 
   // What's playing in the house: one collapsed row when nothing is
@@ -3063,32 +3369,36 @@ class HearthPanel extends HTMLElement {
     return /\btab|tablet|ipad|\bSM-[XTP]\d/i.test(words) ? "tablet" : "phone";
   }
 
-  // The kid's sheet: their lock, their request or suggestions, the actions that help now, today, devices, exceptions,
-  // the week and their to-do list
+  // The kid's sheet: how much is left (or the lock) and why, three actions (More time, Pause, ⋯), today's extras with
+  // End, today, devices, holds and notes, the week and their to-do list
   _kidSheet(kid) {
     const s = this._summaryPerson(kid.id);
     if (!s) return `<div class="dinner"><p class="muted">No word from Hearth about ${esc(kid.name)} yet.</p></div>`;
     const lock = this._lockOf(s);
     const locked = lock && lock.kind !== "paused";
     const h = [];
+    const why = this._why(s);
+    const big = this._bigLeft(s);
+    const bigTone = !lock && s.all?.state === "out" ? "t-out" : "";
     h.push(`<div class="handle"><i></i></div><div class="dinner">
-      <div class="dhead">${this._ring(s, 60)}<div class="grow"><h2>${esc(kid.name)}</h2><div class="line">${this._kidLine(s)}${this._originButton(s, `sheet|${kid.id}`)}</div>${this._presenceLine(s)}${this._originList(s, `sheet|${kid.id}`)}</div>
+      <div class="dhead">${this._ring(s, 60)}<div class="grow"><div class="who">${esc(kid.name)}</div><h2 class="${bigTone}">${esc(big)}</h2>${why ? `<div class="why">${esc(why)}</div>` : ""}${this._presenceLine(s)}</div>
       <button class="closebtn" data-action="sheet-close" aria-label="Close">${icon("close")}</button></div>`);
     if (locked) {
       const word = LOCK_WORDS[lock.kind];
       const from = this._lockSource(lock.by);
       h.push(`<div class="lockbox ${lock.kind === "bedtime" ? "night" : "school"}">${icon(lock.kind === "bedtime" ? "moon" : lock.kind === "school_time" ? "school" : "lock")}<div>
         <div class="strong">${esc(word)}${lock.until ? ` till ${esc(clock(lock.until))}` : ""}</div>
-        <div class="d">${esc(`${from ? `Set in ${from}. ` : ""}Every screen is off for ${kid.name} until then${lock.kind === "bedtime" ? ". Bonus time pauses bedtime while it lasts." : ", so bonus time wouldn't help."}${lock.kind === "school_time" ? " School time apps still work." : ""}`)}</div></div></div>`);
+        <div class="d">${esc(`${from ? `Set in ${from}. ` : ""}Every screen is off for ${kid.name} until then${lock.kind === "bedtime" ? ". More time pauses bedtime while it lasts." : ". More time counts after it ends."}${lock.kind === "school_time" ? " School time apps still work." : ""}`)}</div></div></div>`);
     }
     if (!lock && s.bedtime_lifted)
-      h.push(`<div class="banner">${icon("moon")}<div class="grow">Bedtime paused until ${esc(clock(s.bedtime_lifted.until))} for bonus time</div></div>`);
+      h.push(`<div class="banner">${icon("moon")}<div class="grow">Bedtime paused until ${esc(clock(s.bedtime_lifted.until))} for extra time</div></div>`);
     if (lock?.kind === "paused")
       h.push(`<div class="banner">${icon("pause")}<div class="grow">${esc(WORDS.screensPaused)}${lock.until ? ` till ${esc(clock(lock.until))}` : ""}${lock.reason ? ` · ${esc(lock.reason)}` : ""}</div><button class="lnk" data-action="kid-pause-end" data-person="${esc(kid.id)}">End</button></div>`);
     // Their request or suggestions
     const mine = this._needs([kid]).rows.find((r) => r.person === kid.id);
     if (mine) for (const item of [mine.top, ...mine.more]) h.push(`<div class="card flat">${this._needRow(item, { inSheet: true })}</div>`);
     h.push(this._actionBar(kid, s, lock));
+    h.push(this._extras(kid, s));
     h.push(this._todayBlock(kid, s, locked));
     h.push(this._deviceGroups(kid, s));
     h.push(this._exceptions(kid, s));
@@ -3097,8 +3407,78 @@ class HearthPanel extends HTMLElement {
     h.push(`<div class="card flat blk todo">${icon("list")}<div class="grow"><div class="strong">${td.total ? `To-do: ${td.done} of ${td.total} done` : "No to-do list yet"}</div>
       <div class="d">${td.total ? "" : "Chores can earn bonus time or money."}${s.balance_cents ? ` Balance ${esc(money(s.balance_cents))}` : ""}</div></div>
       <button class="b ghost" data-action="kid" data-kid="${esc(kid.id)}" data-go="kids">${td.total ? "Open" : "Set up"}</button></div>`);
-    h.push(`<div class="foot"><span class="muted">Updated ${esc(clockAmPm(this._now()))}</span><button class="lnk" data-action="kid" data-kid="${esc(kid.id)}" data-go="kids">Change ${esc(kid.name)}'s limits</button></div></div>`);
+    h.push(`<div class="foot"><span class="muted">Updated ${esc(clockAmPm(this._now()))}</span></div></div>`);
     return h.join("");
+  }
+
+  // Today's extras: every extra still on today, each with its End (or Undo): bonus time given, raised limits, free play,
+  // allows and No School time today. Ending one offers Undo where it can be given again
+  _extras(kid, s) {
+    const p = esc(kid.id);
+    const t = s.time || {};
+    const rows = [];
+    const row = (text, button) => rows.push(`<div class="xrow"><span>${esc(text)}</span>${button}</div>`);
+    const origins = (t.origins || []).filter((o) => !o.ended_at && o.endable && ["bonus", "raise", "unlimited"].includes(o.kind) && o.source !== "chore");
+    for (const o of origins)
+      row(this._extraText(o, s), `<button class="lnk" data-action="extra-end" data-person="${p}" data-origin="${esc(o.id)}">End</button>`);
+    // Raised limits and free play the origins don't name (an older Hearth): end them all at once
+    for (const c of (t.categories || []).filter((x) => x.raised && !origins.some((o) => o.kind === "raise" && o.group === x.id)))
+      row(`${c.limit_text || `${c.name}: limit raised today`}`, `<button class="lnk" data-action="raise-end" data-person="${p}" data-group="${esc(c.id)}">End</button>`);
+    if (t.unlimited && !origins.some((o) => o.kind === "unlimited"))
+      row(`${t.unlimited.text} (not counted)`, `<button class="lnk" data-action="unlimited-end" data-person="${p}">End</button>`);
+    const till = (iso) => (iso ? ` till ${clock(iso)}` : "");
+    for (const a of s.allows || []) {
+      const what = a.group ? (a.group === "all" ? "Screen time" : this._groupName(a.group)) : a.app_name || this._config?.known_apps?.[a.app] || a.app;
+      row(`${cap(what)} allowed${a.ends_on ? ` until ${this._endsOn(a.ends_on)}` : till(a.until)}`, `<button class="lnk" data-action="allow-end" data-person="${p}" ${a.group ? `data-group="${esc(a.group)}"` : `data-app="${esc(a.app)}"`}>End</button>`);
+    }
+    for (const x of s.device_extras || []) {
+      const tg = (s.targets || []).find((y) => y.id === x.target);
+      const where = tg ? this._deviceName(tg, kid.name) : x.name || "one device";
+      row(x.kind === "allow" ? `${where} open${till(x.until)}` : `${longMinutes(x.minutes_left || 0)} extra left on ${where}`, "");
+    }
+    const off = (s.school_time_off || [])[0];
+    if (off) row(`No School time today${off.reason ? ` · ${off.reason}` : ""}`, `<button class="lnk" data-action="school-off-cancel" data-person="${p}">Undo</button>`);
+    if (!rows.length) return "";
+    return `<div class="card flat blk extras"><h3>Today's extras</h3>${rows.join("")}</div>`;
+  }
+
+  // An extra in a few words: "+30 min from Alex, 3:05 pm", "Games: limit +30 today", "Free play until 6 PM"
+  _extraText(o, s) {
+    const at = o.at ? clockAmPm(new Date(o.at)) : "";
+    const by = o.by ? ` from ${o.by}` : "";
+    if (o.kind === "bonus" && typeof o.minutes === "number")
+      return `${plusLabel(o.minutes)}${o.group ? ` of ${this._groupName(o.group)}` : ""}${by}${at ? `, ${at}` : ""}`;
+    if (o.kind === "unlimited") return `${String(o.detail || "Unlimited").replace(/^Unlimited/, "Free play")}${by} (not counted)`;
+    return `${o.detail || o.text || ""}${by}`;
+  }
+
+  // What gives an ended extra back (null when it can't be told exactly)
+  _extraUndo(person, o, s) {
+    if (!o) return null;
+    const t = s?.time || {};
+    if (o.kind === "bonus" && typeof o.minutes === "number") {
+      // Ending takes the unused part: as much as its minutes and as what's left unused
+      const left = o.group ? (t.category_bonuses || []).find((c) => c.id === o.group)?.bonus_left : t.bonus_left;
+      const minutes = Math.min(o.minutes, typeof left === "number" ? left : o.minutes);
+      if (minutes <= 0) return null;
+      return () => this._call("add_time", { person, minutes, ...(o.group ? { category: o.group } : {}) });
+    }
+    if (o.kind === "raise" && o.group) {
+      const d = String(o.detail || "");
+      if (/no limit/.test(d)) return () => this._call("raise_cap", { person, category: o.group, no_cap: true });
+      const by = d.match(/limit \+(\d+)/);
+      if (by) return () => this._call("raise_cap", { person, category: o.group, minutes: Number(by[1]) });
+      return null;
+    }
+    if (o.kind === "unlimited" && t.unlimited) return () => this._call("unlimited", this._unlimitedAgain(person, t.unlimited));
+    return null;
+  }
+
+  // Free play again as it was: until the same time (or turned off), bedtime as it was
+  _unlimitedAgain(person, u) {
+    const end = u.until ? new Date(u.until) : null;
+    const until = u.open ? "turned_off" : end && !Number.isNaN(end.getTime()) ? `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}` : "end_of_day";
+    return { people: [person], until, include_bedtime: Boolean(u.include_bedtime) };
   }
 
   // Which parental control a lock comes from, by its entities' integration
@@ -3111,81 +3491,145 @@ class HearthPanel extends HTMLElement {
     return (by || []).some((e) => /_(bedtime|school_time)_active/.test(e)) ? "Family Link" : "";
   }
 
-  // The adult's actions on a kid: Bonus time (no category), Raise limit (one category, today), Unlimited (or End
-  // unlimited while on), Pause screens; Allow an app and the rest under "…"
+  // The adult's actions on a kid, three buttons: More time (one sheet for every kind of extra time), Pause (one tap, 30
+  // minutes, with Undo) and ⋯ (Allow an app…, No School time today, Free play…, Change limits). In bedtime or School
+  // time: Allow an app, More time anyway and ⋯
   _actionBar(kid, s, lock) {
     const locked = lock && lock.kind !== "paused";
     const p = esc(kid.id);
     const now = this._now();
     const off = (s.school_time_off || [])[0];
-    const schoolOpen = s.school_time && now < new Date(s.school_time.end);
-    const unlimitedOn = Boolean(s.time?.unlimited);
-    const categories = (s.time?.categories || []).filter((c) => c.limit !== null || c.raised);
-    const bar = [];
-    if (!locked) {
-      bar.push(`<button class="b primary" data-action="give-open" aria-expanded="${Boolean(this._giveOpen)}">${icon("plus", "sm")}${esc(WORDS.bonus)}</button>`);
-      // The same "+" box as For you's: bonus amounts, and Unlimited today (or no limit for the category that stops them)
-      const b = this._binding(s);
-      bar.push(this._giveBox(`bar|${kid.id}`, { person: kid.id, group: b?.id || "all", over: this._overOf(b, s?.groups) }));
-      if (categories.length)
-        bar.push(`<button class="b" data-action="raise-open" aria-expanded="${Boolean(this._raiseOpen)}">${icon("plus", "sm")}${esc(WORDS.raise)}</button>`);
-    } else bar.push(`<button class="b" data-action="allow-open" aria-expanded="${Boolean(this._allowOpen)}">${icon("shield", "sm")}Allow an app…</button>`);
-    if (unlimitedOn) bar.push(`<button class="b" data-action="unlimited-end" data-person="${p}">${esc(WORDS.unlimitedEnd)}</button>`);
-    else bar.push(`<button class="b" data-action="unlimited-open" aria-expanded="${Boolean(this._unlimitedOpen)}">${esc(WORDS.unlimited)}</button>`);
-    if (!lock) bar.push(`<button class="b" data-action="kid-pause" data-person="${p}" data-minutes="30">${icon("pause", "sm")}${esc(WORDS.pauseScreens)} 30 min</button>`);
-    bar.push(`<button class="b ghost" data-action="more-open" aria-expanded="${Boolean(this._moreOpen)}" aria-label="More actions">${icon("more")}</button>`);
+    const schoolAhead = s.school_time && !off && now < new Date(s.school_time.end);
+    const more = `<button class="b ${locked ? "" : "primary"} grow" data-action="mt-open" data-person="${p}" aria-haspopup="dialog" aria-label="${esc(`More time for ${kid.name}`)}">${icon("plus", "sm")}${locked ? "More time anyway" : "More time"}</button>`;
+    const allow = `<button class="b primary grow" data-action="allow-open" data-person="${p}" aria-expanded="${Boolean(this._allowOpen)}">${icon("shield", "sm")}Allow an app</button>`;
+    const pause = lock
+      ? ""
+      : `<button class="b" data-action="kid-pause" data-person="${p}" data-minutes="30" aria-label="${esc(`Pause ${kid.name}'s screens for 30 min`)}">${icon("pause", "sm")}Pause</button>`;
+    const dots = `<button class="b sq2" data-action="more-open" data-person="${p}" aria-expanded="${Boolean(this._moreOpen)}" aria-label="More actions">${icon("more")}</button>`;
+    const bar = locked ? [allow, more, dots] : [more, pause, dots];
     const menu = [];
     if (this._moreOpen) {
-      if (locked && lock.kind === "bedtime") menu.push(`<button data-action="give-open">${esc(WORDS.bonus)}<small>Pauses bedtime while it lasts</small></button>`);
-      else if (locked) menu.push(`<button data-action="give-open">${esc(WORDS.bonus)} anyway<small>Counts after ${lock.kind === "school_time" ? "School time" : "the lock"} ends</small></button>`);
-      else menu.push(`<button data-action="allow-open">Allow an app…<small>Lets one app or category through limits for a while</small></button>`);
-      if (off) menu.push(`<button data-action="school-off-cancel" data-person="${p}">School time is back today<small>Undo "No School time today"</small></button>`);
-      else if (schoolOpen) menu.push(`<button data-action="school-off" data-person="${p}">No School time today<small>For a sick day or a day off</small></button>`);
-      for (const c of categories.filter((x) => x.raised))
-        menu.push(`<button data-action="raise-end" data-person="${p}" data-group="${esc(c.id)}">${esc(WORDS.raiseEnd)}: ${esc(c.name)}<small>${esc(c.limit_text || "")}</small></button>`);
+      if (!locked) menu.push(`<button data-action="allow-open" data-person="${p}">Allow an app…<small>Lets one app through limits for a while</small></button>`);
+      if (schoolAhead) menu.push(`<button data-action="school-off" data-person="${p}">No School time today<small>For a sick day or a day off</small></button>`);
+      menu.push(`<button data-action="mt-open" data-person="${p}" data-view="free">Free play…<small>Until a time, not counted</small></button>`);
       menu.push(`<button data-action="kid" data-kid="${p}" data-go="kids">Change limits<small>Opens ${esc(kid.name)}'s rules</small></button>`);
     }
-    let chooser = "";
-    if (this._giveOpen) {
-      // Bonus time has no category: spent anywhere, minutes past a category's limit included
-      const amt = this._giveAmt || 15;
-      chooser = `<div class="chooser"><div class="lab">${esc(WORDS.bonus)}</div><div class="chips">${[15, 30, 60]
-        .map((m) => `<button class="chip-t" data-action="give-amt" data-minutes="${m}" aria-pressed="${m === amt}">+${m}</button>`)
-        .join("")}</div><div class="d">Adds to ${esc(WORDS.dailyLower)}; it can be spent on anything, past a category's limit too.</div>
-        <button class="b primary" data-action="give" data-person="${p}" data-minutes="${amt}">Give ${amt} min ${esc(WORDS.bonusShort)}</button></div>`;
-    } else if (this._raiseOpen && categories.length) {
-      const cat = categories.some((c) => c.id === this._raiseCat) ? this._raiseCat : (categories.find((c) => c.left === 0) || categories[0]).id;
-      const how = this._raiseHow || "30";
-      const chosen = categories.find((c) => c.id === cat);
-      const hows = [["15", "+15 min"], ["30", "+30 min"], ["60", "+1 h"], ["none", WORDS.noLimit]];
-      chooser = `<div class="chooser"><div class="lab">${esc(cap(WORDS.category))}</div><div class="chips">${categories
-        .map((c) => `<button class="chip-t" data-action="raise-cat" data-group="${esc(c.id)}" aria-pressed="${c.id === cat}">${esc(c.name)}</button>`)
-        .join("")}</div><div class="d">${esc(chosen?.limit_text || "")}. ${esc(cap(WORDS.dailyLower))} stays the same.</div><div class="lab">Raise by</div><div class="chips">${hows
-        .map(([v, l]) => `<button class="chip-t" data-action="raise-how" data-how="${v}" aria-pressed="${v === how}">${esc(l)}</button>`)
-        .join("")}</div><button class="b primary" data-action="raise" data-person="${p}" data-group="${esc(cat)}" data-how="${esc(how)}">${esc(WORDS.raise)}</button></div>`;
-    } else if (this._unlimitedOpen) {
+    return `<div class="actbar">${bar.join("")}</div>${menu.length ? `<div class="menu">${menu.join("")}</div>` : ""}${this._allowOpen ? this._allowChooser(kid, s) : ""}`;
+  }
+
+  // Allow an app: any of the kid's apps (today's first, then every app Hearth knows), found by typing
+  _allowChooser(kid, s) {
+    const p = esc(kid.id);
+    const q = this._allowQ || "";
+    const seen = new Set();
+    const apps = [];
+    for (const a of s.apps_today || []) {
+      if (!a.package || seen.has(a.package)) continue;
+      seen.add(a.package);
+      apps.push({ package: a.package, name: a.name || this._config?.known_apps?.[a.package] || a.package });
+    }
+    const known = Object.entries(this._config?.known_apps || {})
+      .filter(([pkg]) => !seen.has(pkg) && !this._testBuild(pkg))
+      .map(([pkg, name]) => ({ package: pkg, name: name || pkg }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    apps.push(...known);
+    const shown = apps.filter((a) => !q || a.name.toLowerCase().includes(q) || a.package.toLowerCase().includes(q)).slice(0, 12);
+    const pick = shown.some((a) => `app:${a.package}` === this._allowPick) ? this._allowPick : shown[0] ? `app:${shown[0].package}` : "";
+    const len = this._allowLen ?? 30;
+    const label = (shown.find((a) => `app:${a.package}` === pick) || {}).name;
+    return `<div class="chooser"><label class="field">App<input id="allow-q" type="search" placeholder="Search ${esc(kid.name)}'s apps" autocomplete="off" value="${esc(q)}"></label>
+      <div class="chips">${shown
+        .map((a) => `<button class="chip-t" data-action="allow-pick" data-pick="app:${esc(a.package)}" aria-pressed="${pick === `app:${a.package}`}" title="${esc(a.package)}">${esc(a.name)}</button>`)
+        .join("")}</div>
+      <div class="lab">For</div><div class="chips">${[[30, "30 min"], [60, "1 h"], [0, "Rest of today"]]
+        .map(([m, l]) => `<button class="chip-t" data-action="allow-len" data-minutes="${m}" aria-pressed="${m === len}">${l}</button>`)
+        .join("")}</div>${pick ? `<button class="b primary" data-action="allow" data-person="${p}" data-pick="${esc(pick)}" data-minutes="${len}">Allow ${esc(label || "it")}</button>` : `<div class="d">No app by that name.</div>`}</div>`;
+  }
+
+  // The More time sheet (a second bottom sheet on a phone, a dialog on a wide page): For (what's stopping them, or
+  // Anything), +15 / +30 / +1 h and the rest of today, a line saying what it will do, then Take 15 min away and Free play
+  // until a time. One tap gives, with Undo
+  _moreTimeSheet() {
+    const m = this._mt;
+    if (!m) return "";
+    const s = this._summaryPerson(m.kid);
+    if (!s) return "";
+    const p = esc(m.kid);
+    const name = s.name || this._personName(m.kid);
+    const st = this._mtState(s);
+    const lock = this._lockOf(s);
+    const sub = [this._rowNumber(s).text, ...st.cats.filter((c) => c.left === 0).map((c) => `${c.name} done`)].filter(Boolean);
+    const head = `<div class="handle"><i></i></div><div class="mt-head"><div class="grow"><h2 id="mt-title">${m.view === "free" ? `Free play for ${esc(name)}` : `More time for ${esc(name)}`}</h2>
+      <div class="d">${esc(sub.join(" · "))}</div></div><button class="closebtn" data-action="mt-close" aria-label="Close">${icon("close")}</button></div>`;
+    let body;
+    if (m.view === "free") {
       const until = this._unlimitedUntil || "end_of_day";
-      const choices = [["end_of_day", WORDS.untilEndOfDay], ["time", "Until a time"], ["turned_off", WORDS.untilTurnedOff]];
-      chooser = `<div class="chooser"><div class="lab">${esc(WORDS.unlimited)}</div><div class="chips">${choices
+      const choices = [["end_of_day", "Rest of today"], ["time", "Until a time"], ["turned_off", WORDS.untilTurnedOff]];
+      body = `<div class="chips">${choices
         .map(([v, l]) => `<button class="chip-t" data-action="unlimited-until" data-until="${v}" aria-pressed="${v === until}">${esc(l)}</button>`)
         .join("")}</div>${until === "time" ? `<label class="field">Until<input id="unlimited-time" type="time" value="18:00"></label>` : ""}
         <label class="check"><input type="checkbox" data-change="unlimited-bed" ${this._unlimitedBed ? "checked" : ""}>${esc(WORDS.includeBedtime)}</label>
-        <div class="d">Time used meanwhile isn't counted: ${esc(WORDS.dailyLower)}, limits and bonus time pick up where they were. School time and ${esc(WORDS.pauseScreens)} still apply. Always ends at midnight.</div>
-        <button class="b primary" data-action="unlimited" data-person="${p}">Start ${esc(WORDS.unlimited.toLowerCase())}</button></div>`;
-    } else if (this._allowOpen) {
-      const apps = (s.apps_today || []).filter((a) => a.name).slice(0, 8);
-      const pick = this._allowPick || (apps[0] ? `app:${apps[0].package}` : "");
-      const len = this._allowLen || 30;
-      const label = (apps.find((a) => `app:${a.package}` === pick) || {}).name;
-      chooser = `<div class="chooser"><div class="lab">App</div><div class="chips">${apps
-        .map((a) => `<button class="chip-t" data-action="allow-pick" data-pick="app:${esc(a.package)}" aria-pressed="${pick === `app:${a.package}`}" title="${esc(a.package)}">${esc(a.name)}</button>`)
-        .join("")}</div>
-        <div class="lab">For</div><div class="chips">${[[30, "30 min"], [60, "1 h"], [0, "Rest of today"]]
-          .map(([m, l]) => `<button class="chip-t" data-action="allow-len" data-minutes="${m}" aria-pressed="${m === len}">${l}</button>`)
-          .join("")}</div>${pick ? `<button class="b primary" data-action="allow" data-person="${p}" data-pick="${esc(pick)}" data-minutes="${len}">Allow ${esc(label || "it")}</button>` : `<div class="d">No apps used today to pick from.</div>`}</div>`;
+        <p class="mt-note">Time used meanwhile isn't counted: ${esc(WORDS.dailyLower)} and limits pick up where they were. School time and ${esc(WORDS.pauseScreens)} still apply. Always ends at midnight.</p>
+        <button class="b primary wide" data-action="unlimited" data-person="${p}">Start free play</button>
+        <div class="mt-more"><button data-action="mt-view" data-view="main">‹ Back to more time</button></div>`;
+    } else {
+      const forId = this._mtFor(s);
+      const cat = forId === "all" ? null : st.cats.find((c) => c.id === forId);
+      // The two choices: the category (the one picked, else the one stopping them, else the closest to its limit) and
+      // Anything; the other limited categories as a quiet line under them
+      const focus = cat || st.stopping || st.closest;
+      let forRow = "";
+      if (focus) {
+        const seg = (id, label) =>
+          `<button role="radio" data-action="mt-for" data-group="${esc(id)}" aria-checked="${forId === id}">${esc(label)}</button>`;
+        const others = st.cats.filter((c) => c.id !== focus.id);
+        forRow = `<div class="mt-for"><span class="lab" id="mt-for-l">For</span><div class="seg" role="radiogroup" aria-labelledby="mt-for-l">${seg(focus.id, focus.name)}${seg("all", "Anything")}</div>
+          ${others.length ? `<div class="mt-others">Or for: ${others.map((c) => `<button class="lnk" data-action="mt-for" data-group="${esc(c.id)}">${esc(c.name)}</button>`).join(" · ")}</div>` : ""}</div>`;
+      }
+      const amounts = [15, 30, 60]
+        .map((n) => `<button class="b amt" data-action="mt-give" data-person="${p}" data-group="${esc(forId)}" data-how="${n}">${plusLabel(n)}</button>`)
+        .join("");
+      const restLabel = forId === "all" || st.dailyOut ? "Free play rest of today" : `No ${cat.name} limit rest of today`;
+      const rest = `<button class="b wide" data-action="mt-give" data-person="${p}" data-group="${esc(forId)}" data-how="rest">${esc(restLabel)}</button>`;
+      const note = this._mtNote(s, forId, st, lock);
+      body = `${forRow}<div class="mt-amts">${amounts}</div>${rest}<p class="mt-note">${esc(note)}</p>
+        <div class="mt-more"><button data-action="mt-take" data-person="${p}" data-minutes="15">Take 15 min away</button>
+        <button data-action="mt-view" data-view="free">Free play until a time (not counted) ›</button></div>`;
     }
-    const spans = (s.time?.unlimited_today || []).map((u) => `<div class="notcounted">${esc(u.text)}</div>`).join("");
-    return `<div class="actbar">${bar.join("")}</div>${menu.length ? `<div class="menu">${menu.join("")}</div>` : ""}${chooser}${spans}`;
+    return `<div class="mt-scrim" data-action="mt-close"></div><section class="mt" role="dialog" aria-modal="true" aria-labelledby="mt-title">${head}<div class="mt-body">${body}</div></section>`;
+  }
+
+  // What a More time choice will do, in a line, and how far over they are ("25 min over: +30 leaves 5")
+  _mtNote(s, forId, st, lock) {
+    const name = s.name;
+    const leftText = st.dailyLimited && !st.dailyOut ? longMinutes(st.all.minutes_left) : null;
+    let note;
+    let over = 0;
+    if (forId === "all") {
+      const b = this._binding(s);
+      const stop = st.stopping;
+      note = `Adds to ${name}'s daily time, for any app${stop ? `, ${stop.name} too` : ""}.`;
+      over = this._overOf(b, s.groups);
+      if (lock?.kind === "bedtime") note += " It pauses bedtime while it lasts.";
+      else if (lock) note += " It counts after the lock ends.";
+    } else {
+      const c = st.cats.find((x) => x.id === forId) || {};
+      const row = (s.groups || []).find((g) => g.id === forId);
+      if (st.dailyOut) {
+        note = `Daily time is used up, so this is extra just for ${c.name}, past daily time.`;
+        over = this._overOf(row, s.groups);
+      } else {
+        note = `${c.name} can run longer.${leftText ? ` It still counts toward the ${leftText} left today.` : ""}`;
+        const past = (c.used || 0) - (c.limit_today || 0);
+        over = past >= 1 ? Math.round(past) : 0;
+      }
+      if (lock) note += ` ${LOCK_WORDS[lock.kind] || "The lock"} still holds.`;
+    }
+    if (over > 0) {
+      const enough = [15, 30, 60].find((n) => n > over);
+      note += ` ${fmtMinutes(over)} over: ${enough ? `+${amount(enough)} leaves ${amount(enough - over)}` : "+1 h won't cover it"}.`;
+    }
+    return note;
   }
 
   // Today: one bar for daily time, each category's minutes colored inside it and each category's limit as a marker; then
@@ -3206,10 +3650,12 @@ class HearthPanel extends HTMLElement {
       .filter((c) => c.limit_today !== null && c.limit_today !== undefined && c.limit_today <= total)
       .map((c) => `<b class="mark" style="left:${((c.limit_today / total) * 100).toFixed(2)}%;border-color:${this._poolVar(c.id)}" title="${esc(c.limit_text)}"></b>`)
       .join("");
-    const head = t.unlimited ? t.unlimited.text : left !== null && left !== undefined ? t.adult_text || `${fmtMinutes(left)} left today` : "no limit";
-    let h = `<div class="card flat blk"><h3>${esc(WORDS.daily)} <span>${cap ? `of ${esc(fmtMinutes(cap))}` : "no limit"}${t.bonus > 0 ? ` · +${esc(amount(t.bonus))} ${esc(WORDS.bonusShort)}` : ""}</span>${this._originButton(s, `today|${kid.id}`)}</h3>
+    // Left first (the parent's question), used of today's daily time small
+    const head = t.unlimited ? t.unlimited.text : left !== null && left !== undefined ? `${longMinutes(left)} left` : "No limit today";
+    const usedOf = cap ? `${fmtMinutes(used)} of ${fmtMinutes(cap)}` : `${fmtMinutes(used)} used`;
+    let h = `<div class="card flat blk"><h3>Today <span>${esc(usedOf)}${t.bonus > 0 ? ` · includes +${esc(amount(t.bonus))} ${esc(WORDS.bonusShort)}` : ""}</span>${this._originButton(s, `today|${kid.id}`)}</h3>
       ${this._originList(s, `today|${kid.id}`)}
-      <div class="big">${esc(fmtMinutes(used))} <small>used · ${esc(head)}</small></div>
+      <div class="big">${esc(head)}</div>
       <div class="stack" role="img" aria-label="${esc(`${fmtMinutes(used)} used of ${cap ? fmtMinutes(cap) : "no limit"}`)}">${stack
         .map((x) => `<i style="width:${((x.minutes / total) * 100).toFixed(2)}%;background:${this._poolVar(x.id)}" title="${esc(`${x.name}: ${fmtMinutes(x.minutes)}`)}"></i>`)
         .join("")}${markers}</div>
@@ -3218,10 +3664,12 @@ class HearthPanel extends HTMLElement {
       const key = `${kid.id}|cat|${c.id}`;
       const open = this._exp.has(key);
       const g = pools.find((x) => x.id === c.id) || {};
-      const value = g.state === "allowed" ? "Allowed" : g.state === "paused" ? "Paused" : c.text || `${c.name}: ${fmtMinutes(c.left)} left`;
       const out = c.left === 0;
-      h += `<button class="lane" data-action="exp" data-key="${esc(key)}" aria-expanded="${open}"><span class="nm"><i style="background:${this._poolVar(c.id)}"></i>${esc(value)}</span>
-        <span class="v muted">${esc(c.raised ? c.limit_text.replace(`${c.name}: `, "") : limitWord(c.limit))}</span><span class="chev ${open ? "open" : ""}">${icon("chev", "sm")}</span></button>`;
+      // Read-only: the category, how it stands and its limit today ("Done · 2 h limit"); it opens to its apps
+      const state = g.state === "allowed" ? "Allowed" : g.state === "paused" ? "Paused" : out ? "Done" : c.left === null || c.left === undefined ? "No limit" : `${fmtMinutes(c.left)} left`;
+      const lim = c.raised ? `${(c.limit_text || "").replace(`${c.name}: `, "")}` : limitWord(c.limit_today ?? c.limit);
+      h += `<button class="lane" data-action="exp" data-key="${esc(key)}" aria-expanded="${open}"><span class="nm"><i style="background:${this._poolVar(c.id)}"></i>${esc(c.name)}</span>
+        <span class="v ${out ? "t-out" : ""}">${esc(`${state} · ${lim}`)}</span><span class="chev ${open ? "open" : ""}">${icon("chev", "sm")}</span></button>`;
       if (open) {
         const apps = (s.apps_today || []).filter((a) => (a.groups || []).includes(c.id)).map((a) => ({ name: a.name || a.package, title: a.package, minutes: a.minutes }));
         // Consoles count by device, not by app: "On Switch 2"
@@ -3230,9 +3678,7 @@ class HearthPanel extends HTMLElement {
           if (tg && tg.left_pool === c.id && tg.via !== "family_link" && tg.via !== "hearth") apps.push({ name: `On ${this._deviceName(tg, kid.name)}`, minutes: d.minutes });
         }
         h += `<div class="expand ${out ? "t-out" : ""}">${esc(fmtMinutes(c.used || 0))} of ${esc(fmtMinutes(c.limit_today))} today${c.raised ? " (raised)" : ""}.
-          <div class="apps">${apps.length ? apps.map((a) => `<div><span${a.title ? ` title="${esc(a.title)}"` : ""}>${esc(a.name)}</span><span>${esc(fmtMinutes(a.minutes))}</span></div>`).join("") : `<div><span>No apps in ${esc(c.name)} today</span><span></span></div>`}</div>
-          ${locked ? "" : `<div class="acts"><button class="b" data-action="raise-open" data-group="${esc(c.id)}">${esc(WORDS.raise)}</button>${c.raised ? `<button class="b ghost" data-action="raise-end" data-person="${esc(kid.id)}" data-group="${esc(c.id)}">${esc(WORDS.raiseEnd)}</button>` : ""}</div>`}
-          ${locked ? "" : this._categoryBonus(kid.id, c.id, c.name)}</div>`;
+          <div class="apps">${apps.length ? apps.map((a) => `<div><span${a.title ? ` title="${esc(a.title)}"` : ""}>${esc(a.name)}</span><span>${esc(fmtMinutes(a.minutes))}</span></div>`).join("") : `<div><span>No apps in ${esc(c.name)} today</span><span></span></div>`}</div></div>`;
       }
     }
     // Categories with a bonus of their own but no limit
@@ -3242,15 +3688,10 @@ class HearthPanel extends HTMLElement {
     const other = byPool.find((x) => x.id === "other");
     const notCounted = pools.filter((g) => !g.counted && (g.used_minutes || 0) > 0);
     const free = pools.filter((g) => g.id !== "all" && g.counted && !g.limited && (g.used_minutes || 0) > 0 && g.id !== "other");
-    h += `</div>${other ? `<div class="notcounted">Other apps: ${esc(fmtMinutes(other.minutes))} (no category)</div>` : ""}${free.length ? `<div class="notcounted">No limit: ${esc(free.map((g) => `${g.name} ${fmtMinutes(g.used_minutes)}`).join(", "))}</div>` : ""}${notCounted.length ? `<div class="notcounted">Not counted: ${esc(notCounted.map((g) => `${g.name} ${fmtMinutes(g.used_minutes)}`).join(", "))}</div>` : ""}</div>`;
+    // Free play earlier today (ended windows: "Unlimited 2:00–5:10 PM · 3 h 10 min not counted")
+    const spans = (t.unlimited_today || []).map((u) => `<div class="notcounted">${esc(u.text)}</div>`).join("");
+    h += `</div>${other ? `<div class="notcounted">Other apps: ${esc(fmtMinutes(other.minutes))} (no category)</div>` : ""}${free.length ? `<div class="notcounted">No limit: ${esc(free.map((g) => `${g.name} ${fmtMinutes(g.used_minutes)}`).join(", "))}</div>` : ""}${notCounted.length ? `<div class="notcounted">Not counted: ${esc(notCounted.map((g) => `${g.name} ${fmtMinutes(g.used_minutes)}`).join(", "))}</div>` : ""}${spans}</div>`;
     return h;
-  }
-
-  // A category's own bonus on its row: +15 min (or 5, 30, 60) of that category, next to Raise limit
-  _categoryBonus(person, group, name) {
-    return `<div class="acts cat-bonus">${WORDS.catBonusMinutes
-      .map((m) => `<button class="${m === 15 ? "b" : "chip-t"}" data-action="cat-bonus" data-person="${esc(person)}" data-group="${esc(group)}" data-minutes="${m}">${esc(WORDS.catBonus(m, name))}</button>`)
-      .join("")}<div class="d">${esc(WORDS.catBonusHint)}</div></div>`;
   }
 
   // The action log (hearth/activity): plain lines, a kid filter, failures marked
@@ -3372,25 +3813,15 @@ class HearthPanel extends HTMLElement {
     return `${h}</div>`;
   }
 
-  // What's different today, in plain sentences: who allowed what and till when, what Hearth is holding and why
+  // The rest of what's different today, in plain sentences (what was given is in Today's extras): app pauses, what a
+  // parent changed in their own apps, what Hearth is holding and why, and what didn't take
   _exceptions(kid, s) {
     const notes = [];
     const p = esc(kid.id);
     const note = (ic, html) => notes.push(`<div class="note">${icon(ic, "sm")}<div>${html}</div></div>`);
     const till = (iso) => (iso ? ` till ${esc(clock(iso))}` : "");
-    for (const a of s.allows || []) {
-      const what = a.group ? (a.group === "all" ? "screen time" : this._groupName(a.group)) : a.app_name || a.app;
-      note("shield", `You allowed ${esc(what)}${a.ends_on ? ` until ${esc(this._endsOn(a.ends_on))}` : till(a.until)}. <button class="lnk" data-action="allow-end" data-person="${p}" ${a.group ? `data-group="${esc(a.group)}"` : `data-app="${esc(a.app)}"`}>End</button>`);
-    }
     for (const x of s.pauses || [])
       note("pause", `${esc(x.name)} is paused${till(x.until)}${x.reason ? ` · ${esc(x.reason)}` : ""}. <button class="lnk" data-action="app-pause-end" data-person="${p}" ${x.app ? `data-app="${esc(x.app)}"` : `data-group="${esc(x.group)}"`}>End</button>`);
-    for (const x of s.device_extras || []) {
-      const t = (s.targets || []).find((y) => y.id === x.target);
-      const where = t ? this._deviceName(t, kid.name) : x.name || "one device";
-      note("plus", x.kind === "allow" ? `${esc(where)} is open${till(x.until)}.` : `${esc(amount(x.minutes_left || 0))} min extra left on ${esc(where)}.`);
-    }
-    const off = (s.school_time_off || [])[0];
-    if (off) note("school", `No School time today${off.reason ? ` · ${esc(off.reason)}` : ""}. <button class="lnk" data-action="school-off-cancel" data-person="${p}">Put it back</button>`);
     // A parent's changes in their own apps
     const grants = s.grants || [];
     const where = { family_link: "the Family Link app", family_safety: "the Family Safety app", nintendo: "the Nintendo app" };
@@ -3425,7 +3856,7 @@ class HearthPanel extends HTMLElement {
     }
     for (const a of s.answered_elsewhere || []) note("info", `Request ${esc(a.text)}.`);
     if (!notes.length) return "";
-    return `<div class="card flat blk"><h3>Exceptions</h3>${notes.join("")}</div>`;
+    return `<div class="card flat blk"><h3>Holds and notes</h3>${notes.join("")}</div>`;
   }
 
   // The week: only the days Hearth recorded, with the day's limit as a dashed line
@@ -4654,12 +5085,25 @@ ol.steps { margin: 0; padding-left: 20px; line-height: 1.7; }
 .held li { padding: 6px 0; display: flex; gap: 8px; justify-content: space-between; border-top: 1px solid var(--h-line); }
 .held li span:last-child { color: var(--secondary-text-color); opacity: .8; text-align: right; }
 .kids { display: flex; flex-direction: column; gap: 10px; }
-.today .card.kid { display: flex; align-items: center; gap: 14px; padding: 14px 14px 14px 12px; cursor: pointer; }
+.today .card.kid { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; }
 .today .card.kid[aria-current="true"] { outline: 2px solid var(--h-accent); outline-offset: -2px; }
-.today .card.kid .grow { min-width: 0; }
+.today .kopen { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 8px 6px; min-height: 56px; text-align: left; border-radius: 10px; }
+.today .kopen:hover { background: color-mix(in srgb, var(--h-surface-2) 55%, transparent); }
+.today .kopen .grow { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.today .card.kid .l1 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .today .card.kid .name { font-weight: 600; font-size: 16px; }
+.today .card.kid .num { font-weight: 700; font-size: 18px; white-space: nowrap; color: var(--primary-text-color); }
+.today .card.kid .num.t-lock { font-size: 16px; font-weight: 600; color: var(--secondary-text-color); }
 .today .line { color: var(--secondary-text-color); font-size: 14px; }
-.today .card.kid .line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.today .card.kid .line { font-size: 13px; overflow-wrap: anywhere; }
+.today .card.kid .line.t-out { font-weight: 500; color: var(--h-out); }
+.today .card.kid .num.t-low { color: var(--h-low); } .today .card.kid .num.t-out { color: var(--h-out); }
+.today .b.give { min-height: 44px; height: 44px; flex: none; padding: 0 14px; }
+.quietline { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 18px 4px 4px; font-size: 13px; color: var(--secondary-text-color); }
+.quietline .held { margin: 0; border: 0; padding: 0; }
+.split { display: inline-flex; flex: none; }
+.today .split .ibtn.sl { border-radius: 999px 0 0 999px; height: 44px; }
+.today .split .ibtn.sr { border-radius: 0 999px 999px 0; border-left: 0; height: 44px; width: 40px; padding: 0; justify-content: center; }
 .today .line b { font-weight: 600; color: var(--primary-text-color); }
 .today .line b.t-out { color: var(--h-out); }
 .today .card.kid.asleep .name { color: var(--secondary-text-color); }
@@ -4671,6 +5115,7 @@ ol.steps { margin: 0; padding-left: 20px; line-height: 1.7; }
 .ring .arc { stroke: var(--ring); stroke-width: 4; fill: none; stroke-linecap: round; transition: stroke-dashoffset .5s; }
 .ring .ini { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 600; font-size: 15px; }
 .ring .ini.dim { color: var(--secondary-text-color); }
+.ring img.ini.pic { position: absolute; inset: 6px; width: calc(100% - 12px); height: calc(100% - 12px); border-radius: 50%; object-fit: cover; }
 .ring .badge { position: absolute; right: -3px; bottom: -3px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--h-surface); box-shadow: 0 0 0 2px var(--h-surface); color: var(--ring); padding: 0; font-size: 0; }
 .ring .badge .svg { width: 14px; height: 14px; }
 .tone-accent { --ring: var(--h-accent); } .tone-night { --ring: var(--h-night); } .tone-school { --ring: var(--h-school); }
@@ -4692,10 +5137,46 @@ ol.steps { margin: 0; padding-left: 20px; line-height: 1.7; }
 .detail .handle { position: sticky; top: 0; z-index: 2; background: var(--primary-background-color); padding: 8px 0 0; }
 .detail .handle i { display: block; width: 40px; height: 4px; border-radius: 2px; background: var(--h-btn-line); margin: 0 auto; }
 .dinner { padding: 4px 16px 28px; max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
-.dhead { display: flex; align-items: center; gap: 14px; padding: 10px 0 2px; }
-.dhead h2 { margin: 0; font-size: 22px; font-weight: 600; }
-.closebtn { width: 40px; height: 40px; border-radius: 50%; display: grid !important; place-items: center; background: var(--h-surface) !important; border: 1px solid var(--h-line) !important; }
-.actbar { display: flex; gap: 8px; flex-wrap: wrap; }
+.dhead { display: flex; align-items: flex-start; gap: 14px; padding: 10px 0 2px; }
+.dhead .grow { display: flex; flex-direction: column; gap: 4px; }
+.dhead .who { font-size: 15px; font-weight: 600; color: var(--secondary-text-color); }
+.dhead h2 { margin: 0; font-size: 26px; font-weight: 700; line-height: 1.15; }
+.dhead h2.t-out { color: var(--h-out); }
+.dhead .why { font-size: 14px; line-height: 1.4; color: var(--primary-text-color); overflow-wrap: anywhere; }
+.closebtn { width: 44px; height: 44px; flex: none; border-radius: 50%; display: grid !important; place-items: center; background: var(--h-surface) !important; border: 1px solid var(--h-line) !important; }
+.actbar { display: flex; gap: 8px; }
+.today .actbar .b { height: 48px; border-radius: 12px; font-size: 15px; padding: 0 16px; }
+.today .actbar .b.grow { flex: 1; justify-content: center; min-width: 0; }
+.today .actbar .b.sq2 { width: 48px; padding: 0; justify-content: center; flex: none; }
+.extras h3 { margin-bottom: 4px !important; }
+.xrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; border-top: 1px solid var(--h-line); font-size: 14px; }
+.xrow:first-of-type { border-top: 0; }
+.xrow span { overflow-wrap: anywhere; }
+.today .xrow .lnk { min-height: 44px; padding: 0 8px; flex: none; }
+/* More time: a second bottom sheet over the kid's sheet on a phone, a dialog on a wide page */
+.mt-scrim { position: fixed; inset: 0; z-index: 8; background: rgba(10,8,6,.38); }
+.mt { position: fixed; left: 0; right: 0; bottom: 0; z-index: 9; max-height: 92vh; overflow: auto; background: var(--h-surface); color: var(--primary-text-color);
+  border-radius: 20px 20px 0 0; box-shadow: 0 -8px 32px rgba(0,0,0,.25); padding: 0 18px calc(24px + env(safe-area-inset-bottom, 0px)); overscroll-behavior: contain; }
+.mt .handle { padding: 10px 0 2px; } .mt .handle i { display: block; width: 40px; height: 4px; border-radius: 2px; background: var(--h-btn-line); margin: 0 auto; }
+.mt-head { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0 14px; }
+.mt-head h2 { margin: 0; font-size: 22px; font-weight: 700; }
+.mt-body { display: flex; flex-direction: column; gap: 14px; max-width: 560px; margin: 0 auto; }
+.mt-for .lab { display: block; font-size: 14px; font-weight: 600; color: var(--secondary-text-color); margin-bottom: 8px; }
+.mt-for .seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid var(--h-btn-line); border-radius: 12px; overflow: hidden; }
+.today .mt-for .seg button { height: 46px; font-size: 15px; font-weight: 600; }
+.today .mt-for .seg button + button { border-left: 1px solid var(--h-btn-line); }
+.today .mt-for .seg button[aria-checked="true"] { background: var(--h-accent); color: var(--h-on-accent); }
+.mt-others { font-size: 13px; color: var(--secondary-text-color); margin-top: 8px; }
+.today .mt-others .lnk { padding: 6px 2px; min-height: 32px; }
+.mt-amts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.today .mt .b { height: 52px; border-radius: 12px; justify-content: center; font-size: 16px; }
+.today .mt .b.wide { width: 100%; height: 48px; font-size: 15px; }
+.mt-note { margin: 0; font-size: 14px; line-height: 1.4; color: var(--primary-text-color); }
+.mt-more { display: flex; flex-direction: column; border-top: 1px solid var(--h-line); padding-top: 4px; }
+.today .mt-more button { min-height: 44px; text-align: left; font-size: 15px; color: var(--secondary-text-color); }
+.today .mt-more button:hover { color: var(--primary-text-color); }
+.today.wide .mt { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: min(440px, calc(100% - 32px)); border-radius: 20px; padding-bottom: 20px; }
+.today.wide .mt .handle { display: none; }
 .lockbox { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: var(--radius); }
 .lockbox.night { background: var(--h-night-soft); } .lockbox.night .svg { color: var(--h-night); }
 .lockbox.school { background: var(--h-school-soft); } .lockbox.school .svg { color: var(--h-school); }
@@ -4716,13 +5197,14 @@ ol.steps { margin: 0; padding-left: 20px; line-height: 1.7; }
 .today .legend span { display: inline-flex; align-items: center; gap: 5px; }
 .today .legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
 .lanes { margin-top: 12px; }
-.today .lane { width: 100%; text-align: left; display: grid; grid-template-columns: 96px 1fr auto 16px; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--h-line); margin: 0; font-size: 14px; }
+.today .lane { width: 100%; text-align: left; display: grid; grid-template-columns: max-content minmax(0, 1fr) 16px; align-items: center; gap: 10px; padding: 10px 0; min-height: 44px; border-top: 1px solid var(--h-line); margin: 0; font-size: 14px; }
 .today .lane:first-child { border-top: 0; }
-.today .lane .nm { font-weight: 500; display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.today .lane .nm { font-weight: 500; display: flex; align-items: center; gap: 6px; min-width: 0; }
 .today .lane .nm i { width: 8px; height: 8px; border-radius: 2px; flex: none; }
 .today .lane .bar { height: 6px; border-radius: 3px; background: var(--h-track); overflow: hidden; position: relative; }
 .today .lane .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; }
-.today .lane .v { font-size: 13px; color: var(--secondary-text-color); text-align: right; white-space: nowrap; }
+.today .lane .v { font-size: 13px; color: var(--secondary-text-color); text-align: right; overflow-wrap: anywhere; }
+.today .lane .v.t-out { color: var(--h-out); }
 .today .pill { display: inline-flex; padding: 1px 6px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--h-accent-soft); color: var(--h-accent); }
 .expand { padding: 2px 0 12px; font-size: 13px; color: var(--secondary-text-color); }
 .expand .apps { display: flex; flex-direction: column; gap: 2px; margin: 4px 0 6px; }
@@ -4769,10 +5251,10 @@ ol.steps { margin: 0; padding-left: 20px; line-height: 1.7; }
 .today.wide .today-cols { display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: 28px; align-items: start; }
 .today.wide .scrim { display: none; }
 .today.wide .detail { position: sticky; top: 112px; transform: none; visibility: visible; max-height: calc(100vh - 124px); border-radius: var(--radius); box-shadow: none; background: transparent; margin-top: 6px; z-index: 1; }
-.today.wide .detail .handle, .today.wide .closebtn { display: none !important; }
+.today.wide .detail .handle, .today.wide .detail .closebtn { display: none !important; }
 .today.wide .dinner { padding: 0; }
 .today.wide .empty-detail { display: block; color: var(--secondary-text-color); padding: 40px 16px; text-align: center; }
-@media (max-width: 380px) { .today .lane { grid-template-columns: 80px 1fr auto 14px; } }
+.toast { bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 12; }
 @media (prefers-reduced-motion: reduce) { .today *, .toast * { animation: none !important; transition: none !important; } }
 /* Schedule (the weekly schedule): the Today redesign's tokens, two mode colors of its own */
 :host { --m-homework: #8a52c9; --m-wind: #c78a12; }
