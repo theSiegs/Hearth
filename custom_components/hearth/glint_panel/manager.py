@@ -265,6 +265,20 @@ class Panels:
             record["user_id"] = user_id
             self._save()
 
+    def logins(self) -> list[tuple[str | None, str | None, str]]:
+        """Read only: the Home Assistant logins the panels and the tablets saying hello sign in with, as (user id,
+        token name, the panel's name). Hearth never offers such a login as an adult (adult_offer.py)."""
+        found: list[tuple[str | None, str | None, str]] = []
+        for device_id, record in self.panels.items():
+            live = self._live.get(device_id)
+            token = (live.login or {}).get("token") if live is not None else None
+            found.append((record.get("user_id"), token, self.name(device_id)))
+        for entry in self.hellos.values():
+            login = entry.get("signed_in_as")
+            token = login.get("token") if isinstance(login, dict) else None
+            found.append((entry.get("user_id"), token, self._hello_title(entry)))
+        return found
+
     def registry_device(self, device_id: str) -> dr.DeviceEntry | None:
         if self.entry_id is None:
             return None

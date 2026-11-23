@@ -3,6 +3,7 @@ from a phone (adult_offer.py)."""
 
 import pytest
 
+from homeassistant.auth import models as auth_models
 from homeassistant.core import Context, HomeAssistant
 from homeassistant.exceptions import ServiceValidationError, Unauthorized
 from pytest_homeassistant_custom_component.common import async_capture_events, async_mock_service
@@ -10,7 +11,7 @@ from pytest_homeassistant_custom_component.common import async_capture_events, a
 from custom_components.hearth import adult_offer
 from custom_components.hearth.const import DOMAIN
 
-from test_init import _set_up
+from test_init import PHONE_ID, TV_ID, _pair, _set_up
 from test_phones import _companion_app
 
 SAM = "person.sam"
@@ -29,8 +30,8 @@ async def _options(hass: HomeAssistant, **changes) -> None:
 
 
 async def _household(hass: HomeAssistant):
-    """Alex (an administrator, with a phone), Sam (a kid), and Jordan: a user of their own with a person, not on
-    Hearth's page yet."""
+    """Alex (an administrator, with a phone), Sam (a kid), and Jordan: a user of their own with a person and a phone of
+    their own, not on Hearth's page yet."""
     hass.states.async_set(SAM, "home", {"friendly_name": "Sam"})
     await _set_up(hass)
     alex = await hass.auth.async_create_user("Alex", group_ids=["system-admin"])
@@ -38,6 +39,7 @@ async def _household(hass: HomeAssistant):
     hass.states.async_set("person.alex", "home", {"friendly_name": "Alex", "user_id": alex.id})
     jordan = await hass.auth.async_create_user("Jordan", group_ids=["system-users"])
     hass.states.async_set(JORDAN, "home", {"friendly_name": "Jordan", "user_id": jordan.id})
+    _companion_app(hass, "Jordan Phone", "Android", user_id=jordan.id)
     await _options(hass, roles={SAM: "kid", "person.alex": "adult"})
     sent = async_mock_service(hass, "notify", "mobile_app_alex_phone")
     return alex, jordan, sent
@@ -89,7 +91,8 @@ async def test_a_linked_person_who_isn_t_a_kid_is_offered_once(hass: HomeAssista
     [push] = _offers(sent)
     assert push.data["title"] == "Make Jordan an adult?"
     assert push.data["message"] == (
-        "Jordan signed in from a phone. Make them an adult in Hearth? Adults see the kids' time and can give more."
+        "Jordan (Home Assistant login Jordan) signed in from Jordan Phone. Make them an adult in Hearth? Adults see "
+        "the kids' time and can give more."
     )
     assert [b["title"] for b in push.data["data"]["actions"]] == ["Make adult", "Not now"]
     # A tap opens Hearth's page by a relative path, so it works away from home too
@@ -98,7 +101,9 @@ async def test_a_linked_person_who_isn_t_a_kid_is_offered_once(hass: HomeAssista
     # On Hearth's page too
     admin_ws = await _ws_as(hass, hass_ws_client, alex)
     config = await _read(hass, admin_ws, kind="hearth/config")
-    assert config["result"]["adult_offers"] == [{"person": JORDAN, "name": "Jordan"}]
+    assert config["result"]["adult_offers"] == [
+        {"person": JORDAN, "name": "Jordan", "login": "Jordan", "from": "Jordan Phone"}
+    ]
 
     # Every poll after, the subscription, and Glint's own reads: never asked again
     for n, kind in enumerate(("hearth/household", "hearth/household/subscribe", "hearth/glint/phones"), start=2):
@@ -267,3 +272,122 @@ async def test_each_user_is_looked_at_once_a_run(hass: HomeAssistant, hass_ws_cl
     _forget_looks(hass)
     await _read(hass, ws, 3)
     assert len(_offers(sent)) == 1
+
+
+# A device's login (the panels' login on a wall tablet, or a TV's) is never offered, and only someone with a phone of
+# their own is
+
+
+async def _long_lived(hass: HomeAssistant, user, name: str):
+    return await hass.auth.async_create_refresh_token(
+        user, client_name=name, token_type=auth_models.TOKEN_TYPE_LONG_LIVED_ACCESS_TOKEN
+    )
+
+
+async def test_a_panel_s_login_is_never_offered(hass: HomeAssistant, hass_ws_client) -> None:
+    _alex, jordan, sent = await _household(hass)
+    hub = _hub(hass)
+    # The panels' login: a wall tablet's subscription signed in as Jordan's user (kept with the panel)
+    hub.glint_panel.panels["tablet-1"] = {"name": "Hall panel", "user_id": jordan.id}
+    assert adult_offer.device_login(hass, hub, jordan) == "Hall panel"
+    ws = await _ws_as(hass, hass_ws_client, jordan)
+    assert not (await _read(hass, ws))["success"]
+    assert _offers(sent) == [] and JORDAN not in hub.adult_offers.people
+
+
+async def test_a_read_on_a_panel_s_token_is_never_offered(hass: HomeAssistant, hass_ws_client) -> None:
+    """No panel record names the user, but the read came with the token a tablet saying hello signed in with."""
+    _alex, jordan, sent = await _household(hass)
+    hub = _hub(hass)
+    hub.glint_panel.hellos["tablet-2"] = {"name": "Kitchen panel", "signed_in_as": {"user": "x", "token": "Panels"}}
+    token = await _long_lived(hass, jordan, "Panels")
+    ws = await hass_ws_client(hass, hass.auth.async_create_access_token(token))
+    assert not (await _read(hass, ws))["success"]
+    assert _offers(sent) == [] and JORDAN not in hub.adult_offers.people
+
+
+async def test_a_paired_tv_s_login_is_never_offered(hass: HomeAssistant, hass_ws_client, hass_client_no_auth) -> None:
+    _alex, jordan, sent = await _household(hass)
+    await _pair(hass, await hass_client_no_auth(), TV_ID, "tv", "Den TV")
+    hub = _hub(hass)
+    # The TV signs in with a token of Jordan's user named as the paired TV is
+    await _long_lived(hass, jordan, "Den TV")
+    assert adult_offer.device_login(hass, hub, jordan) == "Den TV"
+    ws = await _ws_as(hass, hass_ws_client, jordan)
+    assert not (await _read(hass, ws))["success"]
+    # (the pairing's own notice went out; no offer did)
+    assert not [c for c in _offers(sent) if c.data.get("title", "").startswith("Make ")]
+    assert JORDAN not in hub.adult_offers.people
+
+
+async def test_a_token_a_hearth_tv_made_is_a_device_s_login(hass: HomeAssistant) -> None:
+    _alex, jordan, _sent = await _household(hass)
+    await _long_lived(hass, jordan, "Hearth household: Playroom TV 2026-11-20 18:05")
+    hub = _hub(hass)
+    assert adult_offer.device_login(hass, hub, jordan) == "Playroom TV"
+    assert adult_offer.qualifying_person(hass, hub, jordan) is None
+
+
+async def test_a_paired_phone_is_a_person_s_own(hass: HomeAssistant, hass_client_no_auth) -> None:
+    """A phone paired to Hearth signs in as its person: a token named as it doesn't make it a device's login."""
+    _alex, jordan, _sent = await _household(hass)
+    await _pair(hass, await hass_client_no_auth(), PHONE_ID, "mobile", "Jordan Phone")
+    await _long_lived(hass, jordan, "Jordan Phone")
+    hub = _hub(hass)
+    assert adult_offer.device_login(hass, hub, jordan) is None
+    assert adult_offer.qualifying_person(hass, hub, jordan) == JORDAN
+
+
+async def test_never_for_someone_with_no_phone_of_their_own(hass: HomeAssistant, hass_ws_client) -> None:
+    _alex, _jordan, sent = await _household(hass)
+    # Riley has a person but no companion app registered by their user (Alex's and Jordan's don't count)
+    riley = await hass.auth.async_create_user("Riley", group_ids=["system-users"])
+    hass.states.async_set("person.riley", "home", {"friendly_name": "Riley", "user_id": riley.id})
+    ws = await _ws_as(hass, hass_ws_client, riley)
+    assert not (await _read(hass, ws))["success"]
+    assert _offers(sent) == [] and "person.riley" not in _hub(hass).adult_offers.people
+    # With a phone of their own they are (looked at again next run)
+    _companion_app(hass, "Riley Phone", "iOS", user_id=riley.id)
+    _forget_looks(hass)
+    assert not (await _read(hass, ws, 2))["success"]
+    assert len(_offers(sent)) == 1
+
+
+async def test_the_notice_names_the_login_and_the_device(hass: HomeAssistant, hass_ws_client) -> None:
+    _alex, jordan, sent = await _household(hass)
+    # Jordan signs in with a username of their own, on a token with a name
+    await hass.auth.async_link_user(
+        jordan,
+        auth_models.Credentials(auth_provider_type="homeassistant", auth_provider_id=None, data={"username": "jordan.r"}),
+    )
+    token = await _long_lived(hass, jordan, "Jordan's tablet")
+    ws = await hass_ws_client(hass, hass.auth.async_create_access_token(token))
+    await _read(hass, ws)
+    [push] = _offers(sent)
+    assert push.data["message"].startswith(
+        "Jordan (Home Assistant login jordan.r) signed in from Jordan's tablet. Make them an adult in Hearth?"
+    )
+    # After a restart the offer comes back with the same words
+    await _restart(hass)
+    assert _hub(hass).attention.item(KEY).text == push.data["message"]
+
+
+async def test_the_answer_refuses_someone_who_no_longer_qualifies(hass: HomeAssistant, hass_ws_client) -> None:
+    alex, jordan, sent = await _household(hass)
+    ws = await _ws_as(hass, hass_ws_client, jordan)
+    await _read(hass, ws)
+    assert len(_offers(sent)) == 1
+    data = {"person": JORDAN, "answer": "adult"}
+    # Meanwhile a wall tablet starts signing in as Jordan's user: Make adult is refused, the role isn't set
+    panels = _hub(hass).glint_panel.panels
+    panels["tablet-1"] = {"name": "Hall panel", "user_id": jordan.id}
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(DOMAIN, "adult_offer_answer", data, blocking=True, context=Context(user_id=alex.id))
+    del panels["tablet-1"]
+    # So is someone with no phone of their own any more (their phone now registered by another user)
+    for entry in hass.config_entries.async_entries("mobile_app"):
+        if entry.data.get("user_id") == jordan.id:
+            hass.config_entries.async_update_entry(entry, data={**entry.data, "user_id": alex.id})
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(DOMAIN, "adult_offer_answer", data, blocking=True, context=Context(user_id=alex.id))
+    assert JORDAN not in hass.config_entries.async_entries(DOMAIN)[0].options["roles"]

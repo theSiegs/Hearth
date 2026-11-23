@@ -45,5 +45,6 @@ and say so in the change. When another part gets the same review-probe-fix-test 
 | State document seam (TV and Home Assistant) | One fixture, `ha_tests/contract_fixtures/tv_state_document.json`, at six moments (evening with tomorrow, bedtime, bedtime lifted, a pause, YouTube allowed by a bonus, Video allowed until 6 PM): Home Assistant must still send what it says (`test_client_contract`) and the TV must read it as a family expects (`TvStateDocumentFixtureTest`). Change both sides with the fixture |
 | `ha_tests/test_invariants.py` | Never-break rules over random cases: left values, whole minutes, counting, day scenarios. Keep it green; add a rule when you harden something |
 | `frontend/hearth-panel.js` | Every interpolation of device-supplied text goes through `esc()`. Keep it that way |
+| `adult_offer.py` `qualifying_person`, `device_login` | "Make this person an adult?" is never offered for a device's login: a user a Glint Panel (or a hello) signs in as, a token named as a panel's or a paired TV's (not a phone's), or a "Hearth household: ..." token, also on the refused read's own token. The user needs a companion app registered by them. The notice names the login and where it came from; Make adult checks it all again (`test_adult_offer`) |
 
 Run `ha_tests` before every push and read the result first.

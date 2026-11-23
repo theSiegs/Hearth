@@ -74,6 +74,11 @@ def service_of(entry) -> str | None:
     return f"mobile_app_{slugify(name)}" if name else None
 
 
+def user_apps(hass: HomeAssistant, user_id: str) -> list:
+    """The companion apps (mobile_app config entries) a Home Assistant user registered themselves."""
+    return [e for e in hass.config_entries.async_entries(MOBILE_APP) if e.data.get("user_id") == user_id]
+
+
 def person_phones(hass: HomeAssistant, person: str) -> list[tuple[str, str | None]]:
     """A person's companion apps: (notify service name, os), from the device trackers their person follows and the
     apps their Home Assistant user registered."""
@@ -89,7 +94,7 @@ def person_phones(hass: HomeAssistant, person: str) -> list[tuple[str, str | Non
             found.append(entity.config_entry_id)
     user_id = state.attributes.get("user_id")
     if user_id:
-        found += [e.entry_id for e in entries.values() if e.data.get("user_id") == user_id]
+        found += [e.entry_id for e in user_apps(hass, user_id)]
     out: list[tuple[str, str | None]] = []
     for entry_id in dict.fromkeys(found):
         entry = entries[entry_id]
