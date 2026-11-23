@@ -779,6 +779,36 @@
         }
       }
     },
+    "notify": {
+      "name": "Send a message",
+      "description": "Shows a message on Hearth TVs and phones: a notification on companion apps, a pop-up in a Hearth TV's adult profiles (a TV that shows notices). No buttons yet. Answers the keys sent, the phones told and the TVs that show it.",
+      "fields": {
+        "devices": {
+          "name": "Devices",
+          "description": "Hearth TVs or phones, or companion-app devices. A paired Hearth phone is reached through its person's companion apps."
+        },
+        "people": {
+          "name": "People",
+          "description": "Each person's companion apps, and an adult's profiles on the TVs."
+        },
+        "household": {
+          "name": "Household",
+          "description": "Everyone on Hearth's page (their companion apps) and every Hearth TV that shows notices."
+        },
+        "title": {
+          "name": "Title",
+          "description": "Optional: the message's title."
+        },
+        "message": {
+          "name": "Message",
+          "description": "What it says."
+        },
+        "duration": {
+          "name": "Duration",
+          "description": "Optional: seconds until it's taken off the phones and TVs. Without it, a phone keeps it until it's swiped away and a TV for a day."
+        }
+      }
+    },
     "allow": {
       "name": "Allow",
       "description": "Lets people use an app or a group until a time: while it lasts, Hearth holds it nowhere for them (their TVs and phones, Family Link, the School-time pause). Bedtime, School time itself and a family pause still lock them. Returns its id.",

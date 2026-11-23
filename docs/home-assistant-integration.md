@@ -1711,9 +1711,23 @@ documents it may read ([contracts/client-settings.md](contracts/client-settings.
 playing now, anywhere Hearth sees it, as in the household summary's `playing` (so a TV profile's part, a phone's and
 `hearth/me` all have it).
 
-**Pop-ups** (not built yet): `hearth.notify` (target: devices, a person's devices, or the household; `title`, `message`, `duration`,
-`position`, `image`, `camera`, up to three `actions`). On a TV it's Hearth TV's pop-up; on a phone, a notification.
-Actions call a Home Assistant service as a user the household chose, not with any device's secret.
+**Pop-ups** (v1 built): `hearth.notify` (`devices`, `people`, `household`; `title`, `message`, optional `duration` in
+seconds). It goes through [Attention](#attention) like every Hearth notice (announced as `hearth_notice` of kind
+`notify`), so it's refused, like every `hearth.*` service, for a user who isn't an administrator or an adult on
+Hearth's page (an automation's call, with no user, may). Targets:
+
+- `devices`: a Hearth TV (its device or Hearth device id) gets it as a notice in its state document (`notices`), which
+  pops up in its adult profiles; a TV whose Hearth doesn't show notices (cap `notices`), a panel or an unknown device is
+  refused. A companion-app device gets a notification on that app. A paired Hearth phone has no message channel of its
+  own: its person's companion apps get it.
+- `people`: each person's companion apps (as the adults' phones get requests), and an adult's profiles on the TVs.
+- `household`: everyone on Hearth's page (adults and kids) on their companion apps, and every TV that shows notices.
+
+With `duration` it's taken off the phones and TVs then; without, a phone keeps it until it's swiped away and a TV for a
+day. It answers the item keys, the notify services told and the TVs that show it; nobody to tell is an error. Not in
+v1: **buttons** (`actions`), `position`, `image` and `camera`, and a pop-up in a kid's TV profile: the TV shows
+Hearth's notices in adult profiles only, so that needs a change on the TV. The port 7676 pop-ups (Notifications for
+Android TV) are unchanged and separate.
 
 **Family pause**: `hearth.pause` (minutes, reason, people or everyone) and `hearth.pause_end`: the devices show the pause
 and stop playing; replaces the hand-made pause helpers and scripts.
@@ -1809,7 +1823,8 @@ Every notice Hearth gives goes through one layer (attention.py): an **item** wit
 (the key when not given), whether it also goes to Home Assistant's bell, an expiry, and what it's `about` (`person`,
 `group`). Audiences: `adults` (every adult's companion apps as above, with the `ask_notify` phone once),
 `chosen_phone` (`ask_notify`), `schedule_phone` (the schedule's own notify service, else `ask_notify`), `admins` (the
-bell only, so far) and `person:<entity id>` (that person's companion apps). Delivery adapters take it out: the
+bell only, so far), `person:<entity id>` (that person's companion apps), and `household` (everyone on Hearth's page)
+and `devices` (chosen phones and TVs) for `hearth.notify`. Delivery adapters take it out: the
 companion app (`delivery/companion.py`) and the bell (`delivery/bell.py`); an Echo later. An item with the same key or
 tag replaces the one before; clearing a key or tag takes it off every channel it went to.
 
@@ -1845,7 +1860,15 @@ its own (key `approve:<notice key>:<n>:<random>`, tag `hearth_approve:<notice ke
 for Sam?", "Sam's Video ran out. Asked on Kitchen.", with that one button and **Don't allow**. Its button runs as the
 adult who taps it, as any item's (the adult check, then the reached check); either button takes it off every phone,
 and so do the notice going, a newer ask for the same notice, or 10 minutes passing. The history says who answered
-(`notice_answer`).
+(`notice_answer`). A `hearth.notify` message is on the TVs too (household, chosen TVs, or an adult's profiles); an item
+can be limited to chosen TVs (`tvs`).
+
+**Announced.** Every item shown, updated or cleared is also fired on Home Assistant's bus as a `hearth_notice` event,
+read-only: its key and tag, kind, urgency, title and text (the phone's words), audience (its kind and the person entity
+ids it resolves to), what it's about, its buttons as labels only (`[{n, label}]`, never a service or its data), its
+link and times. A router can pick it up and say it on a speaker in the room; answering stays with the phones, Hearth's
+page and the TVs. Firing it never stops or slows a delivery. The payload and a sketch of a later answer service (not
+built) are in [contracts/notice-event.md](contracts/notice-event.md).
 
 #### A kid's own Home Assistant user
 

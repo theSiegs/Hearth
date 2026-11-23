@@ -313,6 +313,39 @@ play_on_tv:
       selector:
         text:
 
+notify:
+  fields:
+    devices:
+      selector:
+        device:
+          multiple: true
+    people:
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    household:
+      default: false
+      selector:
+        boolean:
+    title:
+      example: Laundry
+      selector:
+        text:
+    message:
+      required: true
+      example: The washer is done.
+      selector:
+        text:
+          multiline: true
+    duration:
+      example: 60
+      selector:
+        number:
+          min: 1
+          max: 86400
+          unit_of_measurement: s
+
 allow:
   fields:
     people:
