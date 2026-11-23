@@ -1,0 +1,1 @@
+Home Assistant: a simpler More time sheet on Hearth's page, a notice event and hearth.notify, and the make-adult offer skips device logins.

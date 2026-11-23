@@ -3,6 +3,15 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## 2026.11.54
+
+### Home Assistant integration
+
+- **Hearth's page: one More time sheet.** A kid's sheet leads with the time left and why, with More time, Pause and a menu. More time is preset to what is stopping the kid and picks bonus, raised limit or category time itself, with Undo. Today rows get a separate +15 min button, Pause 30 has a menu of lengths, and Today's extras lists every bonus, allowance and day off with End or Undo.
+- **`hearth_notice` event.** Every notice Hearth sends adults (asks, offers, outside-change notices, failing checks) is also announced as a read-only event when it is shown, updated or cleared, with its audience, text and button labels (never what a button does). See `docs/contracts/notice-event.md`.
+- **`hearth.notify`** (v1): a message to Hearth devices, people or the household, on phones and on TVs that show notices, with an optional duration. No buttons yet.
+- **The Make adult offer skips device logins.** A login a wall panel or a TV signs in with is never offered, the person needs a phone of their own, and the notice names the login and the device it came from.
+
 ## 2026.11.53
 
 ### Home Assistant integration
