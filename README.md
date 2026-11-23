@@ -183,6 +183,7 @@ Details, and every Android permission Hearth TV asks for and why: [docs/privacy.
 - [Home Assistant](docs/home-assistant.md): notifications, dashboard, the Hearth integration, phone approval
 - [Privacy](docs/privacy.md): what Hearth TV sends where, and its permissions
 - For contributors: [development](docs/development.md) and the [provider contract](docs/provider-contract.md)
+- [Hearth TV contract](docs/contracts/hearth-tv.md): every call between Hearth TV and the Hearth integration. A change to the Hearth TV contract needs docs/contracts/hearth-tv.md and both contract tests (ha_tests here, the fixture test in HearthTV) updated together.
   HearthTube reads
 
 ## Credits

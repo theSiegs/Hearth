@@ -1,5 +1,18 @@
 {
-  "about": "Sam's part of the state document a TV gets with its status (state.profiles[\"user:10\"]), at six moments. ha_tests/test_client_contract.py builds each moment in Home Assistant and checks this file still says what it sends; android/app/src/test/java/com/thesiegs/hearth/TvStateDocumentFixtureTest.java checks what the TV makes of it. Only what a TV reads is kept, and long app lists are cut to the apps that matter. Times are checked as times only (their date and second follow the test's clock), dates as dates, everything else as written.",
+  "about": "Sam's part of the state document a TV gets with its status (state.profiles[\"user:10\"]), at six moments. ha_tests/test_client_contract.py builds each moment in Home Assistant and checks this file still says what it sends; android/app/src/test/java/com/thesiegs/hearth/TvStateDocumentFixtureTest.java checks what the TV makes of it. Only what a TV reads is kept, and long app lists are cut to the apps that matter. Times are checked as times only (their date and second follow the test's clock), dates as dates, everything else as written. \"document\" is a whole state document with every top-level key docs/contracts/hearth-tv.md lists (ha_tests/test_hearth_tv_contract.py checks its keys and their JSON types against the page and Home Assistant; its values are examples, the hash is not a real one). This file is kept in Hearth (ha_tests/contract_fixtures/) and in Hearth TV (android/app/src/test/resources/contract_fixtures/): the two copies must stay identical.",
+  "document": {
+    "profiles": {"user:10": {"person": "person.sam", "locked": false, "groups": []}},
+    "youtube_blocks": {"user:10": {"videos": [], "channels": [], "words": [], "labels": {}}},
+    "commands": [],
+    "people": {"user:0": "person.alex", "user:10": "person.sam"},
+    "adult_phones": {"user:0": ["mobile_app_alex_phone"]},
+    "notices": [],
+    "parent_pins_version": "0123456789abcdef",
+    "parent_pins": [{"person": "person.alex", "name": "Alex", "hash": "v2$10000$00$00", "profiles": ["user:0"]}],
+    "client_settings": {},
+    "version": "fedcba9876543210",
+    "contract": 3
+  },
   "moments": {
     "evening": {
       "person": "person.sam",
