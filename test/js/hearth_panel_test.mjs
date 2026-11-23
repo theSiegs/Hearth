@@ -237,23 +237,39 @@ const GAMES_OUT = {
   ],
 };
 
-test("Today: one line per kid, bedtime last and faded, a ring around the initial and no +15 in a lock", () => {
+test("Today: two lines per kid, bedtime last and faded, a ring around the initial and no +15 min in a lock", () => {
   const html = today(16)._page();
   assert.match(html, /<h1>Today<\/h1>/);
   assert.match(html, /4:00 pm · 1 of 2 in bedtime/);
   const kids = html.split('class="card kid').slice(1);
   assert.equal(kids.length, 2);
-  assert.match(kids[0], /data-kid="person.sam"[^]*Games are done for today · 31 min left for other things<\/b>/);
-  assert.match(kids[1], /^ asleep"[^]*data-kid="person.alex"[^]*Bedtime till 7:00/);
+  // Line 1: the name and the big number; line 2: the reason, never cut off
+  assert.match(kids[0], /data-kid="person.sam"[^]*<span class="name">Sam<\/span><span class="num t-low">31 min left<\/span>[^]*<span class="line t-out">Games done<\/span>/);
+  assert.match(kids[1], /^ asleep"[^]*data-kid="person.alex"[^]*<span class="num t-lock">Bedtime<\/span>[^]*Till 7:00 am/);
   assert.match(kids[1], /class="ring tone-night"/);
   assert.match(kids[0], /class="ring tone-low"/);
-  // Sam's row offers +15 bonus time (time is what stops him, before his cutoff; no category); Alex's none
-  assert.match(kids[0], /data-action="give" data-person="person.sam" data-minutes="15" aria-label="Give Sam 15 min bonus"/);
-  // A small "?" beside the line opens where it came from
-  assert.match(kids[0], /data-action="origin" data-key="row\|person.sam" aria-label="Where this came from" aria-expanded="false">\?<\/button>/);
+  // Sam's row offers +15 min of bonus time (time is what stops him, before his cutoff; no category); Alex's none.
+  // It's a button beside the row's own button, never inside it
+  assert.match(kids[0], /<\/button>\s*<button class="b give" data-action="give" data-person="person.sam" data-minutes="15" aria-label="Give Sam 15 min bonus">\+15 min<\/button>/);
+  assert.doesNotMatch(kids[0], /role="button"/);
+  assert.doesNotMatch(kids[0], /data-action="origin"/);
   assert.doesNotMatch(kids[1], /data-action="give"/);
   // The old Today is gone: no family by pool, no "Suggested now", no confirm
   assert.doesNotMatch(html, /Family today, by pool|Suggested now|kid-row/);
+});
+
+test("rings tell two kids with the same first letter apart, or show the person's picture", () => {
+  const p = today(16);
+  p._config.persons.push({ id: "person.anna", name: "Anna" });
+  p._config.roles["person.anna"] = "kid";
+  p._summary.people.push({ id: "person.anna", name: "Anna", kind: "kid", all: { id: "all", used_minutes: 0, minutes_left: 60, state: "ok" }, groups: [] });
+  let html = p._page();
+  assert.match(html, /<span class="ini dim">Al<\/span>/);
+  assert.match(html, /<span class="ini ">An<\/span>/);
+  assert.match(html, /<span class="ini ">S<\/span>/);
+  p._hass.states["person.sam"] = { attributes: { entity_picture: "/api/image/sam.png" } };
+  html = p._page();
+  assert.match(html, /<img class="ini pic" src="\/api\/image\/sam.png" alt="">/);
 });
 
 test("For you is honest when it's empty, and folds what's held back with why", () => {
@@ -265,16 +281,19 @@ test("For you is honest when it's empty, and folds what's held back with why", (
   const html = today(23, { household: { suggestions_held: held } })._page();
   assert.match(html, /<h1>Tonight<\/h1>/);
   assert.match(html, /Sam still up/);
-  assert.match(html, /Nothing needs you tonight/);
+  // One quiet line, with the fold beside it
+  assert.match(html, /<div class="quietline"><span>Nothing needs you tonight<\/span><details class="held"/);
   assert.match(html, /2 suggestions held back · why/);
   assert.match(html, /<li><span>Alex&#39;s YouTube time is up<\/span><span>in bedtime till 7:00<\/span><\/li>/);
   assert.doesNotMatch(html, /Behind another one/);
-  // After 9 pm Sam's row has no +15 either
+  // After 9 pm Sam's row has no +15 min either
   assert.doesNotMatch(html.split('class="card kid')[1], /data-action="give"/);
-  assert.match(today(16)._page(), /Nothing needs you<\/div>/);
+  const day = today(16)._page();
+  assert.match(day, /<div class="quietline"><span>Nothing needs you<\/span><\/div>/);
+  assert.doesNotMatch(day, /For you/);
 });
 
-test("a suggestion shows as a sentence with +15, the + box and Dismiss; a request comes first with its own buttons", () => {
+test("a suggestion shows as a sentence with +15, the + box and Not today; a request comes first with its own buttons", () => {
   let html = today(16, { sam: { suggestions: [GAMES_OUT] } })._page();
   // The second amount gave way to the "+" box
   assert.doesNotMatch(html, /data-id="suggest:more:games:30"/);
@@ -282,7 +301,7 @@ test("a suggestion shows as a sentence with +15, the + box and Dismiss; a reques
   assert.match(html, /1 thing for you/);
   assert.match(html, /<div class="t">Sam&#39;s Games time is up<\/div><div class="d">Used 2 h 05 of 2 h · 31 min of screen time left<\/div>/);
   assert.match(html, /data-action="sugg-give" data-person="person.sam" data-id="suggest:more:games:15">[^]*?15 min<\/button>/);
-  assert.match(html, /data-action="sugg-dismiss" data-person="person.sam" data-key="more:games"[^>]*>Dismiss/);
+  assert.match(html, /data-action="sugg-dismiss" data-person="person.sam" data-key="more:games"[^>]*>Not today/);
   // The row covers Sam: no second +15 on his kid row
   assert.doesNotMatch(html.split('class="card kid')[1], /data-action="give"/);
   const ask = { type: "more_time", id: "q1", person: "person.sam", person_name: "Sam", minutes: 30, group: "games", asked: iso(15, 59) };
@@ -294,23 +313,72 @@ test("a suggestion shows as a sentence with +15, the + box and Dismiss; a reques
   assert.match(html, /\+1 more for Sam · <button class="lnk" data-action="kid-sheet" data-kid="person.sam">See/);
 });
 
-test("the kid's sheet: a lock box during bedtime, Allow an app instead of Give time, and the devices as one row", () => {
+test("the kid's sheet in bedtime: a lock box, then Allow an app, More time anyway and ⋯", () => {
   const p = today(23);
   p._hass.entities = { "binary_sensor.alex_tablet_bedtime_active": { platform: "familylink" } };
   p._sel = "person.alex";
   p._sheetOpen = true;
   const html = p._page();
   const sheet = html.slice(html.indexOf('class="detail on"'));
-  assert.match(sheet, /Bedtime till 7:00<\/div>[^]*Set in Family Link\. Every screen is off for Alex until then\. Bonus time pauses bedtime while it lasts\./);
-  assert.match(sheet, /data-action="allow-open"/);
-  assert.doesNotMatch(sheet, /data-action="give-open" aria/);
+  assert.match(sheet, /<div class="who">Alex<\/div><h2 class="">Bedtime<\/h2><div class="why">Till 7:00 am\.<\/div>/);
+  assert.match(sheet, /Bedtime till 7:00<\/div>[^]*Set in Family Link\. Every screen is off for Alex until then\. More time pauses bedtime while it lasts\./);
+  const bar = sheet.match(/<div class="actbar">[^]*?<\/div>/)[0];
+  assert.deepEqual([...bar.matchAll(/data-action="([^"]+)"/g)].map((m) => m[1]), ["allow-open", "mt-open", "more-open"]);
+  assert.match(bar, /More time anyway/);
   assert.doesNotMatch(sheet, /data-action="kid-pause"/);
   assert.match(sheet, /All 2 screens|Kitchen TV, Xbox/);
   assert.match(sheet, /Everything follows the lock/);
-  // More: bonus time at bedtime pauses it while it lasts; Unlimited is still offered
+  // ⋯: Free play and Change limits (Allow an app is on the bar already)
   p._moreOpen = true;
-  assert.match(p._page(), /Bonus time<small>Pauses bedtime while it lasts/);
-  assert.match(p._page().split('class="detail on"')[1], /data-action="unlimited-open"/);
+  const menu = p._page().split('class="detail on"')[1].match(/<div class="menu">[^]*?<\/div>/)[0];
+  assert.doesNotMatch(menu, /allow-open/);
+  assert.match(menu, /data-action="mt-open" data-person="person.alex" data-view="free">Free play…/);
+  assert.match(menu, /Change limits/);
+});
+
+test("the kid's sheet head: the big number, why (wrapping, never cut off), and the bar More time, Pause and ⋯", () => {
+  const p = today(16, { sam: { bedtime: { start: iso(21), end: iso(7) } } });
+  p._sel = "person.sam";
+  p._sheetOpen = true;
+  const sheet = p._page().split('class="detail on"')[1];
+  assert.match(sheet, /<h2 class="">31 min left<\/h2><div class="why">Games: done for today \(2 h 5 min used\)\. Other apps still work\. Bedtime 9:00\.<\/div>/);
+  const bar = sheet.match(/<div class="actbar">[^]*?<\/div>/)[0];
+  assert.deepEqual([...bar.matchAll(/data-action="([^"]+)"/g)].map((m) => m[1]), ["mt-open", "kid-pause", "more-open"]);
+  assert.match(bar, /data-action="kid-pause" data-person="person.sam" data-minutes="30"/);
+  // None of the old ways to give: no Bonus time chooser, no "+" box, no Raise limit, no Unlimited, no category chips
+  assert.doesNotMatch(sheet, /give-open|give-menu|raise-open|unlimited-open|cat-bonus|Raise limit|Bonus time<\/button>/);
+  // ⋯: Allow an app…, No School time today (only while it's ahead), Free play…, Change limits; no ends (they're in
+  // Today's extras)
+  p._moreOpen = true;
+  const actions = () => [...p._page().split('class="detail on"')[1].match(/<div class="menu">[^]*?<\/div>/)[0].matchAll(/data-action="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(actions(), ["allow-open", "mt-open", "kid"]);
+  p._summary.people[0].school_time = { start: iso(17), end: iso(18) };
+  assert.deepEqual(actions(), ["allow-open", "school-off", "mt-open", "kid"]);
+  assert.match(p._page(), /School time 5:00 to 6:00\./);
+  // Daily time out: the big number says so
+  p._summary.people[0].all = { ...p._summary.people[0].all, minutes_left: 0, state: "out" };
+  assert.match(p._page(), /<h2 class="t-out">No time left today<\/h2>/);
+});
+
+test("Allow an app finds any of the kid's apps, not only today's", async () => {
+  const p = today(16);
+  p._config.known_apps = { "com.google.android.apps.messaging": "Messages", "com.google.android.apps.docs": "Docs", "com.example.game": "A Game" };
+  p._sel = "person.sam";
+  p._sheetOpen = true;
+  p._render = () => {};
+  await p._act("allow-open", { dataset: { person: "person.sam" } });
+  let chooser = p._page().split('class="detail on"')[1].match(/<div class="chooser">[^]*?<\/div><\/div>/)[0];
+  // Today's first, then the rest by name
+  assert.deepEqual([...chooser.matchAll(/data-action="allow-pick" data-pick="app:([^"]+)"/g)].map((m) => m[1]), ["com.example.game", "com.google.android.apps.docs", "com.google.android.apps.messaging"]);
+  p._allowQ = "mess";
+  chooser = p._page().split('class="detail on"')[1];
+  assert.match(chooser, /data-action="allow" data-person="person.sam" data-pick="app:com.google.android.apps.messaging" data-minutes="30">Allow Messages/);
+  const calls = [];
+  p._hass.callService = async (domain, service, data) => calls.push([service, data]);
+  await p._act("allow", { dataset: { person: "person.sam", pick: "app:com.google.android.apps.messaging", minutes: "0" } });
+  assert.deepEqual(calls.at(-1), ["allow", { people: ["person.sam"], app: "com.google.android.apps.messaging", until: "end_of_day" }]);
+  assert.equal(p._undo.text, "Allowed Messages for Sam for the rest of today");
+  clearTimeout(p._undoTimer);
 });
 
 test("the kid's sheet: one daily time bar with each limit as a marker, category lines that open to apps, devices by state", () => {
@@ -320,20 +388,22 @@ test("the kid's sheet: one daily time bar with each limit as a marker, category 
   p._exp = new Set(["person.sam|cat|games"]);
   const html = p._page();
   const sheet = html.slice(html.indexOf('class="detail on"'));
-  assert.match(sheet, /<h3>Daily time <span>of 3 h<\/span>/);
-  assert.match(sheet, /2 h 29 <small>used · 31 min left today<\/small>/);
+  // Left first, "used of" small
+  assert.match(sheet, /<h3>Today <span>2 h 29 of 3 h<\/span>/);
+  assert.match(sheet, /<div class="big">31 min left<\/div>/);
   const bar = sheet.match(/<div class="stack"[^]*?<\/div>/)[0];
   assert.equal((bar.match(/<i /g) || []).length, 3);
   // Games' and YouTube's limits as markers on the one bar
   assert.equal((bar.match(/class="mark"/g) || []).length, 2);
-  assert.match(sheet, /<span class="nm"><i [^>]*><\/i>Games are done for today · 31 min left for other things<\/span>[^]*?2 h limit/);
-  assert.match(sheet, /YouTube: 49 min left<\/span>[^]*?1 h limit/);
+  // Read-only lanes: the name, then how it stands and its limit (a column that wraps, not a fixed one that cuts)
+  assert.match(sheet, /<span class="nm"><i [^>]*><\/i>Games<\/span>\s*<span class="v t-out">Done · 2 h limit<\/span>/);
+  assert.match(sheet, /YouTube<\/span>\s*<span class="v ">49 min left · 1 h limit<\/span>/);
   // No bar per category
   assert.doesNotMatch(sheet, /class="lane"[^]*?<span class="bar">/);
   assert.match(sheet, /A Game<\/span><span>25 min/);
   assert.match(sheet, /On Switch 2<\/span><span>2 h 05/);
-  assert.match(sheet, /data-action="raise-open" data-group="games">Raise limit/);
-  assert.doesNotMatch(sheet, /\+15 Games/);
+  // Opened, a lane shows its apps and nothing to press
+  assert.doesNotMatch(sheet, /raise-open|raise-end|cat-bonus|Games bonus/);
   assert.match(sheet, /Not counted|No limit: Messaging 8 min/);
   // Devices: the two out together, the TVs and the tablet together; names without "Sam's", never the model id
   assert.match(sheet, /<div class="t">Xbox, Switch 2<\/div>[^]*?Games ran out/);
@@ -359,15 +429,58 @@ test("exceptions read as sentences: who allowed what, and what Hearth is blockin
   const html = p._page();
   assert.match(html, /9 apps are allowed without a limit till 11:59\. Someone changed their limits in the Family Link app\./);
   assert.doesNotMatch(html, />com\.example/);
+  assert.match(html, /<h3>Holds and notes<\/h3>/);
   assert.match(html, /Hearth is blocking 4 apps on Sam&#39;s Family Link devices because Games ran out\./);
-  assert.match(html, /You allowed YouTube till 6:00\. <button class="lnk" data-action="allow-end"/);
+  // What an adult allowed is one of Today's extras, with its End
+  assert.match(html, /<h3>Today's extras<\/h3><div class="xrow"><span>YouTube allowed till 6:00<\/span><button class="lnk" data-action="allow-end" data-person="person.sam" data-group="youtube">End<\/button>/);
+});
+
+test("Today's extras: each extra still on with End, which offers Undo; No School time today with Undo", async () => {
+  const p = today(16, {
+    sam: {
+      school_time_off: [{ date: "2026-11-22" }],
+      time: {
+        today_left: 31, today_minutes: 210, bonus: 30, bonus_left: 20, used: 179, unlimited: null, unlimited_today: [],
+        categories: [
+          { id: "games", name: "Games", limit: 120, limit_today: 150, raised: true, left: 10, used: 140, limit_text: "Games: 2 h 30 limit (raised)" },
+        ],
+        origins: [
+          { id: "o1", kind: "bonus", source: "hearth", by: "Robin", at: iso(15, 5), minutes: 30, detail: "Bonus +30", endable: true, ended_at: null },
+          { id: "o2", kind: "raise", source: "hearth", by: "Robin", at: iso(15, 10), group: "games", detail: "Games: limit +30 today", endable: true, ended_at: null },
+          { id: "o3", kind: "bonus", source: "hearth", by: "Robin", at: iso(14), minutes: 15, detail: "Bonus +15", endable: false, ended_at: iso(14, 30) },
+          { id: "o4", kind: "pause", source: "hearth", at: iso(13), detail: "Pause screens until 1:30 PM", endable: false, ended_at: iso(13, 30) },
+        ],
+      },
+    },
+  });
+  p._sel = "person.sam";
+  p._sheetOpen = true;
+  p._render = () => {};
+  const calls = [];
+  p._hass.callService = async (domain, service, data) => calls.push([service, data]);
+  const extras = p._page().split('class="detail on"')[1].match(/<h3>Today's extras<\/h3>[^]*?<\/div><\/div>(?=<div class="card flat blk">)/)[0];
+  const rows = [...extras.matchAll(/<div class="xrow"><span>([^<]*)<\/span>(<button[^>]*>[^<]*<\/button>)?/g)].map((m) => [m[1], m[2] || ""]);
+  assert.deepEqual(rows.map((r) => r[0]), ["+30 min from Robin, 3:05 pm", "Games: limit +30 today from Robin", "No School time today"]);
+  assert.match(rows[0][1], /data-action="extra-end" data-person="person.sam" data-origin="o1">End/);
+  assert.match(rows[2][1], /data-action="school-off-cancel"[^>]*>Undo/);
+  // End: exactly that grant; Undo gives back what was still unused (20 of the 30)
+  await p._act("extra-end", { dataset: { person: "person.sam", origin: "o1" } });
+  assert.deepEqual(calls.at(-1), ["end_grant", { origin_id: "o1" }]);
+  assert.equal(p._undo.text, "Ended: +30 min from Robin, 3:05 pm");
+  await p._act("undo", { dataset: {} });
+  assert.deepEqual(calls.at(-1), ["add_time", { person: "person.sam", minutes: 20 }]);
+  // A raise's Undo raises it again by as much
+  await p._act("extra-end", { dataset: { person: "person.sam", origin: "o2" } });
+  await p._act("undo", { dataset: {} });
+  assert.deepEqual(calls.at(-1), ["raise_cap", { person: "person.sam", category: "games", minutes: 30 }]);
+  clearTimeout(p._undoTimer);
 });
 
 test("Screens now collapses to one row when nothing plays; the adults get one line", () => {
   const p = today(16);
   let html = p._page();
   assert.match(html, /Nothing playing<\/div><div class="d">1 TV off · no console or Switch in use/);
-  assert.doesNotMatch(html, />Sam<\/span>/);
+  assert.doesNotMatch(html.slice(html.indexOf("Screens now")), />Sam<\/span>/);
   assert.match(html, /Adults today: Robin 40 min · no limits/);
   p._summary.devices[0].screen = "on";
   p._summary.devices[0].app = "Hearth TV";
@@ -547,83 +660,192 @@ test("Unlock: a category gets no limit today, daily time goes Unlimited, a devic
   clearTimeout(p._toastTimer);
 });
 
-test("the sheet's actions: Bonus time (no category), Raise limit, Unlimited with its end and bedtime, Pause screens", async () => {
-  const p = today(16);
+// More time: one sheet for every kind of extra time. The page picks the service that helps now (bonus, a raised limit,
+// a category's own bonus, free play), and each gives at once with Undo
+
+const mtOf = (html) => html.match(/<section class="mt"[^]*?<\/section>/)?.[0] || "";
+
+function moreTime(sam = {}) {
+  const p = today(16, { sam });
+  const ws = [];
   const calls = [];
+  p._hass.callWS = async (m) => (ws.push(m), { response: { origin_id: "og_1", removed: { "person.sam": 15 } } });
   p._hass.callService = async (domain, service, data) => calls.push([service, data]);
-  p._hass.callWS = async (m) => (calls.push([m.service, m.service_data]), { response: { ended: ["person.sam"], text: { "person.sam": "Limits back on · 31 min left today" } } });
   p._render = () => {};
   p._sel = "person.sam";
   p._sheetOpen = true;
-  let sheet = p._page().split('class="detail on"')[1];
-  assert.match(sheet, />Bonus time<\/button>/);
-  assert.match(sheet, /data-action="raise-open"[^>]*>[^]*?Raise limit<\/button>/);
-  assert.match(sheet, /data-action="unlimited-open"[^>]*>Unlimited<\/button>/);
-  assert.match(sheet, /data-action="kid-pause" data-person="person.sam" data-minutes="30">[^]*?Pause screens 30 min/);
-  // Bonus time: amounts only, no category to pick
-  p._giveOpen = true;
-  sheet = p._page().split('class="detail on"')[1];
-  assert.doesNotMatch(sheet, /data-action="give-pool"/);
-  assert.match(sheet, /data-action="give" data-person="person.sam" data-minutes="15">Give 15 min bonus/);
-  // Raise limit: a category (Games first: it's at its limit) and how much
-  p._giveOpen = false;
-  await p._act("raise-open", { dataset: {} });
-  sheet = p._page().split('class="detail on"')[1];
-  assert.match(sheet, /data-action="raise-cat" data-group="games" aria-pressed="true">Games/);
-  assert.match(sheet, /Games: 2 h limit\. Daily time stays the same\./);
-  await p._act("raise-how", { dataset: { how: "60" } });
-  await p._act("raise", { dataset: { person: "person.sam", group: "games", how: "60" } });
-  assert.deepEqual(calls.at(-1), ["raise_cap", { person: "person.sam", category: "games", minutes: 60 }]);
-  // Unlimited: until turned off, with bedtime
-  await p._act("unlimited-open", { dataset: {} });
-  await p._act("unlimited-until", { dataset: { until: "turned_off" } });
-  await p._act("unlimited-bed", { dataset: {} });
-  sheet = p._page().split('class="detail on"')[1];
-  assert.match(sheet, /data-action="unlimited-until" data-until="turned_off" aria-pressed="true">Until turned off/);
-  assert.match(sheet, /type="checkbox" data-change="unlimited-bed" checked>Include bedtime/);
-  await p._act("unlimited", { dataset: { person: "person.sam" } });
-  assert.deepEqual(calls.at(-1), ["unlimited", { people: ["person.sam"], until: "turned_off", include_bedtime: true }]);
-  // While it's on: its line and End unlimited
-  p._summary.people[0].time = { ...p._summary.people[0].time, unlimited: { until: iso(23, 59), open: true, include_bedtime: true, text: "Unlimited (until turned off)" } };
-  const html = p._page();
-  assert.match(html.split('class="card kid')[1], /<b>Unlimited \(until turned off\)<\/b>/);
-  sheet = html.split('class="detail on"')[1];
-  assert.match(sheet, /data-action="unlimited-end" data-person="person.sam">End unlimited/);
-  await p._act("unlimited-end", { dataset: { person: "person.sam" } });
-  assert.deepEqual(calls.at(-1), ["unlimited_end", { people: ["person.sam"] }]);
-  assert.equal(p._toast, "Limits back on · 31 min left today");
-  // The "?" shows where today's statuses came from
-  await p._act("origin", { dataset: { key: "sheet|person.sam" } });
-  assert.match(p._page(), /<div class="origins" role="note"><div>Bonus \+30 · added by Robin in Hearth · 3:05 PM<\/div><\/div>/);
-  clearTimeout(p._undoTimer);
-  clearTimeout(p._toastTimer);
+  return { p, ws, calls };
+}
+
+test("More time opens on what's stopping them: For Games or Anything, +15 / +30 / +1 h, the rest of today, a note", async () => {
+  const { p } = moreTime();
+  assert.equal(mtOf(p._page()), "");
+  await p._act("mt-open", { dataset: { person: "person.sam" } });
+  const mt = mtOf(p._page());
+  assert.match(mt, /<h2 id="mt-title">More time for Sam<\/h2>\s*<div class="d">31 min left · Games done<\/div>/);
+  assert.match(mt, /role="radiogroup"[^>]*><button role="radio" data-action="mt-for" data-group="games" aria-checked="true">Games<\/button><button role="radio" data-action="mt-for" data-group="all" aria-checked="false">Anything<\/button>/);
+  // The other limited categories, quietly
+  assert.match(mt, /Or for: <button class="lnk" data-action="mt-for" data-group="youtube">YouTube<\/button>/);
+  assert.deepEqual([...mt.matchAll(/data-action="mt-give"[^>]*data-how="(\w+)">([^<]*)</g)].map((m) => [m[1], m[2]]), [
+    ["15", "+15 min"], ["30", "+30 min"], ["60", "+1 h"], ["rest", "No Games limit rest of today"],
+  ]);
+  assert.match(mt, /Games can run longer\. It still counts toward the 31 min left today\. 5 min over: \+15 leaves 10\./);
+  assert.match(mt, /data-action="mt-take" data-person="person.sam" data-minutes="15">Take 15 min away/);
+  assert.match(mt, /data-action="mt-view" data-view="free">Free play until a time \(not counted\) ›/);
+  // Anything: bonus time, and free play for the rest of today
+  await p._act("mt-for", { dataset: { group: "all" } });
+  const any = mtOf(p._page());
+  assert.match(any, /data-group="all" aria-checked="true"/);
+  assert.match(any, /data-how="rest">Free play rest of today/);
+  assert.match(any, /Adds to Sam&#39;s daily time, for any app, Games too\./);
+  // Esc (or the scrim) closes just this sheet
+  await p._act("mt-close", { dataset: {} });
+  assert.equal(p._mt, null);
+  assert.equal(p._sheetOpen, true);
 });
 
-test("the kid's sheet has the same + box beside Bonus time, for the category that stops them", () => {
-  const p = today(16, {
-    sam: {
-      groups: [
-        { id: "all", name: "All screen time", used_minutes: 155, minutes_left: 25, budget: 180, bonus: 0, state: "ok" },
-        { id: "games", name: "Games", used_minutes: 131, minutes_left: 0, budget: 120, bonus: 0, state: "out" },
-      ],
-    },
-  });
-  p._sel = "person.sam";
-  p._sheetOpen = true;
-  let sheet = p._page().split('class="detail on"')[1];
-  assert.match(sheet, /Bonus time<\/button><span class="givebox"><button class="b sq" data-action="give-menu" data-menu="bar\|person.sam"/);
-  p._giveMenu = "bar|person.sam";
-  sheet = p._page().split('class="detail on"')[1];
-  const menu = menuOf(sheet);
-  assert.match(menu, /data-action="menu-give" data-person="person.sam" data-group="games" data-minutes="15">\+15 min/);
-  assert.match(menu, /data-action="menu-unlock" data-person="person.sam" data-group="games"/);
-  // 11 past the 2 h: 15 over (rounded up to 5, as the server counts it)
-  assert.match(menu, /15 min over: \+30 leaves 15/);
-  // In bedtime: no Bonus time, no box
-  const q = today(23);
-  q._sel = "person.alex";
-  q._sheetOpen = true;
-  assert.doesNotMatch(q._page().split('class="detail on"')[1], /data-action="give-menu"/);
+test("More time maps each choice to the service that helps now, each with Undo", async () => {
+  // Games with daily time left: a raised limit; its Undo ends just that raise
+  let { p, ws, calls } = moreTime();
+  const give = (group, how) => p._act("mt-give", { dataset: { person: "person.sam", group, how } });
+  p._mt = { kid: "person.sam", for: null, view: "main" };
+  await give("games", "15");
+  assert.deepEqual(ws.at(-1).service_data, { person: "person.sam", category: "games", minutes: 15 });
+  assert.equal(ws.at(-1).service, "raise_cap");
+  assert.equal(p._mt, null);
+  assert.equal(p._undo.text, "+15 min of Games for Sam");
+  await p._act("undo", { dataset: {} });
+  assert.deepEqual(calls.at(-1), ["end_grant", { origin_id: "og_1" }]);
+  // Games for the rest of today: no limit today
+  await give("games", "rest");
+  assert.deepEqual([ws.at(-1).service, ws.at(-1).service_data], ["raise_cap", { person: "person.sam", category: "games", no_cap: true }]);
+  assert.equal(p._undo.text, "No Games limit for Sam till midnight");
+  // Anything: bonus time (Undo takes back just that); the rest of today: free play
+  await give("all", "60");
+  assert.deepEqual([ws.at(-1).service, ws.at(-1).service_data], ["add_time", { person: "person.sam", minutes: 60 }]);
+  assert.equal(p._undo.text, "+1 h for Sam");
+  await p._act("undo", { dataset: {} });
+  assert.deepEqual(calls.at(-1), ["remove_time", { person: "person.sam", minutes: 60 }]);
+  await give("all", "rest");
+  assert.deepEqual([ws.at(-1).service, ws.at(-1).service_data], ["unlimited", { people: ["person.sam"], until: "end_of_day", include_bedtime: false }]);
+  assert.equal(p._undo.text, "Free play for Sam till midnight (not counted)");
+  await p._act("undo", { dataset: {} });
+  assert.deepEqual(calls.at(-1), ["unlimited_end", { people: ["person.sam"] }]);
+  clearTimeout(p._undoTimer);
+
+  // Daily time is out: Games +N is Games' own bonus (past daily time); Games for the rest of today is free play
+  ({ p, ws, calls } = moreTime({
+    all: { id: "all", name: "All screen time", used_minutes: 180, minutes_left: 0, budget: 180, bonus: 0, state: "out" },
+  }));
+  p._mt = { kid: "person.sam", for: null, view: "main" };
+  const mt = mtOf(p._page());
+  assert.match(mt, /Daily time is used up, so this is extra just for Games, past daily time\./);
+  assert.match(mt, /data-group="games" data-how="rest">Free play rest of today/);
+  await p._act("mt-give", { dataset: { person: "person.sam", group: "games", how: "30" } });
+  assert.deepEqual([ws.at(-1).service, ws.at(-1).service_data], ["add_time", { person: "person.sam", minutes: 30, category: "games" }]);
+  assert.equal(p._undo.text, "+30 min of Games for Sam (past daily time)");
+  await p._act("undo", { dataset: {} });
+  assert.deepEqual(calls.at(-1), ["remove_time", { person: "person.sam", minutes: 30, category: "games" }]);
+  await p._act("mt-give", { dataset: { person: "person.sam", group: "games", how: "rest" } });
+  assert.equal(ws.at(-1).service, "unlimited");
+  clearTimeout(p._undoTimer);
+});
+
+test("More time: Take 15 min away with Undo, free play until a time, and Anything only when there's no category limit", async () => {
+  let { p, ws, calls } = moreTime();
+  await p._act("mt-take", { dataset: { person: "person.sam", minutes: "15" } });
+  assert.deepEqual([ws.at(-1).service, ws.at(-1).service_data], ["remove_time", { person: "person.sam", minutes: 15 }]);
+  assert.equal(p._undo.text, "−15 min for Sam");
+  await p._act("undo", { dataset: {} });
+  assert.deepEqual(calls.at(-1), ["add_time", { person: "person.sam", minutes: 15 }]);
+  // Nothing given today to take back: it says so
+  p._hass.callWS = async () => ({ response: { removed: { "person.sam": 0 } } });
+  await p._act("mt-take", { dataset: { person: "person.sam", minutes: "15" } });
+  assert.equal(p._toast, "No extra time to take back from Sam today");
+  clearTimeout(p._toastTimer);
+  // Free play until a time, with bedtime
+  await p._act("mt-open", { dataset: { person: "person.sam", view: "free" } });
+  await p._act("unlimited-until", { dataset: { until: "turned_off" } });
+  await p._act("unlimited-bed", { dataset: {} });
+  const free = mtOf(p._page());
+  assert.match(free, /<h2 id="mt-title">Free play for Sam<\/h2>/);
+  assert.match(free, /data-action="unlimited-until" data-until="turned_off" aria-pressed="true">Until turned off/);
+  assert.match(free, /type="checkbox" data-change="unlimited-bed" checked>Include bedtime/);
+  await p._act("unlimited", { dataset: { person: "person.sam" } });
+  assert.deepEqual(calls.at(-1), ["unlimited", { people: ["person.sam"], until: "turned_off", include_bedtime: true }]);
+  assert.equal(p._undo.text, "Free play for Sam until turned off (not counted)");
+  clearTimeout(p._undoTimer);
+  // No category limits: no For row, Anything only
+  ({ p } = moreTime({ binding: null, time: { today_left: 31, today_minutes: 180, bonus: 0, categories: [], origins: [] } }));
+  p._mt = { kid: "person.sam", for: null, view: "main" };
+  const mt = mtOf(p._page());
+  assert.doesNotMatch(mt, /mt-for|radiogroup/);
+  assert.match(mt, /data-group="all" data-how="15">\+15 min/);
+  assert.match(mt, /Adds to Sam&#39;s daily time, for any app\./);
+});
+
+test("while free play is on, its End is in Today's extras, with Undo that starts it again", async () => {
+  const { p, ws, calls } = moreTime();
+  p._summary.people[0].time = { ...p._summary.people[0].time, unlimited: { until: iso(18), open: false, include_bedtime: false, text: "Unlimited until 6 PM" } };
+  p._hass.callWS = async (m) => (ws.push(m), { response: { ended: ["person.sam"], text: { "person.sam": "Limits back on · 31 min left today" } } });
+  const html = p._page();
+  assert.match(html.split('class="card kid')[1], /<span class="num ">Free play<\/span><\/span>\s*<span class="line ">Till 6:00 · not counted<\/span>/);
+  const sheet = html.split('class="detail on"')[1];
+  assert.match(sheet, /<span>Unlimited until 6 PM \(not counted\)<\/span><button class="lnk" data-action="unlimited-end" data-person="person.sam">End/);
+  await p._act("unlimited-end", { dataset: { person: "person.sam" } });
+  assert.deepEqual(ws.at(-1).service_data, { people: ["person.sam"] });
+  assert.equal(p._undo.text, "Limits back on · 31 min left today");
+  await p._act("undo", { dataset: {} });
+  assert.deepEqual(calls.at(-1), ["unlimited", { people: ["person.sam"], until: "18:00", include_bedtime: false }]);
+  // The "?" beside Today shows where today's statuses came from
+  await p._act("origin", { dataset: { key: `today|person.sam` } });
+  assert.match(p._page(), /<div class="origins" role="note"><div>Bonus \+30 · added by Robin in Hearth · 3:05 PM<\/div><\/div>/);
+  clearTimeout(p._undoTimer);
+});
+
+test("the header's Pause: one tap pauses everyone 30 min with Undo; its caret opens lengths, until a time and a reason", async () => {
+  const { p, calls } = moreTime();
+  const html = p._page();
+  assert.match(html, /<div class="split"><button class="ibtn sl" data-action="pause-quick"[^>]*>[^]*?Pause 30 min<\/button><button class="ibtn sr" data-action="pause-open"/);
+  await p._act("pause-quick", { dataset: {} });
+  assert.deepEqual(calls.at(-1), ["pause", { minutes: 30 }]);
+  assert.equal(p._undo.text, "Paused everyone for 30 min");
+  await p._act("undo", { dataset: {} });
+  assert.deepEqual(calls.at(-1), ["pause_end", {}]);
+  await p._act("pause-open", { dataset: {} });
+  await p._act("pause-len", { dataset: { minutes: "until" } });
+  assert.match(p._page(), /data-minutes="until" aria-pressed="true">Until a time[^]*id="pause-until" type="time"/);
+  p._value = (sel) => (sel === "#pause-until" ? "19:00" : "Dinner");
+  await p._act("pause-go", { dataset: {} });
+  assert.deepEqual(calls.at(-1), ["pause", { until: "19:00", reason: "Dinner" }]);
+  assert.equal(p._undo.text, "Paused everyone till 7:00 pm");
+  clearTimeout(p._undoTimer);
+});
+
+test("a redraw changes nothing when nothing changed, keeps the toast out of the page, and keeps focus on the same button", () => {
+  const p = today(16);
+  // A stand-in shadow DOM: two slots, and buttons found by their data
+  const made = [];
+  const slot = (cls) => ({ cls, html: "", set innerHTML(v) { this.html = v; made.push(cls); }, get innerHTML() { return this.html; } });
+  const body = slot("hp-body");
+  const toast = slot("hp-toast");
+  let focused = null;
+  const button = { dataset: { action: "kid-sheet", kid: "person.sam" }, focus() { focused = this; } };
+  p.shadowRoot.querySelector = (sel) => (sel === ".hp-body" ? body : sel === ".hp-toast" ? toast : null);
+  p.shadowRoot.querySelectorAll = () => [button];
+  p.shadowRoot.activeElement = { dataset: { action: "kid-sheet", kid: "person.sam" } };
+  p._render();
+  assert.deepEqual(made.sort(), ["hp-body", "hp-toast"]);
+  assert.equal(focused, button);
+  made.length = 0;
+  p._render();
+  assert.deepEqual(made, []);
+  // A toast: only its slot is drawn
+  p._offerUndo("+15 min for Sam", () => {});
+  assert.deepEqual(made, ["hp-toast"]);
+  assert.match(toast.html, /\+15 min for Sam/);
+  assert.doesNotMatch(body.html, /toast/);
+  clearTimeout(p._undoTimer);
 });
 
 test("a tap outside the menu or Esc closes it; a tap inside doesn't", () => {
@@ -1182,11 +1404,8 @@ test("Block and Unblock go through hearth.block_app and hearth.unblock_app; the 
   ]);
 });
 
-test("a category's row: +15 min of its own bonus beside Raise limit, with Undo; a bonus line for a category without a limit", async () => {
+test("a category's lane is read-only (its apps, nothing to press); a bonus line for a category without a limit", () => {
   const p = today(16);
-  const calls = [];
-  p._hass.callService = async (domain, service, data) => calls.push([service, data]);
-  p._render = () => {};
   p._sel = "person.sam";
   p._sheetOpen = true;
   p._exp = new Set(["person.sam|cat|games"]);
@@ -1196,18 +1415,11 @@ test("a category's row: +15 min of its own bonus beside Raise limit, with Undo; 
     category_bonuses: [{ id: "messaging", name: "Messaging", bonus: 15, bonus_left: 15, text: "Messaging: 15 min bonus left" }],
   };
   const sheet = p._page().split('class="detail on"')[1];
-  assert.match(sheet, /data-action="raise-open" data-group="games">Raise limit/);
-  assert.match(sheet, /data-action="cat-bonus" data-person="person.sam" data-group="games" data-minutes="15">\+15 min Games bonus/);
-  for (const m of [5, 30, 60]) assert.match(sheet, new RegExp(`data-minutes="${m}">\\+${m} min Games bonus`));
+  const lane = sheet.match(/<div class="expand[^]*?<\/div><\/div>/)[0];
+  assert.match(lane, /2 h 05 of 2 h today\./);
+  assert.doesNotMatch(lane, /<button/);
   assert.match(sheet, /Messaging: 15 min bonus left/);
-  assert.doesNotMatch(sheet, /allow-cat|allowed until/);
-  await p._act("cat-bonus", { dataset: { person: "person.sam", group: "games", minutes: "15" } });
-  assert.deepEqual(calls.at(-1), ["add_time", { person: "person.sam", minutes: 15, category: "games" }]);
-  assert.equal(p._undo.text, "+15 min Games bonus");
-  await p._act("undo", { dataset: {} });
-  assert.deepEqual(calls.at(-1), ["remove_time", { person: "person.sam", minutes: 15, category: "games" }]);
-  clearTimeout(p._undoTimer);
-  clearTimeout(p._toastTimer);
+  assert.doesNotMatch(sheet, /allow-cat|allowed until|Games bonus/);
 });
 
 test("Activity: plain lines from hearth/activity, a kid filter, failures marked with their error", async () => {
