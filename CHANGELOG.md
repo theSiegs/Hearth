@@ -15,22 +15,7 @@ TV where it wasn't used before.
 
 ### TV
 
-- **Parent PINs are learned, never sent.** A TV no longer gets the adults' Parent PIN hashes from Home Assistant, nor
-  the household's from the other TVs: it keeps, sealed, only PINs typed on it that Home Assistant (or, without it,
-  another TV of the household) confirmed. A wrong answer drops a matching kept PIN, and a changed PIN drops what was
-  kept for it.
-  Offline, the pad says why a PIN wasn't taken: "Can't reach Home Assistant. Only a PIN used on this TV before
-  works." or "Can't reach your other TVs. ...". The TVs of a household check a PIN for each other inside their
-  encrypted exchange, each with its own count of wrong tries.
-- **The old unsalted PIN form is gone.** A PIN still kept that way is moved to the salted form once at start-up.
-- The TV reports contract 4.
-- **One adult's PIN change no longer locks out the others.** Each PIN learned from Home Assistant is kept with whose it
-  is, and a change drops only that adult's, so with Home Assistant down after one adult changed theirs the others'
-  still work. With none working, unpair the TV from an adult profile (Settings > Home Assistant), which needs no PIN.
-- **A household PIN nobody can confirm is dropped.** When the TV that set the household's Parent PIN is removed
-  before another TV had it typed, those TVs stop following it and fall back to the PIN typed on them before (else
-  none), as a TV removed from the household does. An adult profile can remove a TV that hasn't been on for 30 days
-  without the Parent PIN, so a lost TV that alone knew the PIN can't lock the others.
+- The TV side (Parent PINs learned, never sent; contract 4) is in [Hearth TV's changelog](https://github.com/theSiegs/HearthTV/blob/master/CHANGELOG.md).
 
 ### Home Assistant integration
 
