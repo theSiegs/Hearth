@@ -134,6 +134,10 @@ async def test_pair_then_post_status(hass: HomeAssistant, hass_client_no_auth: C
     assert hass.states.get("sensor.kitchen_app").attributes["package"] == "com.example.tv"
     assert hass.states.get("sensor.kitchen_media_title").state == "Episode 1"
     assert hass.states.get("sensor.kitchen_profile").attributes["profile_id"] == "user:0"
+    # Its siblings by id (docs/contracts/tv-entities.md): no reader guesses unique-id suffixes
+    profile = hass.states.get("sensor.kitchen_profile").attributes
+    assert profile["state_entity"] == "sensor.kitchen_state"
+    assert profile["media_title_entity"] == "sensor.kitchen_media_title"
     assert hass.states.get("binary_sensor.kitchen_kids_profile").state == "off"
     assert hass.states.get("binary_sensor.kitchen_connected").state == "on"
 

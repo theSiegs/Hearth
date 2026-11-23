@@ -7,6 +7,7 @@
 
 **For contributors and apps that work with Hearth TV**
 - [Development](development.md): building, testing and releasing
+- [A TV's entities](contracts/tv-entities.md): which entities of a paired TV other integrations may read, and how to find them.
 - [Hearth TV contract](contracts/hearth-tv.md): every call between Hearth TV and the Hearth integration, and what
   each does without the other. A change to the Hearth TV contract needs contracts/hearth-tv.md and both contract tests (ha_tests here, the fixture test in HearthTV) updated together.
 - [Home Assistant integration](home-assistant-integration.md): design draft for a Hearth integration that replaces the webhook, helpers and tokens
