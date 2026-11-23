@@ -186,6 +186,34 @@ off; a client should not read it. It's in the device path and in `hearth/me` ali
 Hearth knows app categories itself ([app-facts.md](app-facts.md), retired). A device may still send
 `app_categories` (Android's own category per package).
 
+### `category_values` (additive, within contract 3)
+
+A phone's state document (and `hearth/me`) carries Hearth's own app-category values, the table Hearth decides by
+(`categories.BUILTIN_VALUES`). The TV's part of the document doesn't have it.
+
+```json
+{"category_values": {
+  "format": "hearth.values/1",
+  "version": "3f1c2a9b0d4e5f67",
+  "categories": {
+    "game": {"label": "Games", "pool": "games"},
+    "messaging": {"label": "Messaging", "pool": "messaging", "loose": true},
+    "interface": {"label": "System screens", "counted": false, "overrides_only": true},
+    "youtube": {"label": "YouTube", "parent": "video", "pool": "other", "pool_names": ["youtube"]}
+  }}}
+```
+
+- `format`: `hearth.values/1`. It changes only when the shape changes; a client that doesn't know the format ignores
+  the key. `version`: 16 hex characters, changes with any value, so a client can keep its copy until it does.
+- `categories`, by value (the ten categories, `interface` and the details): `label`; `pool`, the pool a value goes to
+  by default (the household's own map decides, an adult's move wins); `pool_names`, pool names that also take it;
+  `parent`, a detail's category; `loose`, set only by a confirmed answer; `counted: false` and `overrides_only` for
+  System screens. A field left out is false or none. A client ignores fields it doesn't know.
+- The fields that change a limit (`pool`, `loose`, `counted`) are Hearth's alone: a client shows them, it doesn't
+  decide by them. A client paired with a Hearth reads labels from here instead of carrying its own table; a client
+  without a hub (or with a Hearth older than this key) keeps its own table.
+- Additive: a client that doesn't read it is unaffected. It's part of the document's `version`.
+
 ### Usage Hearth doesn't count
 
 Additive, no contract change. A client keeps sending every package's seconds (`app_seconds_today`) from local

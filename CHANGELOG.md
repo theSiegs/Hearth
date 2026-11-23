@@ -5,6 +5,11 @@
 
 ## Unreleased
 
+### Home Assistant integration
+
+- **Phones get Hearth's app-category values** (`category_values`, `hearth.values/1`) in their state document and `hearth/me`, so a paired client needn't carry its own copy. The TV's document is unchanged. See `docs/contracts/device-api.md`.
+- **The old message design document is gone**: `docs/message-routing.md` now says what Hearth offers a message router (`hearth.notify` and the `hearth_notice` event).
+
 ### Repository
 
 - **Hearth TV's code has left this repository** for [theSiegs/HearthTV](https://github.com/theSiegs/HearthTV), which

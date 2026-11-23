@@ -1714,7 +1714,9 @@ same meaning, from the integration instead of a template.
 
 A **phone** gets its person's part of the same document, in the answer to each post and pushed when it changes (see
 [Away from home](#away-from-home)). Each person's part also says `share_app_data`, always false since sharing app data was
-retired (it replaced `tile_exchange_share` in contract 3, which is no longer sent).
+retired (it replaced `tile_exchange_share` in contract 3, which is no longer sent). A phone's document (and `hearth/me`)
+also has `category_values`, Hearth's own app-category values table, versioned `hearth.values/1`
+([contracts/device-api.md](contracts/device-api.md#category_values-additive-within-contract-3)); a TV's doesn't.
 Since contract 3 a device paired with a client also gets `client_settings`, `{"<scope>/<name>": "<etag>"}` for the
 documents it may read ([contracts/client-settings.md](contracts/client-settings.md)): they're part of the document's
 `version`, so a change to one wakes its wait and push ping. And `playing`: what they're
@@ -1908,6 +1910,7 @@ commands takes a person or any other key: an extra key gets Home Assistant's `in
     "youtube_blocks": {"videos": [], "channels": [], "words": [], "labels": {}}
   },
   "media_rooms": [],
+  "category_values": {"format": "hearth.values/1", "version": "9a0b1c2d3e4f5a6b", "categories": {}},
   "version": "3f1c2a9b0d4e5f67",
   "contract": 3
 }

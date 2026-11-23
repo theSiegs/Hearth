@@ -12,5 +12,6 @@ the provider contract HearthTube reads, household sync between TVs, PIN recipes)
   find them
 - [Contracts](contracts/): the device API (`device-api.md`), the time model, client settings, panel config, app facts
 - [Dashboard parity](dashboard-parity.md): Hearth's page next to the parental control integrations' dashboards
-- [Message hub](message-hub.md): design for the household message hub
+- [Messages and routing](message-routing.md): what Hearth offers a household message router (`hearth.notify` and
+  the `hearth_notice` event); routing and archives are other projects' job
 - [Hardened components](hardened-components.md): parts to change only in place, with their tests

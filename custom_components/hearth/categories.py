@@ -28,6 +28,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import date, timedelta
+import hashlib
 import json
 import logging
 from pathlib import Path
@@ -115,6 +116,19 @@ BUILTIN_VALUES: dict[str, dict[str, Any]] = {
     "companion": {"label": "Companion apps", "parent": "productivity", "pool": "other", "loose": True},
     "system": {"label": "System apps", "parent": "productivity", "pool": "other", "loose": True},
 }
+# The values table as paired phones get it (the state document's category_values, docs/contracts/device-api.md): a
+# client with a hub reads it from here instead of carrying its own copy. The format changes only when the shape does;
+# version changes with any value
+VALUES_FORMAT = "hearth.values/1"
+
+
+def values_document() -> dict[str, Any]:
+    """{format, version, categories}: BUILTIN_VALUES as sent, a copy (never the table itself)."""
+    categories = json.loads(json.dumps(BUILTIN_VALUES))
+    version = hashlib.sha256(json.dumps(categories, sort_keys=True).encode()).hexdigest()[:16]
+    return {"format": VALUES_FORMAT, "version": version, "categories": categories}
+
+
 # The categories an answer may have: the ten, and System screens (set only by an override or the starter list)
 KNOWN_CATEGORIES = (*APP_CATEGORIES, INTERFACE)
 
