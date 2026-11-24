@@ -242,7 +242,7 @@ class OutsideAppChanges:
                     Look(
                         f"{person}|family_link", person, "Family Link", lists,
                         frozenset({"familylink.block_app", "familylink.unblock_app", "familylink.pause_app",
-                                   "familylink.resume_app"}),
+                                   "familylink.resume_app", "familylink.set_app_daily_limit"}),
                     )
                 )
             for entity_id in self._fs_applications(person, registry):

@@ -267,6 +267,21 @@ block_app:
       selector:
         object:
 
+release_stray_pauses:
+  fields:
+    person:
+      required: true
+      selector:
+        entity:
+          domain: person
+    limits:
+      example: '{"com.example.app": 60}'
+      selector:
+        object:
+    dry_run:
+      selector:
+        boolean:
+
 block_outside_app:
   fields:
     source:

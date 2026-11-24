@@ -482,6 +482,28 @@ def _register_app_blocks(hass: HomeAssistant, loaded_household) -> None:
         supports_response=SupportsResponse.OPTIONAL,
     )
 
+    async def release_stray_pauses(call: ServiceCall) -> ServiceResponse:
+        """Apps left at Hearth's 1-minute Family Link pause with no record of it go back (stray_pauses.py)."""
+        from . import stray_pauses
+
+        household = loaded_household()
+        person = call.data["person"]
+        if person not in household.people():
+            raise ServiceValidationError(f"{person} isn't in Hearth's household")
+        return await stray_pauses.release(household, person, call.data.get("limits") or {}, call.data["dry_run"])
+
+    register_service(
+        hass, DOMAIN, "release_stray_pauses", release_stray_pauses,
+        schema=vol.Schema(
+            {
+                vol.Required("person"): cv.entity_id,
+                vol.Optional("limits"): {cv.string: vol.All(vol.Coerce(int), vol.Range(min=-2, max=1440))},
+                vol.Optional("dry_run", default=False): cv.boolean,
+            }
+        ),
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+
 
 ANSWER_REQUEST_SCHEMA = vol.All(
     vol.Schema(

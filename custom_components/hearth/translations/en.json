@@ -1228,6 +1228,24 @@
         }
       }
     },
+    "release_stray_pauses": {
+      "name": "Release stray app pauses",
+      "description": "Puts back apps Family Link still holds at Hearth's 1-minute pause after Hearth let go, with no record of the pause to restore them from: apps Hearth paused in the last 7 days, at 1 minute, not in Family Link's paused_apps and not held now. Each goes back to no app limit, or to the minutes given for it.",
+      "fields": {
+        "person": {
+          "name": "Person",
+          "description": "Whose apps."
+        },
+        "limits": {
+          "name": "Limits",
+          "description": "Minutes to put back for some apps, by package (-1: no app limit, -2: unlimited time); every other app gets no app limit."
+        },
+        "dry_run": {
+          "name": "Dry run",
+          "description": "Only say which apps, and what each would get."
+        }
+      }
+    },
     "block_outside_app": {
       "name": "Block an app loosened outside Hearth",
       "description": "The button on Hearth's notice of an app unblocked, its limit raised or taken off, or always allowed in Family Link, Family Safety or Nintendo without Hearth: blocks it again there (Family Link: as Hearth's own block; Nintendo: off the Switch's allow list).",
