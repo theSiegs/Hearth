@@ -73,6 +73,31 @@ async def test_daily_time_out_and_apart_opens_messages_and_pauses_the_rest(
     assert household.allows.of(SAM) == []
 
 
+async def test_pausing_every_app_doesn_t_flip_back_to_the_device_lock_when_the_list_is_cut_short(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Pausing every app moves them all into Family Link's With time limits list, which then gets too big for Home
+    Assistant and is cut short (truncated). The apps installed are still the ones last seen whole: Hearth keeps the
+    apps paused rather than swapping back to the device lock, and back again, every few minutes."""
+    calls = await sam_out_of_time(hass, hass_client_no_auth, freezer)
+    await _opened(hass, freezer)
+    household = _household(hass)
+    held = _held(hass)
+    assert "Devices" not in held and {CHROME, LATE, GAME} <= set(held)
+    pauses, resumes = len(calls["pause"]), len(calls["resume"])
+    # Family Link now lists the paused apps with a 1-minute limit, cut short; the other lists are left with Messages
+    limited = [{"package": p, "limit_minutes": 1} for p in sorted({CHROME, LATE, GAME, DIALER} & set(held))]
+    hass.states.async_set(
+        "sensor.sam_apps_with_time_limits", str(len(limited)), {"child_id": "42", "apps": limited[:1], "truncated": True}
+    )
+    hass.states.async_set("sensor.sam_apps_without_limits", "2", {"child_id": "42", "apps": [{"package": MESSAGES}, {"package": DIALER}]})
+    for _ in range(3):
+        await minutes(hass, freezer, 3, OUT)
+    assert household.open_apps(SAM) == {MESSAGES}
+    assert "Devices" not in _held(hass) and {CHROME, LATE, GAME} <= set(_held(hass))
+    assert len(calls["resume"]) == resumes and len(calls["pause"]) == pauses
+
+
 async def test_messaging_s_limit_out_and_apart_opens_messages_only(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:

@@ -968,11 +968,23 @@ Switch game. It runs `hearth.block_outside_app` (`source`: the list, as `<person
 `<person>|fs:<sensor>` or `nintendo:<device id>`; `app`), adults only, which takes only a list Hearth looks at.
 Hearth never blocks again by itself: an adult decides.
 
+**Stray app pauses.** An app can be left at Hearth's 1-minute Family Link pause after Hearth let go of it, with no
+record in Family Link of the setting to put back (a Family Link before the fork's fix saved the pause itself when it
+paused an app right after resuming it). `hearth.release_stray_pauses` (`person`; `limits`: minutes per package;
+`dry_run`) puts each such app back to no app limit, or to the minutes given: apps Hearth paused in the last 7 days
+(its action log), at 1 minute, not in Family Link's `paused_apps`, and not held by Hearth now. It reads only a whole
+With time limits list (never one cut short), and its calls are Hearth's own, so the adults aren't told about them.
+
+**A list cut short.** Pausing every app (daily time out while an app stays open, e.g. Messages while away from adults)
+moves each one into Family Link's With time limits list, which then outgrows Home Assistant's attribute limit and is
+cut short (`truncated`). The apps installed are then read as the last whole read plus what the lists show, so Hearth
+keeps the apps paused rather than swapping to the device lock and back.
+
 - **Told:** an app unblocked (still installed); an app's time limit raised or taken off; an app made Always allowed
   or put on a Switch's allow list. The text says the app, what changed, where and when, e.g. "Pins was unblocked in
   Family Link, not by Hearth (5:40 PM)."
 - **Not told:** tightening (a block, a lower limit), an app uninstalled, and Hearth's own changes: a call of the
-  provider's that names the app (block, unblock, pause or resume; Nintendo's `set_app_allowed`) in the action log in
+  provider's that names the app (block, unblock, pause, resume or an app limit; Nintendo's `set_app_allowed`) in the action log in
   the last 30 minutes. Apps Hearth pauses are left out of the limit comparison before and after.
 - Each list is compared with the last look (kept across restarts, so a change made while Home Assistant was down is
   told at the next look). Nothing is told at the first look, or while a list is missing or cut short.

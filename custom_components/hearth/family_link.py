@@ -282,21 +282,38 @@ def _apps_of(state) -> list | None:
     return apps
 
 
+# The last whole read of each child's installed apps (installed_apps), for while a list is cut short
+_LAST_INSTALLED = "hearth_fl_installed"
+
+
 def installed_apps(hass: HomeAssistant, child: str) -> set[str] | None:
     """The packages installed on the child's devices, from their Family Link app lists; None when that can't be told
-    (a list missing, or cut short to fit Home Assistant's attribute limit)."""
+    (a list missing, or cut short with no whole read of them before).
+
+    A list cut short to fit Home Assistant's attribute limit (truncated) is read as the last whole read plus whatever
+    the lists show now. Hearth's own pause of every app makes it so: each paused app moves into With time limits,
+    which outgrows the limit. Reading that as "not known" swapped the pause of every app for the device lock and
+    back, every few minutes."""
     found: set[str] = set()
     seen: set[str] = set()
+    cut_short = False
     for suffix, state in _child_lists(hass, child):
         apps = _apps_of(state)
-        if not isinstance(apps, list) or state.attributes.get("truncated"):
+        if not isinstance(apps, list):
             return None
+        cut_short = cut_short or bool(state.attributes.get("truncated"))
         seen.add(suffix)
         for app in apps:
             package = app.get("package") if isinstance(app, dict) else app
             if isinstance(package, str) and package:
                 found.add(package)
-    return found if seen == set(INSTALLED_LISTS) else None
+    if seen != set(INSTALLED_LISTS):
+        return None
+    last: dict[str, frozenset[str]] = hass.data.setdefault(_LAST_INSTALLED, {})
+    if not cut_short:
+        last[child] = frozenset(found)
+        return found
+    return found | last[child] if child in last else None
 
 
 def app_lists(hass: HomeAssistant, child: str) -> tuple[set[str], set[str] | None]:
