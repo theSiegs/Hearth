@@ -10,6 +10,8 @@ the provider contract HearthTube reads, household sync between TVs, PIN recipes)
   updated together
 - [A TV's entities](contracts/tv-entities.md): which entities of a paired TV other integrations may read, and how to
   find them
+- [Where a device is used](contracts/device-presence.md): a phone's or tablet's Last interaction sensor (and whether
+  it was on the home network), and the event for a profile switch on a TV, for presence readers
 - [Contracts](contracts/): the device API (`device-api.md`), the time model, client settings, panel config, app facts
 - [Dashboard parity](dashboard-parity.md): Hearth's page next to the parental control integrations' dashboards
 - [Messages and routing](message-routing.md): what Hearth offers a household message router (`hearth.notify` and

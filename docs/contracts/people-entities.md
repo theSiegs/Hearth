@@ -16,6 +16,9 @@ may rename them).
 Times are local ISO 8601 with their offset (`2026-11-09T08:10:00-05:00`). Hearth keeps no coordinates: no entity here
 has a position.
 
+Each phone's and tablet's Last interaction sensor carries the same `person` attribute (its owner), and a TV says who
+switched to which profile: see [device-presence.md](device-presence.md).
+
 ## Place
 
 `fresh` is false when the latest reading is older than Hearth trusts (20 minutes for a Family Link location); `as_of`

@@ -83,6 +83,9 @@
       "seconds_today": {
         "name": "Screen time today"
       },
+      "last_interaction": {
+        "name": "Last interaction"
+      },
       "person_screen_time_today": {
         "name": "Screen time today"
       },
