@@ -3434,7 +3434,7 @@ class HearthPanel extends HTMLElement {
     for (const x of s.device_extras || []) {
       const tg = (s.targets || []).find((y) => y.id === x.target);
       const where = tg ? this._deviceName(tg, kid.name) : x.name || "one device";
-      row(x.kind === "allow" ? `${where} open${till(x.until)}` : `${longMinutes(x.minutes_left || 0)} extra left on ${where}`, "");
+      row(x.kind === "bedtime" ? `Bedtime lifted on ${where}${till(x.until)}` : x.kind === "allow" ? `${where} open${till(x.until)}` : `${longMinutes(x.minutes_left || 0)} extra left on ${where}`, "");
     }
     const off = (s.school_time_off || [])[0];
     if (off) row(`No School time today${off.reason ? ` · ${off.reason}` : ""}`, `<button class="lnk" data-action="school-off-cancel" data-person="${p}">Undo</button>`);

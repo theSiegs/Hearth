@@ -379,6 +379,10 @@ allow:
       example: fs:xbox
       selector:
         text:
+    bedtime:
+      default: false
+      selector:
+        boolean:
 
 allow_end:
   fields:

@@ -99,7 +99,13 @@ from .time_model import (
     today_text,
 )
 from .grants import Grants
-from .device_extra import ALLOW as EXTRA_ALLOW, BONUS as EXTRA_BONUS, DeviceExtra, DeviceExtras
+from .device_extra import (
+    ALLOW as EXTRA_ALLOW,
+    BEDTIME as EXTRA_BEDTIME,
+    BONUS as EXTRA_BONUS,
+    DeviceExtra,
+    DeviceExtras,
+)
 from .native_sync import NativeSync
 from .backstop import Backstop
 from .unlimited import Unlimited
@@ -773,29 +779,52 @@ class Household:
             },
         }
 
-    def _locks_document(self, person: str, day: PersonDay | None) -> dict[str, Any]:
+    def _device_bedtime_lift(self, person: str, device_id: str | None) -> DeviceExtra | None:
+        """The bedtime lift on this one Hearth device of the person's (device_extra.py), while it lasts."""
+        if not device_id:
+            return None
+        lifts = [e for e in self.device_extras.of(person, f"hearth:{device_id}") if e.kind == EXTRA_BEDTIME]
+        return max(lifts, key=lambda e: e.until, default=None)
+
+    def _locked_by_here(self, person: str, day: PersonDay | None, here: DeviceExtra | None) -> list[str]:
+        """What locks the person on a device: today's locks, less the bedtime ones while a bedtime lift on that device
+        lasts (a family pause and School time still lock)."""
+        locked_by = list(day.locked_by) if day and day.locked else []
+        if here is None:
+            return locked_by
+        kind = self.schedule_lock(person)
+        return [e for e in locked_by if e == PAUSE or lock_kinds(self.hass, [e], kind) != ["bedtime"]]
+
+    def _locks_document(
+        self, person: str, day: PersonDay | None, here: DeviceExtra | None = None
+    ) -> dict[str, Any]:
         """Why and until when the person is held ("lock" {by, until}), a family pause ("pause" {until, reason}), and
         the next bedtime or school time ("next_lock" {at, by, kind}), for winding down before it. The weekly
         schedule's Sleep and School are locks too (by "schedule"), and its next one is the next_lock when it comes
-        before the lock entities'."""
+        before the lock entities'. [here]: a bedtime lift on the device asking (_device_bedtime_lift), which takes
+        bedtime off the lock there and names its own end as the next lock."""
         out: dict[str, Any] = {}
         pause = pause_of(self.hass, person)
         if pause:
             out["pause"] = pause
-        # Extra time an adult gave at bedtime lifts it until then (bedtime_lift.py): {since, until}
+        # Extra time an adult gave at bedtime lifts it until then (bedtime_lift.py): {since, until}; on one device,
+        # its bedtime lift says the same there (a TV relocks at its end by itself if it loses Home Assistant)
         if (lifted := self.bedtime_lift.view(person)) is not None:
             out["bedtime_lifted"] = lifted
+        elif here is not None:
+            out["bedtime_lifted"] = {"since": None, "until": dt_util.as_local(here.until).isoformat()}
         scheduled = self.schedule_now.get(person)
-        if day and day.locked:
-            ends = [lock_until(self.hass, [e for e in day.locked_by if e not in (PAUSE, SCHEDULE)])]
+        locked_by = self._locked_by_here(person, day, here)
+        if locked_by:
+            ends = [lock_until(self.hass, [e for e in locked_by if e not in (PAUSE, SCHEDULE)])]
             if pause:
                 ends.append(dt_util.parse_datetime(pause["until"]))
-            if SCHEDULE in day.locked_by and scheduled is not None:
+            if SCHEDULE in locked_by and scheduled is not None:
                 ends.append(scheduled.until)
             until = max((e for e in ends if e is not None), default=None)
-            kinds = lock_kinds(self.hass, day.locked_by, self.schedule_lock(person))
+            kinds = lock_kinds(self.hass, locked_by, self.schedule_lock(person))
             out["lock"] = {
-                "by": list(day.locked_by),
+                "by": locked_by,
                 # bedtime, school_time, pause or other: the first of them (bedtime before school time before a pause)
                 "kind": next((k for k in ("bedtime", "school_time", "pause", "other") if k in kinds), "other"),
                 "kinds": kinds,
@@ -825,9 +854,37 @@ class Household:
             upcoming = {"at": dt_util.as_local(back[0]).isoformat(), "by": back[1], "kind": "bedtime"}
             if (ends := self._bedtime_end(person, back[1])) is not None and ends > back[0]:
                 upcoming["until"] = dt_util.as_local(ends).isoformat()
+        # A bedtime lift on this device: bedtime there starts at its end instead (in bedtime now, or a bedtime that
+        # starts before it ends)
+        if here is not None and (back := self._device_bedtime_back(person, here, upcoming)) is not None:
+            upcoming = back
         if upcoming:
             out["next_lock"] = upcoming
         return out
+
+    def _device_bedtime_back(
+        self, person: str, here: DeviceExtra, upcoming: dict[str, Any] | None
+    ) -> dict[str, Any] | None:
+        """The next lock on a device whose bedtime is lifted till [here].until: bedtime at the lift's end, when the
+        person is in bedtime now or the next lock is a bedtime that starts before then. None when the lift's end
+        isn't in bedtime (it lasts past the wake, or no bedtime comes before it)."""
+        at = upcoming and dt_util.parse_datetime(upcoming["at"])
+        if self.in_bedtime(person):
+            by = SCHEDULE if self.schedule_lock(person) == "bedtime" else next(
+                (e for e in self._locked_by(person) if lock_kinds(self.hass, [e]) == ["bedtime"]), SCHEDULE
+            )
+            ends = self._bedtime_end(person, by)
+        elif upcoming and upcoming.get("kind") == "bedtime" and at is not None and at < here.until:
+            by = upcoming["by"]
+            ends = dt_util.parse_datetime(upcoming.get("until") or "")
+        else:
+            return None
+        if ends is not None and ends <= here.until:
+            return None
+        back = {"at": dt_util.as_local(here.until).isoformat(), "by": by, "kind": "bedtime"}
+        if ends is not None:
+            back["until"] = dt_util.as_local(ends).isoformat()
+        return back
 
     def _bedtime_end(self, person: str, by: str) -> datetime | None:
         """When a bedtime held by [by] ends: the schedule's (its Sleep's end now, else the next wake), else the lock
@@ -1905,6 +1962,7 @@ class Household:
         day = self.days.get(person)
         membership = self.membership()
         extras = self.device_extras.of(person, f"hearth:{device_id}") if device_id else []
+        here = self._device_bedtime_lift(person, device_id)
         allowed_here = {e.group for e in extras if e.kind == EXTRA_ALLOW}
         bonus_here: dict[str, int] = {}
         for extra in extras:
@@ -1949,8 +2007,9 @@ class Household:
             "groups": groups,
             # Today's time, bonus time and category limits as a person is shown them (docs/contracts/time-model.md)
             "time": self.time_view(person),
-            "locked": bool(day and day.locked),
-            **self._locks_document(person, day),
+            # A bedtime lift on this device (device_extra.py) takes bedtime off its lock here only
+            "locked": bool(self._locked_by_here(person, day, here)),
+            **self._locks_document(person, day, here),
             # The accessibility apps no group above holds, for a device that can spare them from a lock too
             **({"never_held": sorted(never)} if (never := self.never_held(membership)) else {}),
             # Never paused by Hearth for any reason: the system list enforce.py uses (calls, Settings, Play services,
@@ -2535,7 +2594,18 @@ class Household:
         found = next((t for t in targets_of(self, person) if t["id"] == target), None)
         if found is None:
             raise ServiceValidationError(f"{target} isn't one of {self.person_name(person)}'s devices")
-        if group != ALL and not found["groups"]:
+        if kind == EXTRA_BEDTIME:
+            # Family Link's bedtime is the child's, every device's; a Family Safety platform or a Switch is held all
+            # Sleep by the schedule. Only a Hearth device keeps its own copy of the person's lock
+            if found["via"] != "hearth":
+                raise ServiceValidationError(
+                    f"Bedtime can be lifted on one device only on a TV or phone with Hearth, not on {found['name']}"
+                )
+            if until is None:
+                raise ServiceValidationError("Say until when bedtime is lifted there")
+            group = ALL
+            until = min(until, end_of_day(dt_util.now()))
+        elif group != ALL and not found["groups"]:
             raise ServiceValidationError(
                 f"Only All screen time can be given on {found['name']}: what holds a group there holds it on every "
                 "device of theirs"

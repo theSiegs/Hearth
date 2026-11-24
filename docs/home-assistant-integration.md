@@ -838,6 +838,16 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
     the platform again if the pool is still out.
   - a Switch: Hearth's hold of the Switch is let go (its own limit and Suspend software put back, which still
     apply); by the clock, from now.
+  **Bedtime on one device** (`hearth.allow` with `device` and `bedtime: true`, an `until`, no app or group): bedtime
+  is lifted on that TV or phone with Hearth only, until then (midnight at most). That device's copy of the person's
+  state document isn't locked by bedtime (the schedule's Sleep or a bedtime lock entity), says `bedtime_lifted`
+  `{since: null, until}`, and names the lift's end as `next_lock` (kind bedtime, `until` the wake), so a TV that
+  loses Home Assistant locks again by itself at the end. A family pause and School time still lock there, and the
+  time used there counts as always (a daily time that runs out still stops it). It never moves Family Link's bedtime
+  and never counts as extra time at bedtime, so the person's other devices (phones, tablets, an Xbox, a Switch) stop
+  at bedtime as before. Refused on a Family Link device, a Family Safety platform or a Switch. Example: bedtime at
+  9 PM, and an automation that lifts it on a kid's TVs until 10 PM each night. `kind` is `bedtime` in
+  `device_extras`; `hearth.allow_end` with the `device` (or the id) ends it.
   Each shows in the summary's `device_extras`, in `hearth.explain` (`device_extras`) and as a contract 2 line.
 - Bedtime, School time itself and a family pause still lock the person. An allow lifts Hearth's holds, not those
   locks: a TV can't open one app through a lock without a change on the TV, and Family Link's own bedtime still locks
@@ -2099,7 +2109,7 @@ then sends the same object as an event whenever it changes, at most every 2 seco
   `parent_lock`: a parent's own Family Safety lock; null when not locked). Hearth's limit is All screen time's
   minutes left, and on an Xbox or Switch also each pool its enforcer holds; extra time on that device adds to it (an
   allow there lifts it). The device's own is Family Link's daily limit, Microsoft's allowance or the Switch's limit
-  (`first_party`), unless that number is Hearth's own hold. And `device_extras` `[{id, target, name, via, kind (bonus | allow), group, until,
+  (`first_party`), unless that number is Hearth's own hold. And `device_extras` `[{id, target, name, via, kind (bonus | allow | bedtime), group, until,
   minutes_left, reason}]`: that extra time now (`minutes_left`: a Hearth device's by its use, a Family Link bonus as
   given, the rest by the clock).
 - each person also has `week`: their last 7 local days, newest first, today included: `[{date, minutes {<group id>:

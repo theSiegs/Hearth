@@ -4,11 +4,15 @@ device still reads it; only that device may go past it, today.
 
     bonus  N more minutes there from now, pool or not, till midnight at most
     allow  a group open there until a time
+    bedtime  bedtime lifted there until a time: a Hearth TV or phone only (hearth.allow with bedtime: true)
 
 What it does depends on the device:
 
 - A Hearth TV or phone (hearth:<id>): that device's state document shows the group with the minutes it has left
-  there (a bonus: N less what that device used of the group since; an allow: the group isn't held there).
+  there (a bonus: N less what that device used of the group since; an allow: the group isn't held there). A bedtime
+  lift: that device's copy of the person's document isn't locked by bedtime (the schedule's Sleep, a bedtime lock
+  entity) until then, and names its end as the next lock; a family pause and School time still lock. It never moves
+  Family Link's bedtime, so the person's other devices still stop at bedtime, and their time there still counts.
 - A Family Link device (fl:<id>): a Family Link bonus on that device (add_time_bonus), as Hearth gives for an allow
   of All screen time, so Google's own limit (the one Hearth sets to 0 when All screen time is out) lets that device
   alone go on; Google counts it down. Family Link's app pauses are the child's, every device's, so only All screen
@@ -34,6 +38,7 @@ from homeassistant.util import dt as dt_util
 
 BONUS = "bonus"
 ALLOW = "allow"
+BEDTIME = "bedtime"
 
 
 @dataclass

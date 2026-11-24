@@ -560,9 +560,11 @@ ALLOW_SCHEMA = vol.All(
             vol.Optional("ends_on"): ENDS_ON_SCHEMA,
             # Only on this device of theirs (a target id): a group, open there until the time
             vol.Optional("device"): cv.string,
+            # With a device (a TV or phone with Hearth): bedtime is lifted there until the time, nowhere else
+            vol.Optional("bedtime", default=False): cv.boolean,
         }
     ),
-    cv.has_at_least_one_key("app", "group"),
+    cv.has_at_least_one_key("app", "group", "bedtime"),
 )
 ALLOW_END_SCHEMA = vol.All(
     vol.Schema(
@@ -716,9 +718,24 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         """People may use an app or a group until a time: nothing Hearth holds holds it for them meanwhile."""
         household = loaded_household()
         people = people_of(household, call.data["people"])
-        app, group = what(household, call.data)
         now = dt_util.now()
         until = {p: until_for(household, p, call.data["until"], now) for p in people}
+        if call.data.get("bedtime"):
+            # Bedtime lifted on one TV or phone: the rest of their devices still stop at bedtime
+            if not call.data.get("device"):
+                raise ServiceValidationError("Bedtime is lifted on one device: give the device")
+            if call.data.get("app") or call.data.get("group") or call.data.get("ends_on"):
+                raise ServiceValidationError("A bedtime lift takes a device and a time, not an app, group or place")
+            extras = [
+                household.add_device_extra(p, call.data["device"].strip(), "bedtime", ALL, until=until[p],
+                                           reason=call.data.get("reason"))
+                for p in people
+            ]
+            return {
+                "id": extras[0].id if len(extras) == 1 else [e.id for e in extras],
+                "until": {p: dt_util.as_local(e.until).isoformat() for p, e in zip(people, extras)},
+            }
+        app, group = what(household, call.data)
         if call.data.get("device"):
             if app is not None:
                 raise ServiceValidationError("On one device, allow a group (an app goes with every device)")

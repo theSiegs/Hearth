@@ -199,7 +199,7 @@ def with_time_left(household: Household, person: str, view: dict[str, Any]) -> l
             if left is not None and (hearth is None or max(0, left) < hearth[0]):
                 hearth = (max(0, left), gid)
         for extra in extras:
-            if extra.get("target") != tid or extra.get("group") not in (None, "all"):
+            if extra.get("target") != tid or extra.get("group") not in (None, "all") or extra.get("kind") == "bedtime":
                 continue
             if extra.get("kind") == "allow":
                 hearth = None
@@ -219,7 +219,10 @@ def with_time_left(household: Household, person: str, view: dict[str, Any]) -> l
             left, by, pool = hearth[0], LEFT_BY_HEARTH, hearth[1]
         if own is not None and (left is None or max(0, own) < left):
             left, by, pool = max(0, own), _LEFT_BY.get(via), None
-        if view.get("locked") or view.get("pause"):
+        # Bedtime lifted on this device only (a bedtime device extra): only bedtime's lock is taken off here
+        bedtime_here = any(e.get("target") == tid and e.get("kind") == "bedtime" for e in extras)
+        bedtime_only = bedtime_here and set(lock.get("kinds") or [lock.get("kind")]) <= {"bedtime"}
+        if (view.get("locked") and not bedtime_only) or view.get("pause"):
             kind = lock.get("kind") or ("pause" if view.get("pause") else "other")
         elif parent_lock:
             kind = "parent_lock"

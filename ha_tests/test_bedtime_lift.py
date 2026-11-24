@@ -244,3 +244,97 @@ async def test_a_lifted_bedtime_is_the_next_lock_when_its_extra_time_ends(
     # With the bedtime's own end (Family Link's bedtime_end) for a TV that starts it by itself
     wake = (back + timedelta(days=1)).replace(hour=7, minute=0)
     assert sam["next_lock"] == {"at": back.isoformat(), "by": BEDTIME, "kind": "bedtime", "until": wake.isoformat()}
+
+
+# Bedtime lifted on one device (device_extra.py, kind bedtime): hearth.allow with a device and bedtime: true
+
+
+async def _lift_on_tv(hass: HomeAssistant, until: str) -> dict:
+    from test_init import TV_ID
+
+    answer = await hass.services.async_call(
+        DOMAIN,
+        "allow",
+        {"people": ["person.sam"], "device": f"hearth:{TV_ID}", "bedtime": True, "until": until},
+        blocking=True,
+        return_response=True,
+    )
+    await hass.async_block_till_done()
+    return answer
+
+
+async def test_bedtime_lifted_on_one_tv_only(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    from custom_components.hearth.websocket import summary
+    from test_init import TV_ID
+
+    client, secret, set_bedtime = await _sam(hass, hass_client_no_auth, freezer, 21, 45)
+    household = _household(hass)
+    written = len(set_bedtime)
+    assert (await _sam_state(hass, client, secret))["locked"] is True
+
+    answer = await _lift_on_tv(hass, "22:45")
+    assert answer["id"].startswith("dx_")
+    # The TV: not locked by bedtime till 22:45, and bedtime is its next lock then (it relocks by itself offline)
+    sam = await _sam_state(hass, client, secret)
+    assert sam["locked"] is False and "lock" not in sam
+    assert dt_util.parse_datetime(sam["bedtime_lifted"]["until"]).strftime("%H:%M") == "22:45"
+    assert sam["next_lock"]["kind"] == "bedtime"
+    assert dt_util.parse_datetime(sam["next_lock"]["at"]).strftime("%H:%M") == "22:45"
+    # Everywhere else bedtime holds: Family Link's bedtime isn't moved, no extra time at bedtime, the schedule holds
+    assert len(set_bedtime) == written
+    assert household.bedtime_lift.until("person.sam") is None
+    assert "all" in household.schedule_holds("person.sam")
+    other = household._person_document("person.sam")
+    assert other["locked"] is True and other["lock"]["kind"] == "bedtime" and "bedtime_lifted" not in other
+    # The page: the TV isn't locked, the extra says so
+    person = next(p for p in summary(household.hub)["people"] if p["id"] == "person.sam")
+    [extra] = person["device_extras"]
+    assert extra["kind"] == "bedtime" and extra["target"] == f"hearth:{TV_ID}"
+    tv = next(t for t in person["targets"] if t["id"] == f"hearth:{TV_ID}")
+    assert tv["locked"] is False
+
+    # At 22:45 bedtime is back on the TV too
+    await _later(hass, freezer, 61)
+    sam = await _sam_state(hass, client, secret)
+    assert sam["locked"] is True and sam["lock"]["kind"] == "bedtime" and "bedtime_lifted" not in sam
+
+
+async def test_a_tv_bedtime_lift_given_before_bedtime_moves_the_tv_s_next_lock(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    client, secret, _set_bedtime = await _sam(hass, hass_client_no_auth, freezer, 21, 0)
+    before = await _sam_state(hass, client, secret)
+    assert dt_util.parse_datetime(before["next_lock"]["at"]).strftime("%H:%M") == "21:30"
+
+    await _lift_on_tv(hass, "22:30")
+    sam = await _sam_state(hass, client, secret)
+    assert sam["locked"] is False
+    assert sam["next_lock"]["kind"] == "bedtime"
+    assert dt_util.parse_datetime(sam["next_lock"]["at"]).strftime("%H:%M") == "22:30"
+    # Past bedtime, the TV still plays
+    await _later(hass, freezer, 40)
+    assert (await _sam_state(hass, client, secret))["locked"] is False
+    assert _household(hass)._person_document("person.sam")["locked"] is True
+
+
+async def test_a_bedtime_lift_needs_a_hearth_device_and_nothing_else(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    from homeassistant.exceptions import ServiceValidationError
+    from test_init import TV_ID
+
+    await _sam(hass, hass_client_no_auth, freezer, 21, 45)
+    household = _household(hass)
+    for data in (
+        {"bedtime": True, "until": "22:30"},
+        {"bedtime": True, "until": "22:30", "device": f"hearth:{TV_ID}", "group": "games"},
+    ):
+        with pytest.raises(ServiceValidationError):
+            await hass.services.async_call(
+                DOMAIN, "allow", {"people": ["person.sam"], **data}, blocking=True, return_response=True
+            )
+    with pytest.raises(ServiceValidationError):
+        household.add_device_extra("person.sam", "fs:xbox", "bedtime", "all", until=dt_util.now() + timedelta(hours=1))
+    assert household.device_extras.of("person.sam") == []

@@ -294,6 +294,8 @@ def _sync_items(sync: dict[str, Any], now: datetime | None = None) -> list[dict[
 def _extra_text(extra: dict[str, Any], names: dict[str, str]) -> str:
     where = (extra.get("name") or extra["target"]).lower()
     what = "" if extra.get("group") in (None, ALL) else f"{_group_word(extra['group'], names)} "
+    if extra.get("kind") == "bedtime":
+        return f"{where} · bedtime lifted{_till(extra.get('until'))}"
     if extra.get("kind") == "allow":
         return f"{where} · {what}open{_till(extra.get('until'))}"
     if extra.get("via") == "hearth":

@@ -7,6 +7,7 @@
 
 ### Home Assistant integration
 
+- **Bedtime can be lifted on one TV only**: `hearth.allow` with a `device` (a TV or phone with Hearth) and `bedtime: true` keeps that device going until the time given, while the kid's other devices still stop at bedtime. Family Link's bedtime isn't moved, time on that device still counts, and a family pause or School time still locks it. The TV goes back to bedtime by itself at the end, even with Home Assistant down. Example: bedtime at 9 PM, plus an automation that lifts it on a kid's TVs until 10 PM.
 - **Phones get Hearth's app-category values** (`category_values`, `hearth.values/1`) in their state document and `hearth/me`, so a paired client needn't carry its own copy. The TV's document is unchanged. See `docs/contracts/device-api.md`.
 - **The old message design document is gone**: `docs/message-routing.md` now says what Hearth offers a message router (`hearth.notify` and the `hearth_notice` event).
 
