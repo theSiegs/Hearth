@@ -129,8 +129,69 @@ async def test_home_today_ends_with_its_day(
     await _tick(hass, household, freezer, _at(date(2026, 11, 10), 0, 6))
     household.recompute()
     await hass.async_block_till_done()
-    assert household.scheduler.home == {}
     assert hass.states.get(SCHOOL_TODAY).state == "school"
+    # Yesterday's is kept one more day for yesterday's history (its budget was the day off's), and shown nowhere
+    assert household.scheduler.home == {"person.sam": {"2026-11-09": ""}}
+    assert household.scheduler.homes_of("person.sam") == []
+    assert household.budget_on("person.sam", MONDAY)["all"] == 180
+    assert household.budget_on("person.sam", date(2026, 11, 10))["all"] == 60
+    assert hass.states.get("sensor.hearth_sam_screen_time_today").attributes["exceptions"]["home_today"] == []
+    # A cancel of everything doesn't reach back into a day that's over
+    assert household.scheduler.cancel_home(None, None) == []
+    await _tick(hass, household, freezer, _at(date(2026, 11, 11), 0, 6))
+    assert household.scheduler.home == {}
+
+
+async def test_home_today_leaves_a_school_time_off_the_day_already_had(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """A School time off from 13:00 that ends on arriving somewhere keeps its time and its end through home_today, and
+    home_today_cancel ends only the one home_today made."""
+    from datetime import time
+
+    off = async_mock_service(hass, "switch", "turn_off")
+    async_mock_service(hass, "switch", "turn_on")
+    async_mock_service(hass, "familylink", "set_school_time")
+    household = await _kid(hass, hass_client_no_auth, freezer, _at(MONDAY, 7))
+    scheduler = household.scheduler
+    [dentist] = scheduler.take_off(["person.sam"], MONDAY, time(13, 0), "Dentist", {"arrive": "school"})
+    before = scheduler.offs[dentist].view()
+    assert before["from"] == "13:00" and before["ends_on"] == {"arrive": "school"}
+
+    answer = await hass.services.async_call(
+        DOMAIN, "home_today", {"people": ["person.sam"], "reason": "Sick"}, blocking=True, return_response=True
+    )
+    await hass.async_block_till_done()
+    [own] = answer["school_time_off"]
+    assert own != dentist and scheduler.offs[dentist].view() == before
+    assert scheduler.offs[own].applied and [c.data for c in off] == [{"entity_id": SWITCH}]
+    # Asked again: the same one, not another
+    again = await hass.services.async_call(
+        DOMAIN, "home_today", {"people": ["person.sam"], "reason": "Still sick"}, blocking=True, return_response=True
+    )
+    assert again["school_time_off"] == [own] and scheduler.offs[own].reason == "Still sick"
+    # A School time off asked for now doesn't take home_today's over either
+    assert scheduler.take_off(["person.sam"], MONDAY, time(13, 0), "Dentist", {"arrive": "school"}) == [dentist]
+
+    await hass.services.async_call(DOMAIN, "home_today_cancel", {"people": ["person.sam"]}, blocking=True)
+    await hass.async_block_till_done()
+    assert scheduler.offs[dentist].view() == before
+    assert scheduler.home == {} and scheduler.offs[own].restore_from == MONDAY
+
+
+async def test_home_today_cancel_on_a_later_day_drops_only_its_own(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    from datetime import time
+
+    household = await _kid(hass, hass_client_no_auth, freezer, _at(MONDAY, 7))
+    scheduler = household.scheduler
+    tuesday = date(2026, 11, 10)
+    [dentist] = scheduler.take_off(["person.sam"], tuesday, time(13, 0), "Dentist")
+    await hass.services.async_call(DOMAIN, "home_today", {"people": ["person.sam"], "date": "2026-11-10"}, blocking=True)
+    assert len(scheduler.offs) == 2
+    await hass.services.async_call(DOMAIN, "home_today_cancel", {"people": ["person.sam"]}, blocking=True)
+    assert list(scheduler.offs) == [dentist] and scheduler.offs[dentist].start == time(13, 0)
 
 
 async def test_home_today_needs_a_school_day_that_hasn_t_passed(

@@ -8,6 +8,7 @@ digits (Home Assistant reads the 21 digits as a number).
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
 from datetime import date, datetime, time
 from typing import Any
 
@@ -282,26 +283,57 @@ def _apps_of(state) -> list | None:
     return apps
 
 
-# The last whole read of each child's installed apps (installed_apps), for while a list is cut short
+# The last whole read of each child's installed apps (installed_apps), for while a list is cut short. Kept over a
+# restart with what Hearth holds (enforce.py's store: last_installed, restore_installed)
 _LAST_INSTALLED = "hearth_fl_installed"
+# Called when a child's last whole read changed (enforce.py saves it)
+_INSTALLED_CHANGED = "hearth_fl_installed_changed"
+LIMITS_LIST = "_apps_with_time_limits"
 
 
-def installed_apps(hass: HomeAssistant, child: str) -> set[str] | None:
+def last_installed(hass: HomeAssistant) -> dict[str, list[str]]:
+    """Each child's last whole read of their installed apps, to store."""
+    return {child: sorted(apps) for child, apps in hass.data.get(_LAST_INSTALLED, {}).items()}
+
+
+def restore_installed(hass: HomeAssistant, stored: Any) -> None:
+    """Takes the stored last whole reads back in after a restart, before anything asks for a child's installed apps.
+    A read made since (an entry reload keeps them in memory) is newer and stays."""
+    last: dict[str, frozenset[str]] = hass.data.setdefault(_LAST_INSTALLED, {})
+    if not isinstance(stored, dict):
+        return
+    for child, apps in stored.items():
+        if isinstance(apps, list) and str(child) not in last:
+            last[str(child)] = frozenset(a for a in apps if isinstance(a, str) and a)
+
+
+def on_installed_changed(hass: HomeAssistant, changed: Callable[[], None] | None) -> None:
+    hass.data[_INSTALLED_CHANGED] = changed
+
+
+def installed_apps(hass: HomeAssistant, child: str, holding: Iterable[str] = ()) -> set[str] | None:
     """The packages installed on the child's devices, from their Family Link app lists; None when that can't be told
-    (a list missing, or cut short with no whole read of them before).
+    (a list missing, or cut short with no whole read of them before and nothing else to go by).
 
     A list cut short to fit Home Assistant's attribute limit (truncated) is read as the last whole read plus whatever
     the lists show now. Hearth's own pause of every app makes it so: each paused app moves into With time limits,
     which outgrows the limit. Reading that as "not known" swapped the pause of every app for the device lock and
-    back, every few minutes."""
+    back, every few minutes.
+
+    The last whole read is kept over a restart (enforce.py stores it): a restart while every app is paused found the
+    list cut short with nothing remembered, went to the device lock, resumed every app and paused them all again.
+    With no whole read at all (the first start with this), a With time limits list that alone is cut short is read as
+    what the lists show plus [holding], the apps Hearth holds through Family Link for the child: those are the apps
+    that filled it. Another list cut short with no whole read stays unknown."""
     found: set[str] = set()
     seen: set[str] = set()
-    cut_short = False
+    cut: set[str] = set()
     for suffix, state in _child_lists(hass, child):
         apps = _apps_of(state)
         if not isinstance(apps, list):
             return None
-        cut_short = cut_short or bool(state.attributes.get("truncated"))
+        if state.attributes.get("truncated"):
+            cut.add(suffix)
         seen.add(suffix)
         for app in apps:
             package = app.get("package") if isinstance(app, dict) else app
@@ -310,10 +342,18 @@ def installed_apps(hass: HomeAssistant, child: str) -> set[str] | None:
     if seen != set(INSTALLED_LISTS):
         return None
     last: dict[str, frozenset[str]] = hass.data.setdefault(_LAST_INSTALLED, {})
-    if not cut_short:
-        last[child] = frozenset(found)
+    if not cut:
+        if last.get(child) != found:
+            last[child] = frozenset(found)
+            if (changed := hass.data.get(_INSTALLED_CHANGED)) is not None:
+                changed()
         return found
-    return found | last[child] if child in last else None
+    if child in last:
+        return found | last[child]
+    held = {p for p in holding if isinstance(p, str) and "." in p}
+    if cut == {LIMITS_LIST} and held:
+        return found | held
+    return None
 
 
 def app_lists(hass: HomeAssistant, child: str) -> tuple[set[str], set[str] | None]:
