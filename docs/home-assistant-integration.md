@@ -2026,13 +2026,27 @@ Extra time of one group only (Games, say) and extra time on one device lift noth
   meanwhile is theirs and stays (`kept_current`, as for the daily limit). What Hearth moved is kept across restarts,
   so it's put back after one too; a move of another day isn't (that day's override is over). Hearth's page shows
   what was done in the kid's Family Link line (`bedtime_moved`, `bedtime`: `restored` or `kept_current`).
+- **A Family Link bedtime already under way**: moving its start doesn't end it (the call succeeds and the phone stays
+  locked). Bonus time does, as "Add time" in the Family Link app. So each of the kid's devices whose Bedtime active
+  sensor is on gets `familylink.add_time_bonus` {`entity_id` the device's switch, `bonus_minutes` the minutes the lift
+  has left, 1440 at most}, besides the moved start. More extra time gives the minutes more; a device that enters
+  bedtime during the lift gets the rest then; a device a bonus already keeps open as long gets none. A failed call is
+  tried again 5 minutes later, and the start is moved all the same. A bonus can't be shortened, so when the lift ends
+  (its time is up, All screen time ran out, the extra time was taken back) Hearth ends it with `familylink.reset_bonus`
+  (the device's Reset bonus button on an older Family Link). Family Link shows only a device's latest bonus: when that
+  isn't one of the sizes Hearth gave for the lift, it's a parent's and stays (`bedtime_bonus_kept`), since a reset
+  ends every bonus of the day on the device. The bonus is Hearth's own (never a "bonus time given in the Family Link
+  app" grant), is in the activity log as Hearth's call, and gives no minutes in Hearth: it only opens Family Link's
+  bedtime. What was given is kept across restarts, so nothing is given twice and it's reset after one too. Hearth's
+  page has `bedtime_bonus` {device: minutes}, `bedtime_bonus_reset` and `bedtime_bonus_kept` in the kid's Family Link
+  line. Without `familylink.add_time_bonus` (an older Family Link) only the start is moved, as before.
 - **Which night**: Family Link keys a bedtime by the weekday it starts on, and a `today` override is for today's. So
   only a bedtime that starts today, before the extra time ends, is moved (from the child's Bedtime active sensors'
   `bedtime_start`/`bedtime_end`). After midnight the bedtime under way started yesterday: it's left alone, since an
   override of yesterday's weekday isn't known to reach a night already under way, and today's would move tonight's
-  bedtime instead. Hearth's own locks are lifted all the same, so the TVs open but a Family Link phone stays in its
-  bedtime. A moved start is 23:59 at the latest (a start after midnight would read as a bedtime of this morning), so
-  extra time that runs past midnight ends at 23:59 on the phone.
+  bedtime instead. Hearth's own locks are lifted all the same, and the phone opens by its bonus time (a device's, not
+  a night's). A moved start is 23:59 at the latest (a start after midnight would read as a bedtime of this morning);
+  a phone already in bedtime keeps going past midnight on its bonus, one whose bedtime hadn't started stops at 23:59.
 - Family Safety's own downtime (Microsoft's) isn't moved: only Hearth's hold of the platforms is let go.
 
 **One app or group.** `hearth.pause` with `app` (a package) or `group` (an id or name; `all` is the family pause) pauses

@@ -145,6 +145,23 @@ class NativeSync:
         return found
 
     @callback
+    def note_own_bonus(self, person: str, device_id: str, minutes: int) -> None:
+        """A Family Link bonus Hearth added on a device for another reason than extra time's mirror (a bedtime lift's,
+        bedtime_lift.py): Hearth's own today, never read as a parent's."""
+        today = dt_util.now().date().isoformat()
+        mine = self.fl_added.setdefault(person, {"day": today, "devices": {}})
+        if mine.get("day") != today:
+            mine.update({"day": today, "devices": {}})
+        mine["devices"][device_id] = mine["devices"].get(device_id, 0) + minutes
+        self._save()
+
+    @callback
+    def forget_own_bonus(self, person: str, device_id: str) -> None:
+        """The day's bonus on a device was reset: none of it is Hearth's any more."""
+        if self.fl_added.get(person, {}).get("devices", {}).pop(device_id, None) is not None:
+            self._save()
+
+    @callback
     def after_apply(self) -> None:
         """Enforcement just held or let go: what it holds now is watched (and a change already there is seen)."""
         if self.detect():

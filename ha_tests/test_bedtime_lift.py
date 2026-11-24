@@ -1,5 +1,6 @@
 """An adult's extra time at bedtime lifts it while it lasts (bedtime_lift.py): Hearth's own Sleep and lock, and Family
-Link's bedtime tonight through a today-only override, put back afterwards unless a parent changed it meanwhile."""
+Link's bedtime tonight through a today-only override, put back afterwards unless a parent changed it meanwhile. A
+Family Link bedtime already under way is opened with bonus time on the device, reset when the lift ends."""
 
 from datetime import timedelta
 
@@ -244,6 +245,261 @@ async def test_a_lifted_bedtime_is_the_next_lock_when_its_extra_time_ends(
     # With the bedtime's own end (Family Link's bedtime_end) for a TV that starts it by itself
     wake = (back + timedelta(days=1)).replace(hour=7, minute=0)
     assert sam["next_lock"] == {"at": back.isoformat(), "by": BEDTIME, "kind": "bedtime", "until": wake.isoformat()}
+
+
+# A Family Link bedtime already under way: bonus time on the device ends it (moving its start doesn't)
+
+PHONE = "switch.sam_phone"
+DEVICE = "device-1"
+KEY = "family_link|person.sam"
+
+
+def _phone(hass: HomeAssistant, bonus: int = 0) -> None:
+    """Family Link's device switch of Sam's phone, with the latest bonus Family Link shows on it."""
+    hass.states.async_set(
+        PHONE, "off", {"child_id": CHILD, "device_id": DEVICE, "device_name": "Phone", "bonus_minutes": bonus}
+    )
+
+
+def _phone_bedtime(hass: HomeAssistant, on: bool, start: str, end: str) -> None:
+    """The phone's Bedtime active sensor as Family Link gives it: with the device's id."""
+    hass.states.async_set(
+        BEDTIME,
+        "on" if on else "off",
+        {"child_id": CHILD, "device_id": DEVICE, "bedtime_start": start, "bedtime_end": end},
+    )
+
+
+async def _sam_with_phone(hass: HomeAssistant, hass_client_no_auth, freezer, hour: int, minute: int, on: bool = True):
+    """Sam as in _sam, the phone in Family Link's bedtime (or not yet), with Family Link's bonus services."""
+    client, secret, set_bedtime = await _sam(hass, hass_client_no_auth, freezer, hour, minute)
+    add_time = async_mock_service(hass, "familylink", "add_time_bonus")
+    reset = async_mock_service(hass, "familylink", "reset_bonus")
+    _phone(hass)
+    _phone_bedtime(hass, on, _at("21:30"), _at("07:00", 1))
+    await hass.async_block_till_done()
+    return client, secret, set_bedtime, add_time, reset
+
+
+async def test_extra_time_in_a_bedtime_under_way_gives_family_link_bonus_time(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    client, secret, set_bedtime, add_time, reset = await _sam_with_phone(hass, hass_client_no_auth, freezer, 21, 45)
+    household = _household(hass)
+
+    await _bonus(hass, 30)
+    # The phone is in Family Link's bedtime: bonus time for as long as the lift lasts opens it
+    assert [c.data for c in add_time] == [{"entity_id": PHONE, "bonus_minutes": 30}]
+    # Tonight's start is moved as before, so the Family Link app shows when bedtime is back
+    assert [c.data for c in set_bedtime] == [_call("22:15")]
+    assert household.enforcement.last[KEY]["bedtime_bonus"] == {"Phone": 30}
+    assert household.enforcement.last[KEY]["bedtime_moved"] == "22:15"
+    # Hearth's own, so never read as a parent's bonus, and in the activity log as Hearth's call
+    assert household.sync.own_bonus() == {DEVICE: 30}
+    assert any(
+        r.get("service") in ("add_time_bonus", "familylink.add_time_bonus")
+        for r in household.activity.query(kind="call")
+    )
+    assert (await _sam_state(hass, client, secret))["locked"] is False
+
+    # A recompute gives nothing more; more extra time gives the minutes more
+    await _later(hass, freezer, 5)
+    assert len(add_time) == 1
+    await _bonus(hass, 15)
+    assert [c.data for c in add_time][1:] == [{"entity_id": PHONE, "bonus_minutes": 15}]
+    assert set_bedtime[-1].data == _call("22:30")
+
+    # The lift ends: Hearth's bonus is reset (Family Link shows its latest, 15), and the start put back
+    _phone(hass, bonus=15)
+    _phone_bedtime(hass, True, _at("22:30"), _at("07:00", 1))
+    await _later(hass, freezer, 41)
+    assert [c.data for c in reset] == [{"entity_id": PHONE}]
+    assert set_bedtime[-1].data == _call("21:30")
+    last = household.enforcement.last[KEY]
+    assert last["bedtime"] == "restored" and last["bedtime_bonus_reset"] == [PHONE]
+    assert household.bedtime_lift.bonus == {} and household.sync.own_bonus() == {}
+    assert (await _sam_state(hass, client, secret))["locked"] is True
+    assert len(add_time) == 2
+
+
+async def test_a_bedtime_that_has_not_started_only_has_its_start_moved(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Sleep (21:30) holds Sam at 21:45, Family Link's own bedtime starts at 22:00: no bonus, the start moves."""
+    _client, _secret, set_bedtime, add_time, reset = await _sam_with_phone(
+        hass, hass_client_no_auth, freezer, 21, 45, on=False
+    )
+    _phone_bedtime(hass, False, _at("22:00"), _at("07:00", 1))
+    await hass.async_block_till_done()
+    await _bonus(hass, 30)
+    assert [c.data for c in set_bedtime] == [_call("22:15")]
+    assert add_time == []
+
+    # Family Link shows Hearth's start; the lift ends with nothing to reset
+    _phone_bedtime(hass, False, _at("22:15"), _at("07:00", 1))
+    await _later(hass, freezer, 31)
+    assert set_bedtime[-1].data == _call("22:00")
+    assert add_time == [] and reset == []
+
+
+async def test_a_phone_that_enters_bedtime_during_the_lift_gets_the_rest_as_bonus_time(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """The moved start didn't hold the bedtime off (Family Link's bedtime is on at 22:00 all the same)."""
+    _client, _secret, _set_bedtime, add_time, _reset = await _sam_with_phone(
+        hass, hass_client_no_auth, freezer, 21, 45, on=False
+    )
+    _phone_bedtime(hass, False, _at("22:00"), _at("07:00", 1))
+    await hass.async_block_till_done()
+    await _bonus(hass, 30)
+    assert add_time == []
+    freezer.tick(timedelta(minutes=15))
+    _phone_bedtime(hass, True, _at("22:00"), _at("07:00", 1))
+    await _later(hass, freezer, 0)
+    assert [c.data for c in add_time] == [{"entity_id": PHONE, "bonus_minutes": 15}]
+
+
+async def test_without_family_link_s_bonus_service_only_the_start_is_moved(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """An older Family Link (no add_time_bonus): as before, and nothing fails."""
+    client, secret, set_bedtime = await _sam(hass, hass_client_no_auth, freezer, 21, 45)
+    _phone(hass)
+    _phone_bedtime(hass, True, _at("21:30"), _at("07:00", 1))
+    await hass.async_block_till_done()
+    household = _household(hass)
+    await _bonus(hass, 30)
+    assert [c.data for c in set_bedtime] == [_call("22:15")]
+    assert household.bedtime_lift.bonus == {}
+    assert "error" not in household.enforcement.last[KEY]
+    assert (await _sam_state(hass, client, secret))["locked"] is False
+    _phone_bedtime(hass, False, _at("22:15"), _at("07:00", 1))
+    await _later(hass, freezer, 31)
+    assert household.enforcement.last[KEY]["bedtime"] == "restored"
+
+
+async def test_a_parent_s_bonus_on_top_is_not_reset_when_the_lift_ends(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    _client, _secret, _set_bedtime, add_time, reset = await _sam_with_phone(hass, hass_client_no_auth, freezer, 21, 45)
+    await _bonus(hass, 30)
+    assert len(add_time) == 1
+    # A parent adds 10 minutes in the Family Link app: the device's latest bonus isn't one Hearth gave
+    _phone(hass, bonus=10)
+    await _later(hass, freezer, 31)
+    assert reset == []
+    household = _household(hass)
+    assert household.enforcement.last[KEY]["bedtime_bonus_kept"] == [PHONE]
+    assert household.bedtime_lift.bonus == {}
+
+
+async def test_a_phone_a_bonus_already_keeps_open_gets_none(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    _client, _secret, _set_bedtime, add_time, reset = await _sam_with_phone(hass, hass_client_no_auth, freezer, 21, 45)
+    _phone(hass, bonus=60)
+    await hass.async_block_till_done()
+    await _bonus(hass, 30)
+    assert add_time == []
+    await _later(hass, freezer, 31)
+    assert reset == []
+
+
+async def test_after_midnight_the_night_under_way_gets_bonus_time(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """The night that started yesterday can't have its start moved, but bonus time is the device's, not a night's."""
+    _client, _secret, set_bedtime, add_time, reset = await _sam_with_phone(hass, hass_client_no_auth, freezer, 0, 30)
+    _phone_bedtime(hass, True, _at("21:30", -1), _at("07:00"))
+    await hass.async_block_till_done()
+    await _bonus(hass, 30)
+    assert set_bedtime == []
+    assert [c.data for c in add_time] == [{"entity_id": PHONE, "bonus_minutes": 30}]
+    _phone(hass, bonus=30)
+    await _later(hass, freezer, 31)
+    assert [c.data for c in reset] == [{"entity_id": PHONE}]
+
+
+async def test_a_bedtime_bonus_is_reset_after_a_restart(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    _client, _secret, _set_bedtime, add_time, reset = await _sam_with_phone(hass, hass_client_no_auth, freezer, 21, 45)
+    await _bonus(hass, 30)
+    _phone(hass, bonus=30)
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    assert await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    household = _household(hass)
+    assert household.bedtime_lift.bonus["person.sam"]["devices"][DEVICE]["given"] == [30]
+    # Nothing is given twice
+    await _later(hass, freezer, 5)
+    assert len(add_time) == 1
+    await _later(hass, freezer, 26)
+    assert [c.data for c in reset] == [{"entity_id": PHONE}]
+    assert household.bedtime_lift.bonus == {}
+
+
+async def test_a_bonus_family_link_refuses_is_tried_again_and_the_start_still_moves(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    from homeassistant.exceptions import HomeAssistantError
+
+    _client, _secret, set_bedtime = await _sam(hass, hass_client_no_auth, freezer, 21, 45)
+    calls: list[dict] = []
+
+    async def refuse(call) -> None:
+        calls.append(dict(call.data))
+        if len(calls) == 1:
+            raise HomeAssistantError("Family Link did not add the time bonus")
+
+    hass.services.async_register("familylink", "add_time_bonus", refuse)
+    _phone(hass)
+    _phone_bedtime(hass, True, _at("21:30"), _at("07:00", 1))
+    await hass.async_block_till_done()
+    await _bonus(hass, 30)
+    household = _household(hass)
+    assert len(calls) == 1 and household.bedtime_lift.bonus == {}
+    assert [c.data for c in set_bedtime] == [_call("22:15")]
+    assert household.enforcement.last[KEY]["bedtime_error"] is True
+    # Not hammered: a minute later nothing; after the retry wait the rest of the lift is given
+    await _later(hass, freezer, 1)
+    assert len(calls) == 1
+    await _later(hass, freezer, 5)
+    assert calls[1] == {"entity_id": PHONE, "bonus_minutes": 24}
+
+
+
+async def test_a_reset_that_fails_still_puts_the_start_back_and_is_tried_again(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    from homeassistant.exceptions import HomeAssistantError
+
+    _client, _secret, set_bedtime = await _sam(hass, hass_client_no_auth, freezer, 21, 45)
+    async_mock_service(hass, "familylink", "add_time_bonus")
+    resets: list[dict] = []
+
+    async def refuse(call) -> None:
+        resets.append(dict(call.data))
+        if len(resets) == 1:
+            raise HomeAssistantError("Failed to cancel time bonus")
+
+    hass.services.async_register("familylink", "reset_bonus", refuse)
+    _phone(hass)
+    _phone_bedtime(hass, True, _at("21:30"), _at("07:00", 1))
+    await hass.async_block_till_done()
+    await _bonus(hass, 30)
+    _phone(hass, bonus=30)
+    _phone_bedtime(hass, True, _at("22:15"), _at("07:00", 1))
+    await _later(hass, freezer, 31)
+    household = _household(hass)
+    assert len(resets) == 1 and set_bedtime[-1].data == _call("21:30")
+    assert household.bedtime_lift.moved == {} and DEVICE in household.bedtime_lift.bonus["person.sam"]["devices"]
+    # Tried again once the wait is over, not before
+    await _later(hass, freezer, 1)
+    assert len(resets) == 1
+    await _later(hass, freezer, 5)
+    assert resets == [{"entity_id": PHONE}] * 2
+    assert household.bedtime_lift.bonus == {}
 
 
 # Bedtime lifted on one device (device_extra.py, kind bedtime): hearth.allow with a device and bedtime: true

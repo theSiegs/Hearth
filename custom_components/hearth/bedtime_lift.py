@@ -14,15 +14,24 @@ screen time runs out again; an adult taking the extra time back (hearth.remove_b
   time moves it again. When the lift ends, the start Hearth found is put back the same way, only while the bedtime
   still reads Hearth's start or the one it found: a start a parent changed in the Family Link app meanwhile is theirs,
   and stays (kept_current, as the daily limit's hold does).
+- A Family Link bedtime already under way isn't ended by moving its start (seen live: the call succeeds and the phone
+  stays locked). What ends it is bonus time, as "Add time" in the Family Link app gives. So each device of the kid's
+  whose Bedtime active sensor is on gets familylink.add_time_bonus for the minutes the lift has left (more extra time:
+  the minutes more; a device that enters bedtime during the lift gets it then). A bonus can't be shortened, so when
+  the lift ends Hearth resets it (familylink.reset_bonus), unless the device's latest bonus isn't one Hearth gave: a
+  parent's, which stays. The bonus is Hearth's own in native_sync's count (never read as a parent's), and it adds
+  nothing to Hearth's minutes: it only opens Family Link's bedtime.
 
 Which night: Family Link keys a bedtime by the weekday it starts on, and a "today" override is for today's. So only a
 bedtime that starts today, before the extra time ends, is moved. A bedtime that started yesterday evening (it's after
 midnight now) is left alone: an override of yesterday's weekday isn't known to reach a night already under way, and
-today's would move tonight's bedtime instead. Hearth's own locks are lifted all the same. A start moved past midnight
-would read as a bedtime of this morning, so the moved start is 23:59 at the latest.
+today's would move tonight's bedtime instead. Hearth's own locks are lifted all the same, and the bonus opens the phone
+(it's per device, not per night). A start moved past midnight would read as a bedtime of this morning, so the moved
+start is 23:59 at the latest.
 
-The lifts and what Hearth moved are kept with Home Assistant's storage helper, so a bedtime is put back after a restart
-too. A move from another day is gone with that day (the override was that day's only).
+The lifts, what Hearth moved and the bonuses it gave are kept with Home Assistant's storage helper, so a bedtime is put
+back (and a bonus reset) after a restart too. A move from another day is gone with that day (the override was that
+day's only).
 """
 
 from __future__ import annotations
@@ -53,6 +62,8 @@ EXPIRED = "expired"
 # A failed call is tried again after this long
 RETRY = timedelta(minutes=5)
 LATEST_START = "23:59"
+# Family Link's longest bonus (add_time_bonus takes 1 to 1440 minutes)
+LONGEST_BONUS = 1440
 # Fired when extra time lifts a kid's bedtime {person, until}, and when it's back {person}
 EVENT_LIFTED = "hearth_bedtime_lifted"
 EVENT_BACK = "hearth_bedtime_back"
@@ -122,6 +133,9 @@ class BedtimeLifts:
         self.lifts: dict[str, dict[str, str]] = {}
         # By person: what Hearth moved in Family Link: {"child", "day", "weekday", "start", "end", "set"}
         self.moved: dict[str, dict[str, Any]] = {}
+        # By person: the Family Link bonus Hearth gave on devices already in bedtime, to reset when the lift ends:
+        # {"child", "devices": {device id: {"until" (ISO, the lift's end it reaches), "given": [minutes, ...]}}}
+        self.bonus: dict[str, dict[str, Any]] = {}
         self._failed_at: dict[str, datetime] = {}
         # By person: when their last lift ended (not kept over a restart), for sleep_locks_devices' grace
         self.ended_at: dict[str, datetime] = {}
@@ -133,9 +147,14 @@ class BedtimeLifts:
         stored = await self._store.async_load() or {}
         self.lifts = {p: dict(r) for p, r in (stored.get("lifts") or {}).items() if isinstance(r, dict) and r.get("until")}
         self.moved = {p: dict(r) for p, r in (stored.get("moved") or {}).items() if isinstance(r, dict)}
+        self.bonus = {
+            p: dict(r)
+            for p, r in (stored.get("bonus") or {}).items()
+            if isinstance(r, dict) and r.get("child") and isinstance(r.get("devices"), dict)
+        }
 
     def _data(self) -> dict[str, Any]:
-        return {"lifts": self.lifts, "moved": self.moved}
+        return {"lifts": self.lifts, "moved": self.moved, "bonus": self.bonus}
 
     def _save(self) -> None:
         self._store.async_delay_save(self._data, 2)
@@ -227,12 +246,20 @@ class BedtimeLifts:
         """Each recompute: a lift whose time is up, or whose kid has no All screen time left, ends. Says whether the
         person's bedtime is lifted now."""
         now = now or dt_util.now()
+        failed = self._failed_at.get(person)
+        retry = failed is None or now - failed >= RETRY
         if person not in self.lifts:
+            # A bonus of a lift that's over, whose reset failed: tried again
+            if retry and person in self.bonus:
+                self.sync()
             return False
         # A no-limits lift (hearth.no_limits) lasts its time whatever today's time says
         if self.until(person, now) is None or (all_left == 0 and not self.lifts[person].get("no_limits")):
             self.end(person)
             return False
+        # A device that's in Family Link's bedtime and has no bonus for the lift yet (it entered bedtime meanwhile)
+        if retry and self._bonus_due(person, self.until(person, now), now):
+            self.sync()
         return True
 
     # Family Link
@@ -240,7 +267,7 @@ class BedtimeLifts:
     @callback
     def sync(self) -> None:
         """Brings Family Link's bedtime in step with the lifts (one run at a time)."""
-        if self._closed or not (self.lifts or self.moved):
+        if self._closed or not (self.lifts or self.moved or self.bonus):
             return
         if self._task is not None and not self._task.done():
             self._again = True
@@ -250,7 +277,7 @@ class BedtimeLifts:
     async def _async_sync(self) -> None:
         self._again = False
         now = dt_util.now()
-        for person in sorted(set(self.lifts) | set(self.moved)):
+        for person in sorted(set(self.lifts) | set(self.moved) | set(self.bonus)):
             failed = self._failed_at.get(person)
             if failed is not None and now - failed < RETRY:
                 continue
@@ -282,34 +309,144 @@ class BedtimeLifts:
                 found.add(_hhmm(start))
         return found
 
+    def _bonus_due(self, person: str, until: datetime | None, now: datetime) -> list[tuple[Any, str, int]]:
+        """The Family Link bonus the lift still owes: (device switch, device id, minutes) for each of the kid's devices
+        in Family Link's bedtime now that has none for the lift yet (unless a bonus already keeps it open as long), and
+        for each that has one that ends before the lift does (more extra time was given)."""
+        from . import family_link as fl
+
+        if until is None or not self.hass.services.has_service(FL_DOMAIN, "add_time_bonus"):
+            return []
+        child = self.household.family_link_child(person)
+        if not child:
+            return []
+        given = (self.bonus.get(person) or {}).get("devices", {})
+        in_bedtime = {str(s.attributes.get("device_id")) for s in bedtime_sensors(self.hass, child) if s.state == "on"}
+        due: list[tuple[Any, str, int]] = []
+        for device in fl.devices(self.hass, child):
+            device_id = str(device.attributes.get("device_id"))
+            record = given.get(device_id)
+            reaches = dt_util.parse_datetime(str(record.get("until") or "")) if record else None
+            if record is None and device_id not in in_bedtime:
+                continue
+            minutes = math.ceil((until - max(now, reaches or now)).total_seconds() / 60)
+            if minutes <= 0 or (record is None and fl.bonus_left(self.hass, child, device) >= minutes):
+                continue
+            due.append((device, device_id, min(LONGEST_BONUS, minutes)))
+        return due
+
+    async def _give_bonus(self, person: str, until: datetime, now: datetime) -> dict[str, int]:
+        """Bonus time on each device already in Family Link's bedtime, which is what ends a bedtime under way; what
+        was given, by device name. Raises on the first device that fails (those done are kept; retried later)."""
+        added: dict[str, int] = {}
+        for device, device_id, minutes in self._bonus_due(person, until, now):
+            await call_service(self.hass,
+                FL_DOMAIN, "add_time_bonus", {"entity_id": device.entity_id, "bonus_minutes": minutes}, blocking=True
+            )
+            record = self.bonus.setdefault(
+                person, {"child": self.household.family_link_child(person), "devices": {}}
+            )
+            mine = record["devices"].setdefault(device_id, {"given": []})
+            mine["until"] = until.isoformat()
+            mine["given"].append(minutes)
+            self._save()
+            self.household.sync.note_own_bonus(person, device_id, minutes)
+            self.household.enforcement.refresh_soon(device.entity_id)
+            added[str(device.attributes.get("device_name") or device.entity_id)] = minutes
+        return added
+
+    async def _bonus_back(self, person: str) -> dict[str, list[str]]:
+        """The lift is over: the bonus Hearth gave for it is reset on each device (a bonus can't be shortened, and
+        whether an unused one runs out by itself isn't known), unless the device's latest bonus isn't Hearth's. Family
+        Link shows only a device's latest bonus: one of a size the lift didn't give is a parent's (where extra time's
+        mirror gave some too, one bigger than all of Hearth's), and resetting would end theirs. Raises when a reset
+        fails (kept, retried later)."""
+        from . import family_link as fl
+
+        record = self.bonus.get(person)
+        if record is None:
+            return {}
+        child = str(record["child"])
+        own = self.household.sync.own_bonus()
+        devices = {str(d.attributes.get("device_id")): d for d in fl.devices(self.hass, child)}
+        reset: list[str] = []
+        kept: list[str] = []
+        for device_id in list(record["devices"]):
+            given = [int(m) for m in record["devices"][device_id].get("given") or []]
+            device = devices.get(device_id)
+            if device is not None:
+                showing = fl._int(device.attributes.get("bonus_minutes")) or 0
+                mirrored = own.get(device_id, 0) - sum(given)
+                if showing > 0 and (showing > own.get(device_id, 0) if mirrored > 0 else showing not in given):
+                    kept.append(device.entity_id)
+                else:
+                    await self.household.sync.reset_bonus(child, device)
+                    self.household.sync.forget_own_bonus(person, device_id)
+                    reset.append(device.entity_id)
+            del record["devices"][device_id]
+            self._save()
+        self.bonus.pop(person, None)
+        self._save()
+        if kept:
+            _LOGGER.info("%s: a Family Link bonus that isn't Hearth's is kept on %s", person, ", ".join(kept))
+        return {"bedtime_bonus_reset": reset, "bedtime_bonus_kept": kept}
+
     async def _sync_person(self, person: str, now: datetime) -> None:
         until = self.until(person, now)
         moved = self.moved.get(person)
         today = now.date().isoformat()
+        key = f"family_link|{person}"
+        did: dict[str, Any] = {}
+        failed: Exception | None = None
         if until is None:
+            # A reset that fails doesn't stop the start from being put back
+            try:
+                did = await self._bonus_back(person)
+            except Exception as err:  # noqa: BLE001 - raised again below, after tonight's start
+                failed = err
             if moved is not None:
-                await self._put_back(person, moved, today)
+                await self._put_back(person, moved, today, did)
+            elif any(did.values()):
+                self.household.enforcement.note(key, **did)
+            if failed is not None:
+                raise failed
             return
+        # A bedtime already under way first: only bonus time opens it. A failure there doesn't stop the start's move
+        try:
+            if added := await self._give_bonus(person, until, now):
+                did = {"bedtime_bonus": added}
+        except Exception as err:  # noqa: BLE001 - raised again below, after tonight's start
+            failed = err
+        if not await self._move_start(person, until, now, did) and did:
+            self.household.enforcement.note(key, **did)
+        if failed is not None:
+            raise failed
+
+    async def _move_start(self, person: str, until: datetime, now: datetime, did: dict[str, Any]) -> bool:
+        """Tonight's Family Link bedtime starts when the lift ends. Says whether it noted what it did ([did], the
+        bonus given just before, goes in the same note: Hearth's page shows an enforcer's last note only)."""
+        moved = self.moved.get(person)
+        today = now.date().isoformat()
         if not self.hass.services.has_service(FL_DOMAIN, "set_bedtime"):
-            return
+            return False
         want = moved_start(until, now)
         if moved is not None and moved.get("day") == today:
             if moved.get("kept") or moved["set"] == want:
-                return
+                return False
             # More extra time: tonight's start moves again, unless a parent changed it meanwhile
             if self._current_starts(moved["child"], today) - {moved["set"], moved["start"]}:
                 moved["kept"] = True
-                self.household.enforcement.note(f"family_link|{person}", bedtime=KEPT_CURRENT)
-                return
+                self.household.enforcement.note(f"family_link|{person}", bedtime=KEPT_CURRENT, **did)
+                return True
             await self._set_bedtime(moved["child"], want, moved["end"], moved["weekday"])
             moved["set"] = want
-            self.household.enforcement.note(f"family_link|{person}", bedtime_moved=want)
-            return
+            self.household.enforcement.note(f"family_link|{person}", bedtime_moved=want, **did)
+            return True
         child = self.household.family_link_child(person)
         window = tonight(self.hass, child, now) if child else None
         # Only tonight's bedtime, and only when it would start before the extra time ends
         if window is None or window[0] >= until or window[1] <= now or _hhmm(window[0]) >= want:
-            return
+            return False
         start, end = _hhmm(window[0]), _hhmm(window[1])
         # Kept before the call: a restart in between still puts it back
         self.moved[person] = {
@@ -323,9 +460,10 @@ class BedtimeLifts:
         self._save()
         await self._set_bedtime(child, want, end, now.isoweekday())
         self.household.enforcement.refresh_soon(next(iter(bedtime_sensors(self.hass, child))).entity_id)
-        self.household.enforcement.note(f"family_link|{person}", bedtime_moved=want, bedtime_was=start)
+        self.household.enforcement.note(f"family_link|{person}", bedtime_moved=want, bedtime_was=start, **did)
+        return True
 
-    async def _put_back(self, person: str, moved: dict[str, Any], today: str) -> None:
+    async def _put_back(self, person: str, moved: dict[str, Any], today: str, did: dict[str, Any] | None = None) -> None:
         """The lift is over: tonight's start back as Hearth found it, while it still reads Hearth's (or that one)."""
         key = f"family_link|{person}"
         if moved.get("day") != today:
@@ -337,7 +475,7 @@ class BedtimeLifts:
             await self._set_bedtime(moved["child"], moved["start"], moved["end"], moved["weekday"])
             outcome = RESTORED
         self.moved.pop(person, None)
-        self.household.enforcement.note(key, bedtime=outcome, bedtime_start=moved["start"])
+        self.household.enforcement.note(key, bedtime=outcome, bedtime_start=moved["start"], **(did or {}))
 
 
 def lift_minutes(minutes: int, all_left: float | None) -> int:
