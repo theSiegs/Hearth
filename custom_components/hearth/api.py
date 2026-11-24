@@ -944,10 +944,14 @@ class TodoItemView(HomeAssistantView):
     """POST /api/hearth/device/{device_id}/todo_item (header X-Hearth-Secret, a kid's own phone): {"entity_id": their
     list (todo_lists in the state document), "uid": an item's, "status": "completed" | "needs_action"} -> {"ok": true,
     "entity_id", "uid", "status", "granted": a reward granted by this tick}. Checked off as the kid themselves
-    (todos.py: their reward is granted, the adults are told with an Undo). Refusals carry "error" and "code" (the same)
-    and "message", words to show as they are: 403 not_yours (not this phone's kid's list, or a phone of nobody's or
-    of an adult's), 404 unknown_item (gone, e.g. a new day), 409 undone (an adult undid its reward: an adult's to
-    untick), 400 bad_request, 429 too_often."""
+    (todos.py: their reward is granted, the adults are told with an Undo); "granted" is true while a reward of some
+    minutes or money stands for the check-off (not one the pool's daily cap cut to nothing). Its own refusals carry
+    "error" and "code" (the same) and "message", words to show as they are: 403 not_yours (not this phone's kid's
+    list, or a phone of nobody's or of an adult's), 404 unknown_item (gone, e.g. a new day), 409 undone (an adult
+    undid its reward: an adult's to untick), 409 too_often (this item's reward was earned MAX_KID_GRANTS times today:
+    an adult's to tick), 400 bad_request, 429 too_often (the phone's check-offs in a minute, counted on their own:
+    try again in a minute). As on every device route, 401 not_paired, 403 not_local and 503 not_set_up carry "error"
+    alone."""
 
     url = "/api/hearth/device/{device_id}/todo_item"
     name = "api:hearth:device:todo_item"
@@ -967,35 +971,37 @@ class TodoItemView(HomeAssistantView):
             return _error(HTTPStatus.SERVICE_UNAVAILABLE, "not_set_up")
         if not hub.authorized(device_id, request.headers.get(HEADER_SECRET)):
             return _error(HTTPStatus.UNAUTHORIZED, "not_paired")
-        if hub.too_many_events(device_id):
-            return _error(HTTPStatus.TOO_MANY_REQUESTS, "too_often")
+        if hub.too_many_todo_posts(device_id):
+            return refused(HTTPStatus.TOO_MANY_REQUESTS, "too_often", "Too many at once: try again in a minute")
         body = await _json_body(request)
+        uid = text(body.get("uid"), 64) if isinstance(body, dict) else None
         if (
-            not isinstance(body, dict)
+            uid is None
+            or uid != body["uid"]
             or not isinstance(body.get("entity_id"), str)
-            or not isinstance(body.get("uid"), str)
             or body.get("status") not in ("completed", "needs_action")
         ):
-            return _error(HTTPStatus.BAD_REQUEST, "bad_request")
+            return refused(HTTPStatus.BAD_REQUEST, "bad_request", "That couldn't be read")
         household = hub.household
         person = household.device_person(device_id) if hub.kind(device_id) != KIND_TV else None
         kid = person is not None and household.options.get(CONF_ROLES, {}).get(person) == "kid"
         if not kid or person not in household.todos.kids() or body["entity_id"] != todo_entity_id(person):
             return refused(HTTPStatus.FORBIDDEN, "not_yours", "That isn't your list")
         try:
-            household.todos.occurrence(body["uid"], person)
-            granted = household.todos.check(
-                body["uid"], body["status"] == "completed", Actor(DEVICE, person, via="phone")
-            )
+            household.todos.occurrence(uid, person)
+            key = household.todos.check(uid, body["status"] == "completed", Actor(DEVICE, person, via="phone"))
         except ChoreError as err:
             if err.code == "gone":
                 return refused(HTTPStatus.NOT_FOUND, "unknown_item", str(err))
             if err.code == "not_yours":
                 return refused(HTTPStatus.FORBIDDEN, "not_yours", str(err))
+            # undone, too_often (the item's reward, earned too many times today): an adult's to tick or untick
             return refused(HTTPStatus.CONFLICT, err.code, str(err))
+        # A reward stands for it: minutes or money, not a grant the pool's daily cap cut to nothing
+        entry = next((e for e in household.todos.ledger if e["key"] == key), None) if key else None
+        granted = entry is not None and ((entry.get("minutes") or 0) > 0 or (entry.get("cents") or 0) > 0)
         return web.json_response(
-            {"ok": True, "entity_id": body["entity_id"], "uid": body["uid"], "status": body["status"],
-             "granted": bool(granted) and body["status"] == "completed"}
+            {"ok": True, "entity_id": body["entity_id"], "uid": uid, "status": body["status"], "granted": granted}
         )
 
 

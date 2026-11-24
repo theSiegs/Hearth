@@ -236,11 +236,20 @@ has one per kid, to-dos and chores together; a chore is an item with a reward), 
 themselves: a reward is granted on a check-off with no approval step and taken back by the check back, and the
 adults are told with an Undo.
 
-- 200 `{"ok": true, "entity_id", "uid", "status", "granted"}` (`granted`: a reward stands for this check-off).
-- Refused: `{"error", "code" (the same), "message"}`, the message in words to show as they are. 403 `not_yours` (not
-  this phone's kid's list, or a phone of an adult's or nobody's); 404 `unknown_item` (not on the list now: a new
-  day, deleted); 409 `undone` (an adult undid its reward: only an adult unticks it); 400 `bad_request`; 401
-  `not_paired`; 429 `too_often`.
+- 200 `{"ok": true, "entity_id", "uid", "status", "granted"}`. `granted`: a reward of some minutes or money stands
+  for this check-off (false for an item with no reward, a check back, and minutes the group's daily cap cut to 0).
+  Checking off an item that is checked already changes nothing and answers the same.
+- Refused with `{"error", "code" (the same), "message"}`, the message in words to show as they are:
+  - 400 `bad_request`: a body that isn't the three fields above (a `uid` is at most 64 characters).
+  - 403 `not_yours`: not this phone's kid's list, or a phone of an adult's or nobody's, or a TV.
+  - 404 `unknown_item`: not on the list now (a new day, deleted).
+  - 409 `undone`: an adult undid its reward; only an adult unticks it.
+  - 409 `too_often`: this item's reward was earned 3 times today (check off, back, off again...); nothing is
+    changed and only an adult can check it off today. Checking back and items without a reward are never refused so.
+  - 429 `too_often`: more than 20 check-offs from this phone in a minute; try again in a minute. They are counted
+    on their own: they never use up the phone's asks (`/ask`) or events.
+- Refused with `{"error"}` alone, as on every device route: 401 `not_paired` (unknown device or wrong secret), 403
+  `not_local` (not from the home network), 503 `not_set_up`.
 - A check-off is never queued offline by Hearth: the answer is the result.
 
 ### Usage Hearth doesn't count
