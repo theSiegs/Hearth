@@ -3070,7 +3070,7 @@ class Household:
         if not candidates:
             return set()
         child = self.family_link_child(person)
-        installed = fl.installed_apps(self.hass, child) if child else None
+        installed = fl.installed_apps(self.hass, child, self.enforcement.family_link_holding(person)) if child else None
         if not installed:
             return set()
         day = self.days.get(person)
@@ -3094,7 +3094,7 @@ class Household:
         if not apps or self._locks_now(person) or self.in_bedtime(person):
             return set()
         child = self.family_link_child(person)
-        installed = fl.installed_apps(self.hass, child) if child else None
+        installed = fl.installed_apps(self.hass, child, self.enforcement.family_link_holding(person)) if child else None
         if not installed:
             return set()
         membership = self.membership()

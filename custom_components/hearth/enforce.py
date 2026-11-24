@@ -562,6 +562,24 @@ class Enforcement:
                 set(data.get("items", [])), data.get("entity_id"), restore=dict(data.get("restore") or {})
             )
         self.last = {key: dict(record) for key, record in (stored.get("last") or {}).items() if isinstance(record, dict)}
+        # Each child's last whole read of their Family Link app lists, back before the first run asks for it: a
+        # list cut short by Hearth's own pauses must not read as "apps not known" after a restart
+        fl.restore_installed(self.hass, stored.get("fl_installed"))
+        fl.on_installed_changed(self.hass, self._installed_changed)
+
+    @callback
+    def _installed_changed(self) -> None:
+        if not self._closed:
+            self._save()
+
+    def family_link_holding(self, person: str) -> set[str]:
+        """The packages Hearth holds for the person through Family Link, with those a pause call may have paused
+        (maybe_paused); never the devices."""
+        found: set[str] = set()
+        for key, held in self.held.items():
+            if key_parts(key) == (FAMILY_LINK, person):
+                found |= _holding(held)
+        return found - {DEVICES}
 
     def _save(self) -> None:
         self._store.async_delay_save(self._data, 2)
@@ -575,6 +593,8 @@ class Enforcement:
             },
             # What Hearth last did through each parental control: kept over a restart for Hearth's page
             "last": self.last,
+            # Each Family Link child's last whole read of their installed apps (family_link.installed_apps)
+            "fl_installed": fl.last_installed(self.hass),
         }
 
     async def async_flush(self) -> None:
@@ -1127,7 +1147,7 @@ class Enforcement:
         prefix, so Chrome and any other launchable com.android app are paused; launchers, keyboards and accessibility
         apps are spared later, household.never_held). The whole-device lock when the installed apps aren't known."""
         child = fl.child_of(self.hass, enforcer.entity_id)
-        installed = fl.installed_apps(self.hass, child) if child else None
+        installed = fl.installed_apps(self.hass, child, self.family_link_holding(enforcer.person)) if child else None
         if not installed:
             return {DEVICES}
         # A standing rule's apps (Messages while out without an adult) stay open too

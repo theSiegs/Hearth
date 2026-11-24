@@ -98,6 +98,63 @@ async def test_pausing_every_app_doesn_t_flip_back_to_the_device_lock_when_the_l
     assert len(calls["resume"]) == resumes and len(calls["pause"]) == pauses
 
 
+async def test_a_restart_while_every_app_is_paused_doesn_t_swap_to_the_device_lock(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """After a restart nothing is remembered in memory and the With time limits list is still cut short by Hearth's
+    own pauses. The apps Hearth holds are what filled it: the pauses stay, with no device lock and no resume."""
+    calls = await sam_out_of_time(hass, hass_client_no_auth, freezer)
+    await _opened(hass, freezer)
+    household = _household(hass)
+    held = _held(hass)
+    assert "Devices" not in held and {CHROME, LATE, GAME} <= set(held)
+    pauses, resumes = len(calls["pause"]), len(calls["resume"])
+    limited = [{"package": p, "limit_minutes": 1} for p in sorted({CHROME, LATE, GAME, DIALER} & set(held))]
+    hass.states.async_set(
+        "sensor.sam_apps_with_time_limits", str(len(limited)), {"child_id": "42", "apps": limited[:1], "truncated": True}
+    )
+    hass.states.async_set("sensor.sam_apps_without_limits", "2", {"child_id": "42", "apps": [{"package": MESSAGES}, {"package": DIALER}]})
+    # The restart: no whole read in memory, and none stored (the first start with a Hearth that stores it)
+    hass.data.pop("hearth_fl_installed")
+    for _ in range(3):
+        await minutes(hass, freezer, 3, OUT)
+    assert household.open_apps(SAM) == {MESSAGES}
+    assert "Devices" not in _held(hass) and {CHROME, LATE, GAME} <= set(_held(hass))
+    assert len(calls["resume"]) == resumes and len(calls["pause"]) == pauses
+
+
+async def test_the_last_whole_read_of_the_installed_apps_is_stored_and_comes_back(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    from custom_components.hearth import family_link as fl
+    from custom_components.hearth.enforce import Enforcement
+
+    await sam_out_of_time(hass, hass_client_no_auth, freezer)
+    household = _household(hass)
+    whole = sorted([MESSAGES, CHROME, LATE, DIALER, GAME])
+    assert fl.installed_apps(hass, "42") == set(whole)
+    assert household.enforcement._data()["fl_installed"] == {"42": whole}
+    await household.enforcement._store.async_save(household.enforcement._data())
+    # A restart: nothing in memory, and the lists cut short. Loaded with what Hearth holds, before its first run
+    hass.data.pop("hearth_fl_installed")
+    hass.states.async_set(
+        "sensor.sam_apps_with_time_limits", "4", {"child_id": "42", "apps": [{"package": CHROME}], "truncated": True}
+    )
+    hass.states.async_set("sensor.sam_apps_without_limits", "1", {"child_id": "42", "apps": [{"package": MESSAGES}]})
+    assert fl.installed_apps(hass, "42") is None
+    fresh = Enforcement(hass, household.hub.entry.entry_id)
+    await fresh.async_load()
+    assert fl.installed_apps(hass, "42") == set(whole)
+    fl.on_installed_changed(hass, household.enforcement._installed_changed)
+    # With nothing stored, only a With time limits list cut short alone reads as what Hearth holds
+    hass.data.pop("hearth_fl_installed")
+    assert fl.installed_apps(hass, "42", {GAME, LATE, "Devices"}) == {CHROME, MESSAGES, GAME, LATE}
+    hass.states.async_set(
+        "sensor.sam_apps_without_limits", "9", {"child_id": "42", "apps": [{"package": MESSAGES}], "truncated": True}
+    )
+    assert fl.installed_apps(hass, "42", {GAME, LATE}) is None
+
+
 async def test_messaging_s_limit_out_and_apart_opens_messages_only(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:

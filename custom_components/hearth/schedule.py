@@ -218,6 +218,8 @@ class Off:
     failed_at: datetime | None = None
     # Put back sooner, that day, when the person's place says so: {"arrive" | "leave": <place key>} (places.py)
     ends_on: dict[str, str] | None = None
+    # Made by hearth.home_today (keep_home): the only School time off hearth.home_today_cancel ends
+    home: bool = False
 
     def view(self) -> dict[str, Any]:
         return {
@@ -301,6 +303,12 @@ class Scheduler:
                 )
             except (KeyError, ValueError):
                 continue
+            # Stored before home was kept: a whole-day one of a day the person is kept home on was keep_home's
+            off.home = (
+                bool(raw["home"])
+                if "home" in raw
+                else off.start is None and off.ends_on is None and self.home_on(off.person, off.day) is not None
+            )
             self.offs[off.id] = off
 
     def _data(self) -> dict[str, Any]:
@@ -322,6 +330,7 @@ class Scheduler:
                     "restore_from": o.restore_from.isoformat() if o.restore_from else None,
                     "windows": o.windows,
                     "ends_on": o.ends_on,
+                    "home": o.home,
                 }
                 for o in self.offs.values()
             ],
@@ -402,39 +411,66 @@ class Scheduler:
         return self.home.get(person, {}).get(day.isoformat())
 
     def homes_of(self, person: str) -> list[dict[str, Any]]:
-        return [{"date": d, "reason": r} for d, r in sorted(self.home.get(person, {}).items())]
+        """The days from today on the person is kept home (yesterday's is kept for the history only, _prune_home)."""
+        today = dt_util.now().date().isoformat()
+        return [{"date": d, "reason": r} for d, r in sorted(self.home.get(person, {}).items()) if d >= today]
 
     def keep_home(self, people: list[str], day: date, reason: str | None) -> list[str]:
         """The people are home on [day]: a day off for them alone, and School time off for the day for those with
-        Family Link. Returns the School time off ids."""
+        Family Link. Returns the School time off ids.
+
+        The School time off is keep_home's own (Off.home), next to any the day already has (one from 13:00 that ends
+        on arriving somewhere): that one keeps its time, reason and ends_on, and cancel_home leaves it."""
         reason = (reason or "").strip()[:MAX_REASON]
         for person in people:
             self.home.setdefault(person, {})[day.isoformat()] = reason
+        ids: list[str] = []
+        for person in people:
+            if self.child(person) is None:
+                continue
+            own = next((o for o in self._home_offs(person, day) if o.restore_from is None or o.restore_from > day), None)
+            if own is None:
+                own = Off(secrets.token_hex(6), person, day, None, home=True)
+                self.offs[own.id] = own
+            own.reason = reason or HOME_REASON
+            ids.append(own.id)
         self._save()
-        with_fl = [p for p in people if self.child(p) is not None]
-        return self.take_off(with_fl, day, None, reason or HOME_REASON) if with_fl else []
+        return ids
+
+    def _home_offs(self, person: str, day: date) -> list[Off]:
+        return [o for o in self.offs.values() if o.home and o.person == person and o.day == day]
 
     def cancel_home(self, people: list[str] | None, day: date | None) -> list[str]:
-        """Not home after all: each one's day is a school day again, and School time comes back as a cancelled School
-        time off does. Returns the people it changed."""
+        """Not home after all: each one's day is a school day again, and the School time off keep_home made ends as a
+        cancelled School time off does (not taken off yet: dropped; taken off: put back from today). Any other School
+        time off of that day stays. Returns the people it changed."""
+        today = dt_util.now().date()
         changed: list[str] = []
         for person in list(self.home):
             if people is not None and person not in people:
                 continue
             days = self.home[person]
-            for iso in [d for d in days if day is None or d == day.isoformat()]:
+            # Not a day that's over (yesterday's, kept for the history)
+            for iso in [d for d in days if d >= today.isoformat() and (day is None or d == day.isoformat())]:
                 del days[iso]
                 if person not in changed:
                     changed.append(person)
-                self.cancel([person], date.fromisoformat(iso))
+                for off in self._home_offs(person, date.fromisoformat(iso)):
+                    if off.applied:
+                        off.restore_from = today
+                    else:
+                        del self.offs[off.id]
             if not days:
                 del self.home[person]
         self._save()
         return changed
 
     def _prune_home(self, today: date) -> None:
+        """Yesterday's stays one more day: its history (household.budget_on of the day before) is still asked for,
+        and must show the day off's budget. Everything else asks by date (home_on) or from today on (homes_of)."""
+        keep_from = (today - timedelta(days=1)).isoformat()
         for person in list(self.home):
-            self.home[person] = {d: r for d, r in self.home[person].items() if d >= today.isoformat()}
+            self.home[person] = {d: r for d, r in self.home[person].items() if d >= keep_from}
             if not self.home[person]:
                 del self.home[person]
 
@@ -454,7 +490,13 @@ class Scheduler:
         ids: list[str] = []
         for person in people:
             same = next(
-                (o for o in self.offs.values() if o.person == person and o.day == day and not o.applied), None
+                (
+                    o
+                    for o in self.offs.values()
+                    # Never hearth.home_today's own: that one stays whole-day, and its cancel ends it alone
+                    if o.person == person and o.day == day and not o.applied and not o.home
+                ),
+                None,
             )
             if same is not None:
                 same.start, same.reason = start, (reason or same.reason or "").strip()[:MAX_REASON]

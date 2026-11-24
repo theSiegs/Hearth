@@ -972,13 +972,17 @@ Hearth never blocks again by itself: an adult decides.
 record in Family Link of the setting to put back (a Family Link before the fork's fix saved the pause itself when it
 paused an app right after resuming it). `hearth.release_stray_pauses` (`person`; `limits`: minutes per package;
 `dry_run`) puts each such app back to no app limit, or to the minutes given: apps Hearth paused in the last 7 days
-(its action log), at 1 minute, not in Family Link's `paused_apps`, and not held by Hearth now. It reads only a whole
-With time limits list (never one cut short), and its calls are Hearth's own, so the adults aren't told about them.
+(its action log), at a 1-minute limit that is on, not in Family Link's `paused_apps`, not blocked, and not held (or
+possibly held) by Hearth now. It reads only whole With time limits and Blocked apps lists (never one cut short or
+missing: writing a limit to a blocked app can unblock it), and refuses for 3 minutes after Hearth let go of a Family
+Link hold of the kid's, while the list may still show a pause that was just resumed. An app whose call fails is named
+in `failed` and the others still go back. Its calls are Hearth's own, so the adults aren't told about them.
 
 **A list cut short.** Pausing every app (daily time out while an app stays open, e.g. Messages while away from adults)
 moves each one into Family Link's With time limits list, which then outgrows Home Assistant's attribute limit and is
 cut short (`truncated`). The apps installed are then read as the last whole read plus what the lists show, so Hearth
-keeps the apps paused rather than swapping to the device lock and back.
+keeps the apps paused rather than swapping to the device lock and back. The last whole read is kept over a restart of
+Home Assistant; with none yet, a With time limits list cut short reads as what it shows plus the apps Hearth holds.
 
 - **Told:** an app unblocked (still installed); an app's time limit raised or taken off; an app made Always allowed
   or put on a Switch's allow list. The text says the app, what changed, where and when, e.g. "Pins was unblocked in
