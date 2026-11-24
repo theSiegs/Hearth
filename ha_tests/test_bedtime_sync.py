@@ -799,6 +799,94 @@ async def test_the_bedtime_lift_s_moved_start_is_not_a_parent_s_change(
     assert household.week.data.today.get(SAM) is None
 
 
+async def _extra_time_on_the_xbox(hass: HomeAssistant, minutes: int) -> None:
+    await _call(hass, "add_bonus", {"person": SAM, "minutes": minutes, "group": "all", "device": "fs:xbox"})
+
+
+def _said_changed_in_an_app(hass: HomeAssistant) -> list[str]:
+    return [o["text"] for o in _household(hass).origins_of(SAM) if o["kind"] == "bedtime"]
+
+
+async def test_extra_time_s_moved_end_given_twice_is_not_a_parent_s_change(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Extra time given twice in an evening moves the Xbox's end twice (21:30, then 22:30): both are Hearth's own
+    writes, never "Bedtime 10:30 PM tonight · changed in Family Safety"."""
+    apps = await _started(hass, hass_client_no_auth, freezer, at=(20, 40))
+    await _tick(hass, freezer, apps, 5)
+    await _extra_time_on_the_xbox(hass, 30)
+    await _tick(hass, freezer, apps)
+    await _extra_time_on_the_xbox(hass, 90)
+    assert [(d["end_hour"], d["end_minute"]) for d in apps.fs(platform="Xbox")] == [(21, 30), (22, 30)]
+    for _ in range(5):
+        await _tick(hass, freezer, apps)
+    assert _sync(hass).offers == []
+    assert _said_changed_in_an_app(hass) == []
+    assert _household(hass).week.data.today.get(SAM) is None
+    assert len(apps.fs()) == 2  # and bedtime sync writes nothing over it
+
+
+async def test_extra_time_s_moved_end_left_after_it_ended_early_is_not_a_parent_s_change(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Extra time ended early and Family Safety didn't take the put back: the end Hearth moved still shows until
+    midnight, and is still Hearth's."""
+    apps = await _started(hass, hass_client_no_auth, freezer, at=(20, 40))
+    await _tick(hass, freezer, apps, 5)
+    await _extra_time_on_the_xbox(hass, 90)
+    await _tick(hass, freezer, apps)
+    assert apps.fs_today["Xbox"][1] == ["07:00", "22:30"]
+    apps.fail["Xbox"] = HomeAssistantError("Xbox Family Settings isn't signed in")
+    await _call(hass, "allow_end", {"people": [SAM], "device": "fs:xbox"})
+    for _ in range(5):
+        await _tick(hass, freezer, apps)
+    assert apps.fs_today["Xbox"][1] == ["07:00", "22:30"]
+    assert _sync(hass).offers == []
+    assert _said_changed_in_an_app(hass) == []
+    assert _household(hass).week.data.today.get(SAM) is None
+
+
+async def test_a_parent_s_family_safety_change_is_still_told_after_hearth_moved_the_end(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """A parent's own change in the Family Safety app (no call of Hearth's) is theirs, also on a day Hearth moved the
+    end for extra time."""
+    apps = await _started(hass, hass_client_no_auth, freezer, at=(20, 40))
+    await _tick(hass, freezer, apps, 5)
+    await _extra_time_on_the_xbox(hass, 30)
+    await _tick(hass, freezer, apps)
+    assert _said_changed_in_an_app(hass) == []
+    # A parent sets Monday's Xbox hours to end at 23:00 in the Family Safety app
+    apps.fs_today.pop("Xbox")
+    apps.fs_weekly["Xbox"]["monday"] = ["07:00", "23:00"]
+    apps.publish()
+    for _ in range(3):
+        await _tick(hass, freezer, apps)
+    offers = _sync(hass).offers
+    assert [(o["via"], o["platform"], o["day"], o["bedtime"]) for o in offers] == [
+        ("family_safety", "Xbox", "mon", "23:00")
+    ]
+    said = _said_changed_in_an_app(hass)
+    assert len(said) == 1 and said[0].startswith("Bedtime 11 PM tonight · changed in Family Safety")
+
+
+async def test_a_parent_s_family_safety_change_follows_tonight_with_an_offer(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    apps = await _started(hass, hass_client_no_auth, freezer, at=(18, 0))
+    await _tick(hass, freezer, apps, 5)
+    apps.fs_weekly["Xbox"]["monday"] = ["07:00", "22:30"]
+    apps.publish()
+    await _tick(hass, freezer, apps)
+    await _tick(hass, freezer, apps)
+    household = _household(hass)
+    today = household.week.data.today[SAM]
+    assert today["by"] == "family_safety" and today["changes"][-1] == ["22:30", "sleep"]
+    assert [(o["platform"], o["bedtime"]) for o in _sync(hass).offers] == [("Xbox", "22:30")]
+    said = _said_changed_in_an_app(hass)
+    assert len(said) == 1 and said[0].startswith("Bedtime 10:30 PM tonight · changed in Family Safety")
+
+
 # The device lock as the gap cover (household.sleep_locks_devices)
 
 
