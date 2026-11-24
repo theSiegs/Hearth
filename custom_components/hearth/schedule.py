@@ -38,6 +38,12 @@ Today's day type comes from School days (schooldays.py): school, half_day, day_o
 
 hearth.school_time_off takes School time off for some people on a date (today by default), from a time if given.
 
+hearth.home_today keeps a kid home on a school day (a sick day): that day is a day off for them alone. Their weekly
+schedule and limits are the Day off's, and with Family Link their School time is taken off for the whole day (as
+school_time_off, put back on their next school day). hearth.home_today_cancel undoes it; on the day itself School time
+goes back on inside their window, as a cancelled School time off does. Kept per person and date (home), till the day
+has passed.
+
 Putting School time back is the delicate part. Switching it on outside the kid's window opens a window from then until
 23:59, so Hearth switches it on only inside the kid's own weekly window for today (some hours shorter on a half day),
 then at once pins today's window to those hours (set_school_time, scope today), and checks each minute until the
@@ -108,6 +114,8 @@ MAX_REASON = 120
 EVENT_SCHEDULE = "hearth_schedule"
 # The reason of the School time off a day off takes
 DAY_OFF_REASON = "Day off"
+# The reason of the School time off a kid kept home takes, when none is given
+HOME_REASON = "Home today"
 # Family Safety's limit of a weekday (Windows, or the Xbox through the Xbox Family Settings sign-in)
 FS_LIMIT = "set_screentime_limit"
 FULL_DAY = 1440
@@ -254,6 +262,8 @@ class Scheduler:
         self._done_at: dict[str, datetime] = {}
         # What Hearth blocked from website lists in Family Safety itself (no sync_site_list): {account: {url: [domains]}}
         self.fs_sites = fs_site_list.FsSiteList(hass, {}, self._save)
+        # Kids kept home on a school day (hearth.home_today): person -> {ISO date: reason}
+        self.home: dict[str, dict[str, str]] = {}
 
     # Storage
 
@@ -270,6 +280,12 @@ class Scheduler:
         # An older Hearth kept the Switches' as sw_limits; its fs_limits were Family Safety's own today-only changes,
         # which Family Safety put back itself: nothing of Hearth's to put back
         self.temporary.load(stored.get("temporary_limits"), stored.get("sw_limits"))
+        self.home = {
+            str(person): {str(d): str(r or "") for d, r in days.items()}
+            for person, days in (stored.get("home") or {}).items()
+            if isinstance(days, dict)
+        }
+        self._prune_home(dt_util.now().date())
         for raw in stored.get("offs", []):
             try:
                 off = Off(
@@ -294,6 +310,7 @@ class Scheduler:
             "limits_set": self.limits_set,
             "temporary_limits": self.temporary.dump(),
             "fs_sites": self.fs_sites.owned,
+            "home": self.home,
             "offs": [
                 {
                     "id": o.id,
@@ -377,6 +394,49 @@ class Scheduler:
             return None
         zone = now.tzinfo
         return datetime.combine(today, window[0], zone), datetime.combine(today, window[1], zone)
+
+    # Kept home (a sick day)
+
+    def home_on(self, person: str, day: date) -> str | None:
+        """The reason the person is kept home on [day] ("" when none was given), or None when they aren't."""
+        return self.home.get(person, {}).get(day.isoformat())
+
+    def homes_of(self, person: str) -> list[dict[str, Any]]:
+        return [{"date": d, "reason": r} for d, r in sorted(self.home.get(person, {}).items())]
+
+    def keep_home(self, people: list[str], day: date, reason: str | None) -> list[str]:
+        """The people are home on [day]: a day off for them alone, and School time off for the day for those with
+        Family Link. Returns the School time off ids."""
+        reason = (reason or "").strip()[:MAX_REASON]
+        for person in people:
+            self.home.setdefault(person, {})[day.isoformat()] = reason
+        self._save()
+        with_fl = [p for p in people if self.child(p) is not None]
+        return self.take_off(with_fl, day, None, reason or HOME_REASON) if with_fl else []
+
+    def cancel_home(self, people: list[str] | None, day: date | None) -> list[str]:
+        """Not home after all: each one's day is a school day again, and School time comes back as a cancelled School
+        time off does. Returns the people it changed."""
+        changed: list[str] = []
+        for person in list(self.home):
+            if people is not None and person not in people:
+                continue
+            days = self.home[person]
+            for iso in [d for d in days if day is None or d == day.isoformat()]:
+                del days[iso]
+                if person not in changed:
+                    changed.append(person)
+                self.cancel([person], date.fromisoformat(iso))
+            if not days:
+                del self.home[person]
+        self._save()
+        return changed
+
+    def _prune_home(self, today: date) -> None:
+        for person in list(self.home):
+            self.home[person] = {d: r for d, r in self.home[person].items() if d >= today.isoformat()}
+            if not self.home[person]:
+                del self.home[person]
 
     def offs_of(self, person: str) -> list[dict[str, Any]]:
         return [o.view() for o in sorted(self.offs.values(), key=lambda o: (o.day, o.id)) if o.person == person]
@@ -478,6 +538,7 @@ class Scheduler:
         today = now.date()
         if self.day != today.isoformat():
             self.day, self.marks, self.limits_set = today.isoformat(), {}, {}
+            self._prune_home(today)
             self._save()
         kind = self.day_type(today)
         config = self.config

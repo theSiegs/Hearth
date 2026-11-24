@@ -666,6 +666,19 @@ SCHOOL_TIME_OFF_SCHEMA = vol.Schema(
         vol.Optional("ends_on"): ENDS_ON_SCHEMA,
     }
 )
+HOME_TODAY_SCHEMA = vol.Schema(
+    {
+        vol.Required("people"): vol.All(cv.ensure_list, [cv.entity_id], vol.Length(min=1)),
+        vol.Optional("date"): cv.date,
+        vol.Optional("reason"): cv.string,
+    }
+)
+HOME_TODAY_CANCEL_SCHEMA = vol.Schema(
+    {
+        vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id]),
+        vol.Optional("date"): cv.date,
+    }
+)
 SCHOOL_TIME_OFF_CANCEL_SCHEMA = vol.Schema(
     {
         vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id]),
@@ -815,6 +828,33 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         changed = household.scheduler.cancel(people, call.data.get("date"))
         entry_task(hass, household.hub.entry.entry_id, household.scheduler.async_tick(), "hearth school time back")
         return {"ids": changed}
+
+    async def home_today(call: ServiceCall) -> ServiceResponse:
+        """The people are kept home on a school day (today by default): a day off for them alone, and School time
+        off for the day for those with Family Link."""
+        household = loaded_household()
+        people = people_of(household, call.data["people"])
+        today = dt_util.now().date()
+        day = call.data.get("date") or today
+        if day < today:
+            raise ServiceValidationError("That day has passed")
+        from .schooldays import HALF_DAY, SCHOOL
+
+        day_type = household.day_type_on(day)
+        if day_type not in (SCHOOL, HALF_DAY):
+            raise ServiceValidationError(f"{day.isoformat()} isn't a school day ({day_type})")
+        ids = household.scheduler.keep_home(people, day, call.data.get("reason"))
+        household.recompute()
+        entry_task(hass, household.hub.entry.entry_id, household.scheduler.async_tick(), "hearth home today")
+        return {"people": people, "date": day.isoformat(), "school_time_off": ids}
+
+    async def home_today_cancel(call: ServiceCall) -> ServiceResponse:
+        household = loaded_household()
+        people = people_of(household, call.data["people"]) if call.data.get("people") else None
+        changed = household.scheduler.cancel_home(people, call.data.get("date"))
+        household.recompute()
+        entry_task(hass, household.hub.entry.entry_id, household.scheduler.async_tick(), "hearth home today ended")
+        return {"people": changed}
 
     # Today's time (time_model.py): bonus time, a raised limit, limits paused
 
@@ -967,6 +1007,17 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         "school_time_off_cancel",
         school_time_off_cancel,
         schema=SCHOOL_TIME_OFF_CANCEL_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+    register_service(
+        hass, DOMAIN, "home_today", home_today, schema=HOME_TODAY_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    )
+    register_service(
+        hass,
+        DOMAIN,
+        "home_today_cancel",
+        home_today_cancel,
+        schema=HOME_TODAY_CANCEL_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
 

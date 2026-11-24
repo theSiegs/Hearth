@@ -161,7 +161,7 @@ class PersonLocked(HearthPersonEntity, BinarySensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict:
-        return {"locked_by": self.day.locked_by if self.day else []}
+        return {"person": self.person, "locked_by": self.day.locked_by if self.day else []}
 
 
 class SchoolDay(BinarySensorEntity):

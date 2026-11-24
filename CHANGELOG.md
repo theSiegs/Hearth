@@ -8,6 +8,8 @@
 ### Home Assistant integration
 
 - **Bedtime can be lifted on one TV only**: `hearth.allow` with a `device` (a TV or phone with Hearth) and `bedtime: true` keeps that device going until the time given, while the kid's other devices still stop at bedtime. Family Link's bedtime isn't moved, time on that device still counts, and a family pause or School time still locks it. The TV goes back to bedtime by itself at the end, even with Home Assistant down. Example: bedtime at 9 PM, plus an automation that lifts it on a kid's TVs until 10 PM.
+- **Home today**: `hearth.home_today` keeps a kid home on a school day (a sick day). That day is a day off for them alone: their Day off schedule and limits, and Family Link School time off for the day. `hearth.home_today_cancel` undoes it.
+- **School today sensor** per kid (`sensor.hearth_<kid>_school_today`): `school`, `half_day`, `off` or `home_today`, with today's School time window from Family Link (or the weekly schedule's School mode). Place, Mode, Bedtime, Locked and School today now carry a `person` attribute, and together form a documented contract: `docs/contracts/people-entities.md`.
 - **Phones get Hearth's app-category values** (`category_values`, `hearth.values/1`) in their state document and `hearth/me`, so a paired client needn't carry its own copy. The TV's document is unchanged. See `docs/contracts/device-api.md`.
 - **The old message design document is gone**: `docs/message-routing.md` now says what Hearth offers a message router (`hearth.notify` and the `hearth_notice` event).
 

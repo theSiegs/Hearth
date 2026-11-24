@@ -445,6 +445,33 @@ school_time_off:
       selector:
         object:
 
+home_today:
+  fields:
+    people:
+      required: true
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    date:
+      selector:
+        date:
+    reason:
+      example: Sick
+      selector:
+        text:
+
+home_today_cancel:
+  fields:
+    people:
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    date:
+      selector:
+        date:
+
 school_time_off_cancel:
   fields:
     people:

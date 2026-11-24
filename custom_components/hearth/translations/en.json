@@ -126,6 +126,15 @@
       "person_bedtime": {
         "name": "Bedtime"
       },
+      "person_school_today": {
+        "name": "School today",
+        "state": {
+          "school": "School",
+          "half_day": "Half day",
+          "off": "No school",
+          "home_today": "Home today"
+        }
+      },
       "daily_time_left": {
         "name": "Daily time left"
       },
@@ -914,6 +923,38 @@
         "ends_on": {
           "name": "Ends on",
           "description": "Today only: School time comes back sooner, for each person, when they arrive at a place or leave one: {\"arrive\": \"school\"}, {\"leave\": \"home\"} or a favorite place's key. An unknown or stale place never ends it."
+        }
+      }
+    },
+    "home_today": {
+      "name": "Home today",
+      "description": "Keeps kids home on a school day (a sick day; today by default): a day off for them alone, with the Day off's schedule and limits, and Family Link School time off for the day. Their School today sensor says home_today.",
+      "fields": {
+        "people": {
+          "name": "People",
+          "description": "Who."
+        },
+        "date": {
+          "name": "Date",
+          "description": "The school day; today when empty."
+        },
+        "reason": {
+          "name": "Reason",
+          "description": "Why, for the record."
+        }
+      }
+    },
+    "home_today_cancel": {
+      "name": "Cancel home today",
+      "description": "The day is a school day again; School time comes back inside the window, as with a cancelled School time off.",
+      "fields": {
+        "people": {
+          "name": "People",
+          "description": "Whose; everyone's when empty."
+        },
+        "date": {
+          "name": "Date",
+          "description": "Which day; every day when empty."
         }
       }
     },
