@@ -1610,6 +1610,14 @@ the people chosen):
 - `hearth.school_time_off` (`people`; `date`, today by default; `from`, a time; `reason`) does the same for anyone,
   any day; `hearth.school_time_off_cancel` (`people`, `date`) drops one not started, or puts one already off back from
   today.
+- `hearth.home_today` (`people`; `date`, a school or half day, today by default; `reason`) keeps kids home, a sick day:
+  that day is a day off for them alone. Their weekly schedule and limits are the Day off's (the other days' budgets),
+  and with Family Link their School time is taken off for the whole day, as `hearth.school_time_off` does. The household's
+  day type doesn't change, and none of a day off's extra time is given. `hearth.home_today_cancel` (`people`, `date`)
+  makes it a school day again; School time comes back as with `hearth.school_time_off_cancel` (which also cancels any
+  other School time off of theirs that day). Each kid's **School today** sensor (`sensor.hearth_<kid>_school_today`:
+  `school`, `half_day`, `off` or `home_today`, with today's School time window) is described in
+  `docs/contracts/people-entities.md`.
 
 **Putting School time back.** Switching School time on outside a kid's window opens a window from then until 23:59,
 so Hearth switches it on only on a school day (or half day), inside the kid's own weekly window for today (read from
@@ -2857,7 +2865,8 @@ or ended), `hearth_enforced`, `hearth_new_app`, `hearth_parent_pin_used`, `heart
 Per person with a TV profile: **Last video started** (see [A kids profile's YouTube](#a-kids-profiles-youtube)).
 
 Services: `hearth.add_bonus`, `hearth.remove_bonus`, `hearth.set_budget`, `hearth.pause`, `hearth.pause_end`, `hearth.allow`,
-`hearth.allow_end`, `hearth.explain`, `hearth.school_time_off`, `hearth.school_time_off_cancel`, `hearth.set_schedule`,
+`hearth.allow_end`, `hearth.explain`, `hearth.school_time_off`, `hearth.school_time_off_cancel`, `hearth.home_today`,
+`hearth.home_today_cancel`, `hearth.set_schedule`,
 `hearth.copy_schedule`, `hearth.change_today`, `hearth.resume_schedule`, `hearth.get_schedule` (see
 [Exceptions](#exceptions) and [Schedule](#schedule)), `hearth.play_on_tv` (event
 `hearth_command_done`, see [Play on a TV](#play-on-a-tv));

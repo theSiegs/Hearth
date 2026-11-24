@@ -134,6 +134,7 @@ async def async_setup_entry(
     for person in household.week_people():
         people.append(PersonMode(hub, person, "mode"))
         people.append(PersonBedtime(hub, person, "bedtime"))
+        people.append(PersonSchoolToday(hub, person, "school_today"))
     async_add_entities(people)
     async_add_entities([AppsToSort(hub), DayType(hub)])
     # Each Glint Panel's View and On the tablet (glint_panel/)
@@ -365,7 +366,10 @@ class PersonMode(HearthPersonEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return {k: v for k, v in self.hub.household.mode_of(self.person).items() if k != "mode"}
+        return {
+            "person": self.person,
+            **{k: v for k, v in self.hub.household.mode_of(self.person).items() if k != "mode"},
+        }
 
 
 class PersonBedtime(HearthPersonEntity, SensorEntity):
@@ -383,7 +387,27 @@ class PersonBedtime(HearthPersonEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         found = self.hub.household.bedtime_tonight(self.person)
-        return {"wake": found.get("wake"), "source": found.get("source")} if found else {}
+        return {"person": self.person, "wake": found.get("wake") if found else None,
+                "source": found.get("source") if found else None}
+
+
+class PersonSchoolToday(HearthPersonEntity, SensorEntity):
+    """The kid's school today: school, half_day, off, or home_today (kept home, hearth.home_today); today's School
+    time window (start, end) as it is, with no travel time, from Family Link (else the School mode of their weekly
+    schedule), and what decided the day (docs/contracts/people-entities.md)."""
+
+    _attr_translation_key = "person_school_today"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = ["school", "half_day", "off", "home_today"]
+
+    @property
+    def native_value(self) -> str:
+        return self.hub.household.school_today(self.person)["state"]
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        found = self.hub.household.school_today(self.person)
+        return {"person": self.person, **{k: v for k, v in found.items() if k != "state"}}
 
 
 class PersonLastVideoStarted(HearthPersonEntity, SensorEntity):
@@ -442,6 +466,7 @@ class PersonPlace(HearthPersonEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         view = self.hub.household.places.view(self.person)
         return {
+            "person": self.person,
             **{k: view[k] for k in ("name", "since", "source", "accuracy", "fresh", "as_of")},
             **self.hub.household.presence.view(self.person),
         }

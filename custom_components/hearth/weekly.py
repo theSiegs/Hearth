@@ -394,6 +394,8 @@ class Week:
         self._undo: list[Undo] = []
         # The day type of a date (Household.day_type_on)
         self.type_of: Callable[[date], str] = lambda d: SCHOOL if d.weekday() < 5 else "weekend"
+        # One person's day type of a date, when it differs from the household's (a kid kept home: Household.day_type_of)
+        self.person_type_of: Callable[[str, date], str] | None = None
 
     # Storage
 
@@ -462,7 +464,7 @@ class Week:
     def resolve(self, person: str, day: date, day_type: str | None = None, *, with_today: bool = True) -> Day:
         """What [day] uses for the person: its changes and limits."""
         sched = self.schedule_of(person)
-        day_type = day_type or self.type_of(day)
+        day_type = day_type or (self.person_type_of(person, day) if self.person_type_of else self.type_of(day))
         key, half = day_key_for(day, day_type)
         own = sched["days"].get(key) or {}
         modes = self.data.modes

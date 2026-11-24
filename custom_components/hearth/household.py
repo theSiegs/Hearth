@@ -137,7 +137,7 @@ from . import parent_pin
 from .media import media_rooms
 from .phones import person_phones
 from .profiles import REF_PREFIX, is_ref, split_tv_key, tv_key
-from .schooldays import SchoolDays
+from .schooldays import DAY_OFF, HALF_DAY, SCHOOL, SchoolDays
 from .live import LiveTracker, Observation, Together
 from .nintendo import playing_entities, playing_title, switch_console, switch_name
 from .sources import (
@@ -317,6 +317,7 @@ class Household:
         # The weekly schedule (weekly.py): each kid's modes and limits per day
         self.week = Week(hass, hub.entry.entry_id, lambda: self.limits.data.budgets, lambda: self.options)
         self.week.type_of = self.day_type_on
+        self.week.person_type_of = self.day_type_of
         self.limits.week = self.week
         # The schedule's bedtime kept in step in Family Link and Family Safety (bedtime_sync.py)
         self.bedtime_sync = BedtimeSync(hass, self, hub.entry.entry_id)
@@ -1347,8 +1348,8 @@ class Household:
         is_school = (
             self.school.school if self.school.day == today else self.school.budget_is_school(self.school.decide_type(today))
         )
-        kind = SCHOOL_DAY if is_school else OTHER_DAY
-        day_type = self.day_type_on(today)
+        household_kind = SCHOOL_DAY if is_school else OTHER_DAY
+        household_day_type = self.day_type_on(today)
         if new_day or self.today != today:
             # Today-only changes of the schedule end at midnight
             self.week.new_day(today)
@@ -1356,6 +1357,9 @@ class Household:
         for person in self.people():
             # The weekly schedule now: the mode, and what it locks or closes (weekly.py); today's limits
             self.schedule_now[person] = self.week.now(person, now)
+            # A kid kept home has a day off of their own: the Day off's limits and the other days' budgets
+            day_type = self.home_type(person, today, household_day_type)
+            kind = OTHER_DAY if day_type != household_day_type else household_kind
             day_limits = self.week.limits_on(person, today, day_type)
             devices = {device: merge(r) for device, r in readings.get(person, {}).items()}
             if _LOGGER.isEnabledFor(logging.DEBUG):
@@ -1478,6 +1482,63 @@ class Household:
                 found.setdefault(person, set()).add(package)
         return lambda person: found.get(person, set())
 
+    def home_type(self, person: str, day: date, day_type: str) -> str:
+        """[day_type] for the person: a school or half day they're kept home on (hearth.home_today) is a day off."""
+        if day_type in (SCHOOL, HALF_DAY) and self.scheduler.home_on(person, day) is not None:
+            return DAY_OFF
+        return day_type
+
+    def day_type_of(self, person: str, day: date) -> str:
+        """The person's day type of a date: the household's (day_type_on), a day off while they're kept home."""
+        return self.home_type(person, day, self.day_type_on(day))
+
+    def school_today(self, person: str, now: datetime | None = None) -> dict[str, Any]:
+        """The person's school today, for their School today sensor: {state: school | half_day | off | home_today,
+        start, end (local ISO, None without a window), decided_by, window_source: family_link | schedule | None,
+        reason (home_today's)}. The window is Family Link's School time for today (shorter on a half day), else the
+        School mode of their weekly schedule; as it is, with no travel time."""
+        now = dt_util.as_local(now or dt_util.now())
+        today = now.date()
+        household_type = self.day_type_on(today)
+        home = self.scheduler.home_on(person, today) if household_type in (SCHOOL, HALF_DAY) else None
+        state = "home_today" if home is not None else household_type if household_type in (SCHOOL, HALF_DAY) else "off"
+        out: dict[str, Any] = {
+            "state": state,
+            "start": None,
+            "end": None,
+            "decided_by": "home_today" if home is not None
+            else self.school.reason if self.school.day == today else self.school.decide(today)[1],
+            "window_source": None,
+        }
+        if home is not None:
+            out["reason"] = home
+        if state not in (SCHOOL, HALF_DAY):
+            return out
+        window = self.scheduler.window_today(person, now) if self.scheduler.child(person) else None
+        source = "family_link"
+        if window is None:
+            window, source = self._schedule_school_window(person, now), "schedule"
+        if window is not None:
+            out.update(start=window[0].isoformat(), end=window[1].isoformat(), window_source=source)
+        return out
+
+    def _schedule_school_window(self, person: str, now: datetime) -> tuple[datetime, datetime] | None:
+        """Today's School mode in the person's weekly schedule: from its first start to the end of its last."""
+        from .weekly import SCHOOL_MODE
+
+        modes = self.week.data.modes
+        changes = self.week.resolve(person, now.date()).changes
+        school = [i for i, (_, mode) in enumerate(changes) if modes.get(mode, {}).get("allows") == SCHOOL_MODE]
+        if not school or school[-1] + 1 >= len(changes):
+            return None
+        start, end = changes[school[0]][0], changes[school[-1] + 1][0]
+        zone = now.tzinfo
+        day = now.date()
+        return (
+            datetime.combine(day, time(start // 60, start % 60), zone),
+            datetime.combine(day, time(end // 60, end % 60), zone),
+        )
+
     def day_type_on(self, day: date) -> str:
         """A date's day type: today's as last worked out (the entity and the calendar too), another day's from the
         dates typed in and the rule (schooldays.type_by_dates)."""
@@ -1523,7 +1584,7 @@ class Household:
         and the rule (schooldays.type_by_dates) and the budgets now."""
         if day == self.today and (today := self.days.get(person)) is not None:
             return self.day_budget(today)
-        limits = self.week.limits_on(person, day, self.school.type_by_dates(day))
+        limits = self.week.limits_on(person, day, self.home_type(person, day, self.school.type_by_dates(day)))
         return {g.id: limits.get(g.id) for g in self.groups}
 
     # New apps
@@ -2254,6 +2315,8 @@ class Household:
             # A parent's change in the Family Link, Nintendo or Family Safety app that lifts one of Hearth's holds
             "grants": [g.view() for g in self.grants.of(person)],
             "school_time_off": self.off_views(person),
+            # Kept home on a school day (hearth.home_today)
+            "home_today": self.scheduler.homes_of(person),
             # A standing rule while it lifts something (presence_rules.py: Messages while out without an adult)
             "rules": [view] if (view := self.away.view(person)) is not None else [],
         }
