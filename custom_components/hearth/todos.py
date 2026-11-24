@@ -127,6 +127,11 @@ async def async_actor(hass: HomeAssistant, hub, user_id: str | None, via: str = 
     return Actor(KID, person, user_id, via) if person else Actor(SHARED, user_id=user_id, via=via)
 
 
+def todo_entity_id(person: str) -> str:
+    """The kid's list entity (todo.py names it so)."""
+    return f"todo.hearth_{person.split('.', 1)[-1]}"
+
+
 def worth(summary: str, default: int) -> int:
     """The old lists' "+N" tag, else the default."""
     match = _TAG.search(summary or "")
@@ -739,6 +744,26 @@ class ChoreBook:
         self.ledger.append(entry)
         self._changed()
         return entry
+
+    def device_lists(self, person: str) -> list[dict[str, Any]]:
+        """A kid's own phone's view of their lists (the state document's todo_lists): one list per kid, today's items
+        with their uid, title, status, due and reward (docs/contracts/device-api.md)."""
+        if person not in self.kids():
+            return []
+        items = []
+        for occ in self.items(person):
+            due = occ.due.isoformat() if occ.due is not None else None
+            items.append(
+                {
+                    "uid": occ.id,
+                    "summary": occ.task["title"],
+                    "status": "completed" if occ.done is not None else "needs_action",
+                    "due": due,
+                    "reward": self.reward_label(occ.task),
+                }
+            )
+        return [{"entity_id": todo_entity_id(person), "name": f"{self.household.person_name(person)}'s to-do",
+                 "items": items}]
 
     def counts(self, person: str) -> dict[str, int]:
         items = self.items(person)

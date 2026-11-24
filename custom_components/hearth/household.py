@@ -2271,6 +2271,9 @@ class Household:
             # kid / adult as set on Hearth's page (kind_set); else a kid when they have limits
             body["person"]["kind"] = role or ("kid" if any(g["minutes_left"] is not None for g in body["person"]["groups"]) else "person")
             body["person"]["kind_set"] = role is not None
+            # A kid's own phone: their to-do list's items, to check off through the device API (todo_item)
+            if role == "kid" and (lists := self.todos.device_lists(person)):
+                body["todo_lists"] = lists
         # What's playing where in the house is anyone's to see: every room's players, for a phone's Music
         body["media_rooms"] = media_rooms(self.hass)
         # Hearth's app-category values (label, default pool, loose, ...), so a client shows and sorts apps by Hearth's

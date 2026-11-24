@@ -214,6 +214,35 @@ A phone's state document (and `hearth/me`) carries Hearth's own app-category val
   without a hub (or with a Hearth older than this key) keeps its own table.
 - Additive: a client that doesn't read it is unaffected. It's part of the document's `version`.
 
+### A kid's to-do list (additive, within contract 3)
+
+A phone paired to a kid (its person's role is kid) gets `todo_lists` in its state document: one entry per list (Hearth
+has one per kid, to-dos and chores together; a chore is an item with a reward), refreshed as the document is.
+
+```json
+"todo_lists": [{"entity_id": "todo.hearth_alex", "name": "Alex's to-do", "items": [
+  {"uid": "<occurrence id>", "summary": "Feed the cat", "status": "needs_action", "due": "2026-11-24", "reward": "+15 min Games"}
+]}]
+```
+
+- `items`: today's: one-off tasks, today's occurrence of each repeating task, and what was done today (`completed`,
+  until the day ends). `status` is `needs_action` or `completed`; `due` a date, a local date-time, or `null`;
+  `reward` its words ("+15 min Games", "+$1.00") or `null`.
+- A TV, a phone of an adult's or nobody's gets no `todo_lists`. The `todo` counts stay as they were. A kid's own
+  `hearth/me` document carries it too.
+
+`POST /api/hearth/device/{device_id}/todo_item` (`X-Hearth-Secret`; on the home network, as every device call):
+`{"entity_id", "uid", "status": "completed" | "needs_action"}`. It checks the item off (or back) as the kid
+themselves: a reward is granted on a check-off with no approval step and taken back by the check back, and the
+adults are told with an Undo.
+
+- 200 `{"ok": true, "entity_id", "uid", "status", "granted"}` (`granted`: a reward stands for this check-off).
+- Refused: `{"error", "code" (the same), "message"}`, the message in words to show as they are. 403 `not_yours` (not
+  this phone's kid's list, or a phone of an adult's or nobody's); 404 `unknown_item` (not on the list now: a new
+  day, deleted); 409 `undone` (an adult undid its reward: only an adult unticks it); 400 `bad_request`; 401
+  `not_paired`; 429 `too_often`.
+- A check-off is never queued offline by Hearth: the answer is the result.
+
 ### Usage Hearth doesn't count
 
 Additive, no contract change. A client keeps sending every package's seconds (`app_seconds_today`) from local

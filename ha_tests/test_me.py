@@ -31,7 +31,9 @@ async def test_a_kid_reads_only_their_own_document(
     answer = await ws.receive_json()
     assert answer["success"], answer
     me = answer["result"]
-    assert set(me) == {"person", "media_rooms", "category_values", "version", "contract"}
+    # A kid's own to-do list comes with it (todo_lists), as on their paired phone
+    assert set(me) == {"person", "media_rooms", "category_values", "todo_lists", "version", "contract"}
+    assert [entry["entity_id"] for entry in me["todo_lists"]] == ["todo.hearth_sam"]
     assert me["contract"] == 3
     assert me["person"]["person"] == "person.sam" and me["person"]["kind"] == "kid" and me["person"]["kind_set"]
     # The same document a paired phone of Sam's would get
