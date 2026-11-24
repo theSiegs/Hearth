@@ -87,6 +87,10 @@ class NativeSync:
         # itself after midnight: by <entity>|<platform>|<weekday> (async_windows_tick). Kept until put back or found
         # changed by a parent, over a restart and a missed midnight
         self.windows: dict[str, dict[str, Any]] = {}
+        # Every end of a Family Safety platform's allowed hours Hearth moved for extra time, today and yesterday:
+        # {person, platform, day, weekday, begin, end}, kept before the write. Bedtime sync reads them as Hearth's
+        # own, whichever extra time moved it and after that extra time's record is gone (moved_windows)
+        self.moved: list[dict[str, Any]] = []
         # Family Safety extra time whose write failed but may have been applied: {person, why, platform, until (what
         # Hearth asked for), error, at}; adopted as Hearth's own if it shows, dropped after POSSIBLY_GIVEN_WINDOW
         self.possibly_given: list[dict[str, Any]] = []
@@ -113,6 +117,7 @@ class NativeSync:
             and all(isinstance(record.get(f), str) for f in ("person", "entity_id", "platform", "day"))
             and record.get("weekday") in FS_WEEKDAYS
         }
+        self.moved = _recent_moves(stored.get("moved"))
         self.possibly_given = [
             entry
             for entry in stored.get("possibly_given") or []
@@ -125,6 +130,7 @@ class NativeSync:
             "fl_added": self.fl_added,
             "given": {f"{p}|{why}": r for (p, why), r in self._given.items()},
             "windows": self.windows,
+            "moved": self.moved,
             "possibly_given": self.possibly_given,
         }
 
@@ -634,6 +640,14 @@ class NativeSync:
                     "Family Safety keeps a saved schedule (its account lock or limits off), which would keep the change"
                 )
         before = self._cutoff_elsewhere(person, platform, record) or {"begin": begin, "end": end}
+        # Known as Hearth's before the write, and for the rest of the day: a second extra time moves the end again,
+        # and one that ended early may leave it (a put back that failed, or another extra time still needs it)
+        self.moved = _recent_moves(self.moved)
+        self.moved.append(
+            {"person": person, "platform": platform, "day": now.date().isoformat(), "weekday": fs_weekday(now),
+             "begin": int(begin), "end": int(wanted)}
+        )
+        await self._store.async_save(self._data())
         key = was = None
         if weekday is not None:
             key, was = await self._window_begin(person, entity_id, platform, weekday, before, begin, wanted)
@@ -668,6 +682,11 @@ class NativeSync:
             ),
             None,
         )
+
+    def moved_windows(self, person: str, platform: str) -> list[dict[str, Any]]:
+        """Read only, for bedtime sync: the allowed hours of the person's platform that Hearth itself wrote for extra
+        time today and yesterday ({day, weekday, begin, end}), every one of them, also once the extra time is over."""
+        return [m for m in _recent_moves(self.moved) if m["person"] == person and m["platform"] == platform]
 
     async def async_set_window_today(self, person: str, entity_id: str, platform: str, begin: int, end: int) -> str:
         """Bedtime sync's today write of a platform's allowed hours (begin, end minutes; 1440 midnight): today only on a
@@ -1136,6 +1155,20 @@ def _fs_window_data(
         "end_hour": end // 60,
         "end_minute": end % 60,
     }
+
+
+def _recent_moves(moved: Any) -> list[dict[str, Any]]:
+    """The moved allowed hours (NativeSync.moved) of today and yesterday, well-formed ones only."""
+    since = (dt_util.now().date() - timedelta(days=1)).isoformat()
+    return [
+        m
+        for m in moved or []
+        if isinstance(m, dict)
+        and all(isinstance(m.get(f), str) for f in ("person", "platform", "day"))
+        and all(isinstance(m.get(f), int) for f in ("begin", "end"))
+        and m.get("weekday") in FS_WEEKDAYS
+        and m["day"] >= since
+    ]
 
 
 def fs_weekday(when) -> str:

@@ -594,6 +594,9 @@ class BedtimeSync:
             weekly = ledger.setdefault("weekly", {})
             day = now.date().isoformat()
             cut = self.household.sync.cutoff_today(person, platform)
+            # Every end extra time moved, today's and yesterday's: Hearth's own, also when a second extra time moved
+            # it again or the extra time is over and the end still shows
+            moved = self.household.sync.moved_windows(person, platform)
             for i, key in enumerate(DAYS):
                 weekday = FS_WEEKDAYS[(i + 1) % 7]
                 entry = weekly.setdefault(weekday, _entry())
@@ -613,11 +616,12 @@ class BedtimeSync:
                     now.date() - timedelta(days=1)
                 ).isoformat():
                     own.add(tuple(kept))
-                for moved in self.household.sync.windows.values():
-                    if moved.get("entity_id") == entity_id and moved.get("platform") == platform and moved.get(
+                own.update((hm(m["begin"]), hm(m["end"])) for m in moved if m["weekday"] == weekday)
+                for window in self.household.sync.windows.values():
+                    if window.get("entity_id") == entity_id and window.get("platform") == platform and window.get(
                         "weekday"
                     ) == weekday:
-                        own.add((hm(moved["target_begin"]), hm(moved["target"])))
+                        own.add((hm(window["target_begin"]), hm(window["target"])))
                 reading = self._fs_weekly(entity_id, platform, weekday, now)
                 before = entry.get("written")
                 await self._step(
@@ -642,6 +646,7 @@ class BedtimeSync:
                 window if not isinstance(window, tuple) else None, self._fs_today(entity_id, platform), now,
                 quiet=FS_QUIET, base=_app_value(slot), base_confirmed=bool(slot.get("confirmed_at")),
                 base_written_at=slot.get("written_at"), blocked=blocked,
+                own={(hm(m["begin"]), hm(m["end"])) for m in moved if m["day"] == day},
             )
             if today.get("written"):
                 slot.update(today_value=today["written"], today_date=day)
