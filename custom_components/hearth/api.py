@@ -10,7 +10,7 @@ for posting with its old one.
 from __future__ import annotations
 
 from http import HTTPStatus
-from ipaddress import ip_address
+from ipaddress import ip_address, ip_network
 import json
 import math
 import re
@@ -18,13 +18,14 @@ from typing import Any
 
 from aiohttp import web
 import voluptuous as vol
+from yarl import URL
 
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 from homeassistant.helpers.network import NoURLAvailableError, get_url
-from homeassistant.util.network import is_local
+from homeassistant.util.network import is_ip_address, is_link_local, is_local, is_loopback, is_private
 
 from .const import (
     CAP_EVENTS,
@@ -76,6 +77,98 @@ def _local(request: web.Request) -> bool:
         return request.remote is not None and is_local(ip_address(request.remote))
     except ValueError:
         return False
+
+
+# What a reverse proxy, a tunnel or a CDN adds to a request it passes on: one that has any didn't come straight from
+# the device
+_PROXY_HEADERS = (
+    "Forwarded",
+    "X-Forwarded-For",
+    "X-Forwarded-Host",
+    "X-Forwarded-Proto",
+    "X-Forwarded-Server",
+    "X-Real-IP",
+    "Via",
+    "CF-Connecting-IP",
+    "CF-Ray",
+    "True-Client-IP",
+)
+# Home Assistant OS's own network, where its add-ons live (a proxy, a tunnel): never a phone's
+_ADDON_NETWORK = ip_network("172.30.32.0/23")
+# Names only a home network's own DNS answers
+_HOME_NAMES = (".local", ".lan", ".home", ".internal", ".home.arpa", ".localdomain")
+
+
+def _cloud_request() -> bool:
+    """Whether the request being answered came through Home Assistant Cloud's remote access (Nabu Casa)."""
+    try:
+        from hass_nabucasa import remote
+    except ImportError:
+        return False
+    return bool(remote.is_cloud_request.get())
+
+
+def _peer(request: web.Request) -> str | None:
+    """The address at the other end of the connection itself. request.remote may be what a trusted proxy's headers
+    say instead: None then, as when it can't be read."""
+    transport = request.transport
+    peername = transport.get_extra_info("peername") if transport is not None else None
+    peer = str(peername[0]) if isinstance(peername, (list, tuple)) and peername else None
+    return peer if peer is not None and peer == request.remote else None
+
+
+def _home_address(value: str | None) -> bool:
+    """A private or link-local address that is neither this machine's own (loopback: a proxy or a tunnel running
+    beside Home Assistant) nor an add-on's."""
+    try:
+        address = ip_address(value or "")
+    except ValueError:
+        return False
+    if address.version == 6 and address.ipv4_mapped is not None:
+        address = address.ipv4_mapped
+    if is_loopback(address) or (address.version == 4 and address in _ADDON_NETWORK):
+        return False
+    return is_private(address) or is_link_local(address)
+
+
+def _url_host(url: str | None) -> str | None:
+    try:
+        return (URL(url).host or "").rstrip(".").lower() or None if url else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _home_host(hass: HomeAssistant, request: web.Request) -> bool:
+    """Whether the address the device asked for (the Host header) is one only the home network reaches: a private
+    address, Home Assistant's internal URL, or a name of the home's own DNS. Never the external URL's host."""
+    try:
+        host = (request.url.host or "").rstrip(".").lower()
+    except ValueError:
+        return False
+    if not host or host == _url_host(hass.config.external_url):
+        return False
+    if is_ip_address(host):
+        return _home_address(host)
+    return host == _url_host(hass.config.internal_url) or "." not in host or host.endswith(_HOME_NAMES)
+
+
+def on_home_lan(hass: HomeAssistant, request: web.Request) -> bool:
+    """Whether a request came straight from a device on the home network (docs/contracts/device-presence.md). Stricter
+    than _local, which only decides who is answered: this says where a device is, so anything unsure is False.
+
+    True only when all of these hold: it didn't come through Home Assistant Cloud; it carries no header a proxy or
+    tunnel adds; the connection's own other end (not what a forwarding header says) is a private or link-local
+    address, not this machine, not an add-on and not one of Home Assistant's trusted proxies; and the device asked
+    for a home address, not the external URL."""
+    if _cloud_request() or any(header in request.headers for header in _PROXY_HEADERS):
+        return False
+    peer = _peer(request)
+    if not _home_address(peer):
+        return False
+    proxies = getattr(getattr(hass, "http", None), "trusted_proxies", None) or []
+    if any(ip_address(peer) in proxy for proxy in proxies):
+        return False
+    return _home_host(hass, request)
 
 
 def _error(status: HTTPStatus, reason: str) -> web.Response:
@@ -364,7 +457,7 @@ class StatusView(HomeAssistantView):
         status = clean_status(await _json_body(request))
         if status is None:
             return _error(HTTPStatus.BAD_REQUEST, "bad_request")
-        hub.update_status(device_id, status)
+        hub.update_status(device_id, status, on_home_lan(hass, request))
         # What the device is told: each profile's (or the phone's person's) limits today
         state = hub.household.document_for(device_id)
         answer: dict[str, Any] = {"ok": True, "contract": CONTRACT, "state": state}

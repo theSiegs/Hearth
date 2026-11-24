@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -108,7 +108,11 @@ async def async_setup_entry(
             hass,
             hub,
             async_add_entities,
-            lambda device_id, kind: [HearthSensor(hub, device_id, d) for d in SENSORS if kind in d.kinds],
+            lambda device_id, kind: [
+                *(HearthSensor(hub, device_id, d) for d in SENSORS if kind in d.kinds),
+                # A phone or tablet: when it was last used, and whether from the home network
+                *([DeviceLastInteraction(hub, device_id, LAST_INTERACTION)] if kind == KIND_MOBILE else []),
+            ],
         )
     )
     household = hub.household
@@ -161,6 +165,42 @@ class HearthSensor(HearthEntity, SensorEntity):
             for name, key in (("state_entity", "state"), ("media_title_entity", "media_title")):
                 attrs[name] = registry.async_get_entity_id("sensor", DOMAIN, f"{self.device_id}_{key}")
         return attrs
+
+
+LAST_INTERACTION = SensorEntityDescription(
+    key="last_interaction", translation_key="last_interaction", device_class=SensorDeviceClass.TIMESTAMP
+)
+
+
+def _iso(when: datetime | None) -> str | None:
+    return dt_util.as_local(when).isoformat() if when else None
+
+
+class DeviceLastInteraction(HearthEntity, SensorEntity):
+    """When a phone or tablet was last used, by its status posts, and whether those came straight over the home
+    network (docs/contracts/device-presence.md). Kept while the device is quiet, and across restarts."""
+
+    @property
+    def available(self) -> bool:
+        return True
+
+    @property
+    def native_value(self) -> datetime | None:
+        return self.hub.state(self.device_id).used
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        state = self.hub.state(self.device_id)
+        seen = state.seen.replace(second=0, microsecond=0) if state.seen else None
+        return {
+            "person": self.hub.household.device_person(self.device_id),
+            "device_id": self.device_id,
+            "last_interaction": _iso(state.used),
+            "last_interaction_local": state.used_local,
+            "last_user": state.used_by,
+            "last_post": _iso(seen),
+            "local": state.seen_local,
+        }
 
 
 def _minutes(seconds: float) -> int:

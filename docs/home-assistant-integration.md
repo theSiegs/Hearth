@@ -57,7 +57,7 @@ Supports the current stable Home Assistant only.
 |---|---|---|
 | Whose | several people: Google TV profiles, kids profiles among them | one person, chosen when it pairs |
 | Reaches Home Assistant | on the home network only | at home, and away from home through a webhook (see [Away from home](#away-from-home)) |
-| Status entities | State, App, Media title / artist / app, Profile, Kids profile, Screen time up, Screen time today, Connected | App, Media title / artist / app, Screen time today, Connected |
+| Status entities | State, App, Media title / artist / app, Profile, Kids profile, Screen time up, Screen time today, Connected | App, Media title / artist / app, Screen time today, Last interaction, Connected |
 | Gets | pop-ups, minutes left per profile, family pause, approval answers, the mailbox | its person's state (minutes left, bedtime, pause), pop-ups, approval answers, the mailbox |
 | Sends | status (with usage per profile), approval requests | status, "ask for more", approval requests |
 
@@ -106,6 +106,12 @@ minutes, a phone as its battery allows). The body is the JSON a TV already posts
 it (`screen`, `app`, `app_package`, `media_*`, `day`, `seconds_today`, `app_seconds_today`, `playing_seconds_today`).
 The integration keeps only known fields, cleaned, and keeps the last status across restarts. **Connected** turns off
 after 15 minutes without a post; the device's other entities show unavailable then.
+
+**Where a device is used.** A phone's or tablet's **Last interaction** sensor says when it was last used (a post with
+the screen on, or with more time today), whose it is (`person`), and whether its posts came straight over the home
+network (`local`: never through Home Assistant Cloud, a proxy, a tunnel or the public URL). A TV fires
+`hearth_tv_profile_changed` when someone switches profiles on it (not for its first report after a restart). Both are
+a contract for presence readers: [contracts/device-presence.md](contracts/device-presence.md).
 
 **Time from before pairing.** A phone's or tablet's counts start at local midnight, so on the day it pairs its first
 post carries time from before Hearth had it. That first post after an adult approves the pairing is kept as the
@@ -2872,7 +2878,8 @@ Events: `hearth_budget_reached` (person, group, group_name), `hearth_more_time_r
 `hearth_more_time_answered` (as in [Ask for more](#ask-for-more)), `hearth_playing_together` (title, people, started
 or ended), `hearth_enforced`, `hearth_new_app`, `hearth_parent_pin_used`, `hearth_parent_pin_locked_out`,
 `hearth_schedule`, `hearth_chore_done`, `hearth_chore_reversed`, `hearth_place` (person, from, to), `hearth_mode` and
-`hearth_schedule_changed` (see [Schedule](#schedule)).
+`hearth_schedule_changed` (see [Schedule](#schedule)), `hearth_tv_profile_changed` (see
+[contracts/device-presence.md](contracts/device-presence.md)).
 
 Per person with a TV profile: **Last video started** (see [A kids profile's YouTube](#a-kids-profiles-youtube)).
 

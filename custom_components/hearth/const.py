@@ -36,6 +36,8 @@ MAX_TICKETS = 10
 EVENT_DEVICE_PAIRED = "hearth_device_paired"
 # One of a device's checks (its own, or Hearth's client check) turned false
 EVENT_DEVICE_CHECK_FAILED = "hearth_device_check_failed"
+# Someone switched Google TV profiles on a paired TV (docs/contracts/device-presence.md)
+EVENT_TV_PROFILE_CHANGED = "hearth_tv_profile_changed"
 
 # A status post bigger than this is refused
 MAX_STATUS_BYTES = 64 * 1024

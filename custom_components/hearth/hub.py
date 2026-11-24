@@ -12,6 +12,7 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
@@ -38,6 +39,7 @@ from .const import (
     PAIRING_INTERVAL_PER_ADDRESS,
     EVENT_DEVICE_CHECK_FAILED,
     EVENT_DEVICE_PAIRED,
+    EVENT_TV_PROFILE_CHANGED,
     KIND_TV,
     CONF_CLIENT,
     MAX_TICKETS,
@@ -99,6 +101,23 @@ def _most_each(a: Any, b: Any) -> dict[str, Any]:
     for item, seconds in (b or {}).items():
         out[item] = _most(out.get(item), seconds)
     return out
+
+
+def _in_use(before: dict[str, Any] | None, status: dict[str, Any]) -> bool:
+    """Whether a status shows the device being used: its screen is on, or its time today grew since its last post."""
+    if status.get("screen") == "on":
+        return True
+    had, has = (before or {}).get("seconds_today"), status.get("seconds_today")
+    same_day = status.get("day") is not None and (before or {}).get("day") == status.get("day")
+    return same_day and isinstance(had, int) and isinstance(has, int) and has > had
+
+
+def _other_profile(last: tuple[str | None, str | None], new: tuple[str | None, str | None]) -> bool:
+    """Whether two (profile_id, profile_ref) of one TV are different profiles. The TV's own key decides; a ref the TV
+    learned later, or a profile renamed in Google TV, is the same profile."""
+    if last[0] and new[0]:
+        return last[0] != new[0] and not (last[1] and last[1] == new[1])
+    return bool(last[1] and new[1] and last[1] != new[1])
 
 
 def hash_secret(secret: str) -> str:
@@ -253,6 +272,17 @@ class DeviceState:
     # A TV's own checks failing since (check id -> when it first failed), and those the adults were told of
     failing: dict[str, datetime] = field(default_factory=dict)
     told_failing: set[str] = field(default_factory=set)
+    # Whether the last status post came straight over the home network (api.on_home_lan; None: not known)
+    seen_local: bool | None = None
+    # The last post that showed the device in use (_in_use), to the minute; whether that one came over the home
+    # network; and whose profile was in front, when the device said one that is mapped to a person
+    used: datetime | None = None
+    used_local: bool | None = None
+    used_by: str | None = None
+    # A TV's profile at its last post since this start, (profile_id, profile_ref), and when it last posted since this
+    # start. Never saved or restored: a profile switch is told only between two posts of one run (_profile_switch)
+    live_profile: tuple[str | None, str | None] | None = None
+    live_at: datetime | None = None
 
 
 # A TV's own check failing this long (its accessibility service off, say) is told to the adults; a moment's (the
@@ -342,6 +372,11 @@ class HearthHub:
             state.seen = dt_util.parse_datetime(seen) if isinstance(seen, str) else None
             baseline = kept.get("baseline")
             state.baseline = baseline if isinstance(baseline, dict) else None
+            used = kept.get("used")
+            state.used = dt_util.parse_datetime(used) if isinstance(used, str) else None
+            state.seen_local = kept.get("seen_local") if isinstance(kept.get("seen_local"), bool) else None
+            state.used_local = kept.get("used_local") if isinstance(kept.get("used_local"), bool) else None
+            state.used_by = kept.get("used_by") if isinstance(kept.get("used_by"), str) else None
 
     def authorized(self, device_id: str, secret: str | None) -> bool:
         """The secret is this device's (compared in constant time; a removed device has none)."""
@@ -405,7 +440,8 @@ class HearthHub:
         return False
 
     @callback
-    def update_status(self, device_id: str, status: dict[str, Any]) -> None:
+    def update_status(self, device_id: str, status: dict[str, Any], local: bool | None = None) -> None:
+        """[local]: whether the post came straight over the home network (api.on_home_lan); None when not known."""
         state = self.state(device_id)
         # A TV checks the Parent PIN itself: a lockout there is told as for a phone that asked here
         before = (state.status or {}).get("pin_lockouts")
@@ -423,8 +459,19 @@ class HearthHub:
         if self.kind(device_id) == KIND_TV:
             self._tell_failing_tv_checks(device_id, state, status)
         self._note_baseline(device_id, status)
+        now = dt_util.utcnow()
+        used = _in_use(state.status, status)
+        switch = self._profile_switch(device_id, state, status, now) if self.kind(device_id) == KIND_TV else None
         state.status = status
-        state.seen = dt_util.utcnow()
+        state.seen = now
+        state.seen_local = local
+        if used:
+            # To the minute: a phone posts within seconds of every change, and this is a sensor's state
+            state.used = now.replace(second=0, microsecond=0)
+            state.used_local = local
+            state.used_by = self.household.profile_person(device_id, status.get("profile_id"))
+        if switch is not None:
+            self._tell_profile_switch(device_id, status, switch, now)
         # What the TV ran of its commands leaves the queue (its answer no longer carries them)
         if status.get("commands_done"):
             self.commands.take_done(device_id, status["commands_done"])
@@ -434,6 +481,52 @@ class HearthHub:
         if status.get("local_rules") and self.kind(device_id) == KIND_TV:
             self.household.import_local_rules(device_id, status["local_rules"])
         self.household.recompute()
+
+    def _profile_person(self, device_id: str, profile_id: str | None, ref: str | None) -> str | None:
+        found = self.household.profile_person(device_id, profile_id)
+        return found or (self.household.profile_people().get(ref) if ref else None) or None
+
+    def _profile_switch(
+        self, device_id: str, state: DeviceState, status: dict[str, Any], now: datetime
+    ) -> dict[str, Any] | None:
+        """What a TV's new status switched away from, when it is a real profile switch: this run already had a post
+        from the TV in another profile, and the TV has been heard from since within CONNECTED_WITHIN. Never from what
+        was restored (a restart, a reload: the first post only sets the profile to compare with), never after the TV
+        was away longer (a reconnect), and a post that names no profile changes nothing. Called before the new status
+        is kept, so the profile left is still read from the old one."""
+        new = (status.get("profile_id"), status.get("profile_ref"))
+        last, last_at = state.live_profile, state.live_at
+        state.live_at = now
+        if not new[0] and not new[1]:
+            return None
+        state.live_profile = new
+        if last is None or last_at is None or now - last_at >= CONNECTED_WITHIN or not _other_profile(last, new):
+            return None
+        return {
+            "from_profile_ref": last[1],
+            "from_profile_id": last[0],
+            "from_person": self._profile_person(device_id, last[0], last[1]),
+        }
+
+    def _tell_profile_switch(
+        self, device_id: str, status: dict[str, Any], switch: dict[str, Any], now: datetime
+    ) -> None:
+        """Fires hearth_tv_profile_changed (docs/contracts/device-presence.md), once the new status is kept."""
+        entry = dr.async_get(self.hass).async_get_device(identifiers={(DOMAIN, device_id)})
+        self.hass.bus.async_fire(
+            EVENT_TV_PROFILE_CHANGED,
+            {
+                "device": device_id,
+                "name": (self.devices.get(device_id) or {}).get("name"),
+                "area_id": entry.area_id if entry else None,
+                "profile_ref": status.get("profile_ref"),
+                "profile_id": status.get("profile_id"),
+                "kids_profile": status.get("kids_profile"),
+                "person": self._profile_person(device_id, status.get("profile_id"), status.get("profile_ref")),
+                **switch,
+                "at": dt_util.as_local(now).isoformat(),
+            },
+        )
 
     def _tell_failing_tv_checks(self, device_id: str, state: DeviceState, status: dict[str, Any]) -> None:
         """A TV's own check that has failed for CHECK_FAILING_TELL_AFTER (its accessibility service off: apps opened
@@ -598,6 +691,10 @@ class HearthHub:
                 "status": state.status,
                 "seen": state.seen.isoformat() if state.seen else None,
                 **({"baseline": state.baseline} if state.baseline else {}),
+                "seen_local": state.seen_local,
+                "used": state.used.isoformat() if state.used else None,
+                "used_local": state.used_local,
+                "used_by": state.used_by,
             }
             for device_id, state in self._states.items()
             if device_id in self.devices
