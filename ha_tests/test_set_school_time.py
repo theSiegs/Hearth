@@ -134,3 +134,26 @@ async def test_given_hours_and_what_s_refused(
         await _call(hass, {"people": ["person.sam"]})
     with pytest.raises(ServiceValidationError, match="not both"):
         await _call(hass, {"people": ["person.sam"], "start": "08:00", "end": "15:00", "like": "person.sam"})
+
+
+async def test_a_switch_on_right_after_new_hours_pins_the_new_hours_on_a_half_day(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Family Link's time entities show the old hours until its next refresh: a switch-on right after hours were
+    written pins the hours just written (less a half day's hours), not the old ones."""
+    on = async_mock_service(hass, "switch", "turn_on")
+    pin = async_mock_service(hass, "familylink", "set_school_time")
+    half_day = date(2026, 11, 25)
+    await _set_up(
+        hass, hass_client_no_auth, freezer, _at(half_day, 10), {**YEAR, "half_days": "2026-11-25"},
+        {"half_day_hours_early": 3},
+    )
+    hass.states.async_set(SWITCH, "off")
+
+    # Sam's weekly hours read 8:10 to 15:00 and still do after the write (no refresh yet)
+    answer = await _call(
+        hass, {"people": ["person.sam"], "days": ["wed"], "start": "09:00", "end": "16:15", "switch_on": True}
+    )
+    assert answer["people"]["person.sam"]["set"] == {"wed": "09:00-16:15"}
+    assert [c.data for c in on] == [{"entity_id": SWITCH}]
+    assert pin[-1].data == {"entity_id": SWITCH, "scope": "today", "start_time": "09:00", "end_time": "13:15"}

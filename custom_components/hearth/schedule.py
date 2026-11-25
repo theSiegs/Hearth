@@ -113,6 +113,9 @@ DEFAULT_SITE_LIST_TIME = time(7, 30)
 RETRY = timedelta(minutes=5)
 # A School time switched on or pinned isn't switched on or pinned again for this long (Family Link catching up)
 SETTLE_CALL = timedelta(minutes=2)
+# Weekly School time hours Hearth just wrote (hearth.set_school_time) count over Family Link's time entities this long:
+# they show the old hours until its next refresh
+HOURS_FRESH = timedelta(minutes=15)
 MAX_REASON = 120
 EVENT_SCHEDULE = "hearth_schedule"
 # The reason of the School time off a day off takes
@@ -284,6 +287,9 @@ class Scheduler:
         # Family Link School time to switch on (hearth.set_school_time switch_on): person -> ISO date from which. Put
         # on as a School time off is put back: on a school day, inside the kid's window, and pinned at once
         self.turn_on: dict[str, str] = {}
+        # Weekly School time hours Hearth wrote: person -> {ISO weekday: (start, end, when)}, used over Family Link's
+        # time entities for HOURS_FRESH (a switch-on right after the write mustn't pin the old hours)
+        self.written_hours: dict[str, dict[int, tuple[time, time, datetime]]] = {}
 
     # Storage
 
@@ -685,7 +691,7 @@ class Scheduler:
         state = self.hass.states.get(switch) if switch else None
         if state is None or state.state != "on":
             return True
-        window = fl.weekly_window(self.hass, child, today)
+        window = self.weekly(person, child, today)
         if window is None:
             return True
         end = hours_earlier(window[1], hours)
@@ -1066,8 +1072,15 @@ class Scheduler:
                 # The School-time apps are let go at once (the child's devices take a minute to say so)
                 self.household.recompute()
 
+    def weekly(self, person: str, child: str, day: date) -> tuple[time, time] | None:
+        """The day's weekly School time window: hours Hearth wrote in the last HOURS_FRESH, else Family Link's."""
+        written = self.written_hours.get(person, {}).get(day.isoweekday())
+        if written is not None and dt_util.utcnow() - written[2] < HOURS_FRESH:
+            return written[0], written[1]
+        return fl.weekly_window(self.hass, child, day)
+
     def _window(self, person: str, child: str, today: date, kind: str, config: ScheduleConfig) -> tuple[time, time] | None:
-        window = fl.weekly_window(self.hass, child, today)
+        window = self.weekly(person, child, today)
         if window is None:
             kept = next(
                 (
@@ -1165,7 +1178,7 @@ class Scheduler:
         for iso, (start, end) in sorted(hours.items()):
             name = WEEKDAY_KEYS[iso - 1]
             day = today + timedelta(days=(iso - today.isoweekday()) % 7)
-            if fl.weekly_window(self.hass, child, day) == (start, end):
+            if self.weekly(person, child, day) == (start, end):
                 same.append(name)
                 continue
             try:
@@ -1182,6 +1195,7 @@ class Scheduler:
                 failed[name] = (str(err) or type(err).__name__)[:200]
                 continue
             done[name] = f"{hhmm(start)}-{hhmm(end)}"
+            self.written_hours.setdefault(person, {})[iso] = (start, end, dt_util.utcnow())
         return {"set": done, "same": same, "failed": failed}
 
     def switch_on_from(self, person: str, day: date) -> str:
