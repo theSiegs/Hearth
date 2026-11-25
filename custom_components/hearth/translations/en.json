@@ -1754,6 +1754,40 @@
           "description": "adult or not_now."
         }
       }
+    },
+    "set_play_area": {
+      "name": "Set where play is",
+      "description": "Tells Hearth which room a kid's play is in. A Switch's dock signal: an entity that is on while the Switch is docked, or a power sensor of the dock's plug with the watts above which it's docked (its Playing entry gets the room, else the entity's own area, only while docked). A live source's console: the Xbox it's played on (the console's room while it's on). Replaces that Switch's or source's; with remove, takes it out. Administrators only.",
+      "fields": {
+        "switch": {
+          "name": "Switch",
+          "description": "The Switch, as its Nintendo enforcer row names it (its limit entity)."
+        },
+        "dock": {
+          "name": "Dock signal",
+          "description": "A binary sensor, switch or input boolean that is on while the Switch is docked, or a power sensor of the dock's plug."
+        },
+        "above": {
+          "name": "Above (W)",
+          "description": "For a power sensor: docked while it reads more than this many watts."
+        },
+        "area_id": {
+          "name": "Room",
+          "description": "The room to report while docked (default: the dock signal's own area)."
+        },
+        "source": {
+          "name": "Source",
+          "description": "A live source's id (Xbox now playing)."
+        },
+        "console": {
+          "name": "Console",
+          "description": "The console's media player (the Xbox integration's)."
+        },
+        "remove": {
+          "name": "Remove",
+          "description": "Takes this Switch's or source's out."
+        }
+      }
     }
   },
   "issues": {

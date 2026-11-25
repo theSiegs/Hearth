@@ -353,7 +353,9 @@ class PersonBonusLeft(HearthPersonEntity, SensorEntity):
 
 
 class PersonPlaying(HearthPersonEntity, SensorEntity):
-    """What the person is playing now (a TV's show, a game, an app), anywhere Hearth sees; unknown when nothing."""
+    """What the person is playing now (a TV's show, a game, an app), anywhere Hearth sees; unknown when nothing. Each
+    entry says its room (`area_id`) when Hearth knows it and whether it's being played right now (`active`):
+    play_area.py, docs/contracts/people-entities.md."""
 
     _attr_translation_key = "person_playing"
 
@@ -367,9 +369,11 @@ class PersonPlaying(HearthPersonEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         playing = self.day.playing if self.day else []
         return {
+            "person": self.person,
             "playing": [
-                {k: v for k, v in p.view().items() if k != "target"} for p in playing
-            ]
+                {**{k: v for k, v in p.view().items() if k != "target"}, "area_id": p.area_id, "active": p.active}
+                for p in playing
+            ],
         }
 
 

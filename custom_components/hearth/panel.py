@@ -71,6 +71,7 @@ from .limits import (
 )
 from .notifications import clear_pairing
 from .client import locked
+from .play_area import CONF_PLAY_AREAS, PLAY_AREAS_SCHEMA, play_areas
 from .places import CONF_PLACES, FAVORITES, MAX_FAVORITES, MAX_NAME, RESERVED, SCHOOLS, TRACKERS
 from .presence_rules import CONF_AWAY_MESSAGES, CONF_AWAY_MESSAGES_APPS, MAX_APPS as AWAY_MAX_APPS
 from .schooldays import CONF_SCHOOL_DAYS
@@ -371,6 +372,8 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
         "default_outside_all": sorted(DEFAULT_OUTSIDE_ALL),
         "app_groups": dict(options.get(CONF_APP_GROUPS, {})),
         "media_players": dict(options.get(CONF_MEDIA_PLAYERS, {})),
+        # Where play is (play_area.py): a Switch's dock signal, a live source's console
+        "play_areas": play_areas(options),
         **(overview := household.apps_overview()),
         # What's kept for each client (client_settings.py): {client: {"count", "bytes"}}, never the contents
         "client_settings": hub.client_settings.summary(),
@@ -528,6 +531,7 @@ OPTION_SCHEMAS: dict[str, Any] = {
     CONF_APP_GROUPS: vol.Schema({cv.string: vol.Any(OTHER, _ID)}),
     CONF_INSIDE_ALL: [_ID],
     CONF_MEDIA_PLAYERS: vol.Schema({cv.string: cv.entity_domain("media_player")}),
+    CONF_PLAY_AREAS: PLAY_AREAS_SCHEMA,
     CONF_ASK_NOTIFY: vol.Any(None, cv.string),
     phones.CONF_ASK_NOTIFY_OFF: [_PERSON],
     phones.CONF_ASK_DEEP_LINK: [_PERSON],
@@ -811,6 +815,55 @@ def async_register_pairing_service(hass: HomeAssistant) -> None:
                 vol.Required("answer"): vol.In(("approve", "deny")),
                 vol.Optional("person"): vol.Any(None, _PERSON),
                 vol.Optional("area_id"): vol.Any(None, cv.string),
+            }
+        ),
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+
+
+def async_register_play_area_service(hass: HomeAssistant) -> None:
+    """hearth.set_play_area: a Switch's dock signal ({switch, dock, above?, area_id?}) or a live source's console
+    ({source, console}), replacing that Switch's or source's; with remove, taken out (play_area.py). Administrators
+    only."""
+
+    async def set_play_area(call: ServiceCall) -> ServiceResponse:
+        user = await hass.auth.async_get_user(call.context.user_id) if call.context.user_id else None
+        if user is None or not user.is_admin:
+            raise Unauthorized(context=call.context)
+        hub = _hub(hass)
+        if hub is None:
+            raise ServiceValidationError("Hearth isn't set up")
+        data = call.data
+        if ("switch" in data) == ("source" in data):
+            raise ServiceValidationError("A switch or a source")
+        key = "switch" if "switch" in data else "source"
+        kept = [e for e in play_areas(hub.entry.options) if e.get(key) != data[key]]
+        if not data.get("remove"):
+            if key == "switch":
+                fields = ("switch", "dock", "above", "area_id")
+            else:
+                fields = ("source", "console")
+            entry = {name: data[name] for name in fields if data.get(name) is not None}
+            try:
+                kept = PLAY_AREAS_SCHEMA([*kept, entry])
+            except vol.Invalid as err:
+                raise ServiceValidationError(str(err)) from err
+        hass.config_entries.async_update_entry(hub.entry, options={**hub.entry.options, CONF_PLAY_AREAS: kept})
+        return {"play_areas": kept}
+
+    hass.services.async_register(
+        DOMAIN,
+        "set_play_area",
+        set_play_area,
+        schema=vol.Schema(
+            {
+                vol.Optional("switch"): cv.entity_id,
+                vol.Optional("dock"): cv.entity_id,
+                vol.Optional("above"): vol.Coerce(float),
+                vol.Optional("area_id"): cv.string,
+                vol.Optional("source"): cv.string,
+                vol.Optional("console"): cv.entity_domain("media_player"),
+                vol.Optional("remove", default=False): cv.boolean,
             }
         ),
         supports_response=SupportsResponse.OPTIONAL,

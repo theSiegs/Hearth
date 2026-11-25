@@ -11,6 +11,7 @@ may rename them).
 | Mode (`sensor.hearth_<kid>_mode`) | the mode's key in their weekly schedule (`sleep`, `school`, `free`, or one the household made) | `person`; `name`; `since`; `until`; `next` (`{at, mode}`); `today_changed`; `source` (`schedule` or `locks`) |
 | Bedtime (`sensor.hearth_<kid>_bedtime`) | tonight's bedtime (timestamp), or unknown | `person`; `wake` (tomorrow's wake, ISO); `source` |
 | Locked (`binary_sensor.hearth_<kid>_locked`) | on while a lock holds their Hearth devices (bedtime, School time, a pause) | `person`; `locked_by` (entity ids) |
+| Playing (`sensor.hearth_<kid>_playing`) | what's on (the show, else the title, app or package of the first entry), or unknown when nothing | `person`; `playing` (a list, below) |
 | School today (`sensor.hearth_<kid>_school_today`) | `school`, `half_day`, `off` or `home_today` | `person`; `start`, `end`; `decided_by`; `window_source`; `reason` (with `home_today` only) |
 
 Times are local ISO 8601 with their offset (`2026-11-09T08:10:00-05:00`). Hearth keeps no coordinates: no entity here
@@ -25,6 +26,47 @@ switched to which profile: see [device-presence.md](device-presence.md).
 is when that reading was taken. A change of place needs readings that agree before it counts, so `since` can be a few
 minutes after the kid actually arrived. The state is recorded; `since`, `source`, `accuracy`, `fresh`, `as_of`, `with`
 and `apart_from_adults` are not.
+
+## Playing
+
+Every person has one (adults too). `playing` has an entry per thing they're on now, anywhere Hearth sees, and is
+`[]` when nothing:
+
+```yaml
+state: Minecraft
+person: person.alex
+playing:
+  - kind: game          # video, music, game or app
+    app: Minecraft
+    package: null
+    title: Minecraft
+    series: null
+    artist: null
+    episode: null
+    device: Xbox          # the device's or source's name
+    state: playing
+    since: "2026-11-25T21:02:10+00:00"
+    area_id: den          # the room (a Home Assistant area id), or null
+    active: null          # true, false, or null when it can't be told
+```
+
+`area_id` is set only when Hearth knows the room, else `null` (never a guess):
+
+| Entry | `area_id` | `active` |
+|---|---|---|
+| A Hearth TV's app | the TV's own Home Assistant device's area | `true` while its media plays, `false` while paused; `null` for an app with no media playing (a game, a menu) |
+| Xbox (a live source: the Xbox integration's now playing) | the console's area, only while the console is on: the console set for the source (`hearth.set_play_area` `source` + `console`), whose media player isn't off and, when it names a title, names the same one; else, with none set, the Xbox integration's media player that is on with the same title, when exactly one room has one. Played on a PC, the cloud or a console that's off or has no area: `null` | `true`/`false` only while a set console's media player says `playing`/`paused` (media apps); a game shows `on`: `null`. Now playing stays on a game left open at its menu, so it can't tell play from a game left running |
+| A kid's Switch | only while the dock signal set for that Switch (`hearth.set_play_area` `switch` + `dock`) says docked: a binary sensor, switch or input boolean that is `on`, or a power sensor (the dock's plug) above `above` watts. The room is the one set (`area_id`), else the signal entity's own area. No signal, or one `unknown`/`unavailable`: `null`. Handheld: `null` | from their player's minutes (Nintendo uploads them every 5 to 10 minutes): `true` while they grew in the last window (15 minutes by default), `false` once watched fresh for a whole window without growing, `null` without a player's minutes sensor (only a Playing sensor or friend presence) |
+| A phone's app (companion app source) | `null` (a phone moves with its kid) | `true` (only listed while the screen is on and interactive) |
+
+A TV can't say whether a Switch is docked to it: a Hearth TV is a Google TV puck on one of the TV's inputs and reads
+"off" whenever another input (the Switch's) is showing, just as when the TV is off. So the TV's state is never used
+for a Switch.
+
+The state is unchanged (what's on, not "playing"), so existing readers keep working; `active` is the "being played
+now" signal. `playing` is recorded; `area_id` and `active` change with it, within a minute of a dock signal or console changing
+(Hearth looks at least once a minute; a source's own change shows at once). They're on this sensor only, not in the
+household's documents for devices (`playing` there is unchanged).
 
 ## School today
 
@@ -47,4 +89,5 @@ year), `entity`, `calendar`, or `home_today`.
 The state changes at midnight, when the day type changes, when a kid is kept home or that's cancelled, and when
 Family Link's School time changes.
 
-A change to this page is a contract change: update its test (`ha_tests/test_home_today.py`).
+A change to this page is a contract change: update its tests (`ha_tests/test_home_today.py`,
+`ha_tests/test_play_area.py`).

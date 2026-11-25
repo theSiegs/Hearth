@@ -446,6 +446,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     _register_site_blocks(hass, loaded_household)
     # An administrator's Approve or Deny on a pairing's phone notification
     panel.async_register_pairing_service(hass)
+    # Where play is: a Switch's dock, a live source's console (play_area.py)
+    panel.async_register_play_area_service(hass)
     # An administrator's Make adult or Not now on the offer for a person who signed in from a phone (adult_offer.py)
     adult_offer.async_register_service(hass)
     # A message on Hearth's devices, a person's or the household's (notify_service.py)
