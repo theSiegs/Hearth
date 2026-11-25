@@ -160,6 +160,21 @@ def read_nintendo(response: dict[str, Any] | None) -> dict[str, Any] | None:
     return found
 
 
+def _fs_paused_by_hearth(attrs: Any, hearths: set[str]) -> set[str]:
+    """The apps a Family Safety Applications sensor shows blocked by Hearth's own pause: a paused_apps row of Hearth's
+    (paused "ours": the app wasn't blocked before, so no parent's block is under it), or one that doesn't say whose
+    while Hearth holds (or may hold) the app. Without paused_apps (an older Family Safety), what Hearth holds."""
+    rows = attrs.get("paused_apps")
+    if not isinstance(rows, list):
+        return set(hearths)
+    found: set[str] = set()
+    for row in rows:
+        package = row.get("package") if isinstance(row, dict) else None
+        if isinstance(package, str) and (row.get("paused") == "ours" or (row.get("paused") is None and package in hearths)):
+            found.add(package)
+    return found
+
+
 def _paused(rows: Any) -> set[str]:
     out: set[str] = set()
     for row in rows or []:
@@ -271,12 +286,24 @@ class OutsideAppChanges:
         if app in blocks.blocked_packages(person) and not blocks.why_blocked(person, app):
             found.append({"kind": "blocked_app", "by": "family_link", "provider": "Family Link", "app": app,
                           "why": ["parent"], "until": None})
+        # Hearth's own Family Safety pause is a block too (pause_app): told by its hold, never as a parent's
+        hearths = self._fs_holding(person)
         for entity_id in self._fs_applications(person, er.async_get(self.hass)):
             state = self.hass.states.get(entity_id)
             lists = read_family_safety(dict(state.attributes)) if state is not None else None
-            if lists is not None and app in lists["blocked"]:
+            if lists is not None and app in lists["blocked"] and app not in _fs_paused_by_hearth(state.attributes, hearths):
                 found.append({"kind": "blocked_app", "by": entity_id, "provider": "Family Safety", "app": app,
                               "why": ["parent"], "until": None})
+        return found
+
+    def _fs_holding(self, person: str) -> set[str]:
+        """The Xbox and Windows apps Hearth holds (or may hold) for the person through Family Safety."""
+        from .enforce import FAMILY_SAFETY, _holding, key_parts
+
+        found: set[str] = set()
+        for key, held in self.household.enforcement.held.items():
+            if key_parts(key) == (FAMILY_SAFETY, person):
+                found |= _holding(held)
         return found
 
     def _fs_applications(self, person: str, registry: er.EntityRegistry) -> list[str]:

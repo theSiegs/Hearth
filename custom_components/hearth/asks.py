@@ -31,7 +31,10 @@ from typing import Any
 
 import logging
 
+import voluptuous as vol
+
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ServiceNotFound, ServiceValidationError
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
@@ -407,25 +410,42 @@ class Asks:
         ]
 
     async def _answer_family_safety(self, ask: Ask) -> None:
-        """The answer in Family Safety: approve_request with the minutes, or deny_request. A failure is told."""
+        """The answer in Family Safety: approve_request with the minutes, or deny_request. A failure is told.
+
+        The extra time an approval gives is Hearth's own (native_sync.fs_request_approved), never a parent's grant on a
+        platform Hearth holds. An approval that failed without being refused outright (a timeout, Microsoft's error)
+        may have gone through all the same: watched as possibly given, and the adults are told to look before
+        answering it again, so it isn't approved twice."""
         approve = ask.status == APPROVED
         service = "approve_request" if approve else "deny_request"
         data: dict[str, Any] = {"request_id": ask.external_id}
         if approve:
             # Family Safety takes 15 min to 8 h
             data["extension_minutes"] = min(max(int(ask.granted or 0), 15), 480)
+        sync = self.hub.household.sync
+        # When the approval's extra time ends, as Microsoft counts it from the approval
+        until = dt_util.now() + timedelta(minutes=data.get("extension_minutes", 0))
         try:
             if not self.hass.services.has_service(FS_DOMAIN, service):
                 raise ValueError(f"{FS_DOMAIN}.{service} isn't there")
-            await call_service(self.hass, FS_DOMAIN, service, data, blocking=True)
+            await call_service(self.hass, FS_DOMAIN, service, data, blocking=True, person=ask.person, why="fs_request")
         except Exception as err:  # noqa: BLE001 - told to the adults instead
             _LOGGER.warning("Hearth couldn't answer the Family Safety request %s: %s", ask.external_id, err)
+            # Refused before it went out (no such action, a schema): surely not answered
+            refused = isinstance(err, (ValueError, vol.Invalid, ServiceValidationError, ServiceNotFound))
+            if approve and not refused:
+                sync.fs_request_approved(ask.person, str(ask.external_id), ask.platform, until, err)
             who = self.hub.household.person_name(ask.person)
+            then = (
+                "Answer it in the Family Safety app."
+                if refused or not approve
+                else "It may have gone through: if the request is still in the Family Safety app, answer it there."
+            )
             self.hub.attention.notify(
                 Item(
                     f"hearth_more_fs_{ask.id}",
                     f"Hearth couldn't {'approve' if approve else 'deny'} {who}'s request in Family Safety ({err}). "
-                    "Answer it in the Family Safety app.",
+                    + then,
                     title="Family Safety request",
                     urgency=NOTICE,
                     bell=True,
@@ -433,6 +453,9 @@ class Asks:
                     about={"person": ask.person},
                 )
             )
+            return
+        if approve:
+            sync.fs_request_approved(ask.person, str(ask.external_id), ask.platform, until)
 
     # Telling the adults
 

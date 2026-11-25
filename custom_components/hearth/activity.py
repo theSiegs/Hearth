@@ -281,18 +281,26 @@ class ActivityLog:
         return any((at := self._own.get(service, {}).get(app)) is not None and at >= lo for service in services)
 
     def person_of(self, data: dict[str, Any] | None) -> str | None:
-        """The person an outbound call is about: the enforcer whose entity (or Family Link child) it names."""
+        """The person an outbound call is about: the enforcer whose entity (or Family Link child, or Family Safety
+        account: an older Family Safety is called by account id only) it names."""
         from . import family_link as fl
-        from .enforce import enforcers_from_options
+        from .enforce import FAMILY_SAFETY, enforcers_from_options, fs_account_of
 
         data = data or {}
         entity = data.get("entity_id")
         entity = entity[0] if isinstance(entity, list) and entity else entity
         child = data.get("child_id")
+        account = data.get("account_id")
         for enforcer in enforcers_from_options(self.household.options):
             if entity and enforcer.entity_id == entity:
                 return enforcer.person
             if child and fl.child_of(self.hass, enforcer.entity_id) == str(child):
+                return enforcer.person
+            if (
+                account not in (None, "")
+                and enforcer.kind == FAMILY_SAFETY
+                and fs_account_of(self.hass, enforcer.entity_id) == str(account)
+            ):
                 return enforcer.person
         if entity and child is None:
             state = self.hass.states.get(entity)

@@ -194,6 +194,12 @@ RESUME_UNSURE = "resume_unsure"
 LOCK_PUT_BACK_AT = "lock_put_back_at"
 SWITCH_PUT_BACK_AT = "put_back_at"
 OWN_PUT_BACK_WITHIN = timedelta(minutes=15)
+# held.restore keys of a Family Safety enforcer, kept before the call: a lock under way or that failed (platform -> the
+# end it asked for, ISO): it may be in force all the same, so the platform is possibly held (_holding) and a lock
+# showing that end is Hearth's; and when Hearth started unlocking a platform (platform -> ISO): within
+# OWN_PUT_BACK_WITHIN nothing locked there is Hearth's own unlock (_fs_own_unlock), never a parent's
+FS_LOCKING = "fs_locking"
+FS_UNLOCKING = "fs_unlocking"
 # Swapping between the device lock and pausing every app costs a Family Link call per app, each way. After a swap,
 # Hearth stays on the device lock at least this long before it pauses every app again
 SWAP_DWELL = timedelta(minutes=10)
@@ -578,6 +584,8 @@ class Enforcement:
         # When the extra time Hearth last gave on a Family Safety platform today ends: (person, platform) -> datetime
         # or None (native_sync.py sets it). With what Hearth locked, how Hearth tells its own from a parent's
         self.fs_bonus_until = None
+        # ... and when each of today's ends: (person, platform) -> [datetime]
+        self.fs_bonus_ends = None
         # The values Hearth's Family Link backstop wrote today (backstop.py sets it): never put back as a weekday's limit
         self.backstop_values = None
         # The action log (activity.py; the household sets it): each hold started and ended
@@ -623,6 +631,14 @@ class Enforcement:
             if key_parts(key) == (FAMILY_LINK, person):
                 found |= _holding(held)
         return found - {DEVICES}
+
+    def family_link_devices_held(self, person: str) -> bool:
+        """Hearth holds the person's Family Link devices (the weekday's daily limit at 0), has started or is ending
+        that hold, or just called Family Link: a today-only daily limit written now would open the devices and read
+        as a parent's change (schedule.py's day-off bonus waits)."""
+        key = f"{FAMILY_LINK}|{person}"
+        held = self.held.get(key)
+        return (held is not None and DEVICES in _holding(held)) or self._quiet(key)
 
     def _save(self) -> None:
         self._store.async_delay_save(self._data, 2)
@@ -1129,7 +1145,8 @@ class Enforcement:
             return
         target = {"entity_id": entity_id} if "." in entity_id else {"account_id": entity_id}
         await call_service(self.hass,
-            FS_DOMAIN, "pause_app" if hold else "resume_app", {**target, "apps": sorted(apps)}, blocking=True
+            FS_DOMAIN, "pause_app" if hold else "resume_app", {**target, "apps": sorted(apps)}, blocking=True,
+            why="hold" if hold else "let_go",
         )
 
     async def _platform(self, entity_id: str, platform: str, hold: bool, held: Held | None = None) -> str | None:
@@ -1144,25 +1161,47 @@ class Enforcement:
         if hold:
             data["until"] = until.isoformat()
         service = "lock_platform" if hold else "unlock_platform"
+        why = "hold" if hold else "let_go"
         by_hours = False
-        try:
-            response = await self._fs_call(service, data)
-        except (vol.Invalid, ServiceValidationError) as err:
-            try:
-                account = self._account_id(entity_id)
-            except ValueError:
-                raise err from None
-            legacy: dict[str, Any] = {"account_id": account, "platform": platform}
-            end_at, by_hours = until, hold
-            if hold:
-                legacy["duration_hours"] = hours_to_midnight()
-                until = dt_util.now() + timedelta(hours=legacy["duration_hours"])
-            _LOGGER.debug("Family Safety refused the newer %s call (%s): calling it as before", service, err)
-            response = await self._fs_call(service, legacy)
-            if hold and held is not None and until > end_at:
-                # Whole hours run past midnight: Hearth unlocks it itself then (async_lock_ends_tick)
-                _restore_map(held, FS_UNLOCK_AT)[platform] = dt_util.as_utc(end_at).isoformat()
         if held is not None:
+            # Kept before the call: one that times out or is cut off after Microsoft applied it leaves a lock of
+            # Hearth's in force (possibly held, FS_LOCKING) or nothing locked by Hearth's own unlock (FS_UNLOCKING),
+            # never a parent's lock or unlock
+            if hold:
+                _restore_map(held, FS_LOCKING)[platform] = dt_util.as_utc(until).isoformat()
+            else:
+                _restore_map(held, FS_UNLOCKING)[platform] = dt_util.utcnow().isoformat()
+            self._save()
+        try:
+            try:
+                response = await self._fs_call(service, data, why)
+            except (vol.Invalid, ServiceValidationError) as err:
+                try:
+                    account = self._account_id(entity_id)
+                except ValueError:
+                    raise err from None
+                legacy: dict[str, Any] = {"account_id": account, "platform": platform}
+                end_at, by_hours = until, hold
+                if hold:
+                    legacy["duration_hours"] = hours_to_midnight()
+                    until = dt_util.now() + timedelta(hours=legacy["duration_hours"])
+                    if held is not None:
+                        _restore_map(held, FS_LOCKING)[platform] = dt_util.as_utc(until).isoformat()
+                _LOGGER.debug("Family Safety refused the newer %s call (%s): calling it as before", service, err)
+                response = await self._fs_call(service, legacy, why)
+                if hold and held is not None and until > end_at:
+                    # Whole hours run past midnight: Hearth unlocks it itself then (async_lock_ends_tick)
+                    _restore_map(held, FS_UNLOCK_AT)[platform] = dt_util.as_utc(end_at).isoformat()
+        except (vol.Invalid, ServiceValidationError, ServiceNotFound):
+            # Refused before it went out (no such action, a schema that doesn't take it): nothing changed
+            if held is not None:
+                _restore_map(held, FS_LOCKING if hold else FS_UNLOCKING).pop(platform, None)
+                _tidy_restore(held)
+            raise
+        if held is not None:
+            # Done: neither a lock nor an unlock of Hearth's is under way any more
+            _restore_map(held, FS_LOCKING).pop(platform, None)
+            _restore_map(held, FS_UNLOCKING).pop(platform, None)
             sent = _restore_map(held, "fs_lock_until")
             if hold:
                 sent[platform] = dt_util.as_utc(until).isoformat()
@@ -1182,11 +1221,11 @@ class Enforcement:
             _LOGGER.debug("Family Safety %s %s for %s: %s", service, platform, entity_id, applied)
         return applied if isinstance(applied, str) else None
 
-    async def _fs_call(self, service: str, data: dict[str, Any]) -> Any:
+    async def _fs_call(self, service: str, data: dict[str, Any], why: str | None = None) -> Any:
         """A Family Safety call, with its answer when the service gives one (an older one doesn't)."""
         responds = self.hass.services.supports_response(FS_DOMAIN, service) != SupportsResponse.NONE
         return await call_service(self.hass,
-            FS_DOMAIN, service, data, blocking=True, return_response=responds
+            FS_DOMAIN, service, data, blocking=True, return_response=responds, why=why
         )
 
     def _account_id(self, entity_id: str) -> str:
@@ -1676,6 +1715,8 @@ class Enforcement:
             elif e.kind == FAMILY_SAFETY:
                 for platform in sorted(held.items & set(PLATFORMS)):
                     state = self.fs_state(e, platform, watch)
+                    if state is not None and not quiet and self._fs_own_unlock(held, platform, state):
+                        continue
                     spec = family_safety_grant(state) if state is not None else None
                     if spec is not None:
                         grant(g.PLATFORM, platform, spec["reason"], spec["until"] or midnight, spec["end_with"])
@@ -1883,7 +1924,32 @@ class Enforcement:
         holds = bool(held and platform in held.items and platform not in (held.restore.get(FS_LOCK_ENDED) or {}))
         sent = (held.restore.get("fs_lock_until") or {}).get(platform) if held else None
         bonus = self.fs_bonus_until(e.person, platform) if self.fs_bonus_until is not None else None
-        return {"held": holds, "lock_until": _utc(sent) if holds else None, "bonus_until": bonus}
+        bonus_ends = self.fs_bonus_ends(e.person, platform) if self.fs_bonus_ends is not None else None
+        # A lock call under way or that failed (its end), and an unlock of Hearth's started lately
+        locking = _utc((held.restore.get(FS_LOCKING) or {}).get(platform)) if held else None
+        unlocking = bool(held) and _own_put_back((held.restore.get(FS_UNLOCKING) or {}).get(platform))
+        return {
+            "held": holds, "lock_until": _utc(sent) if holds else None, "bonus_until": bonus,
+            "bonus_ends": bonus_ends, "locking_until": locking, "unlocking": unlocking,
+        }
+
+    def _fs_own_unlock(self, held: Held, platform: str, state: dict[str, Any]) -> bool:
+        """Hearth's own unlock of [platform], cut off or failed after it went out (FS_UNLOCKING, within
+        OWN_PUT_BACK_WITHIN), with nothing locked there now: not a parent's unlock. The platform isn't held any more
+        (locked again if still wanted, else let go of as usual), as for Family Link's put-back (_own_put_back)."""
+        if not _own_put_back((held.restore.get(FS_UNLOCKING) or {}).get(platform)):
+            return False
+        if state.get("override") in (FS_BLOCK_UNTIL, FS_ALLOW_UNTIL) or state.get("hold") not in (
+            FS_HOLD_NONE, FS_HOLD_PARENT
+        ):
+            return False
+        held.items.discard(platform)
+        for key in ("fs_lock_until", FS_UNLOCK_AT, FS_LOCK_ENDED, FS_LOCKING, FS_UNLOCKING):
+            _restore_map(held, key).pop(platform, None)
+        _tidy_restore(held)
+        self._save()
+        _LOGGER.info("Family Safety %s: Hearth's own unlock went through after all", platform)
+        return True
 
     def fs_state(self, e: Enforcer, platform: str, watch: set[str] | None = None) -> dict[str, Any] | None:
         """Who decides the enforcer's Family Safety platform now (fs_hold_state), with what Hearth asked for."""
@@ -1933,12 +1999,17 @@ class Enforcement:
                     {"entity_id": enforcer.entity_id} if "." in enforcer.entity_id else {"account_id": enforcer.entity_id}
                 )
                 self._busy.add(key)
+                # Kept before the call, as any unlock of Hearth's (_platform): one that fails after it went out
+                # leaves nothing locked, which is Hearth's own unlock, never a parent's
+                _restore_map(held, FS_UNLOCKING)[platform] = now.isoformat()
+                self._save()
                 try:
                     try:
-                        await self._fs_call("unlock_platform", {**target, "platform": platform})
+                        await self._fs_call("unlock_platform", {**target, "platform": platform}, "lock_ended")
                     except (vol.Invalid, ServiceValidationError):
                         await self._fs_call(
-                            "unlock_platform", {"account_id": self._account_id(enforcer.entity_id), "platform": platform}
+                            "unlock_platform", {"account_id": self._account_id(enforcer.entity_id), "platform": platform},
+                            "lock_ended",
                         )
                 except Exception as err:  # noqa: BLE001 - tried again next minute, until the lock's own end
                     _LOGGER.warning("Hearth couldn't end its %s lock for %s on time: %s", platform, enforcer.person, err)
@@ -1948,6 +2019,9 @@ class Enforcement:
                     continue
                 finally:
                     self._busy.discard(key)
+                    # What changes now is Hearth's own call showing (as after any call of the enforcement's)
+                    self._quiet_until[key] = dt_util.utcnow() + QUIET_AFTER_CALL
+                _restore_map(held, FS_UNLOCKING).pop(platform, None)
                 due.pop(platform, None)
                 _restore_map(held, FS_LOCK_ENDED)[platform] = now.isoformat()
                 changed = True
@@ -2034,7 +2108,7 @@ def _restore_map(held: Held, key: str) -> dict[str, Any]:
 
 
 def _tidy_restore(held: Held) -> None:
-    for key in ("fs_lock_until", FS_UNLOCK_AT, FS_LOCK_ENDED):
+    for key in ("fs_lock_until", FS_UNLOCK_AT, FS_LOCK_ENDED, FS_LOCKING, FS_UNLOCKING):
         if not held.restore.get(key):
             held.restore.pop(key, None)
 
@@ -2052,11 +2126,12 @@ def fs_derived_hold(
     switch (on: a lock, with no end). Against [mine] (held, lock_until, bonus_until: what Hearth asked for):
 
     - a lock while Hearth holds the platform, ending when Hearth's does (or either end unknown: a Windows lock's end
-      isn't shown after Family Safety restarts): ours; any other lock: parent;
+      isn't shown after Family Safety restarts), or ending when a lock call of Hearth's that failed or is under way
+      asked (locking_until): ours; any other lock: parent;
     - extra time ending when the extra time Hearth gave there does: bonus_ours; any other: parent;
     - nothing in force while Hearth's lock should be (its end not passed): parent, override none (a parent unlocked
-      it), unless Hearth's own extra time replaced that lock today (none) or Hearth doesn't know when its lock ends
-      (None: can't tell);
+      it), unless Hearth's own extra time replaced that lock today or Hearth itself started unlocking it lately
+      (unlocking: none) or Hearth doesn't know when its lock ends (None: can't tell);
     - nothing in force and no lock of Hearth's: none.
 
     None while Family Safety can't read the platform's locks (unknown), or there's no such entity. A Windows lock a
@@ -2087,16 +2162,23 @@ def fs_derived_hold(
     lock_until: datetime | None = mine.get("lock_until")
     bonus_until: datetime | None = mine.get("bonus_until")
     lock_live = bool(mine.get("held")) and (lock_until is None or lock_until > now - FS_OWN_TOLERANCE)
+    # A lock call of Hearth's under way or that failed: a lock in force ending when it asked is Hearth's
+    locking: datetime | None = mine.get("locking_until")
     if not known:
         hold = None
     elif override == FS_BLOCK_UNTIL:
         own = lock_live and (until is None or lock_until is None or _close(until, lock_until))
+        own = own or (locking is not None and (until is None or _close(until, locking)))
         hold = FS_HOLD_OURS if own else FS_HOLD_PARENT
     elif override == FS_ALLOW_UNTIL:
         own = bonus_until is not None and (_close(until, bonus_until) or (until is None and bonus_until > now))
+        # Any extra time of Hearth's today, not only the latest (an approved request's next to a mirrored bonus)
+        own = own or any(_close(until, end) for end in mine.get("bonus_ends") or ())
         hold = FS_HOLD_BONUS_OURS if own else FS_HOLD_PARENT
     elif lock_live and bonus_until is not None and bonus_until > now - FS_OWN_TOLERANCE:
         hold = FS_HOLD_NONE  # Hearth's own extra time (still running) replaced its lock
+    elif lock_live and mine.get("unlocking"):
+        hold = FS_HOLD_NONE  # Hearth's own unlock, cut off or failed after it went out
     elif lock_live:
         hold = FS_HOLD_PARENT if lock_until is not None else None
     else:
@@ -2126,7 +2208,7 @@ def family_safety_grant(state: dict[str, Any]) -> dict[str, Any] | None:
         until = dt_util.parse_datetime(str(state.get("allow_until") or ""))
         if until is not None and until.tzinfo is None:
             until = until.replace(tzinfo=dt_util.get_default_time_zone())
-        return {"reason": "extra time given in the Family Safety app", "until": until, "end_with": g.END_CANCEL_BONUS}
+        return {"reason": "bonus time given in the Family Safety app", "until": until, "end_with": g.END_CANCEL_BONUS}
     if override == "none":  # null is unreadable: nothing said
         return {"reason": "unlocked in the Family Safety app", "until": None, "end_with": g.END_RELOCK}
     return None
@@ -2177,6 +2259,8 @@ def _holding(held: Held) -> set[str]:
         started.add(DEVICES)
     # Family Link apps whose pause call failed part-way, or never showed: they may be paused all the same
     started |= set(held.restore.get(MAYBE_PAUSED) or ())
+    # Family Safety platforms whose lock call failed or was cut off: they may be locked all the same
+    started |= set(held.restore.get(FS_LOCKING) or ())
     return held.items | started
 
 
