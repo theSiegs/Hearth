@@ -572,7 +572,7 @@
     },
     "let_someone_play": {
       "name": "Let someone else play",
-      "description": "Lifts Hearth's hold on a shared Switch, held because a kid was caught playing it with no time left, so someone else can play. If that kid plays during the turn, the Switch is held again at once.",
+      "description": "Lifts Hearth's hold on a shared Switch, held because a kid was caught playing it when they may not, so someone else can play. If that kid plays during the turn, the Switch is held again at once.",
       "fields": {
         "device": {
           "name": "Switch",
@@ -580,7 +580,7 @@
         },
         "minutes": {
           "name": "Minutes",
-          "description": "How long the turn lasts. 0 ends a turn: the Switch is held again now."
+          "description": "How long the turn lasts. 0 holds the Switch now: it ends a turn, or holds it for a kid who may not play before they're caught."
         },
         "for_person": {
           "name": "For",

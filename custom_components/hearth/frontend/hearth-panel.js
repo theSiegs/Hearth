@@ -1717,7 +1717,7 @@ class HearthPanel extends HTMLElement {
         const minutes = Number(d.minutes);
         await this._ws(
           { type: "hearth/nintendo/let_play", person: d.person, device_id: d.device, minutes },
-          minutes ? `The Switch is open for ${minutes < 60 ? `${minutes} min` : `${minutes / 60} h`}` : "The Switch is held again"
+          minutes ? `The Switch is open for ${minutes < 60 ? `${minutes} min` : `${minutes / 60} h`}` : "The Switch is held"
         );
         return;
       }
@@ -4239,14 +4239,16 @@ class HearthPanel extends HTMLElement {
       <div class="facts">${facts.map(([k, v]) => `<div><div class="muted small">${esc(k)}</div><div class="strong">${esc(v)}</div></div>`).join("")}</div>`);
     // A shared Switch held because the kid was caught playing out of time: everyone waits, unless it's someone else's turn
     if (n.caught && n.target)
-      sections.push(`<div class="row wrap"><div class="grow muted small">Held for everyone: ${esc(kid.name)} played it with no time left. It stays held until ${esc(kid.name)} has time again.</div>
+      sections.push(`<div class="row wrap"><div class="grow muted small">Held for everyone: ${esc(kid.name)} played it with no time for it. It stays held until ${esc(kid.name)} may play again.</div>
         ${[30, 60, 120].map((m) => `<button class="btn" data-action="nin-let-play" data-person="${p}" data-device="${dev}" data-minutes="${m}">Let someone else play ${m < 60 ? `${m} min` : `${m / 60} h`}</button>`).join("")}</div>`);
     else if (n.turn && n.target) {
       const until = new Date(n.turn.until).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
       const who = n.turn.for_person ? `${this._personName(n.turn.for_person)}'s turn` : "Someone else's turn";
       sections.push(`<div class="row wrap"><div class="grow muted small">${esc(who)} until ${esc(until)}. If ${esc(kid.name)} plays meanwhile, the Switch is held again.</div>
         <button class="btn" data-action="nin-let-play" data-person="${p}" data-device="${dev}" data-minutes="0">Hold again now</button></div>`);
-    }
+    } else if (n.waiting && n.target)
+      sections.push(`<div class="row wrap"><div class="grow muted small">${esc(kid.name)} may not play now: the Switch is held once ${esc(kid.name)} is caught playing it, so others can play meanwhile.</div>
+        <button class="btn" data-action="nin-let-play" data-person="${p}" data-device="${dev}" data-minutes="0">Hold it now</button></div>`);
     // Hearth's extra time on this Switch alone: lets Hearth's hold go there (its own limit still applies)
     if (n.target)
       sections.push(`<div class="row wrap"><div class="grow muted small">Hearth's extra time on this Switch only (lets Hearth's hold go there, today)</div>

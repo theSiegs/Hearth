@@ -13,13 +13,24 @@ Who is playing comes from what the installed Nintendo integration has:
   so a player whose minutes grew in the last WINDOW minutes is playing. Minutes that haven't been read lately (STALE),
   or aren't there, say nothing: unknown, never "not playing". "Not playing" is only said after the minutes have been
   watched, fresh, for a whole window without growing.
-- A patched copy adds a binary sensor per player (<switch id>_<player id>_playing), friend presence another. "On" is
-  playing; "off" counts only once it has stayed off for OFF_CONFIRM (two of the integration's minute readings) and is
-  fresh; unavailable, unknown or stale is unknown.
+- A patched copy adds a binary sensor per player (<switch id>_<player id>_playing). It is the same minutes growing
+  (on for 10 minutes after each growth, with an off and on again within milliseconds at each reading), so where the
+  player's minutes sensor is there, the minutes alone are read: the flicker never reads as new play. Friend presence
+  (or a playing sensor without minutes) is read as itself: "on" is playing; "off" counts only once it has stayed off
+  for OFF_CONFIRM and is fresh; unavailable, unknown or stale is unknown.
+- Someone else since: a player whose minutes grew, but after whom another player's minutes or the console's own
+  minutes grew at a later reading (not the same one: SAME_UPLOAD) without theirs, isn't the one playing now. Nintendo
+  takes every player's minutes in one upload, so the console moving on without them means they stopped and someone
+  else (an adult, a brother or sister, a guest, or no user at all) started.
 
 Any source saying "playing" wins; else any trusted "not playing"; else unknown. Nothing here ever lets a hold go:
 a Switch is let go only when its kid has time again or an adult gives a turn (enforce.py). Unknown only means Hearth
 doesn't catch anyone with it.
+
+Play nobody's player counts (the console's minutes growing past all its players' together: software that needs no
+user, or no user picked) can't be put on anyone. While a kid on the Switch would be held if caught, UNATTRIBUTED
+minutes of it are told to the adults (ConsoleWatch) with a button to hold the Switch now; Hearth never holds it by
+itself for play it can't put on the kid (it may be an adult's).
 """
 
 from __future__ import annotations
@@ -54,6 +65,15 @@ UPLOAD_GRACE = timedelta(minutes=12)
 # Let someone else play: how long by default, and at most
 DEFAULT_TURN_MINUTES = 60
 MAX_TURN_MINUTES = 240
+# Two growths this close are one Nintendo upload (the integration reads every player's minutes and the console's in
+# one poll): neither is "someone else since"
+SAME_UPLOAD = timedelta(minutes=2)
+# The console's own minutes (its "used screen time")
+CONSOLE_PLAYED = "playing_time"
+# Play on no player's minutes past this many minutes is told to the adults, at most once per UNATTRIBUTED_REPEAT.
+# Nintendo counts the console in steps of 5 to 10 minutes and the players in their own, so less is rounding
+UNATTRIBUTED_MIN = 15
+UNATTRIBUTED_REPEAT = timedelta(minutes=60)
 _UNKNOWN = ("unknown", "unavailable", "")
 
 
@@ -82,6 +102,33 @@ def minutes_of_binary(hass: HomeAssistant, binary: str) -> str | None:
 def binary_of_minutes(hass: HomeAssistant, minutes: str) -> str | None:
     """The patched integration's playing sensor of a player's minutes sensor, when it's installed."""
     return _twin(hass, minutes, "binary_sensor", PLAYER_PLAYED, PLAYING)
+
+
+def own_signal(hass: HomeAssistant, binaries: list[str]) -> list[str]:
+    """The playing sensors that say more than their player's minutes: friend presence, or a patched copy's sensor
+    whose minutes sensor isn't there (missing, or without a state). A patched copy's sensor beside its minutes is the
+    same growth, read from the minutes."""
+    found = []
+    for binary in binaries:
+        twin = minutes_of_binary(hass, binary)
+        if twin is None or hass.states.get(twin) is None:
+            found.append(binary)
+    return found
+
+
+def console_entities(hass: HomeAssistant, switch_entity: str) -> tuple[list[str], str | None]:
+    """Every player's minutes sensor on the Switch [switch_entity] is on (adults' and guests' too), and the console's
+    own minutes sensor."""
+    registry = er.async_get(hass)
+    entry = registry.async_get(switch_entity)
+    if entry is None or entry.device_id is None:
+        return [], None
+    device = dr.async_get(hass).async_get(entry.device_id)
+    nintendo_id = next((v for d, v in device.identifiers if d == NINTENDO_DOMAIN), None) if device else None
+    console = (
+        registry.async_get_entity_id("sensor", NINTENDO_DOMAIN, f"{nintendo_id}_{CONSOLE_PLAYED}") if nintendo_id else None
+    )
+    return [p["entity_id"] for p in players(hass, switch_entity)], console
 
 
 def sources_of(hass: HomeAssistant, enforcer: Enforcer) -> tuple[list[str], list[str]]:
@@ -232,14 +279,27 @@ class MinutesTrack:
         if self.seen_since is None:
             self.seen_since = now
 
-    def verdict(self, now: datetime, window: timedelta) -> bool | None:
+    def verdict(self, now: datetime, window: timedelta, others: list[MinutesTrack] = ()) -> bool | None:
+        """Playing (their minutes grew within [window] and nobody's since: [others], the console's and its other
+        players' minutes), not playing (watched a whole window without growing, or someone else's grew since), or
+        unknown."""
         if self.seen_since is None:
             return None
         if self.grew_at is not None and now - self.grew_at <= window:
+            if any(
+                o.grew_at is not None and o.seen_since is not None and o.grew_at - self.grew_at > SAME_UPLOAD
+                for o in others
+            ):
+                return False
             return True
         if now - self.seen_since >= window:
             return False
         return None
+
+    @property
+    def known(self) -> float | None:
+        """The minutes, when watched without a gap since they were last read fresh."""
+        return self.value if self.seen_since is not None else None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -347,6 +407,47 @@ class SwitchWatch:
             self.baseline, self.absorb_until = minutes, None
             return False
         return True
+
+
+@dataclass
+class ConsoleWatch:
+    """Play on a Switch that no player's minutes count, while a kid on it would be held if caught (in memory: after a
+    restart it starts again from what it reads then)."""
+
+    day: str | None = None
+    console: float | None = None
+    players: float | None = None
+    told_at: datetime | None = None
+
+    def reset(self) -> None:
+        self.console = self.players = None
+
+    def update(self, console: float | None, players: float | None, now: datetime) -> float | None:
+        """The minutes to tell the adults about now (None: nothing), from the console's minutes and all its players'
+        together, as fresh readings (None when one isn't)."""
+        day = dt_util.as_local(now).date().isoformat()
+        if console is None or players is None:
+            # A gap: what happened in it isn't counted against anyone
+            self.reset()
+            return None
+        if self.day != day:
+            self.day, self.told_at = day, None
+            self.reset()
+        if self.console is None or self.players is None:
+            self.console, self.players = console, players
+            return None
+        unattributed = (console - self.console) - (players - self.players)
+        if console < self.console or players < self.players or unattributed < 0:
+            # Nintendo's reset, or players counted past the console (two playing together): from here
+            self.console, self.players = console, players
+            return None
+        if unattributed < UNATTRIBUTED_MIN:
+            return None
+        if self.told_at is not None and now - self.told_at < UNATTRIBUTED_REPEAT:
+            return None
+        self.told_at = now
+        self.console, self.players = console, players
+        return unattributed
 
 
 def window_of(raw: Any) -> timedelta:

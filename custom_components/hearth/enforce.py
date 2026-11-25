@@ -617,6 +617,12 @@ class Enforcement:
         self.playing_now: dict[str, bool | None] = {}
         # ... and what their player's minutes alone say
         self.minutes_playing: dict[str, bool | None] = {}
+        # Whether something would hold each Switch enforcer's Switch if its person were playing, as of the last update
+        self.switch_reason: dict[str, bool] = {}
+        # Play no player's minutes count, by Switch entity, while a kid on it would be held if caught (in memory)
+        self.consoles: dict[str, sp.ConsoleWatch] = {}
+        # Each Switch's players' and console's minutes sensors, looked up once per update (the registry is read whole)
+        self._console_entities: dict[str, tuple[list[str], str | None]] = {}
         # Called with (enforcer, what, details) when a shared Switch's kid is caught, caught again in someone else's
         # turn, a turn ends or the hold is over (household.py tells the adults)
         self.on_switch = None
@@ -795,6 +801,7 @@ class Enforcement:
         one device lifts of an enforcer's schedule holds (a Family Safety platform, a Switch, in Sleep only)."""
         self.enforcers = enforcers
         now = dt_util.now()
+        self._console_entities = {}
         wanted_now: dict[str, set[str]] = {}
         why_now: dict[str, dict[str, str]] = {}
         for e in enforcers:
@@ -898,6 +905,7 @@ class Enforcement:
                 else WHY_BUDGET
                 for item in wanted_now[e.key]
             }
+        self._watch_unattributed(enforcers, now)
         # What an enforcer no longer configured held is let go
         for key in self.held:
             wanted_now.setdefault(key, set())
@@ -940,32 +948,69 @@ class Enforcement:
             self.playing_now.pop(enforcer.key, None)
             self.minutes_playing.pop(enforcer.key, None)
             return None
-        verdicts = [sp.binary_verdict(self.hass.states.get(b), now) for b in binaries]
+        # A patched copy's playing sensor beside its minutes is the same growth (and flickers off and on at each
+        # reading): the minutes are read instead
+        verdicts = [sp.binary_verdict(self.hass.states.get(b), now) for b in sp.own_signal(self.hass, binaries)]
         window = sp.window_of(enforcer.window)
+        # The console's own minutes and its other players' (adults', guests'): growth after theirs is someone else
+        everyone, console = self._console_of(enforcer.entity_id)
+        others = [self._track(e, now) for e in [*everyone, *([console] if console else [])] if e not in minutes]
         by_minutes: list[bool | None] = []
         for entity_id in minutes:
-            track = self.minutes.setdefault(entity_id, sp.MinutesTrack())
-            was = track.to_dict()
-            track.observe(self.hass.states.get(entity_id), now)
-            if track.to_dict() != was:
-                self._save()
-            by_minutes.append(track.verdict(now, window))
+            by_minutes.append(self._track(entity_id, now).verdict(now, window, others))
         self.minutes_playing[enforcer.key] = sp.combine(by_minutes)
         found = sp.combine(verdicts + by_minutes)
         self.playing_now[enforcer.key] = found
         return found
 
+    def _console_of(self, entity_id: str) -> tuple[list[str], str | None]:
+        if entity_id not in self._console_entities:
+            self._console_entities[entity_id] = sp.console_entities(self.hass, entity_id)
+        return self._console_entities[entity_id]
+
+    def _track(self, entity_id: str, now: datetime) -> sp.MinutesTrack:
+        """A minutes sensor's track, brought up to date (once per update is enough; again is harmless)."""
+        track = self.minutes.setdefault(entity_id, sp.MinutesTrack())
+        was = track.to_dict()
+        track.observe(self.hass.states.get(entity_id), now)
+        if track.to_dict() != was:
+            self._save()
+        return track
+
     def _switch_minutes(self, enforcer: Enforcer) -> tuple[float | None, list]:
-        """The person's player minutes now (fresh ones only; None without any) and their playing sensors' states."""
+        """The person's player minutes now (None unless every one of theirs is read fresh: one missing would read as
+        a drop, and its return as play) and the states of their playing sensors that say more than the minutes."""
         binaries, minutes = sp.sources_of(self.hass, enforcer)
-        values = [
-            track.value
-            for entity_id in minutes
-            if (track := self.minutes.get(entity_id)) is not None
-            and track.seen_since is not None
-            and track.value is not None
-        ]
-        return (sum(values) if values else None), [self.hass.states.get(b) for b in binaries]
+        values = [track.known if (track := self.minutes.get(entity_id)) is not None else None for entity_id in minutes]
+        total = sum(values) if values and all(v is not None for v in values) else None
+        return total, [self.hass.states.get(b) for b in sp.own_signal(self.hass, binaries)]
+
+    def _watch_unattributed(self, enforcers: list[Enforcer], now: datetime) -> None:
+        """Play on a Switch no player's minutes count (software that needs no user, or no user picked) while a kid on
+        it would be held if caught: told to the adults with a button to hold it now (switch_play.ConsoleWatch), never
+        held for it, since it may be an adult's."""
+        waiting: dict[str, list[Enforcer]] = {}
+        for e in enforcers:
+            if e.kind != NINTENDO or not e.shared or not self.switch_reason.get(e.key):
+                continue
+            watch = self.switch.get(e.key)
+            if watch is not None and (watch.caught_at is not None or watch.turn is not None):
+                continue
+            waiting.setdefault(e.entity_id, []).append(e)
+        for entity_id in list(self.consoles):
+            if entity_id not in waiting:
+                self.consoles.pop(entity_id)
+        for entity_id, kids in waiting.items():
+            everyone, console = self._console_of(entity_id)
+            if console is None or not everyone:
+                continue
+            values = [self._track(e, now).known for e in everyone]
+            players = sum(values) if all(v is not None for v in values) else None
+            found = self.consoles.setdefault(entity_id, sp.ConsoleWatch()).update(
+                self._track(console, now).known, players, now
+            )
+            if found is not None:
+                self._tell(kids[0], "unattributed", minutes=int(found), held_for=sorted(k.person for k in kids))
 
     def _tell(self, enforcer: Enforcer, what: str, **details: Any) -> None:
         self.hass.bus.async_fire(
@@ -986,6 +1031,7 @@ class Enforcement:
         sources say never lets a hold go."""
         key = enforcer.key
         today = dt_util.as_local(now).date().isoformat()
+        self.switch_reason[key] = reason
         watch = self.switch.get(key)
         if watch is None or watch.day != today:
             watch = self.switch[key] = sp.SwitchWatch(day=today)
@@ -1042,8 +1088,9 @@ class Enforcement:
     def let_someone_play(
         self, entity_ids: set[str], minutes: int, for_person: str | None = None, by: str | None = None
     ) -> list[str]:
-        """Let someone else play: Hearth's caught holds on these Switches are lifted for [minutes] (0 ends a turn:
-        held again now). Says whose holds; raises ValueError when there's none."""
+        """Let someone else play: Hearth's caught holds on these Switches are lifted for [minutes]. 0 holds the Switch
+        now for each kid on it something would hold it for: it ends a turn, or catches a kid not caught yet (an adult
+        who sees them playing, or play no player counts). Says whose holds; raises ValueError when there's none."""
         now = dt_util.now()
         today = now.date().isoformat()
         found: list[str] = []
@@ -1052,10 +1099,11 @@ class Enforcement:
             if watch is None or watch.day != today:
                 continue
             if minutes <= 0:
-                if watch.turn is not None:
+                if watch.turn is not None or (watch.caught_at is None and self.switch_reason.get(e.key)):
                     watch.turn, watch.caught_at = None, now
                     watch.since = watch.baseline = watch.absorb_until = None
                     found.append(e.person)
+                    self._tell(e, "held_now", by=by)
                 continue
             if watch.caught_at is None and watch.turn is None:
                 continue
@@ -1071,7 +1119,9 @@ class Enforcement:
             found.append(e.person)
         if not found:
             raise ValueError(
-                "No one else's turn on this Switch" if minutes <= 0 else "Hearth isn't holding this Switch for anyone"
+                "Nothing would hold this Switch for anyone now"
+                if minutes <= 0
+                else "Hearth isn't holding this Switch for anyone"
             )
         self._save()
         return found
@@ -1080,6 +1130,8 @@ class Enforcement:
         """For Hearth's page: who Hearth holds this Switch for (caught), someone else's turn, and who's playing."""
         today = dt_util.now().date().isoformat()
         caught: list[str] = []
+        # Would be held once caught playing (out of time, paused, Sleep...), not caught yet
+        waiting: list[str] = []
         turn: dict[str, Any] | None = None
         playing: dict[str, bool | None] = {}
         for e in self.switch_enforcers({entity_id}):
@@ -1090,6 +1142,8 @@ class Enforcement:
                 continue
             if watch.caught_at is not None:
                 caught.append(e.person)
+            elif watch.turn is None and self.switch_reason.get(e.key):
+                waiting.append(e.person)
             if watch.turn is not None:
                 if turn is None:
                     turn = {
@@ -1098,7 +1152,7 @@ class Enforcement:
                         "held_for": [],
                     }
                 turn["held_for"].append(e.person)
-        return {"caught": sorted(caught), "turn": turn, "playing": playing}
+        return {"caught": sorted(caught), "waiting": sorted(waiting), "turn": turn, "playing": playing}
 
     def _switch_holders(self, key: str, entity_id: str | None) -> list[Held]:
         """Another person's hold on the same Switch, wanted still or not."""

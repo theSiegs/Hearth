@@ -282,6 +282,8 @@ def switches(household: Household, person: str) -> list[dict[str, Any]]:
                 "shared": bool(enforcer and enforcer.shared),
                 # Hearth holds it because they were caught playing out of time (everyone on it waits)
                 "caught": bool(hold and person in hold["caught"]),
+                # Something would hold it for them (out of time, a pause, Sleep...): held once they're caught playing
+                "waiting": bool(hold and person in hold["waiting"]),
                 # Someone else's turn: {until, for_person, held_for}
                 "turn": hold["turn"] if hold else None,
                 "each_day": _state(hass, by_key[MODE]) == "each_day_of_the_week",
