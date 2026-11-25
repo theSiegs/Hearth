@@ -961,6 +961,36 @@
         }
       }
     },
+    "set_school_time": {
+      "name": "Set School time",
+      "description": "Sets kids' weekly Family Link School time: the hours of some weekdays (given, or like another kid's), and/or switches School time on. Switched on, it comes on during their next school day's window, as a School time off is put back. Days without School time in Family Link can't get hours.",
+      "fields": {
+        "people": {
+          "name": "People",
+          "description": "Whose School time."
+        },
+        "days": {
+          "name": "Days",
+          "description": "Weekdays (mon to sun), school_days (Monday to Friday, the default) or every_day."
+        },
+        "start": {
+          "name": "Start",
+          "description": "School time start, with end."
+        },
+        "end": {
+          "name": "End",
+          "description": "School time end, same day and after the start."
+        },
+        "like": {
+          "name": "Like",
+          "description": "Copy this kid's hours for the days instead of giving them."
+        },
+        "switch_on": {
+          "name": "Switch on",
+          "description": "Also switch their School time on."
+        }
+      }
+    },
     "school_time_off_cancel": {
       "name": "Cancel School time off",
       "description": "One not started yet is dropped; one already off is put back from today (inside the window, as always).",

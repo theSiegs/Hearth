@@ -1639,6 +1639,14 @@ the people chosen):
 - `hearth.school_time_off` (`people`; `date`, today by default; `from`, a time; `reason`) does the same for anyone,
   any day; `hearth.school_time_off_cancel` (`people`, `date`) drops one not started, or puts one already off back from
   today.
+- `hearth.set_school_time` (`people`; `days`: `mon`…`sun`, `school_days` (the default) or `every_day`; `start` and
+  `end`, or `like` another kid; `switch_on`) sets the weekly Family Link School time of those weekdays
+  (`familylink.set_school_time`, weekly scope, one call a day, recorded as Hearth's own with `why: school_hours`). A day
+  already at those hours isn't written; with `like`, a day the other kid has no School time is skipped; Family Link
+  refuses a day that has no School time slot yet, and one day failing doesn't stop the rest. `switch_on` switches the
+  kids' School time on as a School time off is put back (below): on a school day, inside the window, pinned at once;
+  kept over a restart. Answers, per kid, `set`, `same`, `failed`, `skipped` and `switch_on` (the date it may come on
+  from, or `already`).
 - `hearth.home_today` (`people`; `date`, a school or half day, today by default; `reason`) keeps kids home, a sick day:
   that day is a day off for them alone. Their weekly schedule and limits are the Day off's (the other days' budgets),
   and with Family Link their School time is taken off for the whole day, as `hearth.school_time_off` does. The household's

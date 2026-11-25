@@ -487,6 +487,35 @@ home_today_cancel:
       selector:
         date:
 
+set_school_time:
+  fields:
+    people:
+      required: true
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    days:
+      default: [school_days]
+      selector:
+        select:
+          multiple: true
+          options: [school_days, every_day, mon, tue, wed, thu, fri, sat, sun]
+    start:
+      selector:
+        time:
+    end:
+      selector:
+        time:
+    like:
+      selector:
+        entity:
+          domain: person
+    switch_on:
+      default: false
+      selector:
+        boolean:
+
 school_time_off_cancel:
   fields:
     people:
