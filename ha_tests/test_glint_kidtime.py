@@ -114,7 +114,8 @@ async def test_set_budget_takes_no_limit_and_answers_before_and_after(
 async def test_a_panel_reads_each_kid_s_time_by_its_secret(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, hass_ws_client, freezer
 ) -> None:
-    freezer.move_to(dt_util.now().replace(hour=14, minute=0, second=0, microsecond=0))
+    # Tomorrow at 14:00: never behind the real clock, which the panel's login token is checked against
+    freezer.move_to((dt_util.now() + timedelta(days=1)).replace(hour=14, minute=0, second=0, microsecond=0))
     client, _secret = await _household_with_sam(hass, hass_client_no_auth)
     entry = hass.config_entries.async_entries(DOMAIN)[0]
     hass.config_entries.async_update_entry(entry, options={**entry.options, "roles": {SAM: "kid"}})
