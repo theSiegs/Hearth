@@ -3,6 +3,15 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **Hearth's extra time reaches the Switch's own limit**: extra time, an allow of All screen time or of a group the Switch is held for (Games), and extra time on the Switch alone now add Nintendo's own extra playing time where the Switch's daily limit would stop it before Hearth does, so a kid given +30 minutes isn't stopped by the Switch. It's given only where Hearth can cancel it again (the patched Nintendo integration's `cancel_bonus_time`, or the Switch's Cancel extra playing time button), waits while Hearth holds the Switch, never runs past the Switch's bedtime alarm (Nintendo would move it), is cancelled before Hearth holds the Switch again, and goes when the extra time is taken back or ends early, unless a parent's extra playing time came on top.
+- **Block Xbox and Windows apps from Hearth**: `hearth.block_app` and `hearth.unblock_app` take Family Safety's app ids (`x:...`, `appx:...`, `win32:...`) for a kid with Family Safety, blocked through Family Safety's `block_app`. As for Android apps, Hearth only lifts its own blocks (a parent's block in the Family Safety app stays), waits for an app that isn't in the list yet, and keeps a parent's unblock; a block or unblock of an app Hearth's pause holds waits until it's resumed.
+- **Lift bedtime on one Family Link device, the Xbox, Windows or a Switch**: `hearth.allow` with `bedtime: true` and such a `device` now works there too, not only on a TV or phone with Hearth. A Family Link device gets a bonus once it's in bedtime (no more than All screen time has left; it waits through School time, a pause or daily time running out); a Family Safety platform is let go by the schedule's Sleep and its allowed hours move to the lift's end ("Xbox until 10 tonight, nothing else"); a Switch is let go by the schedule's Sleep. Budgets and pauses still hold there.
+- **`hearth.explain` names the Switch's own limit**: a Switch whose daily limit is used up (and Hearth isn't the one holding it) is listed as `device_limit` for All screen time, Games and their apps, so explain no longer says "allowed" while the Switch has stopped.
+
 ## 2026.11.58
 
 ### Home Assistant integration

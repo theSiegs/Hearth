@@ -162,7 +162,10 @@ async def test_what_may_be_blocked_and_by_whom(
         with pytest.raises(ServiceValidationError, match="never blocks"):
             await _call(hass, "block_app", {"app": package})
     with pytest.raises(ServiceValidationError, match="Only Android apps"):
-        await _call(hass, "block_app", {"app": "x:9NBLGGH4R315"})
+        await _call(hass, "block_app", {"app": "not an app"})
+    # An Xbox app: through Family Safety, which Sam doesn't have here (test_platform_parity)
+    with pytest.raises(ServiceValidationError, match="No Family Safety"):
+        await _call(hass, "block_app", {"app": "x:9NBLGGH4R315", "people": ["person.sam"]})
     with pytest.raises(ServiceValidationError, match="kids"):
         await _call(hass, "block_app", {"app": FIREFOX, "people": ["person.someone"]})
 

@@ -842,25 +842,44 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
     or touch the schedule, and its Xbox allowed hours (Xbox Family Settings) have no restore point. Any platform their Family
     Safety reports is a target, whether or not Hearth's enforcer holds it. When it ends, Hearth locks
     the platform again if the pool is still out.
-  - a Switch: Hearth's hold of the Switch is let go (its own limit and Suspend software put back, which still
-    apply); by the clock, from now.
+  - a Switch: Hearth's hold of the Switch is let go (its own limit and Suspend software put back); by the clock, from
+    now. Where the Switch's own limit would stop it sooner, Nintendo's extra playing time is added too, as for the
+    Switch's mirror of extra time ([Keeping the parents' apps in step](#keeping-the-parents-apps-in-step)), and
+    cancelled when it ends early.
   **Bedtime on one device** (`hearth.allow` with `device` and `bedtime: true`, an `until`, no app or group): bedtime
-  is lifted on that TV or phone with Hearth only, until then (midnight at most). That device's copy of the person's
-  state document isn't locked by bedtime (the schedule's Sleep or a bedtime lock entity), says `bedtime_lifted`
-  `{since: null, until}`, and names the lift's end as `next_lock` (kind bedtime, `until` the wake), so a TV that
-  loses Home Assistant locks again by itself at the end. A family pause and School time still lock there, and the
-  time used there counts as always (a daily time that runs out still stops it). It never moves Family Link's bedtime
-  and never counts as extra time at bedtime, so the person's other devices (phones, tablets, an Xbox, a Switch) stop
-  at bedtime as before. Refused on a Family Link device, a Family Safety platform or a Switch. Example: bedtime at
-  9 PM, and an automation that lifts it on a kid's TVs until 10 PM each night. `kind` is `bedtime` in
-  `device_extras`; `hearth.allow_end` with the `device` (or the id) ends it.
+  is lifted on that device only, until then (midnight at most). A family pause, School time and a daily time that
+  runs out still stop it there, and the time used there counts as always; it never counts as extra time at bedtime,
+  so the person's other devices stop at bedtime as before. By device:
+  - a Hearth TV or phone: that device's copy of the person's state document isn't locked by bedtime (the schedule's
+    Sleep or a bedtime lock entity), says `bedtime_lifted` `{since: null, until}`, and names the lift's end as
+    `next_lock` (kind bedtime, `until` the wake), so a TV that loses Home Assistant locks again by itself at the end.
+    It never moves Family Link's bedtime.
+  - a Family Link device: what opens Family Link's bedtime on one device is a bonus there (as
+    [Extra time at bedtime](#extra-time-at-bedtime) found), so once that device is in bedtime (Family Link's own, or
+    Hearth's Sleep lock of the devices) it gets `add_time_bonus` for the minutes until the lift's end, never more than
+    All screen time has left. It waits while School time, a pause or daily time running out holds the device (a bonus
+    would open those too), and is given once only those are gone. Hearth's own, so no parent's grant; ended early,
+    it's reset (unless a parent's bonus came on top). Family Link's bedtime itself isn't moved.
+  - a Family Safety platform: the schedule's Sleep lock of that platform is let go (a budget's or a pause's lock
+    stays), and Microsoft's allowed hours today move to cover the lift, as for extra time on that platform (no extra
+    time: its daily allowance still counts). Ended early, the allowed hours go back. E.g. "Xbox until 10 tonight,
+    nothing else".
+  - a Switch: the schedule's Sleep hold of the Switch is let go (a budget's or a pause's hold stays). No extra
+    playing time, and the Switch's own bedtime alarm (set in the Nintendo app) isn't moved.
+  Example: bedtime at 9 PM, and an automation that lifts it on a kid's TVs until 10 PM each night. `kind` is
+  `bedtime` in `device_extras`; `hearth.allow_end` with the `device` (or the id) ends it.
   Each shows in the summary's `device_extras`, in `hearth.explain` (`device_extras`) and as a contract 2 line.
 - Bedtime, School time itself and a family pause still lock the person. An allow lifts Hearth's holds, not those
   locks: a TV can't open one app through a lock without a change on the TV, and Family Link's own bedtime still locks
   the phone. To lift School time, take it off (`hearth.school_time_off`).
 - `hearth.explain` (`person`; `app` or `group`), response only: `{allowed, until, blocked_by: [{kind, by, until}],
   lifted, exceptions, school_time_off}`. `kind` is `budget` (by the group, until midnight), `bedtime`, `school_time`
-  or `other` (by the lock entity, until it says), `pause` (until, reason) or `school_time_apps` (by the Family Link
+  or `other` (by the lock entity, until it says), `pause` (until, reason) or `device_limit` (a device's own limit
+  stops it now, not a hold of Hearth's: Google's daily limit on a Family Link device, with its `device` name, until
+  midnight; Microsoft's allowance or allowed hours on a platform, with its `platform`, until null; a Switch's own limit,
+  by its Max screentime entity, with its `device` name, until midnight, listed only for what the Switch is held for:
+  All screen time, Games, an app of those) or `parent_lock` (a parent's own Family Safety lock, with its `platform`,
+  until it ends) or `school_time_apps` (by the Family Link
   entity, until School time ends) or `google_tv_limit` (by the TV's device id, with its `device` name, until null; see
   below) or `app_limit` (a parent's own Family Link app limit used up on a device: by the Apps with time limits
   sensor, with `app`, `device`, `limit_minutes` and `used_minutes`, until midnight; Hearth's allows and bonuses don't
@@ -888,13 +907,24 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
 Every kid control goes through Hearth: block an app with `hearth.block_app`, never with `familylink.block_app` directly,
 so Hearth's pauses, its schedule and its blocks stay in step (`app_blocks.py`).
 
-- `hearth.block_app` and `hearth.unblock_app` (`app` or `apps`: Android package names; `people`: the kids, every kid
-  with Family Link by default), adults only like Hearth's other services. Hearth blocks the app through Family Link
-  (`familylink.block_app` with the kid's Family Link entity) and keeps its own record of what it blocked. Only Android
-  apps for now; Hearth's own apps, Family Link, Google Play, Settings, the dialer and contacts are never blocked (an
-  emergency call always works). Messages apps can be blocked; blocking one (unlike pausing it) makes it miss incoming
-  texts, while a paused Messages still receives them.
+- `hearth.block_app` and `hearth.unblock_app` (`app` or `apps`: Android package names, or Family Safety's app ids of
+  Xbox and Windows apps; `people`: the kids, by default every kid with what blocks the app), adults only like Hearth's
+  other services. Hearth blocks an Android app through Family Link (`familylink.block_app` with the kid's Family Link
+  entity) and keeps its own record of what it blocked. Hearth's own apps, Family Link, Google Play, Settings, the
+  dialer and contacts are never blocked (an emergency call always works). Messages apps can be blocked; blocking one
+  (unlike pausing it) makes it miss incoming texts, while a paused Messages still receives them.
   The response names who each app was blocked or unblocked for.
+- **Xbox and Windows apps.** An app id as Family Safety's Applications sensor lists it (`x:...` an Xbox game or app,
+  `x:windowsplt:...` or `appx:...` a Microsoft Store app, `win32:...` a Windows program) is blocked through Family
+  Safety's `block_app` (unblocked with `unblock_app`), for a kid with a Family Safety enforcer (Configure > Enforce);
+  the block is the account's, on every platform. Everything below holds for them too, read from the kid's
+  Applications sensor instead of Family Link's lists: only Hearth's own blocks are lifted (one a parent made in the
+  Family Safety app stays theirs), one not in the list waits until the app is, a list cut short or missing blocks and
+  unblocks nothing, a block Family Safety never lists is tried 3 times, and a parent's unblock in the Family Safety app
+  is kept. One more rule: Family Safety pauses an app (Hearth's holds of Xbox and Windows apps) by blocking it and
+  puts back on resume what the app was before, so a block or unblock of an app Hearth's pause holds now waits until
+  the app is resumed (made under the pause, the resume would undo a block, and an unblock would lift the pause).
+  The browser and AI companion rules are Android's only (Family Safety's web filter covers browsers there).
 - **Hearth only undoes its own blocks.** An app a parent already blocked in the Family Link app stays the parent's
   (Hearth's page shows "blocked by a parent in Family Link"); unblocking it in Hearth leaves it blocked there.
 - **A block stays.** An app that isn't installed waits ("not installed: blocked when it shows up") and is blocked as soon
@@ -953,8 +983,10 @@ so Hearth's pauses, its schedule and its blocks stay in step (`app_blocks.py`).
 - **Hearth's page** (Apps > Blocked by Hearth): the rules, the browsers Hearth filters sites in, each kid's blocks (why,
   where it stands, Unblock), and Windows and Xbox: "covered by Family Safety web filtering: on", or a warning when a
   kid's Family Safety web filtering switch is off or not found. Every Android app's row in Every app has Block (every
-  kid with Family Link). `hearth/config`'s `app_blocks` carries it all.
-- Events: `hearth_app_blocked` and `hearth_app_unblocked` (`person`, `app`) after each Family Link call.
+  kid with Family Link). `hearth/config`'s `app_blocks` carries it all (each kid's `family_safety`: whether Xbox and
+  Windows apps can be blocked for them).
+- Events: `hearth_app_blocked` and `hearth_app_unblocked` (`person`, `app`) after each Family Link or Family Safety
+  call.
 
 ### Outside app changes
 
@@ -1013,8 +1045,8 @@ other app.
 ### Keeping the parents' apps in step
 
 A parent's change in a first-party app (Family Link, the Nintendo app, Microsoft Family Safety) is an adult's decision:
-Hearth adopts it and never writes over it or fights it. And Hearth's own "all screen time" opens Google's and
-Microsoft's own limits too. Everything below is gated on what the installed integrations offer (a service there, an
+Hearth adopts it and never writes over it or fights it. And Hearth's own "all screen time" opens Google's,
+Microsoft's and the Switch's own limits too. Everything below is gated on what the installed integrations offer (a service there, an
 attribute present), so an older Family Link or Family Safety keeps working as before.
 
 **Bedtime** is kept in step from Hearth's weekly schedule, once an adult starts it: Family Link's weekly bedtime and
@@ -1088,7 +1120,7 @@ all. It's not a problem to fix.
   again by Hearth's hold: `relock`). A raised Family Link limit, an unlock or an app change is shown read-only there;
   the service still ends it, and Hearth holds again with the parent's value as the one to put back.
 - **Hearth's "all screen time" in the parents' apps.** `hearth.allow` for group `all`, and extra time that gives All
-  screen time back (it had none left), also give:
+  screen time back (it had none left), also give (the Switch also for an allow of a group it's held for):
   - Family Link: a today-only bonus (`familylink.add_time_bonus`) on each of the child's devices whose own daily limit
     would block within that time (Screen time remaining lower than the minutes needed; a device with no limit gets
     none), as much as is missing; once per allow.
@@ -1114,16 +1146,34 @@ all. It's not a problem to fix.
     with no names or account ids: evidence for the Family Safety maintainer. If its reason already ended, it's
     cancelled that way at once. If nothing shows within the 10 minutes it's dropped (logged at INFO: not applied).
     Hearth never sends a cancel for extra time it can't see.
+  - The Switch: Nintendo's extra playing time (`add_bonus_time`, today only) on each Switch Hearth holds for the kid
+    whose own limit (Max screentime) would stop it sooner than Hearth: as many minutes as its Time remaining falls
+    short (Nintendo's 5 at least, the installed integration's most at most: 30 on Home Assistant's own, 360 on the
+    patched copy). For extra time, as long as Hearth now lets the Switch run (the fewest minutes left of the groups
+    it's held for, also when All screen time has no limit); for an allow, until its end. An allow of a group the
+    Switch is held for (Games) gives it on the Switch alone, since it opens the whole console. Extra playing time
+    opens the Switch whatever holds it, and while it runs Nintendo refuses a new limit, so Hearth couldn't hold the
+    Switch: it's given only where Hearth can cancel it again (`cancel_bonus_time`, the patched copy's, or the Switch's
+    Cancel extra playing time button; without either, nothing is given and the kid's Switch line says so). It waits
+    while Hearth holds the Switch (a pause, Sleep, another kid on a shared one) and is given once the hold is let go
+    (as Family Link's waits). Before Hearth holds the Switch again, it cancels its own extra playing time (then holds),
+    and the extra time it was for waits to be given again; a parent's extra playing time is theirs (the hold waits for
+    it, as before). Nintendo moves the Switch's bedtime alarm for extra time that runs into it, so Hearth's never runs
+    past the alarm, and none is given while the Switch is in its bedtime. What Hearth added today is kept per Switch
+    before the call (`sw_added`, over a restart): an extension up to that much is Hearth's own, more is a parent's too.
   - Ending the allow early (`hearth.allow_end`) resets the Family Link bonus Hearth added (only where no parent's bonus
     came on top: `reset_bonus` ends every bonus of the day; without `reset_bonus` or the button it lapses at
     midnight) and cancels the Family Safety extra time Hearth gave (`cancel_time_bonus`, on each platform it gave it
     on), except where the platform's `hold` now reads `parent` (a parent's extra time or lock came since: kept,
-    `extra_time_kept` in the status).
+    `extra_time_kept` in the status), and the Switch's extra playing time (only where no parent's came on top and no
+    other extra time of Hearth's still needs it; else it lapses at midnight, Hearth's hold staying the real limit).
+    Taking extra time back (`hearth.remove_bonus`) does the same.
 - **First-party limits in explain.** `hearth.explain` also lists `device_limit` (a Family Link device's own daily limit
-  reached with no bonus left, by its switch, with its `device` name, until midnight; or a Family Safety platform that
-  Microsoft's allowance or allowed hours stop, with its `platform`) when Hearth isn't the one holding it, and
-  `parent_lock` (a parent's own Family Safety lock, with its `platform`, until it ends), so explain says what the
-  device does.
+  reached with no bonus left, by its switch, with its `device` name, until midnight; a Family Safety platform that
+  Microsoft's allowance or allowed hours stop, with its `platform`; or a Switch whose own limit is used up with no
+  extra playing time, by its Max screentime entity, with its `device` name, until midnight, for what the Switch is
+  held for) when Hearth isn't the one holding it, and `parent_lock` (a parent's own Family Safety lock, with its
+  `platform`, until it ends), so explain says what the device does.
 - **Requests answered in the Family Safety app.** `microsoft_family_safety_request_resolved` with `via: app` closes the
   matching ask as answered there (`answered_in: family_safety`): `outcome` `approved` or `denied` as such ("approved
   in the Family Safety app", "denied in the Family Safety app"); `unknown` (the request left Microsoft's list without

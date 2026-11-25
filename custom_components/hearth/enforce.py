@@ -578,6 +578,9 @@ class Enforcement:
         # When the extra time Hearth last gave on a Family Safety platform today ends: (person, platform) -> datetime
         # or None (native_sync.py sets it). With what Hearth locked, how Hearth tells its own from a parent's
         self.fs_bonus_until = None
+        # Cancels the Nintendo extra playing time running on a Switch when it's Hearth's own (async, entity -> bool;
+        # native_sync.py sets it): the Switch refuses a new limit while extra time runs
+        self.cancel_own_switch_extra = None
         # The values Hearth's Family Link backstop wrote today (backstop.py sets it): never put back as a weekday's limit
         self.backstop_values = None
         # The action log (activity.py; the household sets it): each hold started and ended
@@ -722,6 +725,7 @@ class Enforcement:
         blocked_of=None,
         budget_lifted_of=None,
         sleep_locks_devices_of=None,
+        device_bedtime_of=None,
     ) -> None:
         """[apps_of]: a group id's packages for a person (for All screen time, every app of theirs). [lifted_of]: what
         a person's allows lift (Lifted); [school_time_of]: whether an enforcer's child is in School time now;
@@ -735,7 +739,8 @@ class Enforcement:
         [blocked_of]: the packages Hearth's blocks hold for a person (app_blocks.py): never paused or resumed, so one
         paused when it was blocked stays as held (Family Link's resume_app skips a blocked app anyway);
         [sleep_locks_devices_of]: whether the weekly schedule's Sleep locks a person's Family Link devices whole (no
-        Family Link bedtime of their own: household.sleep_locks_devices)."""
+        Family Link bedtime of their own: household.sleep_locks_devices); [device_bedtime_of]: what a bedtime lift on
+        one device lifts of an enforcer's schedule holds (a Family Safety platform, a Switch, in Sleep only)."""
         self.enforcers = enforcers
         now = dt_util.now()
         wanted_now: dict[str, set[str]] = {}
@@ -809,6 +814,8 @@ class Enforcement:
                 # family pause does (nothing else would hold a phone or tablet without a Hearth app)
                 if sleep_locks_devices_of and sleep_locks_devices_of(e.person):
                     scheduled.add(DEVICES)
+            if device_bedtime_of:
+                scheduled -= device_bedtime_of(e)
             device_lifted = device_lifted_of(e) if device_lifted_of else set()
             wanted_now[e.key] = (budget | school | paused | scheduled) - granted - device_lifted - set(spared)
             if e.kind == FAMILY_LINK and exempt_of:
@@ -1498,8 +1505,11 @@ class Enforcement:
     async def _hold_switch(self, entity_id: str, held: Held) -> None:
         """Max screentime today to 0 with Suspend software on: the game is suspended. What they were is kept first
         (once: a retry after a half-done hold mustn't keep the 0)."""
-        # Bonus time given in the Nintendo app: the Switch refuses a new limit until it's over (said, not retried blind)
-        if self.switch_extended(entity_id):
+        # Bonus time given in the Nintendo app: the Switch refuses a new limit until it's over (said, not retried blind).
+        # Hearth's own (its extra time's mirror, native_sync.py) is cancelled first
+        if self.switch_extended(entity_id) and not (
+            self.cancel_own_switch_extra is not None and await self.cancel_own_switch_extra(entity_id)
+        ):
             raise ValueError("bonus time is active on the Switch; held when it's over")
         if not held.restore:
             state = self.hass.states.get(entity_id)

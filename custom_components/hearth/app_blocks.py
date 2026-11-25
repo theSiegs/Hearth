@@ -42,9 +42,17 @@ Family Link's resume_app skips a blocked app and keeps its saved setting, and He
 as it was until the app is unblocked. An allow (hearth.allow) doesn't lift a block; hearth.explain names it
 (blocked_by kind blocked_app).
 
-Windows and Xbox need no block: Family Safety's web filter (Content filters > Web and search, on for the kid) lets
-Windows run only Microsoft Edge, and the Xbox has only Edge. Hearth's page shows, per kid, whether that web filter is
-on (web_filter).
+Xbox and Windows apps: hearth.block_app takes Family Safety's app ids too (x:..., appx:..., win32:..., as its
+Applications sensor lists them), for a kid with a Family Safety enforcer, through Family Safety's block_app and
+unblock_app (the account's, every platform's). They're kept the same way, in fs_applied: only Hearth's own blocks
+are ever unblocked (one a parent made in the Family Safety app stays theirs), a block waits until the app is in the
+Applications list, a list cut short or missing changes nothing, an unconfirmed block is tried MAX_TRIES times, and one
+a parent unblocked in the Family Safety app is left unblocked. Family Safety pauses an app (Hearth's holds) by
+blocking it and puts back on resume what it was before the pause: so a block or unblock of an app Hearth's pause holds
+waits until the app is resumed (a block made under the pause would be undone by the resume, an unblock would lift the
+pause). The browser and AI companion rules stay Android's: Family Safety's web filter (Content filters > Web and
+search, on for the kid) lets Windows run only Microsoft Edge, and the Xbox has only Edge. Hearth's page shows, per kid,
+whether that web filter is on (web_filter).
 """
 
 from __future__ import annotations
@@ -234,8 +242,16 @@ MAX_APPS = 50
 
 
 def android_package(app: str) -> bool:
-    """An Android package name (com.example.app): the only kind of app a block takes for now."""
+    """An Android package name (com.example.app), blocked through Family Link."""
     return bool(re.fullmatch(r"[A-Za-z][\w]*(\.[A-Za-z_][\w]*)+", app)) and not app.startswith(("x:", "appx:", "win32:"))
+
+
+def fs_app_id(app: str) -> bool:
+    """A Family Safety app id (x:..., x:windowsplt:..., appx:..., win32:...: an Xbox or Windows app), blocked through
+    Family Safety."""
+    from .enforce import fs_app
+
+    return fs_app(app) and len(app) <= 256 and not any(c.isspace() for c in app) and app.split(":")[-1] != ""
 
 
 # Home screens: a blocked one can leave a device with nothing to open apps from
@@ -273,6 +289,8 @@ class AppBlocks:
         # (confirmed: Family Link listed it blocked since; gone: it left the device since, so unblocked on its return
         # is a reinstall, not a parent's unblock)
         self.applied: dict[str, dict[str, dict[str, Any]]] = {}
+        # The same for Xbox and Windows apps Hearth blocked in Family Safety itself
+        self.fs_applied: dict[str, dict[str, dict[str, Any]]] = {}
         # Blocks of Hearth's a parent took back in the Family Link app: person -> package -> {"at"}. Hearth leaves
         # them unblocked until an adult blocks the app again in Hearth
         self.parent_unblocked: dict[str, dict[str, dict[str, Any]]] = {}
@@ -307,6 +325,11 @@ class AppBlocks:
             for p, apps in (stored.get("applied") or {}).items()
             if isinstance(apps, dict)
         }
+        self.fs_applied = {
+            p: {app: dict(v) for app, v in apps.items() if isinstance(v, dict)}
+            for p, apps in (stored.get("fs_applied") or {}).items()
+            if isinstance(apps, dict)
+        }
         self.parent_unblocked = {
             p: {pkg: dict(v) for pkg, v in apps.items() if isinstance(v, dict)}
             for p, apps in (stored.get("parent_unblocked") or {}).items()
@@ -328,6 +351,7 @@ class AppBlocks:
             "adult": {p: apps for p, apps in self.adult.items() if apps},
             "exempt": {p: sorted(apps) for p, apps in self.exempt.items() if apps},
             "applied": {p: apps for p, apps in self.applied.items() if apps},
+            "fs_applied": {p: apps for p, apps in self.fs_applied.items() if apps},
             "parent_unblocked": {p: apps for p, apps in self.parent_unblocked.items() if apps},
             "asked": {p: apps for p, apps in self.asked.items() if apps},
             # An empty list is a read too ("nothing is blocked" is known)
@@ -379,6 +403,48 @@ class AppBlocks:
         child = fl.child_of(self.hass, enforcer.entity_id)
         return (enforcer.entity_id, child) if child else None
 
+    def fs_target_of(self, person: str) -> str | None:
+        """The Family Safety entity (or typed-in account id) Hearth calls with for a person, None without Family
+        Safety."""
+        from .enforce import FAMILY_SAFETY, enforcers_from_options
+
+        return next(
+            (
+                e.entity_id
+                for e in enforcers_from_options(self.household.options)
+                if e.kind == FAMILY_SAFETY and e.person == person
+            ),
+            None,
+        )
+
+    def fs_lists(self, person: str) -> tuple[set[str], set[str] | None, dict[str, str]]:
+        """The person's Xbox and Windows apps as Family Safety's Applications sensors list them: (installed, blocked,
+        names). blocked is None when a list is missing or cut short (unknown, never "nothing is blocked")."""
+        from .outside_apps import read_family_safety
+
+        sensors = self.household.outside_apps._fs_applications(person, er.async_get(self.hass))
+        if not sensors:
+            return set(), None, {}
+        installed: set[str] = set()
+        blocked: set[str] = set()
+        names: dict[str, str] = {}
+        for entity_id in sensors:
+            state = self.hass.states.get(entity_id)
+            lists = read_family_safety(dict(state.attributes)) if state is not None else None
+            if lists is None:
+                return installed, None, names
+            installed |= lists["installed"]
+            blocked |= lists["blocked"]
+            names.update(lists["names"])
+        return installed, blocked, names
+
+    def _fs_held(self, person: str) -> set[str]:
+        """The Xbox and Windows apps Hearth's holds pause now (Family Safety blocks them for the pause)."""
+        from .enforce import FAMILY_SAFETY
+
+        held = self.household.enforcement.held.get(f"{FAMILY_SAFETY}|{person}")
+        return {a for a in held.items if fs_app_id(a)} if held is not None else set()
+
     def is_browser(self, package: str) -> bool:
         """A known browser's package, or an app Hearth's categories know as a browser (none of the ten kinds, a
         browser's name)."""
@@ -424,8 +490,8 @@ class AppBlocks:
         return any(_AI_COMPANION_NAME.search(n) for n in names)
 
     def _reasons(self, package: str) -> list[str]:
-        """Every rule that would block [package], on or off, the one shown first."""
-        if never_blocked(package) or package in SUPPORTED_ANDROID:
+        """Every rule that would block [package], on or off, the one shown first (Android apps only)."""
+        if never_blocked(package) or package in SUPPORTED_ANDROID or not android_package(package):
             return []
         found = []
         if package in OTHER_APP_STORES:
@@ -574,9 +640,47 @@ class AppBlocks:
                     dirty = True
                 elif self._due(person, package, now):
                     calls.append((person, entity_id, package, False))
-        if dirty:
+        fs_calls, fs_dirty = self._plan_fs(now)
+        if dirty or fs_dirty:
             self._save()
-        return calls
+        return calls + fs_calls
+
+    def _plan_fs(self, now: datetime) -> tuple[list[tuple[str, str, str, bool]], bool]:
+        """The Family Safety calls due now (Xbox and Windows apps), as _plan's; and whether anything changed."""
+        calls: list[tuple[str, str, str, bool]] = []
+        dirty = False
+        kids = self.kids()
+        for person in sorted(set(kids) | set(self.fs_applied) | set(self.adult)):
+            entity_id = self.fs_target_of(person)
+            want = {a for a in self.wanted(person, set()) if fs_app_id(a)} if person in kids else set()
+            applied = self.fs_applied.setdefault(person, {})
+            if entity_id is None or not (want or applied):
+                continue
+            installed, blocked, _names = self.fs_lists(person)
+            if blocked is None:
+                continue  # a list missing or cut short: nothing is blocked or unblocked
+            held = self._fs_held(person)
+            # An app Hearth's pause holds reads blocked for the pause: not a confirmation, nor a parent's unblock
+            part = {a: r for a, r in applied.items() if a not in held}
+            dirty |= self._confirm(person, part, installed, blocked)
+            for app in [a for a in applied if a not in held and a not in part]:
+                applied.pop(app)  # taken back by a parent in the Family Safety app
+            for app in sorted(want):
+                if app in held or app in blocked or app not in installed:
+                    continue  # held by a pause (blocked once resumed), blocked already, or not installed (waits)
+                if self._tries.get((person, app), 0) >= MAX_TRIES:
+                    continue
+                if self._due(person, app, now):
+                    calls.append((person, entity_id, app, True))
+            for app in sorted(set(applied) - want):
+                if app in held:
+                    continue  # an unblock now would lift Hearth's pause: done once it's resumed
+                if app not in blocked:
+                    applied.pop(app, None)
+                    dirty = True
+                elif self._due(person, app, now):
+                    calls.append((person, entity_id, app, False))
+        return calls, dirty
 
     def _ask_named(self, person: str, listed: set[str], blocked: set[str], want: dict[str, set[str]]) -> bool:
         """The adults are asked (once per app and kid, kept) about an app on [person]'s devices that may be an AI
@@ -632,10 +736,10 @@ class AppBlocks:
         )
 
     def _confirm(self, person: str, applied: dict[str, dict[str, Any]], listed: set[str], blocked: set[str]) -> bool:
-        """What Family Link lists now, against what Hearth blocked: a block it lists is confirmed (its event fires
-        once); one that left the device is marked gone (a reinstall comes back unblocked, and is blocked again); one
-        confirmed, still installed and now unblocked was taken back by a parent in the Family Link app: recorded,
-        and Hearth doesn't block it again. Says whether anything changed."""
+        """What Family Link (or Family Safety) lists now, against what Hearth blocked: a block it lists is confirmed
+        (its event fires once); one that left the device is marked gone (a reinstall comes back unblocked, and is
+        blocked again); one confirmed, still installed and now unblocked was taken back by a parent in the Family Link
+        (or Family Safety) app: recorded, and Hearth doesn't block it again. Says whether anything changed."""
         changed = False
         for package, record in list(applied.items()):
             if package in blocked:
@@ -683,9 +787,14 @@ class AppBlocks:
             key = (person, package)
             self._called[key] = dt_util.utcnow()
             service = "block_app" if block else "unblock_app"
+            fs = fs_app_id(package)
+            applied = self.fs_applied if fs else self.applied
+            provider = "Family Safety" if fs else "Family Link"
             try:
                 await call_service(self.hass,
-                    FL_DOMAIN, service, {"entity_id": entity_id, "package_name": package}, blocking=True,
+                    *((FS_DOMAIN, service, self._fs_data(entity_id, package)) if fs else
+                      (FL_DOMAIN, service, {"entity_id": entity_id, "package_name": package})),
+                    blocking=True,
                     person=person, why=",".join(sorted(self.why_blocked(person, package))) or "unblock",
                 )
             except Exception as err:  # noqa: BLE001 - one app failing mustn't stop the others
@@ -694,24 +803,24 @@ class AppBlocks:
                 if block:
                     # It may have gone through all the same (a timeout): kept as Hearth's, unconfirmed, so a block
                     # Family Link lists later is Hearth's to lift, not a parent's
-                    self.applied.setdefault(person, {}).setdefault(
+                    applied.setdefault(person, {}).setdefault(
                         package, {"at": dt_util.utcnow().isoformat(), "why": sorted(self.why_blocked(person, package))}
                     )
                 continue
             self._errors.pop(key, None)
             if block:
-                self.applied.setdefault(person, {})[package] = {
+                applied.setdefault(person, {})[package] = {
                     "at": dt_util.utcnow().isoformat(),
                     "why": sorted(self.why_blocked(person, package)),
                 }
                 # hearth_app_blocked fires once, when Family Link lists it blocked (_confirm)
                 tries = self._tries[key] = self._tries.get(key, 0) + 1
-                _LOGGER.debug("block %s for %s: try %s of %s, waiting for Family Link to list it", package, person, tries, MAX_TRIES)
+                _LOGGER.debug("block %s for %s: try %s of %s, waiting for %s to list it", package, person, tries, MAX_TRIES, provider)
                 if tries >= MAX_TRIES:
                     # Shown on the card until Family Link lists it, or an adult blocks it again
-                    self._errors[key] = (f"Family Link didn't block {self.name_of(package, person)}", dt_util.utcnow())
+                    self._errors[key] = (f"{provider} didn't block {self.name_of(package, person)}", dt_util.utcnow())
             else:
-                self.applied.get(person, {}).pop(package, None)
+                applied.get(person, {}).pop(package, None)
                 self.hass.bus.async_fire("hearth_app_unblocked", {"person": person, "app": package})
             self._save()
         if calls:
@@ -722,9 +831,30 @@ class AppBlocks:
             self._task = None
             self.sync()
 
+    def _fs_data(self, entity_id: str, app: str) -> dict[str, Any]:
+        """Family Safety's block_app / unblock_app data: the child's entity where the installed Family Safety takes
+        one, else their account id (upstream's)."""
+        from .enforce import fs_accepts, fs_account_of
+
+        data = {"entity_id": entity_id, "app_id": app} if "." in entity_id else {"account_id": entity_id, "app_id": app}
+        if "entity_id" in data and not fs_accepts(self.hass, "block_app", data):
+            data = {"account_id": fs_account_of(self.hass, entity_id) or entity_id, "app_id": app}
+        return data
+
     # Views
 
     def state_of(self, person: str, package: str, listed: set[str], blocked: set[str] | None) -> str:
+        if fs_app_id(package):
+            installed, fs_blocked, _names = self.fs_lists(person)
+            if package in self._fs_held(person):
+                return PENDING  # held by a pause: blocked once it's resumed
+            if package in self.fs_applied.get(person, {}) and fs_blocked is not None and package in fs_blocked:
+                return BLOCKED
+            if fs_blocked is not None and package in fs_blocked:
+                return PARENT
+            if fs_blocked is not None and package not in installed:
+                return WAITING
+            return PENDING
         if package in self.applied.get(person, {}) and blocked is not None and package in blocked:
             return BLOCKED
         if blocked is not None and package in blocked:
@@ -740,6 +870,8 @@ class AppBlocks:
             return OTHER_APP_STORES[package]
         if package in AI_COMPANIONS:
             return AI_COMPANIONS[package]
+        if fs_app_id(package) and person is not None and (name := self.fs_lists(person)[2].get(package)):
+            return name
         return self.household.app_names({package}, person).get(package) or package
 
     def views(self, person: str) -> list[dict[str, Any]]:
@@ -752,7 +884,7 @@ class AppBlocks:
                 "app": package,
                 "name": self.name_of(package, person),
                 "why": sorted(why),
-                "state": self.state_of(person, package, listed, blocked) if target else PENDING,
+                "state": self.state_of(person, package, listed, blocked) if target or fs_app_id(package) else PENDING,
             }
             if (error := self._errors.get((person, package))) is not None:
                 view["error"] = error[0]
@@ -796,6 +928,8 @@ class AppBlocks:
                     "person": person,
                     "name": self.household.person_name(person),
                     "family_link": self.target_of(person) is not None,
+                    # Xbox and Windows apps can be blocked too (hearth.block_app with Family Safety's app ids)
+                    "family_safety": self.fs_target_of(person) is not None,
                     "blocks": self.views(person),
                     "exempt": sorted(self.exempt.get(person, set())),
                     # Blocks of Hearth's a parent took back in the Family Link app (Hearth leaves them unblocked)

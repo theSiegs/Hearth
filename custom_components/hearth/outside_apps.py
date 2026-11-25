@@ -274,7 +274,8 @@ class OutsideAppChanges:
         for entity_id in self._fs_applications(person, er.async_get(self.hass)):
             state = self.hass.states.get(entity_id)
             lists = read_family_safety(dict(state.attributes)) if state is not None else None
-            if lists is not None and app in lists["blocked"]:
+            # Hearth's own block there (hearth.block_app of an Xbox or Windows app) is app_blocks.explain's
+            if lists is not None and app in lists["blocked"] and app not in blocks.fs_applied.get(person, {}):
                 found.append({"kind": "blocked_app", "by": entity_id, "provider": "Family Safety", "app": app,
                               "why": ["parent"], "until": None})
         return found
