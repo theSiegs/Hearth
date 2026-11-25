@@ -3034,6 +3034,17 @@ right PIN included; 400 `bad_request` (a malformed body, both or neither of `pin
 there or doesn't run); 429 `too_many` past 6 presses a minute; 401, 403 `not_local` and 503 as for Status; 500
 `failed` when the service itself failed.
 
+**A kid's to-do item** (a phone paired to a kid). `POST /api/hearth/device/<device_id>/todo_item` with the same header
+and `{"entity_id": "<their list>", "uid": "<an item's>", "status": "completed" | "needs_action"}` checks one of the
+kid's own items (`todo_lists` in the phone's state document) off or back, as the kid themselves: a chore's reward is
+granted with no approval step and the adults are told with an Undo. 200 `{"ok": true, "entity_id", "uid", "status",
+"granted"}`. Refusals carry `error`, `code` (the same) and a `message` to show: 400 `bad_request`; 403 `not_yours` (a
+TV, a phone of an adult's or nobody's, another list); 404 `unknown_item`; 409 `undone` (an adult undid its reward)
+and 409 `too_often` (the item's reward was earned 3 times today: tick, untick, tick again... An adult can still tick
+it); 429 `too_often` past 20 check-offs a minute, counted apart from the phone's asks and events; 401, 403
+`not_local` and 503 as for Status. The contract is in
+[contracts/device-api.md](contracts/device-api.md#a-kids-to-do-list-additive-within-contract-3).
+
 **Phone approval of a switch** (a TV; switch_approval.py). A paired TV asks the integration to have an adult allow a
 switch into their PIN-locked Google TV profile from their phone, so it needs no Home Assistant token of its own:
 - `POST /api/hearth/device/<device_id>/switch_approval` with the same header and `{"profile_id": "<the TV's profile

@@ -77,6 +77,9 @@ MAX_REWARD_MINUTES = 240
 MAX_REWARD_CENTS = 100_00
 MAX_MONEY_CENTS = 10_000_00
 DONE_DAYS_KEPT = 5
+# A kid's (or their device's) ticks earn one item's reward this many times a day: tick, untick, tick again is fine,
+# a loop of them isn't (each grant is a ledger entry, a history row, an event and a notice to every adult)
+MAX_KID_GRANTS = 3
 _TAG = re.compile(r"\s*\+\s*(\d+)\s*")
 _HHMM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
@@ -125,6 +128,11 @@ async def async_actor(hass: HomeAssistant, hub, user_id: str | None, via: str = 
         return Actor(ADULT, user_id=user_id, via=via)
     person = next((s.entity_id for s in hass.states.async_all("person") if s.attributes.get("user_id") == user_id), None)
     return Actor(KID, person, user_id, via) if person else Actor(SHARED, user_id=user_id, via=via)
+
+
+def todo_entity_id(person: str) -> str:
+    """The kid's list entity (todo.py names it so)."""
+    return f"todo.hearth_{person.split('.', 1)[-1]}"
 
 
 def worth(summary: str, default: int) -> int:
@@ -494,13 +502,19 @@ class ChoreBook:
 
     def check(self, occ_id: str, done: bool, actor: Actor) -> str | None:
         """Ticks or unticks an item. A tick by the kid, their TV or an adult grants the item's reward; untick reverses
-        what it granted. Returns the live grant's ledger key, if any."""
+        what it granted. Returns the live grant's ledger key, if any. A kid's own tick of a rewarded item is refused
+        (too_often) once the item's reward was granted MAX_KID_GRANTS times that day: an adult can still tick it."""
         occ = self.occurrence(occ_id)
         self._check_person(actor, occ.person)
         if done:
             if occ.done is not None:
                 return occ.done.get("granted")
             now = dt_util.now()
+            if actor.kind != ADULT and self._grants(actor) and occ.task.get("reward"):
+                today = now.date().isoformat()
+                grants = sum(1 for e in self.ledger if e.get("occurrence") == occ.id and e.get("day") == today)
+                if grants >= MAX_KID_GRANTS:
+                    raise ChoreError("too_often", "That was ticked and unticked too often today: ask an adult to tick it")
             mark = {
                 "person": occ.person,
                 "task": occ.task["id"],
@@ -739,6 +753,26 @@ class ChoreBook:
         self.ledger.append(entry)
         self._changed()
         return entry
+
+    def device_lists(self, person: str) -> list[dict[str, Any]]:
+        """A kid's own phone's view of their lists (the state document's todo_lists): one list per kid, today's items
+        with their uid, title, status, due and reward (docs/contracts/device-api.md)."""
+        if person not in self.kids():
+            return []
+        items = []
+        for occ in self.items(person):
+            due = occ.due.isoformat() if occ.due is not None else None
+            items.append(
+                {
+                    "uid": occ.id,
+                    "summary": occ.task["title"],
+                    "status": "completed" if occ.done is not None else "needs_action",
+                    "due": due,
+                    "reward": self.reward_label(occ.task),
+                }
+            )
+        return [{"entity_id": todo_entity_id(person), "name": f"{self.household.person_name(person)}'s to-do",
+                 "items": items}]
 
     def counts(self, person: str) -> dict[str, int]:
         items = self.items(person)

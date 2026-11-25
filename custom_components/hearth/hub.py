@@ -32,6 +32,7 @@ from .const import (
     KIND_MOBILE,
     MAX_EVENT_POSTS,
     MAX_NOTICE_POSTS,
+    MAX_TODO_POSTS,
     MAX_PENDING_PAIRINGS,
     MAX_SETTINGS_CALLS,
     MAX_STATUS_POSTS,
@@ -265,6 +266,7 @@ class DeviceState:
     posts: list[datetime] = field(default_factory=list)
     event_posts: list[datetime] = field(default_factory=list)
     notice_posts: list[datetime] = field(default_factory=list)
+    todo_posts: list[datetime] = field(default_factory=list)
     settings_calls: list[datetime] = field(default_factory=list)
     # A phone's or tablet's count at its first post after pairing, taken off the rest of that day (_note_baseline):
     # {"paired_at", "day" (None: it first posted on a later day), "seconds", "apps"}
@@ -417,6 +419,16 @@ class HearthHub:
         if len(state.notice_posts) >= MAX_NOTICE_POSTS:
             return True
         state.notice_posts.append(now)
+        return False
+
+    def too_many_todo_posts(self, device_id: str) -> bool:
+        """The same for its to-do check-offs, counted on their own (they never use up its asks' posts)."""
+        now = dt_util.utcnow()
+        state = self.state(device_id)
+        state.todo_posts = [t for t in state.todo_posts if now - t < STATUS_WINDOW]
+        if len(state.todo_posts) >= MAX_TODO_POSTS:
+            return True
+        state.todo_posts.append(now)
         return False
 
     def too_many_settings_calls(self, device_id: str) -> bool:

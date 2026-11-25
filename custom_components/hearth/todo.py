@@ -14,7 +14,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from . import HearthConfigEntry
 from .entity import HearthPersonEntity
 from .hub import HearthHub
-from .todos import Actor, async_actor
+from .todos import Actor, async_actor, todo_entity_id
 
 
 async def async_setup_entry(
@@ -43,7 +43,7 @@ class KidTodo(HearthPersonEntity, TodoListEntity):
         self._attr_name = f"{hub.household.person_name(person)}'s to-do"
         # Not on the person's device: the To-do panel lists it by this name alone
         self._attr_device_info = None
-        self.entity_id = f"todo.hearth_{person.split('.', 1)[-1]}"
+        self.entity_id = todo_entity_id(person)
 
     @property
     def book(self):

@@ -128,6 +128,8 @@ SIGNAL_WATCH = "hearth_watch"
 MAX_EVENT_POSTS = 10
 # A TV may press its notices' buttons this many times in STATUS_WINDOW
 MAX_NOTICE_POSTS = 6
+# A kid's phone may check to-do items off or back this many times in STATUS_WINDOW
+MAX_TODO_POSTS = 20
 # A device may read or write its client settings this many times in STATUS_WINDOW
 MAX_SETTINGS_CALLS = 60
 
