@@ -241,6 +241,16 @@ def hours_earlier(end: time, hours: float) -> time:
     return moved.time() if moved.date() == date(2000, 1, 1) else time(0, 0)
 
 
+WEEKDAY_KEYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+
+
+def _iso_date(value: Any) -> date | None:
+    try:
+        return date.fromisoformat(str(value))
+    except ValueError:
+        return None
+
+
 def hhmm(value: time) -> str:
     return value.strftime("%H:%M")
 
@@ -270,6 +280,9 @@ class Scheduler:
         self.site_blocks = SiteBlocks(hass, self)
         # Kids kept home on a school day (hearth.home_today): person -> {ISO date: reason}
         self.home: dict[str, dict[str, str]] = {}
+        # Family Link School time to switch on (hearth.set_school_time switch_on): person -> ISO date from which. Put
+        # on as a School time off is put back: on a school day, inside the kid's window, and pinned at once
+        self.turn_on: dict[str, str] = {}
 
     # Storage
 
@@ -293,6 +306,11 @@ class Scheduler:
             if isinstance(days, dict)
         }
         self._prune_home(dt_util.now().date())
+        self.turn_on = {
+            str(person): str(day)
+            for person, day in (stored.get("turn_on") or {}).items()
+            if isinstance(day, str) and _iso_date(day) is not None
+        }
         for raw in stored.get("offs", []):
             try:
                 off = Off(
@@ -325,6 +343,7 @@ class Scheduler:
             "fs_sites": self.fs_sites.owned,
             "site_blocks": self.site_blocks.dump(),
             "home": self.home,
+            "turn_on": self.turn_on,
             "offs": [
                 {
                     "id": o.id,
@@ -1063,6 +1082,9 @@ class Scheduler:
         for off in self.offs.values():
             if off.applied and off.restore_from is not None and off.restore_from <= today:
                 due.setdefault(off.person, []).append(off)
+        for person, since in self.turn_on.items():
+            if (from_day := _iso_date(since)) is not None and from_day <= today:
+                due.setdefault(person, [])
         for person, offs in due.items():
             # Taken off for today too (a second day off in a row, or from a time later today): not put back today.
             # Today's off may be applied already (at midnight), so whether it is doesn't matter
@@ -1083,6 +1105,7 @@ class Scheduler:
                     # No School time in the whole week, then or now: there's nothing to put back
                     for off in offs:
                         self.offs.pop(off.id, None)
+                    self.turn_on.pop(person, None)
                     self._save()
                 continue
             start, end = window
@@ -1111,9 +1134,64 @@ class Scheduler:
                 continue
             for off in offs:
                 self.offs.pop(off.id, None)
+            self.turn_on.pop(person, None)
             self._save()
             self._event("school_time_back", person, end=hhmm(end))
             self.household.recompute()
+
+    # hearth.set_school_time: Family Link's weekly School time hours, and switching it on
+
+    async def set_school_hours(self, person: str, hours: dict[int, tuple[time, time]]) -> dict[str, Any]:
+        """Writes the person's weekly Family Link School time for each ISO weekday in [hours] ({iso: (start, end)}),
+        through familylink.set_school_time (weekly scope; the day must have School time in Family Link already).
+        A day already at those hours isn't written. Recorded as Hearth's own calls."""
+        child = self.child(person)
+        switch = fl.school_time_switch(self.hass, child) if child else None
+        if child is None or switch is None:
+            raise HomeAssistantError(f"No Family Link School time for {self.household.person_name(person)}")
+        today = dt_util.now().date()
+        done: dict[str, str] = {}
+        same: list[str] = []
+        failed: dict[str, str] = {}
+        for iso, (start, end) in sorted(hours.items()):
+            name = WEEKDAY_KEYS[iso - 1]
+            day = today + timedelta(days=(iso - today.isoweekday()) % 7)
+            if fl.weekly_window(self.hass, child, day) == (start, end):
+                same.append(name)
+                continue
+            try:
+                await call_service(
+                    self.hass,
+                    "familylink",
+                    "set_school_time",
+                    {"entity_id": switch, "day": str(iso), "start_time": hhmm(start), "end_time": hhmm(end)},
+                    blocking=True,
+                    person=person,
+                    why="school_hours",
+                )
+            except Exception as err:  # noqa: BLE001 - one day's failure mustn't stop the others
+                failed[name] = (str(err) or type(err).__name__)[:200]
+                continue
+            done[name] = f"{hhmm(start)}-{hhmm(end)}"
+        return {"set": done, "same": same, "failed": failed}
+
+    def switch_on_from(self, person: str, day: date) -> str:
+        """Family Link School time is switched on from [day]: on a school day, inside the kid's window, then pinned
+        (switch.turn_on alone opens a window until 23:59). Says "already" when it's on and nothing waits."""
+        child = self.child(person)
+        switch = fl.school_time_switch(self.hass, child) if child else None
+        if child is None or switch is None:
+            raise HomeAssistantError(f"No Family Link School time for {self.household.person_name(person)}")
+        state = self.hass.states.get(switch)
+        if state is not None and state.state == "on" and not any(
+            o.person == person and o.applied for o in self.offs.values()
+        ):
+            self.turn_on.pop(person, None)
+            self._save()
+            return "already"
+        self.turn_on[person] = day.isoformat()
+        self._save()
+        return day.isoformat()
 
     def _has_any_window(self, child: str, today: date) -> bool:
         return any(fl.weekly_window(self.hass, child, today + timedelta(days=n)) for n in range(7))

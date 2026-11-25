@@ -689,6 +689,20 @@ SCHOOL_TIME_OFF_SCHEMA = vol.Schema(
         vol.Optional("ends_on"): ENDS_ON_SCHEMA,
     }
 )
+_SCHOOL_DAY_KEYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+_SCHOOL_DAY_SETS = {"school_days": _SCHOOL_DAY_KEYS[:5], "every_day": _SCHOOL_DAY_KEYS}
+SET_SCHOOL_TIME_SCHEMA = vol.Schema(
+    {
+        vol.Required("people"): vol.All(cv.ensure_list, [cv.entity_id], vol.Length(min=1)),
+        vol.Optional("days", default=["school_days"]): vol.All(
+            cv.ensure_list, [vol.In(_SCHOOL_DAY_KEYS + tuple(_SCHOOL_DAY_SETS))], vol.Length(min=1)
+        ),
+        vol.Inclusive("start", "hours"): cv.time,
+        vol.Inclusive("end", "hours"): cv.time,
+        vol.Optional("like"): cv.entity_id,
+        vol.Optional("switch_on", default=False): cv.boolean,
+    }
+)
 HOME_TODAY_SCHEMA = vol.Schema(
     {
         vol.Required("people"): vol.All(cv.ensure_list, [cv.entity_id], vol.Length(min=1)),
@@ -844,6 +858,62 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         ids = household.scheduler.take_off(people, day, call.data.get("from"), call.data.get("reason"), ends_on)
         entry_task(hass, household.hub.entry.entry_id, household.scheduler.async_tick(), "hearth school time off")
         return {"ids": ids}
+
+    async def set_school_time(call: ServiceCall) -> ServiceResponse:
+        """The people's weekly Family Link School time: hours for some weekdays (given, or like another kid's), and/or
+        School time switched on (from its next school day's window, as a School time off is put back)."""
+        from . import family_link as fl
+        from .schedule import WEEKDAY_KEYS
+
+        household = loaded_household()
+        people = people_of(household, call.data["people"])
+        missing = [household.person_name(p) for p in people if household.family_link_child(p) is None]
+        if missing:
+            raise ServiceValidationError(f"No Family Link for {', '.join(missing)} (Configure > Enforce)")
+        like = call.data.get("like")
+        given = call.data.get("start") is not None
+        if like and given:
+            raise ServiceValidationError("Give hours (start and end) or like, not both")
+        if not like and not given and not call.data["switch_on"]:
+            raise ServiceValidationError("Give hours (start and end), like, or switch_on")
+        days: list[str] = []
+        for day in call.data["days"]:
+            days += _SCHOOL_DAY_SETS.get(day, (day,))
+        days = list(dict.fromkeys(days))
+        today = dt_util.now().date()
+        hours: dict[int, tuple] = {}
+        skipped: dict[str, str] = {}
+        if given:
+            if call.data["start"] >= call.data["end"]:
+                raise ServiceValidationError("School time ends after it starts, on the same day")
+            hours = {WEEKDAY_KEYS.index(d) + 1: (call.data["start"], call.data["end"]) for d in days}
+        elif like:
+            source = people_of(household, [like])[0]
+            child = household.family_link_child(source)
+            if child is None:
+                raise ServiceValidationError(f"No Family Link for {household.person_name(source)}")
+            for d in days:
+                iso = WEEKDAY_KEYS.index(d) + 1
+                window = fl.weekly_window(hass, child, today + timedelta(days=(iso - today.isoweekday()) % 7))
+                if window is None:
+                    skipped[d] = f"{household.person_name(source)} has no School time that day"
+                else:
+                    hours[iso] = window
+        result: dict[str, Any] = {}
+        for person in people:
+            if like and person == like:
+                continue
+            answer: dict[str, Any] = (
+                await household.scheduler.set_school_hours(person, hours) if hours else {"set": {}, "same": [], "failed": {}}
+            )
+            if skipped:
+                answer["skipped"] = skipped
+            if call.data["switch_on"]:
+                answer["switch_on"] = household.scheduler.switch_on_from(person, today)
+            result[person] = answer
+        if call.data["switch_on"]:
+            entry_task(hass, household.hub.entry.entry_id, household.scheduler.async_tick(), "hearth school time on")
+        return {"people": result}
 
     async def school_time_off_cancel(call: ServiceCall) -> ServiceResponse:
         household = loaded_household()
@@ -1030,6 +1100,14 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         "school_time_off_cancel",
         school_time_off_cancel,
         schema=SCHOOL_TIME_OFF_CANCEL_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+    register_service(
+        hass,
+        DOMAIN,
+        "set_school_time",
+        set_school_time,
+        schema=SET_SCHOOL_TIME_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
     register_service(

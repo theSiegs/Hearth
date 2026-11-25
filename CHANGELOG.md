@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **Set a kid's weekly School time from Hearth**: `hearth.set_school_time` writes Family Link's weekly School time hours for some weekdays, given or copied from another kid (`like`), and can switch School time on. Switched on, it comes on during the next school day's window and today's hours are pinned, as when a School time off is put back, so it never opens a window until 23:59.
+
 ## 2026.11.57
 
 ### Home Assistant integration
