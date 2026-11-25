@@ -33,8 +33,8 @@ add, per person, the parental controls of other integrations (Configure > Enforc
   A Switch the family shares (switch_play.py) is held only once the person is caught playing it, and then stays held
   until they have time again (or the pause ends, a grant, midnight), whatever the playing sources say after; an
   adult's "Let someone else play" lifts it for a turn, and the person playing in it is caught again at once.
-  The schedule's extra minutes on a day off or half day (schedule.py, bonus_nintendo) go into the limit a hold puts
-  back while it holds, and come out of it again when they're called off or the day ends.
+  The schedule's raise of the Switch's limit to the day's budget (schedule.py, follow_nintendo) goes into the limit a
+  hold puts back while it holds, and comes out of it again when the budget changes or the day ends.
 
 - Hearth's own app blocks (app_blocks.py): an app Hearth blocks is left out of every Family Link hold below; one held
   when it was blocked stays as held (no resume) until it is unblocked.
@@ -733,7 +733,7 @@ class Enforcement:
     def family_link_devices_held(self, person: str) -> bool:
         """Hearth holds the person's Family Link devices (the weekday's daily limit at 0), has started or is ending
         that hold, or just called Family Link: a today-only daily limit written now would open the devices and read
-        as a parent's change (schedule.py's day-off bonus waits)."""
+        as a parent's change (schedule.py's raise to the day's budget waits)."""
         key = f"{FAMILY_LINK}|{person}"
         held = self.held.get(key)
         return (held is not None and DEVICES in _holding(held)) or self._quiet(key)

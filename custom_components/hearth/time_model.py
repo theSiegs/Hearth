@@ -6,7 +6,7 @@
   2 h"). A cap never adds time.
 - **Bonus time** (the services call it extra time: hearth.add_time) has no category. It adds N minutes to today's
   time, and the kid may spend it anywhere: minutes past a cap are paid from it too, and one N is shared by every cap.
-  Chores, approved asks, the day-off bonus and an adult's gift all give it. It ends at midnight.
+  Chores, approved asks and an adult's gift all give it. It ends at midnight.
 - **A raised cap** (hearth.raise_cap) lifts one category's ceiling today (by minutes, to minutes, or no cap) until a
   time. Today's time is unchanged.
 - **No limits** (hearth.no_limits) is an allow of All screen time (exceptions.py) until a time.

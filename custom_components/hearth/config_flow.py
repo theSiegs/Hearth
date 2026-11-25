@@ -71,7 +71,7 @@ from .enforce import (
 from .notifications import clear_pairing
 from .switch_play import guess_player, players
 from .schooldays import CALENDAR_OFF, CALENDAR_SCHOOL, CONF_SCHOOL_DAYS, SCHOOL_BUDGET
-from .schedule import CONF_SCHEDULE, CONF_SITE_LIST
+from .schedule import CONF_SCHEDULE, CONF_SITE_LIST, ScheduleConfig
 from .backstop import CONF_FL_BACKSTOP, CONF_FL_BACKSTOP_MARGIN
 from .app_blocks import CONF_BLOCK_AI_COMPANIONS, CONF_BLOCK_UNSUPPORTED_BROWSERS
 from .time_model import BACKSTOP_MARGIN
@@ -903,7 +903,9 @@ class HearthOptionsFlow(OptionsFlow):
 
     async def async_step_schedule(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """What each day type does to the kids' Family Link (schedule.py): School time off on days off, School time
-        ending early on half days, extra time on both (Family Link, and when chosen Family Safety and the Switch)."""
+        ending early on half days, and whether the parents' own limits follow the day's budget (Family Link with its
+        backstop off, Family Safety, the Switch). The day's time is its budget alone: an older Hearth's day_off_bonus,
+        half_day_bonus and bonus_group aren't offered, and saving drops them."""
         options = self._options()
         current: dict[str, Any] = dict(options.get(CONF_SCHEDULE) or {})
         if user_input is not None:
@@ -913,23 +915,16 @@ class HearthOptionsFlow(OptionsFlow):
         def suggested(key: str, default: Any = None) -> dict[str, Any]:
             return {"suggested_value": current.get(key, default)}
 
-        minutes = NumberSelector(
-            NumberSelectorConfig(min=0, max=720, step=5, unit_of_measurement="min", mode=NumberSelectorMode.BOX)
-        )
+        follow = ScheduleConfig.from_options({CONF_SCHEDULE: current})
         schema = vol.Schema(
             {
                 vol.Optional("day_off_school_time_off", default=bool(current.get("day_off_school_time_off"))): BooleanSelector(),
-                vol.Optional("day_off_bonus", description=suggested("day_off_bonus", 0)): minutes,
                 vol.Optional("half_day_hours_early", description=suggested("half_day_hours_early", 0)): NumberSelector(
                     NumberSelectorConfig(min=0, max=12, step=0.5, unit_of_measurement="h", mode=NumberSelectorMode.BOX)
                 ),
-                vol.Optional("half_day_bonus", description=suggested("half_day_bonus", 0)): minutes,
-                vol.Optional("bonus_family_link", default=current.get("bonus_family_link", True)): BooleanSelector(),
-                vol.Optional(
-                    "bonus_family_safety", default=current.get("bonus_family_safety", False)
-                ): BooleanSelector(),
-                vol.Optional("bonus_nintendo", default=current.get("bonus_nintendo", False)): BooleanSelector(),
-                vol.Optional("bonus_group", description=suggested("bonus_group")): self._group_selector(),
+                vol.Optional("follow_family_link", default=follow.follow_family_link): BooleanSelector(),
+                vol.Optional("follow_family_safety", default=follow.follow_family_safety): BooleanSelector(),
+                vol.Optional("follow_nintendo", default=follow.follow_nintendo): BooleanSelector(),
                 vol.Optional("people", description=suggested("people")): EntitySelector(
                     EntitySelectorConfig(domain="person", multiple=True)
                 ),

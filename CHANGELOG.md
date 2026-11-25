@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **A day's time is its budget, nothing else.** A half day or day off no longer stacks the schedule's bonus on top of the other days' budget (an older Configure > Schedule "Day off / Half day: extra minutes" and "also as Hearth bonus time" are ignored and dropped when the form is saved): school days get the school-day budget, weekends, days off and no-school days the other days', a half day the one School days chooses. The parents' own apps follow that budget instead: when chosen in Configure > Schedule, Family Safety's Windows and Xbox limits and the Switch's limit go up to the day's budget for that day only (any day the budget is higher, put back before midnight and when the budget changes); Family Link does so with its backstop on already, or when chosen with the backstop off. An older "Extra minutes" choice for Family Safety or the Switch carries over. The `hearth_schedule` events `bonus` and `bonus_back` are now `limit_raised` and `limit_back`.
+
 ## 2026.11.59
 
 ### Home Assistant integration

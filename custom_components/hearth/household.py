@@ -3354,7 +3354,7 @@ class Household:
         category: str | None = None,
     ) -> None:
         """Bonus time today (hearth.add_time): a grant of its own, no category, spent anywhere. Google's and
-        Microsoft's own limits get as much (each grant), and given in bedtime it lifts it. [via]: ask, day_off or none
+        Microsoft's own limits get as much (each grant), and given in bedtime it lifts it. [via]: ask or none
         (an adult); [by]: the adult's name, for its origin. With a [category]: a bonus for that category only ("+15
         min Messaging bonus"), usable there past daily time and its limit, spent before the general bonus. A negative
         [minutes] (hearth.add_bonus's older "take away") lowers today's adjustment instead of a grant."""
@@ -3373,8 +3373,6 @@ class Household:
         fields = {k: v for k, v in (("reason", reason), ("via", via)) if v}
         self.history.log(BONUS, person, group=ALL, minutes=minutes, **fields)
         detail = f"Bonus {'+' if minutes > 0 else '−'}{abs(minutes)}"
-        if via == "day_off":
-            detail += " (day off)"
         if reason:
             detail += f" · {reason}"
         about = {"id": grant["id"]} if grant else {}
