@@ -1558,6 +1558,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: HearthConfigEntry) -> bo
     entry.async_on_unload(async_track_time_change(hass, bedtime_sync, hour=0, minute=1, second=0))
     entry.async_on_unload(async_track_time_change(hass, bedtime_sync, hour=3, minute=10, second=0))
     entry.async_on_unload(hass.bus.async_listen(EVENT_BEDTIME_BACK, bedtime_sync))
+
+    # The parents' own daily limits next to Hearth's budgets (native_limits.py, read only): every 10 minutes; the
+    # adults are told what was seen on two looks in a row
+    @callback
+    def native_limits_check(_now=None) -> None:
+        hub.household.native_limits.check()
+
+    entry.async_on_unload(async_track_time_interval(hass, native_limits_check, timedelta(minutes=10)))
     # The kids' to-do lists (todos.py): today's grants' notices back after a restart; the old Chores earn time lists
     # brought in once Home Assistant has started (their entities are there then); and each midnight, old marks go
     todos = hub.household.todos

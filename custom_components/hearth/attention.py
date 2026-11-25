@@ -84,6 +84,7 @@ KINDS_BY_PREFIX = (
     ("hearth_paired_", "pairing"),
     ("hearth_panel_hello_", "pairing"),
     ("hearth_bedtime_", "bedtime"),
+    ("hearth_native_limit_", "native_limit"),
     ("hearth_new_apps", "new_app"),
     ("hearth_app_", "new_app"),
     ("hearth_rules_", "rules"),

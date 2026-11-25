@@ -1826,6 +1826,41 @@ What each app goes up to:
   again. A budget change puts the limit back at once, under the same rules, and raises it again to the new budget
   once the Switch reads the put-back.
 
+**Parents' limits next to the budget** (`native_limits.py`, read only: nothing is ever written to a platform). Every
+10 minutes Hearth sets each kid's own daily limits against its budgets, per platform and weekday, so the adults know
+when a parent's app would stop a kid before Hearth's budget does, or that nothing caps a platform while Home Assistant
+is down:
+
+- **The platforms' limits**: Family Link's weekday limit (`weekly_minutes` of the child's `<weekday>_limit` number;
+  none while the child's daily limit switch is off), Family Safety's Windows and Xbox limit per weekday (the
+  `*_limit_<weekday>` and `*_xbox_limit_<weekday>` numbers; 1440 is none), and the Switch's Max screentime (-1 is
+  none): one limit for every day, or with a limit per weekday (timer mode `each_day_of_the_week`) only today's, the
+  other weekdays as last read on their own day (kept 8 days). Hearth's own values are seen through: a limit it raised
+  today reads as the one it raised from, a Switch it holds as the limit the hold puts back, Family Link's weekday limit
+  while Hearth holds the devices (0) is unknown.
+- **Hearth's budget** of each weekday's usual day type (Monday to Friday school days within the school year, else
+  no-school days; Saturday and Sunday weekends; the weekly schedule's limits without today's changes; one-off days off
+  and half days aren't usual): the least of the budgets of the groups the platform's enforcer holds for (a group with
+  no limit leaves it to the others: Games with none falls back to All screen time). Family Link's limit is the whole
+  device's: All screen time. A shared Switch takes the biggest of its kids' budgets (a kid with none isn't counted).
+- **Each weekday**: `below` (the platform's limit cuts in first; `short` says by how many minutes), `covered` (below,
+  but Hearth raises it each day: Family Link's [backstop](#family-link-backstop), or with it off
+  `follow_family_link`; `follow_family_safety`; `follow_nintendo` up to the Switch's 360 minutes), `ok` (at the budget
+  or over it), `none` (no limit of its own), `no_budget` (Hearth has none for those groups), `unknown` (unreadable now).
+- **hearth.explain** has `native_limits`: the rows of the platforms holding for the groups explained (for an app, only
+  the platform it's on when its id says: an Xbox or Windows app's, an Android package's Family Link), each with
+  `platform`, `name`, `via`, `people`, `groups`, `covered_by`, `days` (`weekday`, `native`, `budget`, `status`, `short`)
+  and `lines`, e.g. "Xbox (Family Safety): its own limit stops them before Hearth's budget on Saturday (60 of 180 min,
+  120 short)" or "Xbox (Family Safety): no daily limit of its own on Sunday: nothing caps it while Home Assistant is
+  down". Hearth's page has the last look's rows in the household data (`native_limits` per kid).
+- **One notice per kid and platform** (a shared Switch: one per Switch; kind `native_limit`, to the adults, bell and
+  phones) while a weekday is `below` and not covered: which days and by how much, and the fix (raise the limit in the
+  parent's app, or turn on following the budget for that platform; the Switch's own maximum is 6 hours, so over it: no
+  limit). Said once the same finding was seen on two looks in a row, kept across a restart (put back on the bell, not
+  pushed again) and said again only when the days or minutes change; taken back once nothing is below. A platform with
+  any weekday unknown changes nothing, neither said nor taken back: a read cut short is never acted on. `none` is
+  only a line in explain.
+
 **Upgrading.** An older Hearth's "Day off: extra minutes" and "Half day: extra minutes" (`day_off_bonus`,
 `half_day_bonus`) and "Extra minutes also as Hearth bonus time" (`bonus_group`) stacked a bonus on top of the other
 days' budget the day already had; they're ignored, and saving Configure > Schedule drops them. "Extra minutes as

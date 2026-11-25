@@ -131,6 +131,9 @@ def summary(hub) -> dict[str, Any]:
         # Bedtime kept in step in Family Link and Family Safety (bedtime_sync.py), for a kid it's for
         if person in household.bedtime_sync.kids():
             people[-1]["bedtime_sync"] = household.bedtime_sync.view(person)
+        # The parents' own daily limits per weekday next to Hearth's budget, as of the last look (native_limits.py)
+        if native := household.native_limits.view(person):
+            people[-1]["native_limits"] = native
         if person in household.todos.kids():
             people[-1]["todo"] = household.todos.counts(person)
             people[-1]["balance_cents"] = household.todos.balance_cents(person)
