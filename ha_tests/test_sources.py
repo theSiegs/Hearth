@@ -384,9 +384,13 @@ async def test_share_app_data_is_always_false(
 
 
 async def test_a_source_dropping_to_nothing_never_lowers_today_s_count(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:
     """A source's own day ending at another hour, or a hiccup reporting 0: today's count (and its holds) stays."""
+    from homeassistant.util import dt as dt_util
+
+    # Midday: early in the morning a drop is the source's own new day (the test below)
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
     await _household_with_sam(hass, hass_client_no_auth)
     hass.states.async_set(PHONE_SENSOR, "45", {"unit_of_measurement": "min"})
     await _option(hass, "add_source", {"entity_id": PHONE_SENSOR, "person": "person.sam", "group": "games"})
