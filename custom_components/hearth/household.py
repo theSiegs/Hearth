@@ -1496,7 +1496,9 @@ class Household:
         """The person's school today, for their School today sensor: {state: school | half_day | off | home_today,
         start, end (local ISO, None without a window), decided_by, window_source: family_link | schedule | None,
         reason (home_today's)}. The window is Family Link's School time for today (shorter on a half day), else the
-        School mode of their weekly schedule; as it is, with no travel time."""
+        School mode of their weekly schedule; as it is, with no travel time. A kid whose Family Link School time is
+        switched off (not by Hearth's School time off) has no window: its times are only the weekdays left in Family
+        Link, not a schedule anyone keeps."""
         now = dt_util.as_local(now or dt_util.now())
         today = now.date()
         household_type = self.day_type_on(today)
@@ -1514,6 +1516,8 @@ class Household:
             out["reason"] = home
         if state not in (SCHOOL, HALF_DAY):
             return out
+        if self._school_time_switched_off(person):
+            return out
         window = self.scheduler.window_today(person, now) if self.scheduler.child(person) else None
         source = "family_link"
         if window is None:
@@ -1521,6 +1525,15 @@ class Household:
         if window is not None:
             out.update(start=window[0].isoformat(), end=window[1].isoformat(), window_source=source)
         return out
+
+    def _school_time_switched_off(self, person: str) -> bool:
+        """The kid's Family Link School time switch is off, and not because Hearth took School time off."""
+        child = self.scheduler.child(person)
+        switch = fl.school_time_switch(self.hass, child) if child else None
+        state = self.hass.states.get(switch) if switch else None
+        if state is None or state.state != "off":
+            return False
+        return not any(o.person == person and o.applied for o in self.scheduler.offs.values())
 
     def _schedule_school_window(self, person: str, now: datetime) -> tuple[datetime, datetime] | None:
         """Today's School mode in the person's weekly schedule: from its first start to the end of its last."""
