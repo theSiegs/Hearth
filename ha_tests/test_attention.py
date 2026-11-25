@@ -89,7 +89,12 @@ async def test_a_tag_replaces_and_clears(hass: HomeAssistant, hass_client_no_aut
     # One item, one bell notification: the second replaced the first
     assert [i.key for i in attention.items() if i.channel_tag == "hearth_news"] == ["hearth_news_2"]
     assert _bell(hass)["hearth_news"]["message"] == "Second"
-    assert sent["alex_phone"][-1].data == {"title": "News", "message": "Second", "data": {"tag": "hearth_news"}}
+    assert sent["alex_phone"][-1].data == {
+        "title": "News",
+        "message": "Second",
+        # What an app routes by, never the tag (no kind or person for this one)
+        "data": {"tag": "hearth_news", "hearth_kind": "other", "hearth_person": "", "hearth_people": []},
+    }
 
     attention.clear("hearth_news")
     await hass.async_block_till_done()

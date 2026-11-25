@@ -45,11 +45,17 @@ answer it as before. Firing the event never stops or slows a delivery; a failure
 | `title`, `text` | The same words its phone notification shows (`title` may be empty). |
 | `audience.kind` | Who it's for: `adults`, `admins`, `person`, `household`, `devices`, `chosen_phone`, `schedule_phone`. |
 | `audience.people` | The person entity ids that resolves to: the adults on Hearth's page who get notices (`adults`), the administrators' persons (`admins`), the one person (`person`), everyone on Hearth's page (`household`); else the persons behind the phones it goes to. May be empty. |
-| `about` | Who and which group it's about, when it is (`person`, `group`); nothing else. |
+| `about` | Who and which group it's about, when it is (`person`, `group`), and `people` (every person it's about) when that's more than `person` says: a shared Switch's notice for several kids, a parent's own limit found for several. `person` is there only when it's about one person (or, for a Switch held for a kid in another's turn, the held kid). Nothing else. |
 | `actions` | Its buttons, `[{n, label}]`, numbered as the phone's are. Labels only: never a button's service or data, which stay inside Hearth (looked up by key and number when a button is pressed). |
 | `link` | The page a tap on the phone opens (relative, `/hearth...`), or null. |
 | `channels` | Where Hearth itself sent it: `phone`, `bell` (Home Assistant's notifications), `tv`. |
 | `sent`, `expires` | When it was made, and when it goes by itself (null: until cleared). An item that expires isn't announced as cleared: drop it at `expires`. |
+
+**The phone push carries the same.** Each companion-app notification of an item has, besides its `tag`,
+`data.hearth_kind` (this event's `kind`), `data.hearth_person` (the one person it's about: `about.person`, else the only
+one of `about.people`; `""` for none or several alike) and `data.hearth_people` (`about.people`, else `[person]`, else
+`[]`). Route by these, never by parsing the tag (a person's entity id can't be cut out of `hearth_native_limit_<...>`
+reliably).
 
 A `cleared` event carries the item as it was. An item put back after Home Assistant restarts isn't announced again.
 

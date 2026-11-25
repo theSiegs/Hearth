@@ -1398,6 +1398,7 @@ class Scheduler:
 
     def _watchdog(self, people: list[str], today: date) -> None:
         off: list[str] = []
+        off_people: list[str] = []
         for person in people:
             if any(o.person == person and o.day == today for o in self.offs.values()):
                 continue  # taken off for today on purpose
@@ -1406,11 +1407,13 @@ class Scheduler:
             state = self.hass.states.get(switch) if switch else None
             if state is not None and state.state == "off":
                 off.append(self.household.person_name(person))
+                off_people.append(person)
         if off:
             self.tell(
                 "School time is off on a school day",
                 f"Family Link School time is still off for {', '.join(off)}. Check Family Link.",
                 "hearth_school_time_watchdog",
+                off_people,
             )
 
     def family_safety_entity(self, person: str) -> str | None:
@@ -1550,11 +1553,12 @@ class Scheduler:
     def _event(self, action: str, person: str, **data: Any) -> None:
         self.hass.bus.async_fire(EVENT_SCHEDULE, {"action": action, "person": person, **data})
 
-    def tell(self, title: str, message: str, notification_id: str) -> None:
+    def tell(self, title: str, message: str, notification_id: str, people: list[str] | None = None) -> None:
         """The adults: a notification in Home Assistant, and on the schedule's phone (else the one that answers
-        requests for more time), tagged with the notification's id."""
+        requests for more time), tagged with the notification's id; about [people] when given."""
         from .attention import SCHEDULE_PHONE, Item
 
+        about = {"people": list(people)} if people else {}
         self.household.hub.attention.notify(
-            Item(notification_id, message, title=title, audience=SCHEDULE_PHONE, bell=True)
+            Item(notification_id, message, title=title, audience=SCHEDULE_PHONE, bell=True, about=about)
         )

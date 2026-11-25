@@ -322,7 +322,10 @@ class Attention:
     def notice_event(self, change: str, item: Item) -> dict[str, Any]:
         """The hearth_notice event's data (docs/contracts/notice-event.md): the item's words, who it's for and its
         buttons' labels. Never a button's service or data: those stay looked up here (act)."""
-        about = {k: item.about[k] for k in ("person", "group") if isinstance(item.about.get(k), str)}
+        about: dict[str, Any] = {k: item.about[k] for k in ("person", "group") if isinstance(item.about.get(k), str)}
+        # Everyone it's about, when that's more than about.person says (a shared Switch's kids)
+        if len(people := item_people(item)) > 1 or (people and "person" not in about):
+            about["people"] = people
         channels = [name for name, on in (("phone", item.phone), ("bell", item.bell), ("tv", item.tv)) if on]
         return {
             "v": NOTICE_EVENT_VERSION,
@@ -538,6 +541,31 @@ def admin_phones(hass: HomeAssistant) -> tuple[list[phones.Phone], dict[str, lis
 def _household(options: Mapping[str, Any]) -> list[tuple[str, str]]:
     """Everyone on Hearth's page, adults and kids: (person entity id, role)."""
     return sorted((p, role) for p, role in (options.get(CONF_ROLES) or {}).items() if role in ("adult", "kid"))
+
+
+def item_people(item: Item) -> list[str]:
+    """Every person an item is about (about["people"], else about["person"]), each once, in order."""
+    given = item.about.get("people")
+    found = [p for p in given if isinstance(p, str) and p] if isinstance(given, (list, tuple)) else []
+    if isinstance(item.about.get("person"), str) and item.about["person"]:
+        found.insert(0, item.about["person"])
+    return list(dict.fromkeys(found))
+
+
+def item_person(item: Item) -> str:
+    """The one person an item is about: about["person"], else the only one of about["people"]; "" when none (or it's
+    about several alike)."""
+    if isinstance(item.about.get("person"), str) and item.about["person"]:
+        return item.about["person"]
+    people = item_people(item)
+    return people[0] if len(people) == 1 else ""
+
+
+def routing(item: Item) -> dict[str, Any]:
+    """What every companion-app push of an item carries in its data, so an app routes it without reading its tag:
+    hearth_kind (as the hearth_notice event's kind), hearth_person (the one person it's about, "" for none) and
+    hearth_people (everyone it's about, [] for none)."""
+    return {"hearth_kind": item.kind or notice_kind(item), "hearth_person": item_person(item), "hearth_people": item_people(item)}
 
 
 def notice_kind(item: Item) -> str:

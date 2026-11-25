@@ -509,10 +509,12 @@ class Asks:
             )
         )
 
-    def tell(self, title: str, message: str, tag: str) -> None:
-        """News about a kid for the adults, the way requests reach them: on the adults' phones (not Home Assistant's
-        bell, which everyone who uses Home Assistant sees)."""
-        self.hub.attention.notify(Item(tag, message, title=title, audience=ADULTS))
+    def tell(self, title: str, message: str, tag: str, person: str | None = None) -> None:
+        """News about a kid ([person]) for the adults, the way requests reach them: on the adults' phones (not Home
+        Assistant's bell, which everyone who uses Home Assistant sees)."""
+        self.hub.attention.notify(
+            Item(tag, message, title=title, audience=ADULTS, about={"person": person} if person else {})
+        )
 
     def _clear_notification(self, ask: Ask) -> None:
         """An answered (or expired) request comes off every adult's phone (and off Home Assistant's bell, where an

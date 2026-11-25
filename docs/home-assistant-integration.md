@@ -2165,7 +2165,13 @@ store).
 (Glint) can tell them apart: `hearth_more_<request id>` (a request or an offer), `hearth_place_<person entity id>` (where a kid
 went), `hearth_schedule_check` and `hearth_school_time_watchdog` (the schedule), `hearth_chore_<to-do item uid>` (a
 chore done), `hearth_app_<package>` (a new app), `hearth_suggest:<person entity id>:<suggestion key>` (a suggestion
-pushed to phones), `hearth_approve:<notice key>` (a TV notice's button waiting for a parent's phone). Bell-only notices keep their ids (`hearth_pairing_<id>`,
+pushed to phones), `hearth_approve:<notice key>` (a TV notice's button waiting for a parent's phone). **Route by the
+data, never by parsing a tag** (a person's entity id can't be cut out of one reliably): every companion-app push also
+carries `data.hearth_kind` (the item's kind, as `kind` in the [hearth_notice event](contracts/notice-event.md)),
+`data.hearth_person` (the one person it's about, `about.person`; `""` when none, or when it's about several alike) and
+`data.hearth_people` (everyone it's about, `[]` for none: a shared Switch's notice names each kid it concerns, a parent's
+own limit found for several kids each of them). `hearth.notify` messages carry `hearth_kind: notify` and no person.
+Bell-only notices keep their ids (`hearth_pairing_<id>`,
 `hearth_paired_<device>`, `hearth_rules_<device>`, `hearth_more_fs_<request id>`, `hearth_new_apps`).
 
 **Buttons.** A button with a service goes to the phone as `HEARTH_ACT|<item key>|<n>`: the service and its data stay in
@@ -2437,6 +2443,28 @@ then sends the same object as an event whenever it changes, at most every 2 seco
   recorded) the budgets now for that day's type, from the dates typed in and the weekday rule of
   [School days](#school-days-and-day-types) (an entity's or calendar's answer is only ever today's).
 - `groups`: every group of the household, budget or not today: `[{id, name, not_screen_time}]`.
+- each person also has `budgets` `[{group, name, school_days, other_days, per_weekday, weekdays?, limitable}]`: every
+  group of the household, in its order, with a budget or not (`null`: no limit), so an app can offer to switch one on.
+  `school_days` and `other_days` are the two numbers `hearth.set_budget` sets (Monday's and Saturday's limits). When an
+  adult gave some weekdays limits of their own on the Schedule tab, `per_weekday` is true and `weekdays` {`mon`..`sun`,
+  `day_off`: minutes or null} lists them (setting the two numbers writes every day of their kind again).
+  `limitable` false: a group nothing holds (Accessibility). `budgets_per_weekday`: any row's `per_weekday`.
+  `half_day_budget` (`school_days` or `other_days`): which budget their half day uses. The summary's own
+  `half_day_budget` is the household's (Configure > School days). Read by the summary's readers (administrators and
+  adults); a kid's own login doesn't get the summary. **`hearth.set_budget`** {`person`, `group` (id or name),
+  `minutes` 0 to 1440, `days` `both` (default), `school_days` or `other_days`} takes "no limit" as `minutes: null`,
+  `"no_limit"` or `-1` (as the number entities say it), or `no_limit: true` with no minutes; `0` is a limit of 0 (closed).
+  It answers (response optional) `{person, group, before, after}`, each `{school_days, other_days, per_weekday,
+  weekdays?}` as in `budgets`: calling it again with `before`'s values undoes it (a `per_weekday` before is written back
+  flat: say so before offering that undo).
+- **Used and counted.** Minutes used while Unlimited are used but not counted against the day's time. A person's
+  `groups[].used_minutes`, `time.used`, `week[].minutes` and the minutes-left sensors' `counted` are the counted
+  minutes. Every minute used, Unlimited's too: `groups[].total_minutes` (with `unlimited_minutes`, the part used while
+  Unlimited), `week[].used` {group: minutes} (the same as `minutes` on a day with no Unlimited; a past day's from its
+  `day` record's `used`, kept only when it differs), each group's today sensor (`sensor.hearth_<person>_<group>_today`:
+  its state and statistics are every minute used; attributes `counted` and `unlimited`), the Screen time today sensor,
+  `devices_today` and `apps_today`. An Unlimited window's own minutes are also its `unlimited_today` span and its
+  history `unlimited` event.
 - `not_screen_time`, `contract`, and `version` (changes with any of it).
 - `media_rooms`: the house's media players by room, below.
 - Contract 2: each person's `headline`, `lines` and `actions`, and the household's `household` {`headline`,

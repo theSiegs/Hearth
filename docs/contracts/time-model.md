@@ -80,7 +80,16 @@ Daily time's (`id: "all"`) is `today_left`. Show `time.*` to people; hold by `gr
 
 Each person gains `time` (as above). Each `groups[]` row gains `held_left`, `bonus_left` and `raised`
 (`{add, to, no_cap, until}` or `null`); its `minutes_left` is now the usable value (`left`), and `held_left` the hold
-value. `bonus` on a category row is what its raised limit adds, not bonus time.
+value. `bonus` on a category row is what its raised limit adds, not bonus time. (The WebSocket command is
+`hearth/household`, and `hearth/household/subscribe`.) Each person also has `budgets` (every group's school-day and
+other-day budget, `null` for none) and `half_day_budget`; each `groups[]` row `total_minutes` (every minute used,
+Unlimited's too) and `unlimited_minutes` next to `used_minutes` (counted); each `week[]` day `used` next to `minutes`
+(counted). See [Household summary](../home-assistant-integration.md#household-summary), "Used and counted".
+
+**Unlimited's minutes are used, not counted.** They stay out of daily time, every category's limit and bonus time
+(`time.used`, `today_left`), and show as used: each group's today sensor (its state and statistics; attributes
+`counted` and `unlimited`), the summary's `total_minutes` and `week[].used`, `time.uncounted`, the Screen time today
+sensor and the window's `unlimited_today` span.
 
 ### `hearth.explain`
 

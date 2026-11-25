@@ -257,13 +257,20 @@ class History:
 
     @callback
     def log_day(
-        self, person: str, day: date, minutes: dict[str, int], budget: dict[str, int | None] | None = None
+        self,
+        person: str,
+        day: date,
+        minutes: dict[str, int],
+        budget: dict[str, int | None] | None = None,
+        used: dict[str, int] | None = None,
     ) -> bool:
-        """Records [day]'s final minutes per group for the person (and its budget per group), once; says whether it
-        did."""
+        """Records [day]'s final counted minutes per group for the person (and its budget per group, and [used]: every
+        minute used, Unlimited's too, kept only when it differs), once; says whether it did."""
         if self.has_day(person, day):
             return False
-        extra = {"budget": dict(budget)} if budget is not None else {}
+        extra: dict[str, Any] = {"budget": dict(budget)} if budget is not None else {}
+        if used is not None and dict(used) != dict(minutes):
+            extra["used"] = dict(used)
         self.log(DAY, person, date=day.isoformat(), minutes=dict(minutes), **extra)
         return True
 
@@ -273,17 +280,22 @@ class History:
         today_minutes: dict[str, int],
         now: datetime | None = None,
         budget_of: Callable[[date], dict[str, int | None]] | None = None,
+        today_used: dict[str, int] | None = None,
     ) -> list[dict[str, Any]]:
-        """The last WEEK_DAYS local days, newest first, today included: {date, minutes {group: n}, out [groups],
-        bonus {group: minutes}, asks, budget {group: n | None}}. Today's minutes are [today_minutes] (live); a past
-        day's are its `day` record, {} when there's none (unknown, not zero). A day's budget is its `day` record's,
-        else [budget_of] (today's live budget, a past day's from its day type and the budgets now)."""
+        """The last WEEK_DAYS local days, newest first, today included: {date, minutes {group: n}, used {group: n},
+        out [groups], bonus {group: minutes}, asks, budget {group: n | None}}. `minutes` are the counted ones (what
+        counts against the day's time), `used` every minute used, Unlimited's too (the same as `minutes` on a day with
+        none). Today's are [today_minutes] and [today_used] (live); a past day's are its `day` record, {} when there's
+        none (unknown, not zero). A day's budget is its `day` record's, else [budget_of] (today's live budget, a past
+        day's from its day type and the budgets now)."""
         today = dt_util.as_local(now or dt_util.utcnow()).date()
         dates = [today - timedelta(days=i) for i in range(WEEK_DAYS)]
         rows = {
-            d: {"date": d.isoformat(), "minutes": {}, "out": [], "bonus": {}, "asks": 0, "budget": None} for d in dates
+            d: {"date": d.isoformat(), "minutes": {}, "used": {}, "out": [], "bonus": {}, "asks": 0, "budget": None}
+            for d in dates
         }
         rows[today]["minutes"] = dict(today_minutes)
+        rows[today]["used"] = dict(today_used if today_used is not None else today_minutes)
         by_iso = {d.isoformat(): d for d in dates}
         # A day's events are at most a day either side of it in UTC
         since = (dt_util.start_of_local_day(dates[-1]) - timedelta(days=1)).isoformat()
@@ -295,6 +307,8 @@ class History:
                 day = by_iso.get(str(event.get("date")))
                 if day is not None and day != today and isinstance(event.get("minutes"), dict):
                     rows[day]["minutes"] = dict(event["minutes"])
+                    used = event.get("used")
+                    rows[day]["used"] = dict(used if isinstance(used, dict) else event["minutes"])
                     if isinstance(event.get("budget"), dict):
                         rows[day]["budget"] = dict(event["budget"])
                 continue

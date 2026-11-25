@@ -28,6 +28,7 @@ from homeassistant.util import dt as dt_util
 from .const import CONF_KIND, CONF_MEDIA_PLAYERS, CONF_PERSON, CONF_ROLES, CONTRACT, DOMAIN, SIGNAL_DEVICE_ADDED, KIND_TV, SIGNAL_PAIRINGS, SIGNAL_PEOPLE, SIGNAL_STATUS, SIGNAL_WATCH
 from .counting import ALL
 from .asks import AMOUNTS, VIA_HOME_ASSISTANT, AskError
+from .budgets import budget_rows, half_day_budget
 from .limits import GAMES, OTHER
 from .media import media_rooms
 from .adult_offer import note_refused
@@ -61,13 +62,19 @@ def summary(hub) -> dict[str, Any]:
         for group in household.groups:
             state = day.limits.get(group.id) if day else None
             used = day.groups.get(group.id, 0.0) if day else 0.0
-            if (state is None or state.budget_min is None) and not used:
+            # Every second used, Unlimited's too (used is the counted part)
+            total = (day.raw_groups or day.groups).get(group.id, 0.0) if day else 0.0
+            if (state is None or state.budget_min is None) and not used and not total:
                 continue
             groups.append(
                 {
                     "id": group.id,
                     "name": group.name,
+                    # Counted against the day's time (Unlimited's minutes left out)
                     "used_minutes": _minutes(used),
+                    # Every minute used today, Unlimited's too; and the part of it used while Unlimited (not counted)
+                    "total_minutes": max(_minutes(total), _minutes(used)),
+                    "unlimited_minutes": max(0, _minutes(total) - _minutes(used)),
                     # What can actually be used (time_model.py: a category's is never more than daily time left)
                     "minutes_left": state.shown_left if state else None,
                     # What holds it (0: held): a category's may be more than daily time left
@@ -127,6 +134,11 @@ def summary(hub) -> dict[str, Any]:
                 "playing": [_playing_view(p, now, groups_of_item) for p in (day.playing if day else [])],
             }
         )
+        # Every group's budget on school days and other days (null: no limit), with or without one, so an adult's app
+        # can switch one on (budgets.py); and which of the two a half day uses
+        people[-1]["budgets"] = budget_rows(household, person)
+        people[-1]["budgets_per_weekday"] = any(row["per_weekday"] for row in people[-1]["budgets"])
+        people[-1]["half_day_budget"] = half_day_budget(household, person)
         # A kid's to-do list today and their money balance (todos.py)
         # Bedtime kept in step in Family Link and Family Safety (bedtime_sync.py), for a kid it's for
         if person in household.bedtime_sync.kids():
@@ -143,7 +155,8 @@ def summary(hub) -> dict[str, Any]:
         # The last 7 local days, newest first: minutes per group (today's live; {} for a day not recorded), what ran
         # out, bonus minutes, asks and the day's budget per group (history.py)
         people[-1]["week"] = household.history.week(
-            person, household.day_minutes(day) if day else {}, now, lambda d, p=person: household.budget_on(p, d)
+            person, household.day_minutes(day) if day else {}, now, lambda d, p=person: household.budget_on(p, d),
+            household.day_used_minutes(day) if day else {},
         )
         # Today's School time window, on a school or half day ({start, end}, local), for "no school time today"
         if (window := household.scheduler.window_today(person, now)) is not None:
@@ -230,6 +243,8 @@ def summary(hub) -> dict[str, Any]:
         "devices": devices,
         "approvals": approvals,
         "not_screen_time": sorted(household.outside_all()),
+        # Which budget a half day uses for the household (Configure > School days): school_days or other_days
+        "half_day_budget": half_day_budget(household),
         # Every group, budget or not today, for an app that offers to pause or allow one
         "groups": [
             {"id": g.id, "name": g.name, "not_screen_time": g.id in household.outside_all()} for g in household.groups

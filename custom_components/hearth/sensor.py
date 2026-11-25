@@ -276,12 +276,23 @@ class PersonScreenTime(_TodaySoFar):
 
 
 class PersonGroupToday(_TodaySoFar):
-    """The person's time today in one group (Video, Games, YouTube)."""
+    """The person's time today in one group (Video, Games, YouTube): every minute used, the ones while Unlimited too
+    (so the history and statistics show them). `counted` is what counts against the day's time, `unlimited` the
+    minutes used while Unlimited (not counted)."""
 
     _attr_translation_key = "person_group_today"
 
     def _count(self) -> int:
-        return _minutes(self.day.groups.get(self.budget_group.id, 0.0)) if self.day else 0
+        if not self.day:
+            return 0
+        return _minutes((self.day.raw_groups or self.day.groups).get(self.budget_group.id, 0.0))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        if not self.day:
+            return {"counted": 0, "unlimited": 0}
+        counted = _minutes(self.day.groups.get(self.budget_group.id, 0.0))
+        return {"counted": counted, "unlimited": max(0, self._count() - counted)}
 
 
 class PersonMinutesLeft(HearthPersonEntity, SensorEntity):

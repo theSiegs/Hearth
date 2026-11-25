@@ -10,6 +10,7 @@ from typing import Any
 import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.event import async_call_later
 
 from . import start
 from .const import BY_PANEL, MAX_PAGE, MAX_SEED_BYTES, MAX_STARTS, START_KINDS, ws_type
@@ -23,6 +24,8 @@ UNAVAILABLE_RETRY = 5
 # its secret and pairs again. Never Home Assistant's own "unauthorized" (a refused login token: the token is the
 # owner's to fix, pairing again doesn't help)
 UNKNOWN_PANEL = "unknown_panel"
+# Kid time's changes come together (a status post recomputes everyone): one event for them, at most this often (s)
+KIDS_EVERY = 2
 
 _ID = vol.All(str, vol.Match(r"^[A-Za-z0-9_-]{8,64}$"))
 _SECRET = vol.All(str, vol.Length(min=1, max=256))
@@ -258,7 +261,49 @@ def async_register_commands(hass: HomeAssistant, domain: str) -> None:
         version, undo = panels.set_start(device_id, tiles, BY_PANEL)
         connection.send_result(msg["id"], {"version": version, "undo": undo})
 
-    for command in (ws_hello, ws_subscribe, ws_report, ws_verify_pin, ws_set_start):
+    @websocket_api.websocket_command(
+        {vol.Required("type"): ws_type(domain, "kids/subscribe"), vol.Required("device_id"): _ID, vol.Required("secret"): _SECRET}
+    )
+    @callback
+    def ws_kids_subscribe(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+        """Each kid's time today, read only (the host's kids_time): result null, then an event with it, and again when
+        it changes (batched KIDS_EVERY; only when its version differs). Not part of the document: live minutes would
+        change the document's version every minute."""
+        panels = _panels(hass, domain, connection, msg)
+        if panels is None:
+            return
+        msg_id = msg["id"]
+        sent: dict[str, Any] = {"version": None, "cancel": None}
+
+        @callback
+        def send(_now=None) -> None:
+            sent["cancel"] = None
+            current = Panels.find(hass, domain)
+            if current is None or not current.authorized(msg["device_id"], msg["secret"]):
+                return
+            body = current.host.kids_time()
+            if body.get("version") != sent["version"]:
+                sent["version"] = body.get("version")
+                connection.send_message(websocket_api.event_message(msg_id, body))
+
+        @callback
+        def changed() -> None:
+            if sent["cancel"] is None:
+                sent["cancel"] = async_call_later(hass, KIDS_EVERY, send)
+
+        unwatch = panels.host.watch_kids_time(changed)
+
+        @callback
+        def unsubscribe() -> None:
+            unwatch()
+            if sent["cancel"] is not None:
+                sent["cancel"]()
+
+        connection.subscriptions[msg_id] = unsubscribe
+        connection.send_result(msg_id)
+        send()
+
+    for command in (ws_hello, ws_subscribe, ws_report, ws_verify_pin, ws_set_start, ws_kids_subscribe):
         websocket_api.async_register_command(hass, command)
 
 

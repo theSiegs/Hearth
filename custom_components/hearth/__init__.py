@@ -62,6 +62,7 @@ from .entity import async_prune_group_entities
 from .attention import ACT_PREFIX
 from .bedtime_lift import EVENT_BACK as EVENT_BEDTIME_BACK
 from .limits import DAY_TYPES, count_messaging, retire_video
+from .budgets import budget_values
 from .asks import EVENT_MORE_TIME_ANSWERED, EVENT_MORE_TIME_REQUESTED, AskError
 from .const import EVENT_BUDGET_REACHED
 from .counting import ALL
@@ -106,15 +107,41 @@ REMOVE_BONUS_SCHEMA = vol.Schema(
         vol.Optional("group", default="all"): cv.string,
     }
 )
-SET_BUDGET_SCHEMA = vol.Schema(
-    {
-        vol.Required("person"): cv.entity_id,
-        vol.Required("group"): cv.string,
-        vol.Required("minutes"): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=0, max=1440))),
-        # School days and other days (weekday and weekend are their older names)
-        vol.Optional("days", default="both"): vol.In(["school_days", "other_days", "weekday", "weekend", "both"]),
-    }
+def _budget_minutes(value: Any) -> int | None:
+    """A budget's minutes, 0 to 1440; "no limit" is null, "no_limit" or -1 (as the number entities say it)."""
+    if value is None or (isinstance(value, str) and value.strip().casefold() in ("no_limit", "none")):
+        return None
+    minutes = vol.Coerce(int)(value)
+    if minutes == -1:
+        return None
+    return vol.Range(min=0, max=1440)(minutes)
+
+
+SET_BUDGET_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            vol.Required("person"): cv.entity_id,
+            vol.Required("group"): cv.string,
+            # null, "no_limit" or -1: no limit
+            vol.Optional("minutes"): _budget_minutes,
+            # true: no limit (minutes left out)
+            vol.Optional("no_limit"): cv.boolean,
+            # School days and other days (weekday and weekend are their older names)
+            vol.Optional("days", default="both"): vol.In(["school_days", "other_days", "weekday", "weekend", "both"]),
+        }
+    ),
+    lambda data: _minutes_or_no_limit(data),
 )
+
+
+def _minutes_or_no_limit(data: dict[str, Any]) -> dict[str, Any]:
+    if data.get("no_limit"):
+        if data.get("minutes") is not None:
+            raise vol.Invalid("no_limit: true takes no minutes")
+        return {**data, "minutes": None}
+    if "minutes" not in data:
+        raise vol.Invalid("Give minutes (null, \"no_limit\" or -1 for no limit) or no_limit: true")
+    return data
 # Ends sooner when the person's place says so: arriving at a place, or leaving one (places.py)
 ENDS_ON_SCHEMA = vol.All(
     vol.Schema(
@@ -276,12 +303,17 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         return {"removed": target.remove_bonus(call.data["person"], group, call.data["minutes"])}
 
     @callback
-    def set_budget(call: ServiceCall) -> None:
+    def set_budget(call: ServiceCall) -> ServiceResponse:
+        """A person's budget for a group, on school days, other days or both (minutes null: no limit). Answers the
+        values before and after ({person, group, before, after}: budgets.budget_values), for an undo."""
         target = household(call)
         names = {"school_days": "weekday", "other_days": "weekend", "weekday": "weekday", "weekend": "weekend"}
         days = DAY_TYPES if call.data["days"] == "both" else (names[call.data["days"]],)
+        person, group = call.data["person"], group_id(target, call.data["group"])
+        before = budget_values(target, person, group)
         for kind in days:
-            target.set_budget(call.data["person"], group_id(target, call.data["group"]), kind, call.data["minutes"])
+            target.set_budget(person, group, kind, call.data["minutes"])
+        return {"person": person, "group": group, "before": before, "after": budget_values(target, person, group)}
 
     register_service(
         hass, DOMAIN, SERVICE_ADD_BONUS, add_bonus, schema=ADD_BONUS_SCHEMA, supports_response=SupportsResponse.OPTIONAL
@@ -290,7 +322,9 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
         hass, DOMAIN, SERVICE_REMOVE_BONUS, remove_bonus, schema=REMOVE_BONUS_SCHEMA,
         supports_response=SupportsResponse.OPTIONAL,
     )
-    register_service(hass, DOMAIN, SERVICE_SET_BUDGET, set_budget, schema=SET_BUDGET_SCHEMA)
+    register_service(
+        hass, DOMAIN, SERVICE_SET_BUDGET, set_budget, schema=SET_BUDGET_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    )
 
     def loaded_household():
         entries = hass.config_entries.async_loaded_entries(DOMAIN)

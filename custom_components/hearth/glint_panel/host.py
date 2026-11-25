@@ -7,6 +7,7 @@ never as an import.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any, Protocol
 
 from homeassistant.core import Context, ServiceCall
@@ -58,3 +59,10 @@ class PanelHost(Protocol):
 
     def hello_answered(self, device_id: str) -> None:
         """The hello was approved or refused: its card and notice go."""
+
+    def kids_time(self) -> dict[str, Any]:
+        """Each kid's time today as a kid card shows it, read only: {"kids": [...], "at", "version"} (the version changes
+        exactly when a kid's part does). Served on <d>/panel/kids/subscribe."""
+
+    def watch_kids_time(self, changed: Callable[[], None]) -> Callable[[], None]:
+        """Calls [changed] whenever kids_time may have changed; returns the unsubscribe."""

@@ -294,7 +294,7 @@ async def test_school_time_off_from_noon_and_the_watchdog(
 
     # Tuesday at 10:00 School time is still off (it couldn't be put back): the adults are told, once
     told: list[str] = []
-    household.scheduler.tell = lambda title, message, _id: told.append(message)
+    household.scheduler.tell = lambda title, message, _id, *_people: told.append(message)
     hass.states.async_set(SWITCH, "off")
     household.scheduler.offs.clear()
     await _tick(hass, household, freezer, _at(monday + timedelta(days=1), 9, 59))
@@ -733,7 +733,7 @@ async def test_a_failed_xbox_write_isn_t_counted_and_is_tried_again(
     )
     _family_safety_entities(hass, "sam", "123456", {"Xbox": 60})
     told: list[str] = []
-    household.scheduler.tell = lambda title, message, _id: told.append(message)
+    household.scheduler.tell = lambda title, message, _id, *_people: told.append(message)
     await _tick(hass, household, freezer, _at(day_off, 0, 6))
     assert _limit_calls(limits) == [(FAMILY_SAFETY, "Xbox", 4, 1, 30)]
     key = f"family_safety|{FAMILY_SAFETY}|Xbox"
@@ -874,7 +874,7 @@ async def test_family_safety_following_the_budget_is_off_unless_chosen(
     )
     _family_safety_entities(hass, "sam", "123456", {"Windows": 120, "Xbox": 60})
     told: list[str] = []
-    household.scheduler.tell = lambda title, message, _id: told.append(message)
+    household.scheduler.tell = lambda title, message, _id, *_people: told.append(message)
     await _tick(hass, household, freezer, _at(day_off, 0, 6))
     await _tick(hass, household, freezer, _at(day_off, 6))
     assert [c.data["daily_minutes"] for c in fl_limit] == [180] and limits == [] and told == []
@@ -907,7 +907,7 @@ async def test_no_limit_today_or_no_family_safety_service_is_left_alone_quietly(
     # Windows has no limit (24 hours); Mobile has no weekday limit to raise; no set_screentime_limit at all yet
     _family_safety_entities(hass, "sam", "123456", {"Windows": 1440, "Xbox": 60})
     told: list[str] = []
-    household.scheduler.tell = lambda title, message, _id: told.append(message)
+    household.scheduler.tell = lambda title, message, _id, *_people: told.append(message)
     await _tick(hass, household, freezer, _at(day_off, 0, 6))
     limits, _restores = _family_safety_services(hass)
     await _tick(hass, household, freezer, _at(day_off, 0, 7))
@@ -969,7 +969,7 @@ async def test_one_family_safety_failure_doesn_t_stop_family_link_or_another_kid
         person, groups, day
     )
     told: list[str] = []
-    household.scheduler.tell = lambda title, message, _id: told.append(message)
+    household.scheduler.tell = lambda title, message, _id, *_people: told.append(message)
     await _tick(hass, household, freezer, _at(day_off, 0, 6))
     assert len(fl_limit) == 1
     assert sorted((c.data["entity_id"], c.data["platform"], c.data["hours"], c.data["minutes"]) for c in limits) == [
@@ -1243,7 +1243,7 @@ async def test_a_switch_with_no_limit_is_left_alone_and_following_is_off_unless_
         other_days=180,
     )
     told: list[str] = []
-    household.scheduler.tell = lambda title, message, _id: told.append(message)
+    household.scheduler.tell = lambda title, message, _id, *_people: told.append(message)
     await _tick(hass, household, freezer, _at(day_off, 0, 6))
     await _tick(hass, household, freezer, _at(day_off, 6))
     assert set_value == [] and household.scheduler.temporary.held == {} and told == []
