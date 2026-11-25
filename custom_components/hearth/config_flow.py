@@ -69,6 +69,7 @@ from .enforce import (
     PLATFORMS,
 )
 from .notifications import clear_pairing
+from .switch_play import guess_player, players
 from .schooldays import CALENDAR_OFF, CALENDAR_SCHOOL, CONF_SCHOOL_DAYS, SCHOOL_BUDGET
 from .schedule import CONF_SCHEDULE, CONF_SITE_LIST
 from .backstop import CONF_FL_BACKSTOP, CONF_FL_BACKSTOP_MARGIN
@@ -695,6 +696,15 @@ class HearthOptionsFlow(OptionsFlow):
                     }
                 )
             if user_input.get("nintendo"):
+                player = list(user_input.get("nintendo_player") or [])
+                if not player and not user_input.get("nintendo_playing"):
+                    # A Switch with several players is shared: theirs by name, when one player's matches
+                    state = self.hass.states.get(person)
+                    name = state.name if state else person.split(".", 1)[-1].replace("_", " ")
+                    if len(players(self.hass, user_input["nintendo"])) > 1 and (
+                        guessed := guess_player(self.hass, user_input["nintendo"], name)
+                    ):
+                        player = [guessed]
                 kept.append(
                     {
                         "kind": NINTENDO,
@@ -702,6 +712,7 @@ class HearthOptionsFlow(OptionsFlow):
                         "entity_id": user_input["nintendo"],
                         "groups": list(user_input.get("nintendo_groups") or DEFAULT_NINTENDO_GROUPS),
                         **({"playing": list(user_input["nintendo_playing"])} if user_input.get("nintendo_playing") else {}),
+                        **({"player": player} if player else {}),
                     }
                 )
             # Family Link's daily limit as a backstop (backstop.py): the household's, whoever was chosen
@@ -739,7 +750,12 @@ class HearthOptionsFlow(OptionsFlow):
                 vol.Optional("nintendo_groups", default=list(DEFAULT_NINTENDO_GROUPS)): SelectSelector(
                     SelectSelectorConfig(options=groups, multiple=True)
                 ),
-                # A shared Switch: held only while one of these is on (this person is the one playing)
+                # A shared Switch: their player's minutes ("<nickname> used screen time"); held once they're caught
+                # playing. Left empty on a Switch with several players: theirs by name
+                vol.Optional("nintendo_player"): EntitySelector(
+                    EntitySelectorConfig(integration=NINTENDO_DOMAIN, domain="sensor", multiple=True)
+                ),
+                # A shared Switch: a playing sensor of theirs (a patched Nintendo integration's, friend presence)
                 vol.Optional("nintendo_playing"): EntitySelector(
                     EntitySelectorConfig(domain="binary_sensor", multiple=True)
                 ),

@@ -150,6 +150,14 @@ GET_ACTIVITY_SCHEMA = vol.Schema(
         vol.Optional("limit", default=200): vol.All(vol.Coerce(int), vol.Range(min=1, max=2000)),
     }
 )
+LET_SOMEONE_PLAY_SCHEMA = vol.Schema(
+    {
+        # The Switch: nintendo:<entity> (a target id), or its device id
+        vol.Required("device"): cv.string,
+        vol.Optional("minutes", default=60): vol.All(vol.Coerce(int), vol.Range(min=0, max=240)),
+        vol.Optional("for_person"): cv.entity_id,
+    }
+)
 PAUSE_END_SCHEMA = vol.Schema(
     {
         vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id]),
@@ -377,6 +385,23 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     )
     register_service(hass, DOMAIN, "pause", pause, schema=PAUSE_SCHEMA, supports_response=SupportsResponse.OPTIONAL)
     register_service(hass, DOMAIN, "pause_end", pause_end, schema=PAUSE_END_SCHEMA)
+
+    @callback
+    def let_someone_play(call: ServiceCall) -> ServiceResponse:
+        """A shared Switch Hearth holds for a kid caught playing out of time: lifted for some minutes so someone else
+        can play (0: held again now). The held kid playing meanwhile holds it again."""
+        household = loaded_household()
+        try:
+            return household.let_someone_play(
+                call.data["device"], call.data["minutes"], call.data.get("for_person"), call.context.user_id
+            )
+        except ValueError as err:
+            raise ServiceValidationError(str(err)) from err
+
+    register_service(
+        hass, DOMAIN, "let_someone_play", let_someone_play, schema=LET_SOMEONE_PLAY_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
     _register_app_blocks(hass, loaded_household)
     _register_answer_request(hass)
     _register_dismiss_suggestion(hass)

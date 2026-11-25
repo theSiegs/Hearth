@@ -353,7 +353,8 @@ What counts as playing now, for Playing, `playing` and together:
   matches on the show rather than the app. Not timed here (the devices' own counts are).
 - **Live sources** (Xbox now playing, Switch friend presence): timed by the integration.
 - **A kid's Switch**: a Nintendo enforcer's `playing` entities (a shared Switch's player sensors; else the Switch's own
-  Playing sensor when no one else's enforcer is on it). While one is on, the person plays the game it names (a
+  Playing sensor when no one else's enforcer is on it), or their player's minutes growing (see **A shared Switch**
+  under Enforce). While one is on, the person plays the game it names (a
   `title`, `game` or `application_name` attribute, as a patched integration or presence gives it), else "Switch", on
   the Switch's target (`nintendo:<entity>`). Not timed (Nintendo's own minutes count); counted for together. A live
   source on the same Switch says it instead.
@@ -762,17 +763,64 @@ until the group has time again (a bonus, a higher budget, a new day):
     time from the Nintendo app runs (its time-extended sensor), the Switch refuses a new limit: Hearth waits and says so.
     The change goes through Nintendo's cloud and reaches the Switch while it's online.
 
-    Nintendo's limits are the whole console's: there's no limit per child. On a **shared Switch**, choose the person's
-    "playing" sensor (an entity that's on while they're the one playing: the rebuilt Nintendo integration's per-player
-    playing sensor, or friend presence) and the Switch is held only while it's on, so a brother or sister with time left
-    can play. Nintendo reports play about every 10 minutes, so with its sensor the hold can start and end that late;
-    friend presence is about a minute. Two kids held on one Switch share the hold: it's put back only when neither is.
+    Nintendo's limits are the whole console's: there's no limit per child. See **A shared Switch** below for
+    holding one kid on a Switch the family shares. Two kids held on one Switch share the hold: it's put back only when
+    neither is.
 
     An adult's **pause** holds the Switch the same way, through the same hold: a family pause of the person
     (`hearth.pause` without an app or group), or a pause of a group the enforcer covers (`group: games` with the
     defaults; a pause of Video doesn't touch it). It's let go when the pause ends (or 2 minutes before midnight, as
-    above), and on a shared Switch it's held only while the person is the one playing. A parent's grant in the Nintendo
-    app (a changed limit, bonus time) lifts it as it lifts a budget's hold; an allow doesn't, as for any pause.
+    above), and on a shared Switch it's held once the person is caught playing, as for a budget. A parent's grant in the
+    Nintendo app (a changed limit, bonus time) lifts it as it lifts a budget's hold; an allow doesn't, as for any pause.
+
+    **A shared Switch.** One kid out of time can only be held by holding the whole Switch, so on a Switch the family shares Hearth waits
+    until that kid is **caught** playing it, then holds it **until the kid has time again**: extra time (on all their
+    devices or on this Switch), a new day's budget, the pause or the schedule's mode ending, a parent's grant in the
+    Nintendo app, or 2 minutes before midnight. Before, the hold followed the kid's playing sensor, which goes off
+    because the hold stops the game; the kid then played on until the next upload showed it, about half the time.
+
+    **Who is playing.** Set the person's player on the Switch (the enforcer's `player`: their **"<nickname> used screen
+    time"** sensor). Hearth's page and the Configure menu pick it by name on a Switch with several players (the one
+    whose nickname is the person's name, or has their first name as a word); pick another or **Hold the whole Switch**.
+    - With Home Assistant's own Nintendo integration (as released), that sensor is the only per-player signal. Nintendo
+      takes a player's minutes from the console every 5 to 10 minutes, and the integration reads them every minute. A
+      player whose minutes grew within the last **15 minutes** is playing (an enforcer row may set `window`, 5 to 60).
+      A player is **not playing** only once their minutes have been read, fresh, for a whole window without growing.
+      Anything else is **unknown**: the sensor is unavailable, unknown or hasn't been read for 10 minutes, or Hearth
+      hasn't watched it for a window yet (after a restart, or after a gap longer than a window; growth during a gap
+      that long isn't taken as play now).
+    - A patched Nintendo integration's per-player playing sensor (`<switch>_<player>_playing`), or friend presence, can
+      be set too (the enforcer's `playing`). The player's other entity is found and used as well, so either one in the
+      row is enough. "On" is playing. "Off" is believed only once it has stayed off for 2 minutes and is fresh;
+      unavailable, unknown or stale is unknown.
+    - Any source saying "playing" wins; else any trusted "not playing"; else unknown. **Nothing about playing ever lets
+      a hold go**, and unknown never catches anyone: the release comes only from the kid's time, as above.
+
+    So a hold starts 5 to 10 minutes after the kid starts playing (one upload), sooner with a patched playing sensor or
+    friend presence. A hold from before this version counts as caught. While the kid is caught, the adults get a notice
+    on their phones (and on TVs that show notices): "Our Switch held for Alex", with **Let someone else play 1 h**.
+
+    **Let someone else play.** `hearth.let_someone_play` (adults; `device`: `nintendo:<entity>` or the Switch's device
+    id, `minutes` 1 to 240, default 60, `for_person` optional) lifts the caught hold for that long: one write, about a
+    second to reach the Switch. Hearth's page has the same buttons on the kid's Switch card (30 min, 1 h, 2 h; the
+    WebSocket command `hearth/nintendo/let_play`), and **Hold again now** during a turn (`minutes: 0`). During the
+    turn:
+    - if the held kid's player shows play (their minutes grow past what they were when the turn started, or a playing
+      sensor turns on after it), the Switch is held again at once and the adults are told ("Alex played during Sam's
+      turn"). The first upload within 12 minutes of the hold starting is forgiven once: it can still carry play from
+      before the hold;
+    - with `for_person`, the turn ends early when that person's own time for the Switch's groups runs out (and it's
+      refused when they have none);
+    - when it ends, the Switch stays open and is held again only once the kid plays after it.
+
+    Each change fires `hearth_switch` (`person`, `entity_id`, `what`: caught, caught_in_turn, turn_ended, released,
+    and `for_person`). The kid's Switch in the household summary (`first_party.nintendo`) adds `shared`, `caught`,
+    `turn` ({until, for_person, held_for}) and `playing_now` (true, false or null for unknown).
+
+    The page's Nintendo capabilities (`hearth/config` `capabilities.nintendo`) add `player_minutes` (players' minutes
+    sensors exist: Home Assistant's own integration), `player_playing` (a patched copy's playing sensors exist) and
+    `update_daily_restrictions`. Not built yet: a sibling's own "I want to play" on their TV or phone (it would notify
+    the adults), and showing the console's PIN to adults.
 - What's held is kept across restarts, so only what Hearth held is let go. For a few minutes after Home Assistant
   starts nothing is let go (the sources report in first). A failed call shows on the person's **Held by parental
   controls** sensor and is tried again 5 minutes later. Each change fires `hearth_enforced` (person, by, held, let go).

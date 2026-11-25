@@ -457,7 +457,8 @@
           "groups": "Family Safety: lock while one of these categories (or daily time) is out of time",
           "nintendo": "Nintendo: the person's Switch (its Max screentime today)",
           "nintendo_groups": "Nintendo: suspend while one of these categories (or daily time) is out of time",
-          "nintendo_playing": "A shared Switch: held only while this person is the one playing (their playing sensor)",
+          "nintendo_playing": "A shared Switch: their playing sensor (a patched Nintendo integration's, or friend presence)",
+          "nintendo_player": "A shared Switch: their player's used screen time (minutes that grow say they're playing; the Switch is held once they're caught)",
           "school_time_apps": "Family Link: during School time, pause these apps",
           "fl_backstop": "Keep Family Link's daily limit as a backstop",
           "fl_backstop_margin": "Backstop margin (minutes)"
@@ -566,6 +567,24 @@
         "group": {
           "name": "Group",
           "description": "Pause only this group's apps (its id or name, such as youtube), not every app."
+        }
+      }
+    },
+    "let_someone_play": {
+      "name": "Let someone else play",
+      "description": "Lifts Hearth's hold on a shared Switch, held because a kid was caught playing it with no time left, so someone else can play. If that kid plays during the turn, the Switch is held again at once.",
+      "fields": {
+        "device": {
+          "name": "Switch",
+          "description": "The Switch: nintendo:<entity> (its target id in the household summary), or its device id."
+        },
+        "minutes": {
+          "name": "Minutes",
+          "description": "How long the turn lasts. 0 ends a turn: the Switch is held again now."
+        },
+        "for_person": {
+          "name": "For",
+          "description": "Who plays (optional): the turn ends early when their own time runs out."
         }
       }
     },

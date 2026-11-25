@@ -78,6 +78,7 @@ from .sources import CONF_SOURCES, CONF_TITLES
 from .suggest_push import CONF_SUGGEST_PUSH, pairs as suggest_pairs
 from .profiles import OPTION_KEY
 from . import fs_capabilities, nintendo, parent_pin, phones
+from .switch_play import WINDOW_MAX, WINDOW_MIN, players
 from .bedtime_sync import fl_capabilities
 from .push import clean_server
 from .activity import call_service
@@ -154,6 +155,9 @@ def _entity_choices(hass: HomeAssistant) -> dict[str, list[dict[str, Any]]]:
     out["app_lists"] = []
     out["media_player"] = []
     out["nintendo_playing"] = []
+    # Each Switch's players (their used screen time), with the Switch's limit entity the page picks by
+    out["nintendo_players"] = []
+    switch_of_device: dict[str | None, str] = {}
     # Family Link's location trackers only (a router's or Wi-Fi tracker is never a place's source)
     out["location"] = []
     for entry in registry.entities.values():
@@ -185,8 +189,23 @@ def _entity_choices(hass: HomeAssistant) -> dict[str, list[dict[str, Any]]]:
             out["nintendo_playing"].append(item)
         if entry.domain == "media_player":
             out["media_player"].append(item)
+        if entry.platform == NINTENDO_DOMAIN and entry.domain == "number" and entry.unique_id.endswith(
+            f"_{nintendo.LIMIT}"
+        ):
+            switch_of_device[entry.device_id] = entry.entity_id
         if entry.domain == "device_tracker" and entry.platform == "familylink":
             out["location"].append(item)
+    for player in players(hass):
+        state = hass.states.get(player["entity_id"])
+        out["nintendo_players"].append(
+            {
+                "entity_id": player["entity_id"],
+                "name": state.name if state else player["nickname"] or player["entity_id"],
+                "platform": NINTENDO_DOMAIN,
+                "nickname": player["nickname"],
+                "switch": switch_of_device.get(player["device_id"]),
+            }
+        )
     for found in out.values():
         found.sort(key=lambda i: i["name"].lower())
     return out
@@ -497,6 +516,9 @@ OPTION_SCHEMAS: dict[str, Any] = {
                 vol.Optional("groups"): [_ID],
                 vol.Optional("platforms"): [vol.In(PLATFORMS)],
                 vol.Optional("playing"): [cv.entity_id],
+                # A shared Switch: the person's player's minutes (switch_play.py), and how long growth says "playing"
+                vol.Optional("player"): [cv.entity_id],
+                vol.Optional("window"): vol.All(int, vol.Range(min=WINDOW_MIN, max=WINDOW_MAX)),
                 vol.Optional("school_time_apps"): [cv.string],
             }
         )
@@ -963,6 +985,38 @@ async def ws_nintendo_app_allowed(
     connection.send_result(msg["id"], response or {})
 
 
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "hearth/nintendo/let_play",
+        vol.Required("person"): _PERSON,
+        vol.Required("device_id"): cv.string,
+        vol.Optional("minutes", default=60): vol.All(int, vol.Range(min=0, max=240)),
+        vol.Optional("for_person"): _PERSON,
+    }
+)
+@callback
+def ws_nintendo_let_play(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """Let someone else play: Hearth's hold on a kid's shared Switch (caught playing out of time) lifted for some
+    minutes (0: held again now), as hearth.let_someone_play."""
+    hub = _hub(hass)
+    if hub is None:
+        connection.send_error(msg["id"], "not_set_up", "Hearth isn't set up")
+        return
+    switch = nintendo.switch_of(hub.household, msg["person"], msg["device_id"])
+    if switch is None or not switch["target"]:
+        connection.send_error(msg["id"], "not_found", "Hearth doesn't hold that Switch for them")
+        return
+    try:
+        result = hub.household.let_someone_play(
+            switch["target"], msg["minutes"], msg.get("for_person"), connection.user.id if connection.user else None
+        )
+    except ValueError as err:
+        connection.send_error(msg["id"], "failed", str(err))
+        return
+    connection.send_result(msg["id"], result)
+
+
 @callback
 def new_group_id(name: str, taken: set[str]) -> str:
     base = slug(name) or "group"
@@ -986,5 +1040,6 @@ def async_register_commands(hass: HomeAssistant) -> None:
         ws_nintendo_bonus_cancel,
         ws_nintendo_apps,
         ws_nintendo_app_allowed,
+        ws_nintendo_let_play,
     ):
         websocket_api.async_register_command(hass, command)

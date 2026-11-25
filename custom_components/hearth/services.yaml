@@ -251,6 +251,25 @@ pause_end:
       selector:
         text:
 
+let_someone_play:
+  fields:
+    device:
+      required: true
+      example: "nintendo:number.our_switch_max_screentime_today"
+      selector:
+        text:
+    minutes:
+      default: 60
+      selector:
+        number:
+          min: 0
+          max: 240
+          unit_of_measurement: min
+    for_person:
+      selector:
+        entity:
+          domain: person
+
 block_app:
   fields:
     people:

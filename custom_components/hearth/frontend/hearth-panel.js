@@ -1452,7 +1452,12 @@ class HearthPanel extends HTMLElement {
         if (nin) {
           const groups = [...this.shadowRoot.querySelectorAll(`[data-nin-group="${person}"]:checked`)].map((x) => x.value);
           const playing = this._value(`#enf-nin-playing-${CSS.escape(person)}`);
-          kept.push({ kind: "nintendo", person, entity_id: nin, groups, ...(playing ? { playing: [playing] } : {}) });
+          const player = this._value(`#enf-nin-player-${CSS.escape(person)}`);
+          kept.push({
+            kind: "nintendo", person, entity_id: nin, groups,
+            ...(playing ? { playing: [playing] } : {}),
+            ...(player ? { player: [player] } : {}),
+          });
         }
         await this._setOption("enforce", kept, "Parental controls saved");
         return;
@@ -1708,6 +1713,14 @@ class HearthPanel extends HTMLElement {
         if (!window.confirm("Cancel the Switch's extra playing time for today?")) return;
         await this._ws({ type: "hearth/nintendo/bonus_cancel", person: d.person, device_id: d.device }, "Extra playing time cancelled");
         return;
+      case "nin-let-play": {
+        const minutes = Number(d.minutes);
+        await this._ws(
+          { type: "hearth/nintendo/let_play", person: d.person, device_id: d.device, minutes },
+          minutes ? `The Switch is open for ${minutes < 60 ? `${minutes} min` : `${minutes / 60} h`}` : "The Switch is held again"
+        );
+        return;
+      }
       case "nin-apps":
         await this._loadSwitchApps(d.person, d.device);
         return;
@@ -4167,12 +4180,26 @@ class HearthPanel extends HTMLElement {
         <label class="field">Nintendo Switch
           <select id="enf-nin-${esc(kid.id)}">${this._entityOptions(cfg.choices?.nintendo, nin?.entity_id || "", "Not used")}</select></label>
         <div class="muted small">Suspends the game while any of these is out:</div><div class="checks">${groupBoxes("data-nin-group", nin?.groups || ["all", "games"])}</div>
-        <label class="field">A shared Switch: hold it only while ${esc(kid.name)} is the one playing (their "playing" sensor)
-          <select id="enf-nin-playing-${esc(kid.id)}">${this._entityOptions(cfg.choices?.nintendo_playing, (nin?.playing || [])[0] || "", "Hold the whole Switch")}</select></label>
-        <div class="muted small">Nintendo reports play about every 10 minutes, so the hold can start that late and end that late.</div>
+        <label class="field">A shared Switch: ${esc(kid.name)}'s player on it (held only once ${esc(kid.name)} is caught playing)
+          <select id="enf-nin-player-${esc(kid.id)}">${this._entityOptions(cfg.choices?.nintendo_players, (nin?.playing || []).length && !(nin?.player || []).length ? "" : (nin?.player || [])[0] || this._guessPlayer(kid, nin), "Hold the whole Switch")}</select></label>
+        <label class="field">Optional: a playing sensor of ${esc(kid.name)}'s (a patched Nintendo integration's, or friend presence)
+          <select id="enf-nin-playing-${esc(kid.id)}">${this._entityOptions(cfg.choices?.nintendo_playing, (nin?.playing || [])[0] || "", "None")}</select></label>
+        <div class="muted small">Nintendo reports play about every 10 minutes, so ${esc(kid.name)} can play that long before the hold starts. Once caught, the Switch stays held until ${esc(kid.name)} has time again; the Switch card has Let someone else play.</div>
         <div class="actions"><button class="btn primary" data-action="enforce-save" data-person="${esc(kid.id)}">Save</button></div>
       </div>
     </section>`;
+  }
+
+  // The kid's player on their Switch by name, when the Switch has several players and exactly one name matches
+  _guessPlayer(kid, nin) {
+    if (!nin?.entity_id) return "";
+    const players = (this._config.choices?.nintendo_players || []).filter((p) => p.switch === nin.entity_id);
+    if (players.length < 2) return "";
+    const name = String(kid.name || "").trim().toLowerCase();
+    const first = name.split(/\s+/)[0];
+    const words = (s) => String(s || "").toLowerCase().split(/[^\p{L}\p{N}_]+/u).filter(Boolean);
+    const found = players.filter((p) => p.nickname && (p.nickname.toLowerCase() === name || words(p.nickname).includes(first)));
+    return found.length === 1 ? found[0].entity_id : "";
   }
 
   // A kid's Nintendo Switch: today's play and its own limit, Hearth's extra time on it, Nintendo's own extra time and
@@ -4206,8 +4233,20 @@ class HearthPanel extends HTMLElement {
     else if (n.blocking) status.push(`<span class="chip out"><ha-icon icon="mdi:timer-off"></ha-icon>Its own limit stops it</span>`);
     if (n.suspended && !n.held_by_hearth) status.push(`<span class="chip warn"><ha-icon icon="mdi:pause"></ha-icon>Software suspended</span>`);
     if (n.last_synced) status.push(`<span class="chip dim" title="When the Switch last took its settings"><ha-icon icon="mdi:sync"></ha-icon>Synced ${esc(new Date(n.last_synced).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }))}</span>`);
+    if (n.shared && n.playing_now === null && !n.caught && !n.turn)
+      status.push(`<span class="chip dim" title="Nintendo hasn't reported lately, so Hearth can't tell who's playing"><ha-icon icon="mdi:help-circle-outline"></ha-icon>Who's playing: not known</span>`);
     sections.push(`<div class="chips">${status.join("")}</div>
       <div class="facts">${facts.map(([k, v]) => `<div><div class="muted small">${esc(k)}</div><div class="strong">${esc(v)}</div></div>`).join("")}</div>`);
+    // A shared Switch held because the kid was caught playing out of time: everyone waits, unless it's someone else's turn
+    if (n.caught && n.target)
+      sections.push(`<div class="row wrap"><div class="grow muted small">Held for everyone: ${esc(kid.name)} played it with no time left. It stays held until ${esc(kid.name)} has time again.</div>
+        ${[30, 60, 120].map((m) => `<button class="btn" data-action="nin-let-play" data-person="${p}" data-device="${dev}" data-minutes="${m}">Let someone else play ${m < 60 ? `${m} min` : `${m / 60} h`}</button>`).join("")}</div>`);
+    else if (n.turn && n.target) {
+      const until = new Date(n.turn.until).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      const who = n.turn.for_person ? `${this._personName(n.turn.for_person)}'s turn` : "Someone else's turn";
+      sections.push(`<div class="row wrap"><div class="grow muted small">${esc(who)} until ${esc(until)}. If ${esc(kid.name)} plays meanwhile, the Switch is held again.</div>
+        <button class="btn" data-action="nin-let-play" data-person="${p}" data-device="${dev}" data-minutes="0">Hold again now</button></div>`);
+    }
     // Hearth's extra time on this Switch alone: lets Hearth's hold go there (its own limit still applies)
     if (n.target)
       sections.push(`<div class="row wrap"><div class="grow muted small">Hearth's extra time on this Switch only (lets Hearth's hold go there, today)</div>

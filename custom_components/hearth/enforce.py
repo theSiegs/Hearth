@@ -28,8 +28,11 @@ add, per person, the parental controls of other integrations (Configure > Enforc
   every day, or of this weekday), not of today only, so it's put back before midnight. As with Family Link, only while
   it still reads 0: a limit a parent set meanwhile in the Nintendo app stays, with the Switch's other settings.
   An adult's pause holds the Switch the same way: a family pause of the person, or a pause of a group the enforcer
-  covers (Games, say), until the pause ends (a shared Switch only while the person is the one playing, let go before
-  midnight as above). A parent's grant from the Nintendo app lifts it; an allow doesn't, as for any pause.
+  covers (Games, say), until the pause ends (let go before midnight as above). A parent's grant from the Nintendo app
+  lifts it; an allow doesn't, as for any pause.
+  A Switch the family shares (switch_play.py) is held only once the person is caught playing it, and then stays held
+  until they have time again (or the pause ends, a grant, midnight), whatever the playing sources say after; an
+  adult's "Let someone else play" lifts it for a turn, and the person playing in it is caught again at once.
   The schedule's extra minutes on a day off or half day (schedule.py, bonus_nintendo) go into the limit a hold puts
   back while it holds, and come out of it again when they're called off or the day ends.
 
@@ -93,6 +96,7 @@ from . import family_link as fl
 from .counting import ALL
 from .exceptions import Lifted, end_of_day
 from .activity import call_service
+from . import switch_play as sp
 
 if TYPE_CHECKING:
     from .household import PersonDay
@@ -340,12 +344,22 @@ class Enforcer:
     entity_id: str
     groups: tuple[str, ...] = ()
     platforms: tuple[str, ...] = ()
-    # A shared Switch: entities that are on while this person is the one playing (the Nintendo integration's player
-    # "playing" sensor, or friend presence). With any, the Switch is held only while one of them is on, so a brother
-    # or sister with time left can play
+    # A shared Switch: entities that are on while this person is the one playing (a patched Nintendo integration's
+    # player "playing" sensor, or friend presence). With any (or a player's minutes below), the Switch is held only
+    # once this person is caught playing, so a brother or sister with time left can play (switch_play.py)
     playing: tuple[str, ...] = ()
     # Family Link: apps paused while the child's School time is on
     school_apps: tuple[str, ...] = ()
+    # A shared Switch: the person's player's minutes today ("<nickname> used screen time"): minutes that grow say
+    # they're playing
+    player: tuple[str, ...] = ()
+    # Minutes that grew this many minutes ago still say "playing" (None: switch_play.WINDOW)
+    window: int | None = None
+
+    @property
+    def shared(self) -> bool:
+        """A Switch others play too: something says who's playing it."""
+        return self.kind == NINTENDO and bool(self.playing or self.player)
 
     @property
     def key(self) -> str:
@@ -375,12 +389,14 @@ def enforcers_from_options(options: dict[str, Any]) -> list[Enforcer]:
         elif kind == NINTENDO:
             groups = groups or DEFAULT_NINTENDO_GROUPS
         playing = tuple(e for e in raw.get("playing") or () if isinstance(e, str)) if kind == NINTENDO else ()
+        player = tuple(e for e in raw.get("player") or () if isinstance(e, str)) if kind == NINTENDO else ()
+        window = raw.get("window") if kind == NINTENDO and isinstance(raw.get("window"), int) else None
         school_apps = (
             tuple(p.strip() for p in raw.get("school_time_apps") or () if isinstance(p, str) and school_pausable(p.strip()))
             if kind == FAMILY_LINK
             else ()
         )
-        found.append(Enforcer(kind, person, entity_id, groups, platforms, playing, school_apps))
+        found.append(Enforcer(kind, person, entity_id, groups, platforms, playing, school_apps, player, window))
     return found
 
 
@@ -593,6 +609,17 @@ class Enforcement:
         self.backstop_values = None
         # The action log (activity.py; the household sets it): each hold started and ended
         self.activity = None
+        # A shared Switch, by enforcer key: caught, someone else's turn, armed (switch_play.py); kept over a restart
+        self.switch: dict[str, sp.SwitchWatch] = {}
+        # What Hearth has seen of each player's minutes today, by entity
+        self.minutes: dict[str, sp.MinutesTrack] = {}
+        # Whether each Switch enforcer's person is playing now (None: unknown), as of the last update
+        self.playing_now: dict[str, bool | None] = {}
+        # ... and what their player's minutes alone say
+        self.minutes_playing: dict[str, bool | None] = {}
+        # Called with (enforcer, what, details) when a shared Switch's kid is caught, caught again in someone else's
+        # turn, a turn ends or the hold is over (household.py tells the adults)
+        self.on_switch = None
 
     async def async_load(self) -> None:
         stored = await self._store.async_load() or {}
@@ -620,6 +647,12 @@ class Enforcement:
         # list cut short by Hearth's own pauses must not read as "apps not known" after a restart
         fl.restore_installed(self.hass, stored.get("fl_installed"))
         fl.on_installed_changed(self.hass, self._installed_changed)
+        self.switch = {
+            key: sp.SwitchWatch.from_dict(raw) for key, raw in (stored.get("switch") or {}).items() if isinstance(raw, dict)
+        }
+        self.minutes = {
+            key: sp.MinutesTrack.from_dict(raw) for key, raw in (stored.get("minutes") or {}).items() if isinstance(raw, dict)
+        }
 
     @callback
     def _installed_changed(self) -> None:
@@ -662,6 +695,9 @@ class Enforcement:
             # Until when a change is Hearth's own call showing, by enforcer
             "quiet": {key: until.isoformat() for key, until in self._quiet_until.items() if until > dt_util.utcnow()},
             "swaps": self._swaps,
+            # A shared Switch's caught hold, turn or arming, and each player's minutes Hearth has seen today
+            "switch": {key: w.to_dict() for key, w in self.switch.items() if w.caught_at or w.turn or w.since},
+            "minutes": {key: t.to_dict() for key, t in self.minutes.items() if t.value is not None},
         }
 
     async def async_flush(self) -> None:
@@ -763,7 +799,10 @@ class Enforcement:
         why_now: dict[str, dict[str, str]] = {}
         for e in enforcers:
             lifted = lifted_of(e.person) if lifted_of else None
-            playing = self._playing(e)
+            # A Switch: what would hold it if this person were the one playing; whether to hold it is the caught
+            # hold's (_switch_gate, below). Who's playing (verdict) only catches
+            verdict = self._playing(e, now)
+            playing = True if e.kind == NINTENDO else None
             # [budget_lifted_of]: what lifts a budget hold only: the allows, and a category's own bonus left (its apps
             # run past daily time). Bedtime, School time and pauses aren't lifted by it
             budget_lifted = budget_lifted_of(e.person) if budget_lifted_of else lifted
@@ -834,6 +873,8 @@ class Enforcement:
                 scheduled -= device_bedtime_of(e)
             device_lifted = device_lifted_of(e) if device_lifted_of else set()
             wanted_now[e.key] = (budget | school | paused | scheduled) - granted - device_lifted - set(spared)
+            if e.kind == NINTENDO and not self._switch_gate(e, SWITCH in wanted_now[e.key], verdict, now, days):
+                wanted_now[e.key].discard(SWITCH)
             if e.kind == FAMILY_LINK and exempt_of:
                 wanted_now[e.key] -= exempt_of(e.person)
             if e.kind == FAMILY_LINK:
@@ -882,16 +923,182 @@ class Enforcement:
             self.last[key] = {**{k: v for k, v in last.items() if k != "error"}, "ok": True, "error_cleared": True}
             self._save()
 
-    def _playing(self, enforcer: Enforcer) -> bool | None:
-        """Whether the person is the one playing a shared Switch (any of their playing entities on); None when the
-        enforcer has none, or none of them has a state yet (the whole Switch is held, as before)."""
-        if not enforcer.playing:
+    def playing(self, enforcer: Enforcer) -> bool | None:
+        """Whether their player's minutes say the person is playing their shared Switch, as the last update judged
+        them (None: unknown, or no minutes). Their playing sensors are read where they're needed, as they are now."""
+        return self.minutes_playing.get(enforcer.key)
+
+    def _playing(self, enforcer: Enforcer, now: datetime | None = None) -> bool | None:
+        """Whether the person is the one playing their shared Switch (switch_play.py): True, False only when a source
+        trusts it (an "off" that stayed off, minutes watched a whole window without growing), None when unknown or
+        the enforcer has no source (a Switch nobody else plays)."""
+        if enforcer.kind != NINTENDO:
             return None
-        states = [self.hass.states.get(e) for e in enforcer.playing]
-        known = [s for s in states if s is not None and s.state not in ("unknown", "unavailable")]
-        if not known:
+        now = now or dt_util.now()
+        binaries, minutes = sp.sources_of(self.hass, enforcer)
+        if not binaries and not minutes:
+            self.playing_now.pop(enforcer.key, None)
+            self.minutes_playing.pop(enforcer.key, None)
             return None
-        return any(s.state == "on" for s in known)
+        verdicts = [sp.binary_verdict(self.hass.states.get(b), now) for b in binaries]
+        window = sp.window_of(enforcer.window)
+        by_minutes: list[bool | None] = []
+        for entity_id in minutes:
+            track = self.minutes.setdefault(entity_id, sp.MinutesTrack())
+            was = track.to_dict()
+            track.observe(self.hass.states.get(entity_id), now)
+            if track.to_dict() != was:
+                self._save()
+            by_minutes.append(track.verdict(now, window))
+        self.minutes_playing[enforcer.key] = sp.combine(by_minutes)
+        found = sp.combine(verdicts + by_minutes)
+        self.playing_now[enforcer.key] = found
+        return found
+
+    def _switch_minutes(self, enforcer: Enforcer) -> tuple[float | None, list]:
+        """The person's player minutes now (fresh ones only; None without any) and their playing sensors' states."""
+        binaries, minutes = sp.sources_of(self.hass, enforcer)
+        values = [
+            track.value
+            for entity_id in minutes
+            if (track := self.minutes.get(entity_id)) is not None
+            and track.seen_since is not None
+            and track.value is not None
+        ]
+        return (sum(values) if values else None), [self.hass.states.get(b) for b in binaries]
+
+    def _tell(self, enforcer: Enforcer, what: str, **details: Any) -> None:
+        self.hass.bus.async_fire(
+            "hearth_switch", {"person": enforcer.person, "entity_id": enforcer.entity_id, "what": what, **details}
+        )
+        if self.on_switch is not None:
+            try:
+                self.on_switch(enforcer, what, details)
+            except Exception:  # noqa: BLE001 - a notice failing mustn't stop the holds
+                _LOGGER.exception("Hearth couldn't tell the adults about the Switch")
+
+    def _switch_gate(
+        self, enforcer: Enforcer, reason: bool, playing: bool | None, now: datetime, days: dict[str, PersonDay]
+    ) -> bool:
+        """Whether to hold the Switch for this person now, given whether something would ([reason]): once they're
+        caught playing it stays held until the reason is gone (time back, a grant, midnight), but in someone else's
+        turn; caught again when they play in it. A Switch nobody else plays is caught at once. What the playing
+        sources say never lets a hold go."""
+        key = enforcer.key
+        today = dt_util.as_local(now).date().isoformat()
+        watch = self.switch.get(key)
+        if watch is None or watch.day != today:
+            watch = self.switch[key] = sp.SwitchWatch(day=today)
+        if not reason:
+            if watch.caught_at or watch.turn or watch.since:
+                told = watch.caught_at is not None or watch.turn is not None
+                self.switch[key] = sp.SwitchWatch(day=today)
+                self._save()
+                if told and enforcer.shared:
+                    self._tell(enforcer, "released")
+            return False
+        minutes, binaries = self._switch_minutes(enforcer)
+        if watch.turn:
+            other = watch.turn.get("for_person")
+            if watch.played_since(minutes, binaries, now):
+                watch.turn, watch.caught_at = None, now
+                watch.since = watch.baseline = watch.absorb_until = None
+                self._save()
+                self._tell(enforcer, "caught_in_turn", for_person=other)
+                return True
+            ran_out = bool(other and out_of_time(days.get(other), enforcer.groups))
+            if now < watch.turn["until"] and not ran_out:
+                return False
+            # The turn is over: open, and held again only once this person plays after it
+            watch.turn = None
+            watch.arm(now, minutes)
+            self._save()
+            self._tell(enforcer, "turn_ended", for_person=other)
+        held = self.held.get(key)
+        if watch.caught_at is None and watch.since is None and held is not None and SWITCH in held.items:
+            # Held already (by an older Hearth, or a run under way): that's caught
+            watch.caught_at = now
+            self._save()
+        if watch.caught_at is not None:
+            return True
+        if not enforcer.shared:
+            catch = True
+        elif watch.since is not None:
+            catch = watch.played_since(minutes, binaries, now)
+        else:
+            catch = playing is True
+        if not catch:
+            return False
+        watch.caught_at = now
+        watch.since = watch.baseline = watch.absorb_until = None
+        self._save()
+        if enforcer.shared:
+            self._tell(enforcer, "caught")
+        return True
+
+    def switch_enforcers(self, entity_ids: set[str]) -> list[Enforcer]:
+        return [e for e in self.enforcers if e.kind == NINTENDO and e.entity_id in entity_ids]
+
+    def let_someone_play(
+        self, entity_ids: set[str], minutes: int, for_person: str | None = None, by: str | None = None
+    ) -> list[str]:
+        """Let someone else play: Hearth's caught holds on these Switches are lifted for [minutes] (0 ends a turn:
+        held again now). Says whose holds; raises ValueError when there's none."""
+        now = dt_util.now()
+        today = now.date().isoformat()
+        found: list[str] = []
+        for e in self.switch_enforcers(entity_ids):
+            watch = self.switch.get(e.key)
+            if watch is None or watch.day != today:
+                continue
+            if minutes <= 0:
+                if watch.turn is not None:
+                    watch.turn, watch.caught_at = None, now
+                    watch.since = watch.baseline = watch.absorb_until = None
+                    found.append(e.person)
+                continue
+            if watch.caught_at is None and watch.turn is None:
+                continue
+            if for_person == e.person:
+                raise ValueError("Hearth holds the Switch for them: give them extra time instead")
+            value, _ = self._switch_minutes(e)
+            # Nintendo's next upload may still carry play from before the hold: forgiven once
+            grace = watch.caught_at + sp.UPLOAD_GRACE if watch.caught_at else watch.absorb_until
+            watch.turn = {"started": now, "until": now + timedelta(minutes=minutes), "for_person": for_person, "by": by}
+            watch.caught_at = None
+            watch.since, watch.baseline = now, value
+            watch.absorb_until = grace if grace is not None and grace > now else None
+            found.append(e.person)
+        if not found:
+            raise ValueError(
+                "No one else's turn on this Switch" if minutes <= 0 else "Hearth isn't holding this Switch for anyone"
+            )
+        self._save()
+        return found
+
+    def switch_view(self, entity_id: str) -> dict[str, Any]:
+        """For Hearth's page: who Hearth holds this Switch for (caught), someone else's turn, and who's playing."""
+        today = dt_util.now().date().isoformat()
+        caught: list[str] = []
+        turn: dict[str, Any] | None = None
+        playing: dict[str, bool | None] = {}
+        for e in self.switch_enforcers({entity_id}):
+            if e.key in self.playing_now:
+                playing[e.person] = self.playing_now[e.key]
+            watch = self.switch.get(e.key)
+            if watch is None or watch.day != today:
+                continue
+            if watch.caught_at is not None:
+                caught.append(e.person)
+            if watch.turn is not None:
+                if turn is None:
+                    turn = {
+                        "until": watch.turn["until"].isoformat(),
+                        "for_person": watch.turn.get("for_person"),
+                        "held_for": [],
+                    }
+                turn["held_for"].append(e.person)
+        return {"caught": sorted(caught), "turn": turn, "playing": playing}
 
     def _switch_holders(self, key: str, entity_id: str | None) -> list[Held]:
         """Another person's hold on the same Switch, wanted still or not."""
