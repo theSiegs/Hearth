@@ -830,6 +830,21 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         answer = {"id": allowed.id, "until": {p: dt_util.as_local(u).isoformat() for p, u in until.items()}}
         if ends_on:
             answer["ends_on"] = ends_on
+        # An Xbox or Windows app on a platform Hearth keeps locked whole (Windows always, the Xbox when its swap to
+        # app pauses can't be made): the allow can't open it there; extra time or an allow on that device can
+        not_on = [
+            {
+                "person": p,
+                "platform": row["platform"],
+                "why": row["why"],
+                "text": f"Hearth keeps {row['platform']} locked whole, so this allow doesn't open it there: give "
+                f"extra time or allow it on that device (device {row['lift_with'][0]['device']})",
+            }
+            for p in people
+            for row in household.platform_locks(p, app, group)
+        ]
+        if not_on:
+            answer["not_on"] = not_on
         return answer
 
     @callback

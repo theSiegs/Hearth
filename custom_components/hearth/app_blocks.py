@@ -533,6 +533,12 @@ class AppBlocks:
                     found.setdefault(package, set()).add(reason)
         return found
 
+    def fs_blocks(self, person: str) -> set[str]:
+        """The Xbox and Windows apps Hearth blocks for [person] (wanted, or blocked and not lifted yet): never paused by
+        the Xbox swap (enforce.py's _xbox_swap), which would make the block wait for its resume."""
+        wanted = self.wanted(person, set()) if person in self.kids() else {}
+        return {a for a in wanted if fs_app_id(a)} | set(self.fs_applied.get(person, {}))
+
     def blocked_packages(self, person: str) -> set[str]:
         """What is blocked for [person] in Family Link now (Hearth's confirmed blocks and a parent's): never paused or
         resumed by Hearth's other holds (enforce.py). A block Hearth wants but Family Link doesn't list yet stays

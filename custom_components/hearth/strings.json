@@ -823,7 +823,7 @@
     },
     "allow": {
       "name": "Allow",
-      "description": "Lets people use an app or a group until a time: while it lasts, Hearth holds it nowhere for them (their TVs and phones, Family Link, the School-time pause). Bedtime, School time itself and a family pause still lock them. Returns its id.",
+      "description": "Lets people use an app or a group until a time: while it lasts, Hearth holds it nowhere for them (their TVs and phones, Family Link, the School-time pause). Bedtime, School time itself, a family pause and a block still hold them, and Windows stays locked whole when daily time is out (the Xbox pauses its other apps instead where it can): the answer says so in not_on. Returns its id.",
       "fields": {
         "people": {
           "name": "People",
