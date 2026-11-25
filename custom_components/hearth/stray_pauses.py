@@ -19,6 +19,18 @@ pause of an app that was resumed a moment ago, and a limit written then would re
 Each goes back to no app limit (-1, the device's limits apply), or to the minutes given for it, through
 familylink.set_app_daily_limit, recorded in the action log, so outside_apps.py doesn't tell the adults about it.
 dry_run only says which.
+
+Family Safety (Xbox and Windows apps) keeps its own record of each pause (the Applications sensor's paused_apps), so a
+pause of Hearth's left behind there is resumed with that record (resume_app puts back what the app had). A stray
+Family Safety pause is an app that:
+- Family Safety's record shows paused by its pause_app and still blocked by it ("ours": nothing a parent blocked is
+  under it, Family Safety skips an app already blocked), from whole lists only (every Applications sensor of the kid,
+  none cut short, each with paused_apps),
+- Hearth doesn't hold now, nor may hold (enforce.py's fs_maybe_paused), nor blocks itself (app_blocks.py's
+  fs_applied),
+- and Hearth asked Family Safety to pause in the last LOOK_BACK (its action log's calls, every app of a call).
+Not within JUST_RESUMED of Hearth letting go of a Family Safety hold of the kid's either. A pause a parent made from
+Family Safety's own card of an app Hearth paused that week can't be told from Hearth's: dry_run says which first.
 """
 
 from __future__ import annotations
@@ -124,3 +136,60 @@ async def release(household: Household, person: str, limits: dict[str, int], dry
     except Exception:  # noqa: BLE001 - the work is done: a refresh that can't be asked for mustn't lose the answer
         _LOGGER.warning("Hearth couldn't ask Family Link for fresh app limits after releasing stray pauses")
     return {"person": person, "dry_run": False, "apps": done, "failed": failed}
+
+
+def fs_stray_pauses(household: Household, person: str) -> list[str]:
+    """The person's stray Family Safety pauses (see the module), sorted."""
+    from .enforce import FAMILY_SAFETY, FS_DOMAIN, FS_HOLD_OURS, Held, _holding, fs_applications, fs_row_app
+
+    entity_id = household.blocks.fs_target_of(person)
+    if entity_id is None:
+        raise ServiceValidationError(f"No Family Safety for {household.person_name(person)}")
+    states = fs_applications(household.hass, entity_id)
+    if not states:
+        raise ServiceValidationError("Family Safety's Applications list isn't known yet")
+    ours: set[str] = set()
+    for state in states:
+        rows = state.attributes.get("paused_apps")
+        if state.attributes.get("truncated") or not isinstance(state.attributes.get("applications"), list):
+            raise ServiceValidationError("Family Safety's Applications list is cut short: try again later")
+        if not isinstance(rows, list):
+            raise ServiceValidationError("This Family Safety keeps no record of its pauses (update it)")
+        ours |= {app for row in rows if (app := fs_row_app(row)) and row.get("paused") == FS_HOLD_OURS}
+    now = dt_util.utcnow()
+    for record in household.activity.query(person, HOLD_END, since=now - JUST_RESUMED, limit=5000):
+        if record.get("by") == FAMILY_SAFETY:
+            raise ServiceValidationError(
+                "Hearth let go of a Family Safety hold a moment ago and the list may not show it yet: "
+                "try again in a few minutes"
+            )
+    held = _holding(household.enforcement.held.get(f"{FAMILY_SAFETY}|{person}") or Held())
+    blocked = set(household.blocks.fs_applied.get(person, {}))
+    since = now - LOOK_BACK
+    hearths = {app for app in ours if household.activity.own_call({f"{FS_DOMAIN}.pause_app"}, app, since)}
+    return sorted(hearths - held - blocked)
+
+
+async def release_fs(household: Household, person: str, dry_run: bool) -> dict[str, Any]:
+    """Resumes each stray Family Safety pause (Family Safety puts back what the app had); says which, and any that
+    failed. A list that can't be read says why instead of raising (the Family Link part's answer stays)."""
+    try:
+        found = fs_stray_pauses(household, person)
+    except ServiceValidationError as err:
+        return {"apps": [], "error": str(err)}
+    if dry_run or not found:
+        return {"apps": found, **({"dry_run": True} if dry_run else {"failed": {}})}
+    entity_id = household.blocks.fs_target_of(person)
+    target = {"entity_id": entity_id} if "." in entity_id else {"account_id": entity_id}
+    try:
+        await call_service(
+            household.hass, "microsoft_family_safety", "resume_app", {**target, "apps": found}, blocking=True,
+            person=person, why="stray_pause",
+        )
+    except Exception as err:  # noqa: BLE001 - said in the answer
+        return {"apps": [], "failed": {app: (str(err) or type(err).__name__)[:200] for app in found}}
+    try:
+        household.enforcement.refresh_soon(entity_id)
+    except Exception:  # noqa: BLE001 - the work is done
+        _LOGGER.warning("Hearth couldn't ask Family Safety for fresh app lists after releasing stray pauses")
+    return {"apps": found, "failed": {}}

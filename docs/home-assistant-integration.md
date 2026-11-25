@@ -1015,6 +1015,21 @@ possibly held) by Hearth now. It reads only whole With time limits and Blocked a
 missing: writing a limit to a blocked app can unblock it), and refuses for 3 minutes after Hearth let go of a Family
 Link hold of the kid's, while the list may still show a pause that was just resumed. An app whose call fails is named
 in `failed` and the others still go back. Its calls are Hearth's own, so the adults aren't told about them.
+For a kid with Family Safety, the answer's `family_safety` part does the same for Xbox and Windows apps: Family
+Safety keeps its own record of each pause, so an app its record shows still paused by a pause Hearth made in the
+last 7 days (`paused: ours`), that Hearth no longer holds (or possibly holds) nor blocks itself, is resumed through
+`resume_app`, which puts back what the app had. Whole Applications lists only, not within 3 minutes of Hearth
+letting go of a Family Safety hold; a list that can't be read is said in `error`. A pause a parent made from Family
+Safety's own card of an app Hearth paused that week can't be told apart: `dry_run` first.
+
+**Calls cut off or failed after they went out.** A settings save reloads Hearth, which cancels the calls under way;
+a provider may also apply a write and answer with an error. Hearth writes down each such write before its call:
+Family Safety's platform locks and unlocks, extra time and request approvals, Xbox and Windows app pauses and resumes,
+and Family Link's bonus time. While its answer isn't known it is Hearth's own (never a parent's change) and possibly
+held (letting go undoes it). It's cleared when the call goes through or is refused before it went out, and otherwise
+kept until it can be told: for 10 minutes for extra time (adopted if it shows), for a Family Link bonus until the
+device's bonus shows it (else taken out after 10 minutes; a bedtime lift then gives it again), and for an app pause or
+resume until Family Safety's own record of its pauses (`paused_apps` of the Applications sensor) can be read whole.
 
 **A list cut short.** Pausing every app (daily time out while an app stays open, e.g. Messages while away from adults)
 moves each one into Family Link's With time limits list, which then outgrows Home Assistant's attribute limit and is
@@ -1136,8 +1151,10 @@ all. It's not a problem to fix.
     neither changes nothing. When Microsoft doesn't apply it,
     the person's status says Family Safety extra time is unavailable and it counts as not given; nothing fails.
     **A write that failed may have been applied anyway** (an error or a timeout after Microsoft took it, and a read
-    back that couldn't tell): unless the service's schema refused it, Hearth keeps it as possibly given (person,
-    platform, the `until` it asked for, the error, when; kept across a restart) and looks each minute for 10 minutes.
+    back that couldn't tell, or a call cut off when a settings save reloads Hearth): Hearth writes it down as possibly
+    given before the call (person, platform, the `until` it asks for, when; saved, kept across a restart), drops it
+    when the call goes through or was refused before it went out (a schema, no such action), and otherwise keeps it
+    with the error and looks each minute for 10 minutes. The same goes for a Family Safety request Hearth approves.
     Meanwhile extra time ending then counts as Hearth's, never a parent's grant. If Family Safety shows extra time on
     that platform ending when Hearth asked (within 2 minutes; a fork's `hold: bonus_ours` agrees), Hearth adopts it
     as its own extra time for its reason (so ending the allow cancels it through `cancel_time_bonus`, which checks

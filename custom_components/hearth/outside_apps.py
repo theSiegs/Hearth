@@ -169,7 +169,8 @@ def _fs_paused_by_hearth(attrs: Any, hearths: set[str]) -> set[str]:
         return set(hearths)
     found: set[str] = set()
     for row in rows:
-        package = row.get("package") if isinstance(row, dict) else None
+        # Family Safety's rows name the app by app_id (an older one by package)
+        package = (row.get("app_id") or row.get("package")) if isinstance(row, dict) else None
         if isinstance(package, str) and (row.get("paused") == "ours" or (row.get("paused") is None and package in hearths)):
             found.add(package)
     return found
@@ -178,7 +179,7 @@ def _fs_paused_by_hearth(attrs: Any, hearths: set[str]) -> set[str]:
 def _paused(rows: Any) -> set[str]:
     out: set[str] = set()
     for row in rows or []:
-        package = row.get("package") if isinstance(row, dict) else row
+        package = (row.get("package") or row.get("app_id")) if isinstance(row, dict) else row
         if isinstance(package, str) and package:
             out.add(package)
     return out

@@ -1291,7 +1291,7 @@
     },
     "release_stray_pauses": {
       "name": "Release stray app pauses",
-      "description": "Puts back apps Family Link still holds at Hearth's 1-minute pause after Hearth let go, with no record of the pause to restore them from: apps Hearth paused in the last 7 days, at 1 minute, not in Family Link's paused_apps and not held now. Each goes back to no app limit, or to the minutes given for it.",
+      "description": "Puts back apps Family Link still holds at Hearth's 1-minute pause after Hearth let go, with no record of the pause to restore them from: apps Hearth paused in the last 7 days, at 1 minute, not in Family Link's paused_apps and not held now. Each goes back to no app limit, or to the minutes given for it. With Family Safety, Xbox and Windows apps its own record shows still paused by a pause Hearth made in the last 7 days, that Hearth no longer holds, are resumed (Family Safety puts back what each had).",
       "fields": {
         "person": {
           "name": "Person",
