@@ -1015,6 +1015,34 @@
         }
       }
     },
+    "block_site": {
+      "name": "Block a website",
+      "description": "Blocks websites for kids by hand, in Family Link (Chrome: the domain and its subdomains) and Family Safety, next to the daily website list. Give domains (example.com); a web address is cut down to its domain, and IP addresses, wildcards and suffixes such as co.uk are refused. Returns, per person and side, the sites done, already blocked and failed.",
+      "fields": {
+        "people": {
+          "name": "People",
+          "description": "Which kids (everyone with Family Link or Family Safety in Configure > Enforce when none)."
+        },
+        "sites": {
+          "name": "Websites",
+          "description": "One or more domains, such as example.com."
+        }
+      }
+    },
+    "unblock_site": {
+      "name": "Unblock a website",
+      "description": "Takes back what Hearth's own Block a website added. A block made in the Family Link or Family Safety app stays, and so does a site the daily website list blocked; the answer says which were kept and why.",
+      "fields": {
+        "people": {
+          "name": "People",
+          "description": "Which kids (everyone with Family Link or Family Safety in Configure > Enforce when none)."
+        },
+        "sites": {
+          "name": "Websites",
+          "description": "One or more domains, such as example.com."
+        }
+      }
+    },
     "chore_undo": {
       "name": "Undo a chore's reward",
       "description": "Takes back, whole, the reward a checked-off item on a kid's to-do list gave (the Undo on its notice). The item stays done.",

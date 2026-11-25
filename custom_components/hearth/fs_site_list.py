@@ -14,7 +14,9 @@ service did:
 - Only domains Hearth itself blocked from this list for this kid earlier, and that the list has since dropped, are
   unblocked, with remove_website (allow_website would put them on the allowed list instead, which nobody asked for).
   What Hearth added is kept in Hearth's storage per kid and list (Scheduler's store, so it survives a restart); a site
-  someone removed by hand meanwhile isn't Hearth's any more, and sites Hearth didn't add are never touched. A fork's
+  someone removed by hand meanwhile isn't Hearth's any more, and sites Hearth didn't add are never touched. A site an
+  adult also blocked by hand (hearth.block_site, site_blocks.py: [keep]) isn't taken back when the list drops it: it
+  is the hand block's from then on. A fork's
   own record of what its sync_site_list added (microsoft_family_safety.site_sync.<entry>) is taken over the first time
   Hearth syncs that list for that kid, so a switch from the fork to the release doesn't strand them.
 - Upstream's block_website and remove_website try every site and, when any fails, fail naming the sites done and the
@@ -204,9 +206,12 @@ class FsSiteList:
             return split_failure(err, sites)
         return list(sites), {}
 
-    async def sync(self, target: dict[str, str], account: str, url: str, domains: list[str]) -> dict[str, Any]:
+    async def sync(
+        self, target: dict[str, str], account: str, url: str, domains: list[str], keep: set[str] | frozenset[str] = frozenset()
+    ) -> dict[str, Any]:
         """Brings the kid's blocked websites in step with the list's [domains]. What was added, removed, kept,
-        skipped (allowed) and failed (site, error). Raises SiteListError when nothing was changed for a reason."""
+        skipped (allowed) and failed (site, error). [keep]: the kid's hand-blocked domains, never taken back (the
+        list lets go of them). Raises SiteListError when nothing was changed for a reason."""
         if not domains:
             raise SiteListError(f"The website list {url} has no usable domains, so nothing was changed.")
         if len(domains) > MAX_DOMAINS:
@@ -234,6 +239,9 @@ class FsSiteList:
         insert = [d for d in wanted if d not in blocked]
         kept = [d for d in wanted if d in blocked]
         remove = [d for d in sorted(mine - set(wanted)) if d in blocked]
+        # A dropped site an adult also blocked by hand stays blocked, as the hand block's alone
+        handed = {d for d in remove if d in keep}
+        remove = [d for d in remove if d not in handed]
         # A list that keeps none of the sites it added is more likely a wrong download than a new list
         if len(mine) > 1 and remove and not set(wanted) & mine:
             raise SiteListError(
@@ -247,6 +255,7 @@ class FsSiteList:
             )
         # Sites the list added that are gone from Microsoft's (removed by hand) aren't Hearth's any more
         mine &= blocked
+        mine -= handed
         added, failed = await self._call("block_website", target, insert)
         mine |= set(added)
         lists[url] = sorted(mine)

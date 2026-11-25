@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **Block a website by hand**: `hearth.block_site` blocks one or more domains for the kids (everyone with Family Link or Family Safety by default) in Family Link's Chrome (`*.example.com` and `example.com`) and in Family Safety, next to the daily website list. Web addresses are cut down to their domain; IP addresses, wildcards and suffixes such as `co.uk` are refused. `hearth.unblock_site` takes back only what Hearth's block added: a block made in the Family Link or Family Safety app stays, and so does a site the website list blocked, and the answer says which were kept and why. A hand-blocked site stays blocked when the website list drops it. The kid's screen-time sensor shows them under `exceptions.blocked_sites`.
+
 ## 2026.11.56
 
 ### Home Assistant integration

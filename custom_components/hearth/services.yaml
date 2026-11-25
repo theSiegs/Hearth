@@ -561,6 +561,32 @@ copy_sites:
       default: false
       selector:
         boolean:
+block_site:
+  fields:
+    people:
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    sites:
+      required: true
+      example: '["example.com"]'
+      selector:
+        text:
+          multiple: true
+unblock_site:
+  fields:
+    people:
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    sites:
+      required: true
+      example: '["example.com"]'
+      selector:
+        text:
+          multiple: true
 
 set_schedule:
   fields:

@@ -2335,6 +2335,8 @@ class Household:
             "home_today": self.scheduler.homes_of(person),
             # A standing rule while it lifts something (presence_rules.py: Messages while out without an adult)
             "rules": [view] if (view := self.away.view(person)) is not None else [],
+            # Websites an adult blocked by hand (hearth.block_site), by side: {family_link: [...], family_safety: [...]}
+            "blocked_sites": self.scheduler.site_blocks.view(person),
         }
 
     def allow_views(self, person: str, allows=None) -> list[dict[str, Any]]:

@@ -1704,6 +1704,27 @@ gets the host (`block_website` / `allow_website`). Returns, per person, `{added_
 `error` when a side refused; a person without both sides (or with a Family Safety too old for `get_sites`) gets
 `{"missing": [...]}`. With `dry_run` it says the same and writes nothing.
 
+**Block a website** (`hearth.block_site`, `hearth.unblock_site`): an adult's own blocks of websites, next to the daily
+list. `people` (everyone with Family Link or Family Safety in Configure > Enforce by default) and `sites` (one domain
+or a list, such as `example.com`). A web address is cut down to its domain (lowercase, no scheme, path, port or
+leading `www.`); an IP address, a wildcard or a bare suffix such as `co.uk` is refused. Each kid's sides are read
+first with their `get_sites`. Family Link gets both `*.example.com` and `example.com` (`familylink.block_site`: Google
+doesn't say whether the wildcard covers the bare domain); Family Safety gets the domain (`block_website`). Returns,
+per person and side (`family_link`, `family_safety`), `done`, `already` and `failed` (`[{site, error}]`); a side that
+fails is told and the other side and the other kids go on. What Hearth's block added is kept with the schedule (over a
+restart and a reload) and shown on the kid's screen-time sensor, under `exceptions.blocked_sites` (`{family_link:
+[...], family_safety: [...]}`); a site is recorded once its call succeeded. `hearth.unblock_site` removes only that
+(`familylink.remove_site`, `remove_website`) and answers `done`, `already`, `failed` and `kept` (`[{site, reason}]`):
+a block made in the Family Link or Family Safety app stays (`blocked outside Hearth`; with Family Link, a parent's own
+`*.example.com` next to Hearth's `example.com` too, with its `patterns`), and so does a site the website list added
+(`on the website list`). With the daily list: a hand block of a site the list added is Hearth's too, so when the list
+drops it, it stays blocked (Hearth's own Family Safety sync leaves it out of what it takes back; around Family Link's
+and a Family Safety fork's `sync_site_list`, Hearth reads the kid's sites before and blocks again right after what the
+sync took out of a hand block); it is the hand block's alone from then on. A hand unblock of a site the list added
+leaves it blocked and lets the list have it. A site blocked by hand before the list had it isn't the list's (the list
+adds only what isn't blocked yet): a hand unblock removes it, and the next daily sync blocks it again as the list's.
+Hearth's calls go to its action log as its own; outside changes (`outside_apps`) look at apps only, never at websites.
+
 ## Data out
 
 ### What a device gets

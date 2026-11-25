@@ -384,6 +384,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     _register_watch_services(hass)
     _register_play_on_tv(hass)
     _register_copy_sites(hass, loaded_household)
+    _register_site_blocks(hass, loaded_household)
     # An administrator's Approve or Deny on a pairing's phone notification
     panel.async_register_pairing_service(hass)
     # An administrator's Make adult or Not now on the offer for a person who signed in from a phone (adult_offer.py)
@@ -1075,6 +1076,72 @@ def _register_copy_sites(hass: HomeAssistant, loaded_household) -> None:
 
     register_service(
         hass, DOMAIN, "copy_sites", copy_sites, schema=COPY_SITES_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    )
+
+
+SITE_BLOCK_SCHEMA = vol.Schema(
+    {
+        # The kids (everyone with Family Link or Family Safety by default)
+        vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id]),
+        vol.Required("sites"): vol.All(cv.ensure_list, [cv.string], vol.Length(min=1)),
+    }
+)
+
+
+def _register_site_blocks(hass: HomeAssistant, loaded_household) -> None:
+    """hearth.block_site and hearth.unblock_site: websites an adult blocks by hand, in Family Link and Family Safety;
+    only what Hearth's block added is ever unblocked (site_blocks.py)."""
+    from .site_blocks import MAX_SITES, normalize
+
+    def checked(call: ServiceCall) -> tuple:
+        household = loaded_household()
+        scheduler = household.scheduler
+        domains: list[str] = []
+        wrong: list[str] = []
+        for site in call.data["sites"]:
+            try:
+                domain = normalize(site)
+            except ValueError as err:
+                wrong.append(str(err))
+                continue
+            if domain not in domains:
+                domains.append(domain)
+        if wrong:
+            raise ServiceValidationError("; ".join(wrong))
+        if len(domains) > MAX_SITES:
+            raise ServiceValidationError(f"Give one to {MAX_SITES} websites")
+        with_sites = scheduler.site_list_people()
+        given = call.data.get("people")
+        if given:
+            without = [household.person_name(p) for p in given if p not in with_sites]
+            if without:
+                raise ServiceValidationError(
+                    f"No Family Link or Family Safety child set up for {', '.join(without)} (Configure > Enforce)"
+                )
+            people = list(dict.fromkeys(given))
+        else:
+            people = with_sites
+        if not people:
+            raise ServiceValidationError("No kid has Family Link or Family Safety set up in Hearth (Configure > Enforce)")
+        return household, people, domains
+
+    async def block_site(call: ServiceCall) -> ServiceResponse:
+        household, people, domains = checked(call)
+        result = await household.scheduler.site_blocks.block(people, domains)
+        household.recompute()
+        return result
+
+    async def unblock_site(call: ServiceCall) -> ServiceResponse:
+        household, people, domains = checked(call)
+        result = await household.scheduler.site_blocks.unblock(people, domains)
+        household.recompute()
+        return result
+
+    register_service(
+        hass, DOMAIN, "block_site", block_site, schema=SITE_BLOCK_SCHEMA, supports_response=SupportsResponse.OPTIONAL
+    )
+    register_service(
+        hass, DOMAIN, "unblock_site", unblock_site, schema=SITE_BLOCK_SCHEMA, supports_response=SupportsResponse.OPTIONAL
     )
 
 
