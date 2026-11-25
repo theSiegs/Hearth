@@ -375,6 +375,28 @@ def app_lists(hass: HomeAssistant, child: str) -> tuple[set[str], set[str] | Non
     return listed, blocked
 
 
+def always_allowed_apps(hass: HomeAssistant, child: str) -> tuple[set[str], bool] | None:
+    """(packages, whole) of the child's Always allowed apps list (the apps a parent gave unlimited time): what it
+    shows now, and whether that's all of it (not cut short). None when it can't be read at all (no such sensor, or
+    one without its apps: unavailable)."""
+    found: set[str] = set()
+    whole = True
+    seen = False
+    for suffix, state in _child_lists(hass, child):
+        if suffix != "_always_allowed_apps":
+            continue
+        apps = _apps_of(state)
+        if not isinstance(apps, list):
+            return None
+        seen = True
+        whole = whole and not state.attributes.get("truncated")
+        for app in apps:
+            package = app.get("package") if isinstance(app, dict) else app
+            if isinstance(package, str) and package:
+                found.add(package)
+    return (found, whole) if seen else None
+
+
 # Google's capabilities of a device that takes a daily limit (HAFamilyLink's CAPS_TIME_LIMIT): a Google TV has neither
 TIME_LIMIT_CAPABILITIES = ("capabilityBedtime", "capabilityLockWithDeadline")
 
