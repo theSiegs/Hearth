@@ -112,6 +112,7 @@ from .unlimited import Unlimited
 from .activity import RULE, ActivityLog
 from .bedtime_lift import BedtimeLifts, bedtime_sensors, in_family_link_bedtime, lift_minutes
 from .bedtime_sync import BedtimeSync
+from .native_limits import NativeLimits
 from . import family_link as fl
 from .todos import ChoreBook
 from .schedule import Scheduler
@@ -323,6 +324,8 @@ class Household:
         self.limits.week = self.week
         # The schedule's bedtime kept in step in Family Link and Family Safety (bedtime_sync.py)
         self.bedtime_sync = BedtimeSync(hass, self, hub.entry.entry_id)
+        # The parents' own daily limits next to Hearth's budgets, read only (native_limits.py)
+        self.native_limits = NativeLimits(hass, self, hub.entry.entry_id)
         # Each person's schedule now (weekly.Now, None without one), as of the last recompute; the mode last told
         # (hearth_mode fires when it changes)
         self.schedule_now: dict[str, Now | None] = {}
@@ -393,6 +396,7 @@ class Household:
         await self.scheduler.async_load()
         await self.week.async_load()
         await self.bedtime_sync.async_load()
+        await self.native_limits.async_load()
         await self.todos.async_load()
         await self.presence.async_load()
 
@@ -426,6 +430,7 @@ class Household:
         await self.scheduler.async_flush()
         await self.week.async_flush()
         await self.bedtime_sync.async_flush()
+        await self.native_limits.async_flush()
         await self.todos.async_flush()
         await self.presence.async_flush()
 
@@ -2638,6 +2643,9 @@ class Household:
             ],
             # The parents' apps whose bedtime isn't in step with Hearth's schedule (bedtime_sync.py), when any
             **({"bedtime_sync": lines} if (lines := self.bedtime_sync.explain_lines(person)) else {}),
+            # The parents' own daily limits per weekday next to Hearth's budget (native_limits.py): below, covered,
+            # ok, none; for the platforms holding for these groups, when any
+            **({"native_limits": rows} if (rows := self.native_limits.explain(person, set(groups), app)) else {}),
         }
 
     # Extra time on one device (device_extra.py)

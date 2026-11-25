@@ -40,7 +40,7 @@ answer it as before. Firing the event never stops or slows a delivery; a failure
 | `change` | `shown` (new), `updated` (new words for an item with the same key or tag) or `cleared` (taken off every channel: answered, gone, or replaced by one with another key). |
 | `key` | The item's key: unique while it's kept. |
 | `tag` | What replaces or clears it on a channel (the phone notification's tag); the key when it has none. |
-| `kind` | What it is, a slug: `ask`, `ask_failed`, `adult_offer`, `outside_change`, `app_check`, `device_check`, `device_clock`, `pairing`, `bedtime`, `new_app`, `rules`, `place`, `chore`, `schedule`, `unlimited`, `suggestion`, `approval`, `notify`, `switch` (a shared Switch held for a kid, or played on no player), or `other`. New kinds may come. |
+| `kind` | What it is, a slug: `ask`, `ask_failed`, `adult_offer`, `outside_change`, `app_check`, `device_check`, `device_clock`, `pairing`, `bedtime`, `new_app`, `rules`, `place`, `chore`, `schedule`, `unlimited`, `suggestion`, `approval`, `notify`, `switch` (a shared Switch held for a kid, or played on no player), `native_limit` (a parent's own daily limit in Family Link, Family Safety or on a Switch stops a kid before Hearth's budget), or `other`. New kinds may come. |
 | `urgency` | `info`, `notice` or `urgent`. |
 | `title`, `text` | The same words its phone notification shows (`title` may be empty). |
 | `audience.kind` | Who it's for: `adults`, `admins`, `person`, `household`, `devices`, `chosen_phone`, `schedule_phone`. |
