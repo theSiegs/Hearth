@@ -257,6 +257,12 @@ NOT_ON_TOO_MANY = "too_many_apps"
 NOT_ON_NOT_INSTALLED = "allowed_app_not_listed"
 NOT_ON_BLOCKED = "allowed_app_blocked"
 NOT_ON_DWELL = "swapped_lately"
+NOT_ON_UNLISTED = "xbox_games_not_all_listed"
+# The Xbox swap is off: Family Safety's Applications list for an Xbox holds only the apps it has a setting for (blocked,
+# limited, asked for), not the games played (a kid playing 3 hours a day had 3 apps listed, all blocked games). Pausing
+# "every other app" would pause only those, and unlocking would open every game not listed. Turn it on only once the
+# list is known to hold every installed game
+XBOX_SWAP = False
 
 # Never paused, whatever category they're in: calls (the dialer and contacts, so an emergency call always works), the
 # system, and the apps that hold the rest. Messages apps are NOT here: daily time, a limit, bedtime
@@ -1465,6 +1471,8 @@ class Enforcement:
             why = NOT_ON_LIST
         elif records is None:
             why = NOT_ON_NO_TRACKING
+        elif not XBOX_SWAP:
+            why = NOT_ON_UNLISTED
         else:
             installed, blocked, names = lists
             # Family Safety pauses an app by blocking it: an app blocked by a pause (its own record says "ours", or

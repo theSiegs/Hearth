@@ -793,7 +793,11 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
   and a whole platform Hearth locks for daily time (next).
 - **Allowing one app on a platform locked whole.** Family Safety locks the Xbox or Windows whole when daily time (a
   group the enforcer holds for: Games, All screen time) is out; an allow of one app or of a group can't open one app
-  through that lock. On the **Xbox**, while an allow names Xbox apps (an `x:...` app, or a group with Xbox apps) and the
+  through that lock. On the **Xbox** the lock stays and `hearth.allow` says why (`xbox_games_not_all_listed`): a
+  swap of the lock for a pause of every other app is built but **off** (`XBOX_SWAP` in enforce.py), because Family
+  Safety's Xbox Applications list holds only the apps it has a setting for (blocked, limited, asked for), not the games
+  played: on a console played 3 hours a day it listed 3 apps, all blocked games, so unlocking would open every game not
+  listed. Turned on: while an allow names Xbox apps (an `x:...` app, or a group with Xbox apps) and the
   Xbox is locked only for daily time, Hearth swaps the lock for a pause of every other Xbox app of the kid's
   Applications list (`pause_app`), then unlocks the Xbox; when the allow ends it locks the Xbox first, then resumes
   them. Never paused: the allowed apps, apps blocked by Hearth or a parent (an allow never lifts a block), and the
@@ -804,12 +808,11 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
   is missing or cut short, the allowed app isn't in it or is blocked, or there would be more than 150 apps. **Windows is never
   swapped**: it stays locked. Either way `hearth.allow` answers with `not_on: [{person, platform, why, text}]` (`why`:
   `windows_locked_whole`, `held_otherwise`, `family_safety_cannot_pause_apps`, `family_safety_pauses_not_readable`,
-  `applications_list_unknown`, `allowed_app_not_listed`, `allowed_app_blocked`, `too_many_apps`, `swapped_lately`),
+  `applications_list_unknown`, `xbox_games_not_all_listed`, `allowed_app_not_listed`, `allowed_app_blocked`, `too_many_apps`, `swapped_lately`),
   and `hearth.explain`
   lists a `platform_lock` row; extra time or an allow on that device (`hearth.add_bonus` or `hearth.allow` with
-  `device: fs:xbox` or `fs:windows`) opens it. **Known limit**: whether the Xbox's Applications list includes a game
-  installed but never played isn't known yet; one that isn't listed isn't paused by the swap and stays open while it
-  lasts.
+  `device: fs:xbox` or `fs:windows`) opens it. **Why it's off**: a game that isn't in the
+  Applications list isn't paused by the swap and stays open while it lasts, and Family Safety doesn't list games played.
 - `hearth.allow_end` (`id`, or `people` with an optional `app` or `group`) ends one early; returns `{ended: [ids]}`.
 - **Ends on a place.** `hearth.allow`, `hearth.pause` and `hearth.school_time_off` take `ends_on: {arrive: <place>}`
   or `ends_on: {leave: <place>}`, a place key (`home`, `school`, or a favorite place's key, see [Places](#places)) of

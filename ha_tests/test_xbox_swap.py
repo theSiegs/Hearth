@@ -28,6 +28,13 @@ KEY = f"{enforce.FAMILY_SAFETY}|person.sam"
 NAMES = {MINECRAFT: "Minecraft", RACER: "Racer", EDGE: "Microsoft Edge", PARENTS: "Shooter", PAINT: "Paint"}
 
 
+@pytest.fixture(autouse=True)
+def swap_on(monkeypatch, request):
+    """The swap is off by default (XBOX_SWAP): these tests cover it turned on, but the one about the default."""
+    if "swap_off" not in request.keywords:
+        monkeypatch.setattr(enforce, "XBOX_SWAP", True)
+
+
 def _household(hass: HomeAssistant):
     return hass.config_entries.async_entries(DOMAIN)[0].runtime_data.household
 
@@ -243,3 +250,16 @@ async def test_hearth_s_block_of_an_xbox_app_is_left_to_the_block_under_a_swap(
     _household(hass).recompute()
     await hass.async_block_till_done()
     assert len(_of(calls, "pause_app")) == 0
+
+
+@pytest.mark.swap_off
+async def test_by_default_the_xbox_stays_locked_and_the_allow_says_why(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Family Safety's Xbox list doesn't hold every game played, so pausing "every other app" would open the rest."""
+    calls = await _sam_out_of_time(hass, hass_client_no_auth, freezer)
+    answer = await _allow(hass, app=MINECRAFT)
+    assert answer["not_on"][0]["platform"] == "Xbox"
+    assert answer["not_on"][0]["why"] == enforce.NOT_ON_UNLISTED
+    assert _of(calls, "pause_app") == [] and _of(calls, "unlock_platform") == []
+    assert _household(hass).enforcement.held[KEY].items == {"Xbox"}
