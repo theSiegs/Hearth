@@ -3,6 +3,18 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **An Xbox or PC unlock that timed out is no longer a parent's unlock**: when Hearth unlocked a Family Safety platform (its own let-go, or the midnight end of a lock by whole hours) and Microsoft applied it but the answer was lost, Hearth read "nothing locked" as "unlocked in the Family Safety app" and stopped holding the platform for the rest of the day, so tonight's Sleep or a pause never locked the Xbox. Hearth now marks its unlock before the call: nothing locked within 15 minutes of it is Hearth's own unlock, and the platform is locked again if it should be.
+- **An Xbox or PC lock that timed out is still Hearth's**: a lock Microsoft applied although its call failed read as a parent's own lock, and Hearth never unlocked it, so the Xbox stayed locked until midnight after the kid had time again. Hearth now records the lock and its end before the call: a lock with that end is Hearth's, and letting go unlocks it.
+- **The day-off bonus no longer opens a phone Hearth holds**: at 00:05 on a day off, Family Link's extra minutes went on top of the 0 Hearth's Sleep lock had set, opening the phone in the night, reading as a parent's change, and keeping the weekday's real limit from coming back. The bonus now waits until Hearth lets go of the devices, then goes on top of the real limit.
+- **Family Safety extra time on one platform no longer stops the other**: an unexpected error giving Xbox extra time skipped Windows and wasn't watched for having been applied anyway. Each platform now goes on, and the failed one is watched as before.
+- **A Family Safety request Hearth approves is Hearth's own extra time**: approving a kid's Xbox or PC request in Hearth made the extra time read as "given in the Family Safety app" on a platform Hearth held. It's now Hearth's extra time on that device (shown with the kid's extra time, the hold let go while it lasts). When the approval fails in a way that may still have gone through, the adults are told to check before answering it again in the Family Safety app, so it isn't approved twice.
+- **`hearth.explain` no longer blames a parent for Hearth's own Xbox or PC pause**, and **a cut-short Pending Requests list no longer closes open Family Safety requests**.
+- **One wording for a parent's bonus time**: "bonus time given in the Family Safety app", as for Family Link and Nintendo. Family Safety calls in the action log now say why, and calls made with an account id name the kid.
+
 ## 2026.11.58
 
 ### Home Assistant integration

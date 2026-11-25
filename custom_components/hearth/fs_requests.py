@@ -16,7 +16,8 @@ enforcer and tells the requests apart by id:
 - Sooner, and as approved, when extra time newly shows on the request's platform for that kid (the platform's Allowed
   Now sensor: an allowUntil override that wasn't there, and isn't Hearth's own extra time) within MATCH_WINDOW of the
   id leaving the list: a parent approved it in the Family Safety app. The minutes are those to the extra time's end.
-- An unavailable or unknown sensor, or one without `requests`, changes nothing (and isn't a reading).
+- An unavailable or unknown sensor, or one without `requests`, changes nothing (and isn't a reading). A list cut short
+  (`truncated`) resolves nothing: a request it leaves out isn't gone (new ones it shows are still asks).
 - The first reading of a child's sensor only learns what's pending (nothing is announced); what's known is kept with
   Home Assistant's storage helper, so a restart doesn't announce anything again, and a request that came or went
   while Home Assistant was off is found.
@@ -192,13 +193,19 @@ class RequestTracker:
         enforcement = self.hub.household.enforcement
         if enforcement.fs_bonus_until is None:
             return False
-        ours = enforcement.fs_bonus_until(person, "Xbox" if platform == "xbox" else "Windows")
+        named = "Xbox" if platform == "xbox" else "Windows"
+        # Any of Hearth's extra time there today, not only the latest
+        ends = enforcement.fs_bonus_ends
+        ours = list(ends(person, named)) if ends is not None else []
+        latest = enforcement.fs_bonus_until(person, named)
+        if latest is not None:
+            ours.append(latest)
         shown = dt_util.parse_datetime(until)
-        if ours is None or shown is None:
+        if not ours or shown is None:
             return False
         if shown.tzinfo is None:
             shown = shown.replace(tzinfo=dt_util.get_default_time_zone())
-        return abs(dt_util.as_utc(shown) - dt_util.as_utc(ours)) <= FS_OWN_TOLERANCE
+        return any(abs(dt_util.as_utc(shown) - dt_util.as_utc(end)) <= FS_OWN_TOLERANCE for end in ours)
 
     def _read_extra(self, account: str, person: str, watched: set[str], now: datetime) -> None:
         """The kid's Allowed Now sensors: extra time (allowUntil) that newly shows is noted with when."""
@@ -279,7 +286,11 @@ class RequestTracker:
                 if platform and self.platforms.get(request_id) != platform:
                     self.platforms[request_id] = platform
                     changed = True
+            # A list cut short (truncated): the requests it shows are there, but one it leaves out isn't gone
+            cut_short = bool(state.attributes.get("truncated"))
             if account not in self.known:
+                if cut_short:
+                    continue  # learned from a whole list only: the rest would be announced as new later
                 # The first reading: what's pending is learned, not announced
                 self.known[account] = {request_id: None for request_id in current}
                 changed = True
@@ -297,7 +308,7 @@ class RequestTracker:
                     known[request_id] = None  # back in the list: not resolved
                     changed = True
             for request_id, gone in list(known.items()):
-                if request_id in current:
+                if request_id in current or cut_short:
                     continue
                 if gone is None:
                     gone = known[request_id] = {"since": now.isoformat(), "readings": 1}

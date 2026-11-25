@@ -9,7 +9,8 @@ Today's day type comes from School days (schooldays.py): school, half_day, day_o
 - A half day: School time ends some hours early, today only (familylink.set_school_time, scope today), for a kid whose
   School time is on; one whose School time is off gets the early end when it is put back.
 - Both: bonus minutes, as Family Link's today-only daily limit (the weekday's limit plus the bonus, set_daily_limit
-  without a day: an override that ends by itself) and/or as Hearth bonus minutes on a group.
+  without a day: an override that ends by itself; written only once Hearth's own hold of the devices is let go) and/or
+  as Hearth bonus minutes on a group.
 - When chosen (bonus_family_safety, off by default) or chosen for the Switch (bonus_nintendo, off by default), the same
   bonus raises a limit that is a setting, not today's alone, as a temporary limit Hearth puts back itself
   (temporary_limit.py: Hearth records what it added to and what it wrote before writing, kept across a restart and
@@ -699,10 +700,18 @@ class Scheduler:
         return ok
 
     async def _family_link_bonus(self, person: str, today: date, minutes: int) -> bool:
-        """Today's daily limit = the weekday's limit + [minutes], as a today-only override (no day)."""
+        """Today's daily limit = the weekday's limit + [minutes], as a today-only override (no day).
+
+        Not while Hearth holds the kid's devices (Sleep past midnight, daily time out, a family pause: the weekday's
+        limit at 0): the override would open them, read as a parent's change in the Family Link app, and keep the
+        weekday's real limit from being put back. False then, so it's tried again each minute and written once the
+        hold is let go, as Family Link extra time waits (native_sync._give_family_link). Never folded into the limit
+        the hold puts back (as a Switch's is): that one is the weekday's own setting, for every week."""
         child = self.child(person)
         if child is None:
             return True
+        if self.household.enforcement.family_link_devices_held(person):
+            return False
         switch = fl.daily_limit_switch(self.hass, child)
         switch_state = self.hass.states.get(switch) if switch else None
         if switch_state is not None and switch_state.state != "on":
@@ -1218,7 +1227,10 @@ class Scheduler:
         # With the backstop on, Family Link follows Hearth's bonus time (backstop.py): nothing of its own to check
         if minutes and config.bonus_family_link and not self.household.backstop.enabled():
             for person in people:
-                if not self._marked(person, "bonus_fl"):
+                # Waiting for Hearth's own hold of the devices to be let go is no failure
+                if not self._marked(person, "bonus_fl") and not self.household.enforcement.family_link_devices_held(
+                    person
+                ):
                     problems.append(f"{self.household.person_name(person)}'s extra time couldn't be set")
         fs_problems: list[str] = []
         for person in self.family_safety_people(config.people) if minutes else []:
