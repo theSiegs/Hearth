@@ -1449,6 +1449,7 @@ class Household:
             sleep_locks_devices_of=self.sleep_locks_devices,
             exempt_of=self.client_exempt(),
             blocked_of=self.blocks.blocked_packages,
+            fs_blocks_of=self.blocks.fs_blocks,
         )
         # Hearth's app blocks in step with Family Link (an app that showed up, a block or unblock of an adult's)
         self.blocks.sync()
@@ -2425,6 +2426,42 @@ class Household:
         if changes:
             self.recompute()
 
+    def platform_locks(
+        self, person: str, app: str | None, group: str | None, membership=None, until: str | None = None
+    ) -> list[dict[str, Any]]:
+        """hearth.explain's platform_lock rows: a Family Safety platform Hearth keeps locked whole although an allow
+        names [app] (or [group]'s apps) on it (enforce.py's platform_open: Windows always, the Xbox when the swap fell
+        back), with why and what lifts it: extra time or an allow on that device (device fs:xbox or fs:windows)."""
+        rows = self.enforcement.platform_open.get(person) or []
+        if not rows:
+            return []
+        if app is not None:
+            platforms = {fs_app_platform(app)}
+        elif group is not None and group != ALL and (target := self.group(group)) is not None:
+            platforms = {fs_app_platform(a) for a in self._group_apps(target, membership or self.membership(), with_fs=True)}
+        else:
+            platforms = set()
+        until = until or dt_util.as_local(end_of_day(dt_util.now())).isoformat()
+        found = []
+        for row in rows:
+            if row["platform"] not in platforms:
+                continue
+            device = f"fs:{row['platform'].lower()}"
+            found.append(
+                {
+                    "kind": "platform_lock",
+                    "by": FAMILY_SAFETY,
+                    "platform": row["platform"],
+                    "why": row["why"],
+                    "until": until,
+                    "lift_with": [
+                        {"service": "hearth.allow", "device": device},
+                        {"service": "hearth.add_bonus", "device": device},
+                    ],
+                }
+            )
+        return found
+
     def explain(self, person: str, app: str | None = None, group: str | None = None) -> dict[str, Any]:
         """Why an app or a group is held for the person now, or isn't: allowed, until, blocked_by [{kind, by, until}],
         exceptions (the allows that apply)."""
@@ -2525,6 +2562,10 @@ class Household:
             blocked += self.blocks.explain(person, app)
             # A parent's own block, made in Family Link or Family Safety: no allow lifts it either
             blocked += self.outside_apps.blocked_elsewhere(person, app)
+        # An allowed Xbox or Windows app on a platform Hearth keeps locked whole (Windows always; the Xbox when its swap
+        # to app pauses fell back): lifted by extra time or an allow on that device
+        if excepted:
+            blocked += self.platform_locks(person, app, group, membership, midnight)
         if app is not None:
             for enforcer in enforcers_from_options(self.options):
                 if (

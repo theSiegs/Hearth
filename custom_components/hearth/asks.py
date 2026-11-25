@@ -425,16 +425,23 @@ class Asks:
         sync = self.hub.household.sync
         # When the approval's extra time ends, as Microsoft counts it from the approval
         until = dt_util.now() + timedelta(minutes=data.get("extension_minutes", 0))
+        # The approval's extra time is possibly given from before the call (saved): one cut off by a reload, or
+        # failing after it went out, is Hearth's own while watched, never a parent's grant
+        intents = (
+            await sync.fs_request_intend(ask.person, str(ask.external_id), ask.platform, until) if approve else []
+        )
         try:
             if not self.hass.services.has_service(FS_DOMAIN, service):
                 raise ValueError(f"{FS_DOMAIN}.{service} isn't there")
             await call_service(self.hass, FS_DOMAIN, service, data, blocking=True, person=ask.person, why="fs_request")
-        except Exception as err:  # noqa: BLE001 - told to the adults instead
-            _LOGGER.warning("Hearth couldn't answer the Family Safety request %s: %s", ask.external_id, err)
+        except BaseException as err:  # a reload cutting the call off (CancelledError) too
             # Refused before it went out (no such action, a schema): surely not answered
             refused = isinstance(err, (ValueError, vol.Invalid, ServiceValidationError, ServiceNotFound))
-            if approve and not refused:
-                sync.fs_request_approved(ask.person, str(ask.external_id), ask.platform, until, err)
+            # Anything else: the approval may have gone through, watched as possibly given
+            sync.fs_request_settled(intents, err, refused)
+            if not isinstance(err, Exception):
+                raise
+            _LOGGER.warning("Hearth couldn't answer the Family Safety request %s: %s", ask.external_id, err)
             who = self.hub.household.person_name(ask.person)
             then = (
                 "Answer it in the Family Safety app."
@@ -454,6 +461,7 @@ class Asks:
                 )
             )
             return
+        sync.fs_request_settled(intents, None)
         if approve:
             sync.fs_request_approved(ask.person, str(ask.external_id), ask.platform, until)
 

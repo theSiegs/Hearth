@@ -439,11 +439,12 @@ class AppBlocks:
         return installed, blocked, names
 
     def _fs_held(self, person: str) -> set[str]:
-        """The Xbox and Windows apps Hearth's holds pause now (Family Safety blocks them for the pause)."""
-        from .enforce import FAMILY_SAFETY
+        """The Xbox and Windows apps Hearth's holds pause now (Family Safety blocks them for the pause), with those a
+        pause or resume call that failed or was cut off may have left paused (enforce.py's fs_maybe_paused)."""
+        from .enforce import FAMILY_SAFETY, _holding
 
         held = self.household.enforcement.held.get(f"{FAMILY_SAFETY}|{person}")
-        return {a for a in held.items if fs_app_id(a)} if held is not None else set()
+        return {a for a in _holding(held) if fs_app_id(a)} if held is not None else set()
 
     def is_browser(self, package: str) -> bool:
         """A known browser's package, or an app Hearth's categories know as a browser (none of the ten kinds, a
@@ -531,6 +532,12 @@ class AppBlocks:
                 if reason is not None:
                     found.setdefault(package, set()).add(reason)
         return found
+
+    def fs_blocks(self, person: str) -> set[str]:
+        """The Xbox and Windows apps Hearth blocks for [person] (wanted, or blocked and not lifted yet): never paused by
+        the Xbox swap (enforce.py's _xbox_swap), which would make the block wait for its resume."""
+        wanted = self.wanted(person, set()) if person in self.kids() else {}
+        return {a for a in wanted if fs_app_id(a)} | set(self.fs_applied.get(person, {}))
 
     def blocked_packages(self, person: str) -> set[str]:
         """What is blocked for [person] in Family Link now (Hearth's confirmed blocks and a parent's): never paused or

@@ -52,9 +52,11 @@ add, per person, the parental controls of other integrations (Configure > Enforc
   tonight is moved to start when the extra time ends (a today-only override) and put back after, only while it still
   reads Hearth's start.
 
-An adult's allow (hearth.allow, exceptions.py) takes its app or group out of every hold above while it lasts. A
-parent's grant (a change in the Family Link, Nintendo or Family Safety app, grants.py) takes out only the hold it came
-from.
+An adult's allow (hearth.allow, exceptions.py) takes its app or group out of the holds above while it lasts, but not
+out of a platform Family Safety locks whole: on the Xbox, while daily time alone locks it, the lock is swapped for a
+pause of every other Xbox app (_xbox_swap, with Family Link's dwell and swap breaker) where that can be done safely;
+Windows stays locked, and hearth.allow and hearth.explain say so (platform_open). A parent's grant (a change in the
+Family Link, Nintendo or Family Safety app, grants.py) takes out only the hold it came from.
 
 An app in the built-in Accessibility pool (Voice Access, Lookout, Live Transcribe) or System screens (the home screen,
 Family Link's lock screen, keyboards) is never paused by any of these: a budget, a pause, School time's apps or the
@@ -200,6 +202,13 @@ OWN_PUT_BACK_WITHIN = timedelta(minutes=15)
 # OWN_PUT_BACK_WITHIN nothing locked there is Hearth's own unlock (_fs_own_unlock), never a parent's
 FS_LOCKING = "fs_locking"
 FS_UNLOCKING = "fs_unlocking"
+# held.restore keys of a Family Safety enforcer's Xbox and Windows app pauses, kept before the call (pause_app,
+# resume_app): the apps a call that failed or was cut off (a reload cancels calls mid-flight) may have left paused
+# (possibly held: letting go resumes them, _holding), and when that was. Once the Applications sensor's paused_apps
+# has had the time to show it (PAUSE_SHOWS_WITHIN), the next pass keeps as held only the apps Family Safety still has
+# a pause of its own of ("ours", _fs_reconcile), and with no whole list keeps them all possibly held
+FS_MAYBE_PAUSED = "fs_maybe_paused"
+FS_UNSURE_AT = "fs_unsure_at"
 # Swapping between the device lock and pausing every app costs a Family Link call per app, each way. After a swap,
 # Hearth stays on the device lock at least this long before it pauses every app again
 SWAP_DWELL = timedelta(minutes=10)
@@ -210,6 +219,44 @@ SWAP_WINDOW = timedelta(hours=1)
 SWAP_BREAK = timedelta(hours=1)
 LOCK_KIND_DEVICES = "devices"
 LOCK_KIND_APPS = "apps"
+XBOX = "Xbox"
+# The Xbox's own parts, never paused when an allow swaps the Xbox lock for a pause of every other Xbox app: the home
+# screen (dashboard), the Guide, Settings, the Store and Microsoft Edge, and the companion apps that hold the rest.
+# Family Safety lists an Xbox app as x:<its title id>; no id of these was found in Hearth's code or tests nor in
+# Family Safety's, so they're matched by the name the Applications sensor gives them (lower case). Add an id to
+# XBOX_NEVER_PAUSED once it's seen on a console. Whether these show in the Applications list at all is a live check
+XBOX_NEVER_PAUSED: frozenset[str] = frozenset()
+XBOX_NEVER_PAUSED_NAMES = frozenset(
+    {
+        "home",
+        "xbox home",
+        "dashboard",
+        "xbox dashboard",
+        "guide",
+        "xbox guide",
+        "settings",
+        "xbox settings",
+        "microsoft store",
+        "store",
+        "microsoft edge",
+        "edge",
+        "xbox family settings",
+        "family safety",
+        "microsoft family safety",
+        "my games & apps",
+    }
+)
+# Why an allow of an app couldn't open a platform Hearth locks whole (Enforcement.platform_open; hearth.allow's
+# not_on, hearth.explain's platform_lock): Windows is never swapped; on the Xbox each reason the swap fell back
+NOT_ON_WINDOWS = "windows_locked_whole"
+NOT_ON_HELD = "held_otherwise"
+NOT_ON_NO_PAUSE_APP = "family_safety_cannot_pause_apps"
+NOT_ON_NO_TRACKING = "family_safety_pauses_not_readable"
+NOT_ON_LIST = "applications_list_unknown"
+NOT_ON_TOO_MANY = "too_many_apps"
+NOT_ON_NOT_INSTALLED = "allowed_app_not_listed"
+NOT_ON_BLOCKED = "allowed_app_blocked"
+NOT_ON_DWELL = "swapped_lately"
 
 # Never paused, whatever category they're in: calls (the dialer and contacts, so an emergency call always works), the
 # system, and the apps that hold the rest. Messages apps are NOT here: daily time, a limit, bedtime
@@ -576,6 +623,9 @@ class Enforcement:
         self._always_last: dict[str, list[str]] = {}
         # Why each wanted item is held, by enforcer key: {item: budget, school_time or pause} (for Hearth's page)
         self._why: dict[str, dict[str, str]] = {}
+        # Family Safety platforms Hearth keeps locked whole although an allow names apps on them, by person:
+        # [{platform, why (NOT_ON_*)}] (hearth.allow's not_on, hearth.explain's platform_lock). Worked out each update
+        self.platform_open: dict[str, list[dict[str, str]]] = {}
         # The refreshes waiting after a write, by entity: one each at a time
         self._refresh: dict[str, CALLBACK_TYPE] = {}
         # A Switch's limit Hearth just put back, by entity: its number may still read 0 for a moment, and a hold
@@ -742,6 +792,7 @@ class Enforcement:
         budget_lifted_of=None,
         sleep_locks_devices_of=None,
         device_bedtime_of=None,
+        fs_blocks_of=None,
     ) -> None:
         """[apps_of]: a group id's packages for a person (for All screen time, every app of theirs). [lifted_of]: what
         a person's allows lift (Lifted); [school_time_of]: whether an enforcer's child is in School time now;
@@ -756,11 +807,14 @@ class Enforcement:
         paused when it was blocked stays as held (Family Link's resume_app skips a blocked app anyway);
         [sleep_locks_devices_of]: whether the weekly schedule's Sleep locks a person's Family Link devices whole (no
         Family Link bedtime of their own: household.sleep_locks_devices); [device_bedtime_of]: what a bedtime lift on
-        one device lifts of an enforcer's schedule holds (a Family Safety platform, a Switch, in Sleep only)."""
+        one device lifts of an enforcer's schedule holds (a Family Safety platform, a Switch, in Sleep only);
+        [fs_blocks_of]: the Xbox and Windows apps Hearth's own blocks are for (app_blocks.py), never paused by the
+        Xbox swap (_xbox_swap)."""
         self.enforcers = enforcers
         now = dt_util.now()
         wanted_now: dict[str, set[str]] = {}
         why_now: dict[str, dict[str, str]] = {}
+        platform_open: dict[str, list[dict[str, str]]] = {}
         for e in enforcers:
             lifted = lifted_of(e.person) if lifted_of else None
             playing = self._playing(e)
@@ -833,6 +887,16 @@ class Enforcement:
             if device_bedtime_of:
                 scheduled -= device_bedtime_of(e)
             device_lifted = device_lifted_of(e) if device_lifted_of else set()
+            if e.kind == FAMILY_SAFETY:
+                # An allow of Xbox apps while daily time locks the Xbox whole: every other Xbox app paused instead
+                budget, not_on = self._xbox_swap(
+                    e, budget, paused | scheduled, granted | device_lifted, lifted, apps_of, set(spared),
+                    set(fs_blocks_of(e.person)) if fs_blocks_of else set(), now,
+                )
+                held_whole = (budget | paused | scheduled) - granted - device_lifted
+                not_on = [n for n in not_on if n["platform"] in held_whole]
+                if not_on:
+                    platform_open.setdefault(e.person, []).extend(not_on)
             wanted_now[e.key] = (budget | school | paused | scheduled) - granted - device_lifted - set(spared)
             if e.kind == FAMILY_LINK and exempt_of:
                 wanted_now[e.key] -= exempt_of(e.person)
@@ -862,6 +926,7 @@ class Enforcement:
             wanted_now.setdefault(key, set())
         self._wanted = wanted_now
         self._why = why_now
+        self.platform_open = platform_open
         for key, want in wanted_now.items():
             self._clear_stale_error(key, want)
         if any(self._differs(key) for key in wanted_now):
@@ -948,6 +1013,9 @@ class Enforcement:
             if kind == FAMILY_LINK and held.restore.get(RESUME_UNSURE) and entity_id is not None:
                 # A resume failed part-way: what's held is what Family Link still has a pause record of
                 self._reconcile_resume(held, entity_id)
+            if kind == FAMILY_SAFETY and held.restore.get(FS_MAYBE_PAUSED) and entity_id is not None:
+                # A pause or resume of apps failed or was cut off: held is what Family Safety still has a pause of
+                self._fs_reconcile(held, entity_id)
             # A Family Safety lock that ran out (at midnight) while still wanted (Sleep, a pause) is locked again
             hold = want - (held.items - _ended_locks(held))
             let_go = _holding(held) - want if self._may_let_go() else set()
@@ -965,7 +1033,8 @@ class Enforcement:
                 # Switching between the whole-device lock and pausing apps one by one (a category open past daily
                 # time): the new hold first, so a failure leaves the kid held too much rather than not at all (a
                 # failed pause_app keeps the device lock, and is tried again)
-                hold_first = DEVICES in hold or DEVICES in let_go
+                # The Xbox's lock and the pause of its other apps (an allow's swap, _xbox_swap) the same way
+                hold_first = DEVICES in hold or DEVICES in let_go or (kind == FAMILY_SAFETY and XBOX in hold | let_go)
                 if hold and hold_first:
                     held.entity_id = entity_id
                     await self._call(kind, entity_id, hold, True, held)
@@ -1132,7 +1201,7 @@ class Enforcement:
             else:
                 held.items.discard(platform)
         if apps:
-            await self._fs_apps(entity_id, apps, hold)
+            await self._fs_apps(entity_id, apps, hold, held)
         return outcomes
 
     def _responds(self, domain: str, service: str) -> bool:
@@ -1142,19 +1211,52 @@ class Enforcement:
         except Exception:  # noqa: BLE001 - not registered: the call itself says so
             return False
 
-    async def _fs_apps(self, entity_id: str, apps: set[str], hold: bool) -> None:
+    async def _fs_apps(self, entity_id: str, apps: set[str], hold: bool, held: Held | None = None) -> None:
         """Xbox and Windows apps paused (a block that keeps whether each was blocked before) or resumed. Family
-        Safety leaves an app a parent blocked alone."""
+        Safety leaves an app a parent blocked alone, and resuming an app it hasn't paused does nothing (skipped).
+
+        Kept before the call ([held]: FS_MAYBE_PAUSED): Family Safety pauses and resumes one app after the other, keeps
+        its record of each pause before its write, and a call that fails or is cut off (a settings save reloads the
+        entry and cancels it) may have paused or resumed any of them. Those stay possibly held, so letting go resumes
+        them, until the call goes through or was refused before it went out; a resume that failed leaves none of its
+        apps held for sure (sorted by _fs_reconcile). Apps the answer names as failed stay possibly held too."""
         if not self.hass.services.has_service(FS_DOMAIN, "pause_app"):
             if hold:
                 raise ValueError("Family Safety can't pause apps (update it)")
             # Nothing to resume with: what it held can't have been paused by it
             return
         target = {"entity_id": entity_id} if "." in entity_id else {"account_id": entity_id}
-        await call_service(self.hass,
-            FS_DOMAIN, "pause_app" if hold else "resume_app", {**target, "apps": sorted(apps)}, blocking=True,
-            why="hold" if hold else "let_go",
-        )
+        service = "pause_app" if hold else "resume_app"
+        before = set(held.restore.get(FS_MAYBE_PAUSED) or ()) if held is not None else set()
+        if held is not None:
+            _fs_maybe_paused(held, apps)
+            held.restore[FS_UNSURE_AT] = dt_util.utcnow().isoformat()
+            self._save()
+        try:
+            response = await call_service(self.hass,
+                FS_DOMAIN, service, {**target, "apps": sorted(apps)}, blocking=True,
+                return_response=self._responds(FS_DOMAIN, service), why="hold" if hold else "let_go",
+            )
+        except BaseException as err:  # a reload cutting the call off (CancelledError) too
+            if held is not None:
+                if refused_before_sent(err):
+                    # Nothing went out: only what was possibly held before stays so
+                    _fs_maybe_paused(held, apps - before, False)
+                else:
+                    if not hold:
+                        # Some may be resumed, the rest still paused: none held for sure any more
+                        held.items -= apps
+                    held.restore[FS_UNSURE_AT] = dt_util.utcnow().isoformat()
+                # (a reload's flush stores it itself: nothing of this instance saves after that)
+                if not self._closed:
+                    self._save()
+            raise
+        if held is not None:
+            failed = response.get("failed") if isinstance(response, dict) else None
+            unsure = {a for a in failed if a in apps} if isinstance(failed, dict) else set()
+            _fs_maybe_paused(held, apps - unsure, False)
+            if unsure:
+                held.restore[FS_UNSURE_AT] = dt_util.utcnow().isoformat()
 
     async def _platform(self, entity_id: str, platform: str, hold: bool, held: Held | None = None) -> str | None:
         """Locks a Family Safety platform until the next local midnight, or unlocks it. The child is named by the
@@ -1301,7 +1403,10 @@ class Enforcement:
             )
             self.note(enforcer.key, swap_breaker=dt_util.as_utc(until).isoformat(), swaps=len(swaps))
             if self.activity is not None:
-                self.activity.hold(True, enforcer.person, DEVICES, "swap_breaker", enforcer.kind)
+                self.activity.hold(
+                    True, enforcer.person, XBOX if enforcer.kind == FAMILY_SAFETY else DEVICES, "swap_breaker",
+                    enforcer.kind,
+                )
             return False
         return not swaps or now - max(swaps) >= SWAP_DWELL
 
@@ -1322,6 +1427,105 @@ class Enforcement:
             self._swaps[key] = {"kind": kind, "at": swaps, "until": until}
         self._save()
 
+    def _xbox_swap(
+        self, e: Enforcer, budget: set[str], others: set[str], lifted_whole: set[str], lifted: Lifted | None, apps_of,
+        spared: set[str], fs_blocks: set[str], now: datetime,
+    ) -> tuple[set[str], list[dict[str, str]]]:
+        """An allow of Xbox apps (hearth.allow of an x:... app, or of a group with Xbox apps) while daily time locks
+        the Xbox whole (a budget, [budget]): the Xbox lock is swapped for a pause of every other Xbox app of the
+        Applications list, so the allowed one opens. Never paused: the allowed apps, blocked ones (Hearth's or a
+        parent's: an allow never lifts a block, [fs_blocks] are Hearth's own), the Xbox's own parts
+        (XBOX_NEVER_PAUSED, by id or name) and [spared]. Windows is never swapped (its apps can't run alone the same
+        way): it stays locked. The lock stays, said in the answer (NOT_ON_*), when the Xbox is held otherwise ([others]:
+        a pause, the schedule), Family Safety can't pause apps, the Applications list is missing or cut short, Family
+        Safety's record of its pauses (paused_apps: what sorts a pause or resume that failed, fs_maybe_paused) can't be
+        read, none of the allowed apps is in the list, there would be more than MAX_PACKAGES apps, or a swap was made
+        lately (_may_pause_every_app: SWAP_DWELL, and the breaker after MAX_SWAPS an hour, as Family Link's). Returns
+        the budget hold (the Xbox swapped for the apps, or as it was) and the platforms an allow names apps on that stay
+        locked whole, with why."""
+        not_on: list[dict[str, str]] = []
+        if not lifted or lifted.everything:
+            self._lock_kind(e.key, LOCK_KIND_DEVICES if XBOX in budget - lifted_whole else None, now)
+            return budget, not_on
+        if "Windows" in e.platforms and self._allowed_on(e, lifted, apps_of, "Windows"):
+            not_on.append({"platform": "Windows", "why": NOT_ON_WINDOWS})
+        allowed = self._allowed_on(e, lifted, apps_of, XBOX)
+        if XBOX not in budget - lifted_whole or not allowed:
+            self._lock_kind(e.key, LOCK_KIND_DEVICES if XBOX in budget - lifted_whole else None, now)
+            return budget, not_on
+        why = None
+        apps: set[str] = set()
+        lists = self._fs_xbox_apps(e.entity_id)
+        records = fs_pause_records(self.hass, e.entity_id) if lists is not None else None
+        if XBOX in others:
+            why = NOT_ON_HELD  # a pause or the schedule: an allow doesn't lift those
+        elif not self.hass.services.has_service(FS_DOMAIN, "pause_app"):
+            why = NOT_ON_NO_PAUSE_APP
+        elif lists is None:
+            why = NOT_ON_LIST
+        elif records is None:
+            why = NOT_ON_NO_TRACKING
+        else:
+            installed, blocked, names = lists
+            # Family Safety pauses an app by blocking it: an app blocked by a pause (its own record says "ours", or
+            # Hearth holds it) isn't blocked by anyone, and stays in the swap's pause
+            held = self.held.get(e.key)
+            blocked -= {app for app, who in records.items() if who == FS_HOLD_OURS}
+            blocked -= _holding(held) if held is not None else set()
+            apps = {
+                app
+                for app in installed
+                if app not in allowed and app not in blocked and app not in fs_blocks and app not in spared
+                and app not in XBOX_NEVER_PAUSED and (names.get(app) or "").strip().lower() not in XBOX_NEVER_PAUSED_NAMES
+            }
+            if not allowed & installed:
+                why = NOT_ON_NOT_INSTALLED
+            elif not (allowed & installed) - blocked - fs_blocks:
+                why = NOT_ON_BLOCKED  # a block stays: unlocking the Xbox would open nothing allowed
+            elif len(apps) > MAX_PACKAGES:
+                why = NOT_ON_TOO_MANY
+            elif not self._may_pause_every_app(e, now):
+                why = NOT_ON_DWELL
+        if why is not None:
+            self._lock_kind(e.key, LOCK_KIND_DEVICES, now)
+            not_on.append({"platform": XBOX, "why": why})
+            return budget, not_on
+        self._lock_kind(e.key, LOCK_KIND_APPS, now)
+        return (budget - {XBOX}) | apps, not_on
+
+    @staticmethod
+    def _allowed_on(e: Enforcer, lifted: Lifted, apps_of, platform: str) -> set[str]:
+        """The apps of [platform] an adult's allows name for the enforcer's person: an app itself, or a group's."""
+        found = {app for app in lifted.apps if fs_app_platform(app) == platform}
+        for group_id in lifted.groups:
+            if group_id != ALL:
+                found |= {app for app in apps_of(group_id, e.person) if fs_app_platform(app) == platform}
+        return found
+
+    def _fs_xbox_apps(self, entity_id: str) -> tuple[set[str], set[str], dict[str, str]] | None:
+        """The child's Xbox apps as Family Safety's Applications sensors list them: (installed, blocked, names), None
+        when a list is missing or cut short (never "no apps")."""
+        states = fs_applications(self.hass, entity_id)
+        if not states:
+            return None
+        installed: set[str] = set()
+        blocked: set[str] = set()
+        names: dict[str, str] = {}
+        for state in states:
+            applications = state.attributes.get("applications")
+            if state.attributes.get("truncated") or not isinstance(applications, list):
+                return None
+            for row in applications:
+                app = row.get("app_id") if isinstance(row, dict) else None
+                if not isinstance(app, str) or fs_app_platform(app) != XBOX:
+                    continue
+                installed.add(app)
+                if row.get("blocked"):
+                    blocked.add(app)
+                if isinstance(row.get("app_name"), str):
+                    names[app] = row["app_name"]
+        return installed, blocked, names
+
     def _reconcile_resume(self, held: Held, entity_id: str) -> None:
         """After a resume that failed part-way: the apps Family Link still has a pause record of are held as before,
         the others were resumed and are let go of. While the records can't be read (no such list, or cut short), all
@@ -1338,6 +1542,25 @@ class Enforcement:
             _forget_pauses(held, unsure - still)
         held.restore.pop(RESUME_UNSURE, None)
         self._save()
+
+    def _fs_reconcile(self, held: Held, entity_id: str) -> None:
+        """After a Family Safety pause or resume of apps that failed or was cut off (FS_MAYBE_PAUSED), once the
+        Applications sensor has had the time to show it: the apps Family Safety still holds by a pause of its own
+        ("ours" in paused_apps) are held as before, the others aren't (resumed, never paused, or unblocked by a parent
+        since). Only from whole lists: while they can't be read, all of them stay possibly held (letting go resumes
+        them again, harmless for an app that isn't paused; a hold pauses them again)."""
+        unsure = set(held.restore.get(FS_MAYBE_PAUSED) or ())
+        at = _utc(held.restore.get(FS_UNSURE_AT))
+        if not unsure or (at is not None and dt_util.utcnow() - at < PAUSE_SHOWS_WITHIN):
+            return
+        records = fs_pause_records(self.hass, entity_id)
+        if records is None:
+            return
+        ours = {app for app in unsure if records.get(app) == FS_HOLD_OURS}
+        held.items = (held.items - unsure) | ours
+        _fs_maybe_paused(held, unsure, False)
+        self._save()
+        _LOGGER.debug("Family Safety pauses sorted after a call that failed: %s held, %s not", sorted(ours), sorted(unsure - ours))
 
     def _pause_records(self, child: str) -> set[str] | None:
         """The packages Family Link has a pause record of for the child (paused_apps of their With time limits
@@ -2271,7 +2494,27 @@ def _holding(held: Held) -> set[str]:
     started |= set(held.restore.get(MAYBE_PAUSED) or ())
     # Family Safety platforms whose lock call failed or was cut off: they may be locked all the same
     started |= set(held.restore.get(FS_LOCKING) or ())
+    # Family Safety apps whose pause or resume call failed or was cut off: they may be paused all the same
+    started |= set(held.restore.get(FS_MAYBE_PAUSED) or ())
     return held.items | started
+
+
+def _fs_maybe_paused(held: Held, apps: set[str], add: bool = True) -> None:
+    """Family Safety apps that may be paused without Hearth holding them for sure (held.restore, kept over a
+    restart): added before a pause or resume call, taken out when it went through or was refused before it went out."""
+    was = set(held.restore.get(FS_MAYBE_PAUSED) or ())
+    now = was | apps if add else was - apps
+    if now:
+        held.restore[FS_MAYBE_PAUSED] = sorted(now)
+    else:
+        held.restore.pop(FS_MAYBE_PAUSED, None)
+        held.restore.pop(FS_UNSURE_AT, None)
+
+
+def refused_before_sent(err: BaseException) -> bool:
+    """A call refused before it went out (its schema, a validation, no such action): surely not applied. Any other
+    error, and a call cut off (CancelledError), may have been applied all the same."""
+    return isinstance(err, (vol.Invalid, ServiceValidationError, ServiceNotFound))
 
 
 def _maybe_paused(held: Held, packages: set[str], add: bool = True) -> None:
@@ -2370,6 +2613,53 @@ def fs_account_of(hass: HomeAssistant, entity_id: str) -> str | None:
         if account not in (None, ""):
             return str(account)
     return None
+
+
+def fs_applications(hass: HomeAssistant, entity_id: str) -> list[Any]:
+    """The Family Safety child's Applications sensors (an applications list among their attributes): on the device of
+    [entity_id], or naming its account (user_id)."""
+    registry = er.async_get(hass)
+    entry = registry.async_get(entity_id) if "." in entity_id else None
+    device = entry.device_id if entry is not None else None
+    account = fs_account_of(hass, entity_id)
+    if device is None and account is None:
+        return []
+    found = []
+    for state in hass.states.async_all("sensor"):
+        if not isinstance(state.attributes.get("applications"), list):
+            continue
+        other = registry.async_get(state.entity_id)
+        if (account is not None and str(state.attributes.get("user_id")) == account) or (
+            device is not None and other is not None and other.platform == FS_DOMAIN and other.device_id == device
+        ):
+            found.append(state)
+    return sorted(found, key=lambda s: s.entity_id)
+
+
+def fs_row_app(row: Any) -> str | None:
+    """The app id of a paused_apps row (app_id; an older Family Safety's package)."""
+    if not isinstance(row, dict):
+        return None
+    app = row.get("app_id") or row.get("package")
+    return app if isinstance(app, str) and app else None
+
+
+def fs_pause_records(hass: HomeAssistant, entity_id: str) -> dict[str, str] | None:
+    """Family Safety's own record of the apps its pause_app paused for the child (paused_apps of their Applications
+    sensors): app id -> "ours" (still blocked by the pause) or "parent" (unblocked since). None when that can't be
+    told: no Applications sensor, a list cut short (truncated), or a Family Safety that keeps no such record."""
+    states = fs_applications(hass, entity_id)
+    if not states:
+        return None
+    found: dict[str, str] = {}
+    for state in states:
+        rows = state.attributes.get("paused_apps")
+        if state.attributes.get("truncated") or not isinstance(rows, list):
+            return None
+        for row in rows:
+            if (app := fs_row_app(row)) is not None:
+                found[app] = str(row.get("paused") or FS_HOLD_OURS)
+    return found
 
 
 def fs_accepts(hass: HomeAssistant, service: str, data: dict[str, Any]) -> bool:

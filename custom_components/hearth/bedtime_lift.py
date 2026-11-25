@@ -338,22 +338,60 @@ class BedtimeLifts:
     async def _give_bonus(self, person: str, until: datetime, now: datetime) -> dict[str, int]:
         """Bonus time on each device already in Family Link's bedtime, which is what ends a bedtime under way; what
         was given, by device name. Raises on the first device that fails (those done are kept; retried later)."""
+        from . import family_link as fl
+
         added: dict[str, int] = {}
         for device, device_id, minutes in self._bonus_due(person, until, now):
-            await call_service(self.hass,
-                FL_DOMAIN, "add_time_bonus", {"entity_id": device.entity_id, "bonus_minutes": minutes}, blocking=True
-            )
+            # Hearth's own before the call (saved here and in native_sync's count): a bonus whose answer is lost or
+            # that's cut off (a reload) is still reset when the lift ends, never kept as a parent's. Refused before it
+            # went out, or not shown within the watch window, it's taken out again (forget_given) and given later
             record = self.bonus.setdefault(
                 person, {"child": self.household.family_link_child(person), "devices": {}}
             )
             mine = record["devices"].setdefault(device_id, {"given": []})
+            before = mine.get("until")
             mine["until"] = until.isoformat()
             mine["given"].append(minutes)
-            self._save()
-            self.household.sync.note_own_bonus(person, device_id, minutes)
+            intent = self.household.sync.begin_fl_bonus(
+                person, device_id, minutes, fl._int(device.attributes.get("bonus_minutes")) or 0, "bedtime_lift",
+                lift=True, lift_until=before,
+            )
+            await self._store.async_save(self._data())
+            await self.household.sync.async_flush()
+            try:
+                await call_service(self.hass,
+                    FL_DOMAIN, "add_time_bonus", {"entity_id": device.entity_id, "bonus_minutes": minutes},
+                    blocking=True,
+                )
+            except BaseException as err:  # a reload cutting the call off (CancelledError) too
+                self.household.sync.fl_bonus_settled(intent, err)
+                self._save()
+                raise
+            self.household.sync.fl_bonus_settled(intent, None)
             self.household.enforcement.refresh_soon(device.entity_id)
             added[str(device.attributes.get("device_name") or device.entity_id)] = minutes
         return added
+
+    @callback
+    def forget_given(self, person: str, device_id: str, minutes: int, until_before: str | None = None) -> None:
+        """A bonus the lift wrote down before its call wasn't given (refused, or never shown: native_sync's
+        fl_bonus_settled and its watch): it's taken out of the lift's record, so the device gets it again."""
+        record = self.bonus.get(person)
+        mine = (record or {}).get("devices", {}).get(device_id)
+        if mine is None:
+            return
+        given = list(mine.get("given") or [])
+        if minutes in given:
+            given.remove(minutes)
+        if not given:
+            del record["devices"][device_id]
+            if not record["devices"]:
+                self.bonus.pop(person, None)
+        else:
+            mine["given"] = given
+            if until_before:
+                mine["until"] = until_before
+        self._save()
 
     async def _bonus_back(self, person: str) -> dict[str, list[str]]:
         """The lift is over: the bonus Hearth gave for it is reset on each device (a bonus can't be shortened, and

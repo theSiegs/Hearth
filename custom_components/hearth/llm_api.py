@@ -251,7 +251,8 @@ def parent_blocks(household: Household, person: str) -> list[dict[str, str]]:
             if entry is None or entry.device_id not in devices:
                 continue
         ours = {
-            str(p.get("package"))
+            # Family Safety's rows name the app by app_id (an older one by package)
+            str(p.get("app_id") or p.get("package"))
             for p in attrs.get("paused_apps") or []
             if isinstance(p, dict) and p.get("paused") == "ours"
         }

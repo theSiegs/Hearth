@@ -784,11 +784,32 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
 
 - `hearth.allow` (`people`; `app`, a package, or `group`, a Hearth group or `all`; `until`: a time, tomorrow's if it
   has passed, `school_time_end` (the end of their School time today, from Family Link's sensors) or `end_of_day`, the
-  default; `reason`) returns `{id, until: {person: when}}`. It's kept across restarts. While it lasts, Hearth holds
-  that app or group nowhere for those people: their TVs' and phones' state documents leave the group out (an allowed
-  app is taken out of every group's `apps` and added to All screen time's `except`, so a device needs no change),
-  Family Link doesn't pause it (budget or School time), and Family Safety and Nintendo don't hold for an allowed group.
-  It ends on its own; what should hold then holds again with the next minute's recompute.
+  default; `reason`) returns `{id, until: {person: when}}`. It's kept across restarts. While it lasts, Hearth's own
+  holds of that app or group are lifted for those people: their TVs' and phones' state documents leave the group out
+  (an allowed app is taken out of every group's `apps` and added to All screen time's `except`, so a device needs no
+  change), Family Link doesn't pause it (budget or School time), and Family Safety and Nintendo don't hold for an
+  allowed group. It ends on its own; what should hold then holds again with the next minute's recompute. Not lifted:
+  a block (Hearth's or a parent's: `hearth.unblock_app`, or the parent's app), bedtime, School time and a pause (below),
+  and a whole platform Hearth locks for daily time (next).
+- **Allowing one app on a platform locked whole.** Family Safety locks the Xbox or Windows whole when daily time (a
+  group the enforcer holds for: Games, All screen time) is out; an allow of one app or of a group can't open one app
+  through that lock. On the **Xbox**, while an allow names Xbox apps (an `x:...` app, or a group with Xbox apps) and the
+  Xbox is locked only for daily time, Hearth swaps the lock for a pause of every other Xbox app of the kid's
+  Applications list (`pause_app`), then unlocks the Xbox; when the allow ends it locks the Xbox first, then resumes
+  them. Never paused: the allowed apps, apps blocked by Hearth or a parent (an allow never lifts a block), and the
+  Xbox's own parts (Home, the Guide, Settings, the Store, Microsoft Edge: `XBOX_NEVER_PAUSED`, by name until their ids
+  are known). As with Family Link's device lock, a swap waits 10 minutes after the last one, and after 4 swaps in an
+  hour the lock stays for an hour. The lock stays, and `hearth.allow` says so, when the Xbox is also held by a pause or
+  the schedule, Family Safety can't pause apps or keeps no record of its pauses (`paused_apps`), the Applications list
+  is missing or cut short, the allowed app isn't in it or is blocked, or there would be more than 150 apps. **Windows is never
+  swapped**: it stays locked. Either way `hearth.allow` answers with `not_on: [{person, platform, why, text}]` (`why`:
+  `windows_locked_whole`, `held_otherwise`, `family_safety_cannot_pause_apps`, `family_safety_pauses_not_readable`,
+  `applications_list_unknown`, `allowed_app_not_listed`, `allowed_app_blocked`, `too_many_apps`, `swapped_lately`),
+  and `hearth.explain`
+  lists a `platform_lock` row; extra time or an allow on that device (`hearth.add_bonus` or `hearth.allow` with
+  `device: fs:xbox` or `fs:windows`) opens it. **Known limit**: whether the Xbox's Applications list includes a game
+  installed but never played isn't known yet; one that isn't listed isn't paused by the swap and stays open while it
+  lasts.
 - `hearth.allow_end` (`id`, or `people` with an optional `app` or `group`) ends one early; returns `{ended: [ids]}`.
 - **Ends on a place.** `hearth.allow`, `hearth.pause` and `hearth.school_time_off` take `ends_on: {arrive: <place>}`
   or `ends_on: {leave: <place>}`, a place key (`home`, `school`, or a favorite place's key, see [Places](#places)) of
@@ -887,7 +908,7 @@ An adult lets someone use an app or a group for a while, whatever would hold it:
   (Hearth's own block of the app, [Blocked apps](#blocked-apps): `by` is `hearth.block_app`,
   `block_unsupported_browsers` or `block_ai_companions`, with `app` and `why`, until null; no allow lifts it; or a parent's own block made in
   Family Link or Family Safety, not by Hearth: `by` is `family_link` or the Family Safety Applications sensor, with
-  `provider`, `app` and `why: ["parent"]`, until null; only unblocking it there lifts it, since `hearth.unblock_app` leaves a parent's own block). `place` is kept for place rules (none are built yet: a place only ends an exception so far). `until` is when it's allowed again (the latest of the blocks, null when one doesn't
+  `provider`, `app` and `why: ["parent"]`, until null; only unblocking it there lifts it, since `hearth.unblock_app` leaves a parent's own block) or `platform_lock` (an allowed Xbox or Windows app on a platform Hearth keeps locked whole for daily time: `by` `family_safety`, with `platform`, `why` as `hearth.allow`'s `not_on`, until midnight, and `lift_with`: `hearth.allow` and `hearth.add_bonus` with `device: fs:xbox` or `fs:windows`). `place` is kept for place rules (none are built yet: a place only ends an exception so far). `until` is when it's allowed again (the latest of the blocks, null when one doesn't
   say), or, when allowed thanks to an exception, when that ends. `lifted` lists the holds an allow lifts now.
 - **Google TV's own Kids daily limit.** A kids profile can also have a daily limit set in Google TV itself (Family Link's
   or the TV's own Kids profile settings). When it runs out, Google TV shows its time up screen and blocks the whole
@@ -1015,6 +1036,21 @@ possibly held) by Hearth now. It reads only whole With time limits and Blocked a
 missing: writing a limit to a blocked app can unblock it), and refuses for 3 minutes after Hearth let go of a Family
 Link hold of the kid's, while the list may still show a pause that was just resumed. An app whose call fails is named
 in `failed` and the others still go back. Its calls are Hearth's own, so the adults aren't told about them.
+For a kid with Family Safety, the answer's `family_safety` part does the same for Xbox and Windows apps: Family
+Safety keeps its own record of each pause, so an app its record shows still paused by a pause Hearth made in the
+last 7 days (`paused: ours`), that Hearth no longer holds (or possibly holds) nor blocks itself, is resumed through
+`resume_app`, which puts back what the app had. Whole Applications lists only, not within 3 minutes of Hearth
+letting go of a Family Safety hold; a list that can't be read is said in `error`. A pause a parent made from Family
+Safety's own card of an app Hearth paused that week can't be told apart: `dry_run` first.
+
+**Calls cut off or failed after they went out.** A settings save reloads Hearth, which cancels the calls under way;
+a provider may also apply a write and answer with an error. Hearth writes down each such write before its call:
+Family Safety's platform locks and unlocks, extra time and request approvals, Xbox and Windows app pauses and resumes,
+and Family Link's bonus time. While its answer isn't known it is Hearth's own (never a parent's change) and possibly
+held (letting go undoes it). It's cleared when the call goes through or is refused before it went out, and otherwise
+kept until it can be told: for 10 minutes for extra time (adopted if it shows), for a Family Link bonus until the
+device's bonus shows it (else taken out after 10 minutes; a bedtime lift then gives it again), and for an app pause or
+resume until Family Safety's own record of its pauses (`paused_apps` of the Applications sensor) can be read whole.
 
 **A list cut short.** Pausing every app (daily time out while an app stays open, e.g. Messages while away from adults)
 moves each one into Family Link's With time limits list, which then outgrows Home Assistant's attribute limit and is
@@ -1136,8 +1172,10 @@ all. It's not a problem to fix.
     neither changes nothing. When Microsoft doesn't apply it,
     the person's status says Family Safety extra time is unavailable and it counts as not given; nothing fails.
     **A write that failed may have been applied anyway** (an error or a timeout after Microsoft took it, and a read
-    back that couldn't tell): unless the service's schema refused it, Hearth keeps it as possibly given (person,
-    platform, the `until` it asked for, the error, when; kept across a restart) and looks each minute for 10 minutes.
+    back that couldn't tell, or a call cut off when a settings save reloads Hearth): Hearth writes it down as possibly
+    given before the call (person, platform, the `until` it asks for, when; saved, kept across a restart), drops it
+    when the call goes through or was refused before it went out (a schema, no such action), and otherwise keeps it
+    with the error and looks each minute for 10 minutes. The same goes for a Family Safety request Hearth approves.
     Meanwhile extra time ending then counts as Hearth's, never a parent's grant. If Family Safety shows extra time on
     that platform ending when Hearth asked (within 2 minutes; a fork's `hold: bonus_ours` agrees), Hearth adopts it
     as its own extra time for its reason (so ending the allow cancels it through `cancel_time_bonus`, which checks

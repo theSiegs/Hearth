@@ -42,6 +42,7 @@ from .enforce import (
     fs_accepts,
     fs_account_of,
     fs_hold_state,
+    refused_before_sent,
 )
 from .exceptions import end_of_day
 from .activity import call_service
@@ -60,6 +61,8 @@ MINUTES_A_DAY = 24 * 60
 # Family Safety extra time whose write failed is looked for this long (a few of its polls): one Microsoft applied
 # anyway shows by then
 POSSIBLY_GIVEN_WINDOW = timedelta(minutes=10)
+# What a possibly given write that never answered says it failed with (cut off by a reload or a restart)
+CUT_OFF = "cut off before an answer"
 SET_INTERVALS = "set_screentime_intervals"
 # Family Safety's day_of_week: 0 is Sunday
 FS_WEEKDAYS = ("sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday")
@@ -96,6 +99,12 @@ class NativeSync:
         # Family Safety extra time whose write failed but may have been applied: {person, why, platform, until (what
         # Hearth asked for), error, at}; adopted as Hearth's own if it shows, dropped after POSSIBLY_GIVEN_WINDOW
         self.possibly_given: list[dict[str, Any]] = []
+        # Family Link bonus minutes Hearth wrote down as its own before the add_time_bonus call (fl_added, and the
+        # extra time's or the bedtime lift's record) whose answer isn't known yet: {person, device_id, minutes, base
+        # (the device's bonus_minutes before), why, lift (a bedtime lift's), at, pending (the call is under way)}. One
+        # whose call failed with anything but a refusal, or was cut off, is kept for POSSIBLY_GIVEN_WINDOW: confirmed
+        # by the device's bonus rising by the minutes asked (then it's simply Hearth's), else taken out again
+        self.fl_pending: list[dict[str, Any]] = []
         # One retry of waiting Family Link extra time at a time (the minute tick and a hold let go): never given twice
         self._retrying = False
         # Nintendo extra playing time Hearth itself added today, by Switch (its Max screentime entity): {"day",
@@ -133,6 +142,19 @@ class NativeSync:
             if isinstance(entry, dict)
             and all(isinstance(entry.get(f), str) for f in ("person", "why", "platform", "until", "at"))
         ]
+        for entry in self.possibly_given:
+            # A write under way when Home Assistant stopped or the entry reloaded: cut off, no answer
+            if entry.pop("pending", None):
+                entry["error"] = entry.get("error") or CUT_OFF
+        self.fl_pending = [
+            entry
+            for entry in stored.get("fl_pending") or []
+            if isinstance(entry, dict)
+            and all(isinstance(entry.get(f), str) for f in ("person", "device_id", "at"))
+            and isinstance(entry.get("minutes"), int)
+        ]
+        for entry in self.fl_pending:
+            entry.pop("pending", None)
         self.sw_added = {
             str(entity): record
             for entity, record in (stored.get("sw_added") or {}).items()
@@ -147,6 +169,7 @@ class NativeSync:
             "moved": self.moved,
             "possibly_given": self.possibly_given,
             "sw_added": self.sw_added,
+            "fl_pending": self.fl_pending,
         }
 
     def _save(self) -> None:
@@ -180,6 +203,107 @@ class NativeSync:
     def forget_own_bonus(self, person: str, device_id: str) -> None:
         """The day's bonus on a device was reset: none of it is Hearth's any more."""
         if self.fl_added.get(person, {}).get("devices", {}).pop(device_id, None) is not None:
+            self._save()
+        self._drop_fl_pending(person, device_id)
+
+    @callback
+    def begin_fl_bonus(
+        self, person: str, device_id: str, minutes: int, base: float, why: str, record: dict[str, Any] | None = None,
+        lift: bool = False, lift_until: str | None = None,
+    ) -> dict[str, Any]:
+        """Before a Family Link add_time_bonus of Hearth's: its minutes are Hearth's own at once (fl_added, and
+        [record]'s devices: the extra time's), so a bonus whose answer is lost or that's cut off (a reload cancels calls
+        mid-flight) is still reset by take_back_bonus or device_ended, never a parent's grant in detect(), and a
+        bedtime lift's ([lift]) is never read as a parent's by bedtime_lift._bonus_back. [base]: the device's
+        bonus_minutes before the call. Settled by fl_bonus_settled; the caller saves before the call."""
+        day = record["day"] if record is not None else dt_util.now().date().isoformat()
+        mine = self.fl_added.setdefault(person, {"day": day, "devices": {}})
+        if mine.get("day") != day:
+            mine.update({"day": day, "devices": {}})
+        mine["devices"][device_id] = mine["devices"].get(device_id, 0) + minutes
+        if record is not None:
+            record["devices"][device_id] = record["devices"].get(device_id, 0) + minutes
+        entry = {
+            "person": person, "device_id": device_id, "minutes": int(minutes), "base": float(base or 0), "why": why,
+            "lift": lift, "lift_until": lift_until, "at": dt_util.utcnow().isoformat(), "pending": True,
+        }
+        self.fl_pending.append(entry)
+        return entry
+
+    @callback
+    def fl_bonus_settled(self, entry: dict[str, Any], err: BaseException | None) -> None:
+        """A Family Link bonus kept by begin_fl_bonus: given (no [err]) it's simply Hearth's; refused before it went out
+        it's taken out again; any other failure, or a call cut off, leaves it Hearth's while it's confirmed
+        (async_pending_tick: the device's bonus rising by the minutes asked) for POSSIBLY_GIVEN_WINDOW, then it's taken
+        out."""
+        if err is None:
+            self.fl_pending = [e for e in self.fl_pending if e is not entry]
+        elif refused_before_sent(err):
+            self.fl_pending = [e for e in self.fl_pending if e is not entry]
+            self._take_out_fl_bonus(entry)
+        else:
+            entry.pop("pending", None)
+            entry["error"] = _scrub(str(err) or type(err).__name__)[:200]
+        self._save()
+
+    def _take_out_fl_bonus(self, entry: dict[str, Any]) -> None:
+        """A Family Link bonus of Hearth's that wasn't given: its minutes come out of what Hearth counts as its own."""
+        person, device_id, minutes = entry["person"], entry["device_id"], int(entry["minutes"])
+        for devices in (
+            self.fl_added.get(person, {}).get("devices"),
+            (self._given.get((person, entry.get("why") or "")) or {}).get("devices") if not entry.get("lift") else None,
+        ):
+            if isinstance(devices, dict) and device_id in devices:
+                devices[device_id] -= minutes
+                if devices[device_id] <= 0:
+                    devices.pop(device_id)
+        if entry.get("lift"):
+            self.household.bedtime_lift.forget_given(person, device_id, minutes, entry.get("lift_until"))
+
+    def _drop_fl_pending(self, person: str, device_id: str) -> None:
+        """The device's bonus was reset: nothing of Hearth's there is left to confirm."""
+        kept = [e for e in self.fl_pending if e.get("pending") or (e["person"], e["device_id"]) != (person, device_id)]
+        if len(kept) != len(self.fl_pending):
+            self.fl_pending = kept
+            self._save()
+
+    def _confirm_fl_bonuses(self) -> None:
+        """Each minute: a Family Link bonus whose call failed after it may have gone out, or was cut off
+        (fl_pending), is confirmed once the device's bonus shows it (risen by at least the minutes asked, or showing
+        just those minutes: Family Link may show the latest bonus only), and stays Hearth's. Nothing shown within
+        POSSIBLY_GIVEN_WINDOW: taken out, it wasn't given."""
+        from . import family_link as fl
+
+        unsure = [e for e in self.fl_pending if not e.get("pending")]
+        if not unsure:
+            return
+        now = dt_util.utcnow()
+        done: list[dict[str, Any]] = []
+        for entry in unsure:
+            child = self.household.family_link_child(entry["person"])
+            device = next(
+                (d for d in (fl.devices(self.hass, child) if child else []) if str(d.attributes.get("device_id")) == entry["device_id"]),
+                None,
+            )
+            showing = _number(device.attributes.get("bonus_minutes")) if device is not None else None
+            minutes, base = int(entry["minutes"]), float(entry.get("base") or 0)
+            if showing is not None and (showing >= base + minutes or (showing == minutes and showing != base)):
+                _LOGGER.info(
+                    "Family Link bonus of %s minutes on %s: given although its call failed (%s)",
+                    minutes, device.entity_id, entry.get("error"),
+                )
+                done.append(entry)
+                continue
+            at = _when(entry.get("at"))
+            if at is None or now - at >= POSSIBLY_GIVEN_WINDOW:
+                _LOGGER.info(
+                    "Family Link bonus of %s minutes: the call that failed at %s was not applied (not shown within %d "
+                    "minutes)", minutes, _local(entry.get("at")), POSSIBLY_GIVEN_WINDOW.total_seconds() // 60,
+                )
+                self._take_out_fl_bonus(entry)
+                done.append(entry)
+        if done:
+            self.fl_pending = [e for e in self.fl_pending if not any(e is d for d in done)]
             self._save()
 
     @callback
@@ -291,6 +415,65 @@ class NativeSync:
         self._save()
 
     @callback
+    def _intend_given(self, person: str, why: str, platform: str, until) -> dict[str, Any]:
+        """Before a Family Safety extra time write (add_time_bonus, a request's approval): possibly given from the
+        start (pending while the call is under way), so a write that fails after it went out, or is cut off (a
+        settings save reloads the entry and cancels calls mid-flight), is Hearth's own while watched and never a
+        parent's grant. Settled by _given_settled; the caller saves it before the call."""
+        entry = {
+            "person": person,
+            "why": why,
+            "platform": platform,
+            "until": dt_util.as_utc(until).isoformat(),
+            "error": CUT_OFF,
+            "at": dt_util.utcnow().isoformat(),
+            "pending": True,
+        }
+        self.possibly_given.append(entry)
+        return entry
+
+    @callback
+    def _given_settled(self, entry: dict[str, Any], err: BaseException | None, refused: bool | None = None) -> None:
+        """The answer of a write kept by _intend_given: gone through ([err] None) or refused before it went out
+        ([refused], else by the error's kind), it's no longer possibly given; any other failure or a cut-off call
+        leaves it watched for POSSIBLY_GIVEN_WINDOW (async_pending_tick), one per person and platform as before."""
+        if err is None or (refused if refused is not None else refused_before_sent(err)):
+            self.possibly_given = [e for e in self.possibly_given if e is not entry]
+        else:
+            entry.pop("pending", None)
+            entry["error"] = _scrub(str(err) or type(err).__name__)[:200]
+            self.possibly_given = [
+                e for e in self.possibly_given
+                if e is entry or e.get("pending")
+                or not (e["person"] == entry["person"] and e["platform"] == entry["platform"])
+            ]
+            if entry not in self.possibly_given:
+                self.possibly_given.append(entry)
+        self._save()
+
+    async def fs_request_intend(self, person: str, request_id: str, platform: Any, until) -> list[dict[str, Any]]:
+        """Before Hearth approves a Family Safety request (asks.py): the extra time it gives is possibly given from
+        the start, on the request's platform (both when it doesn't say; none for a phone's), saved before the call.
+        Settled by fs_request_settled."""
+        given = str(platform or "").lower()
+        named = {"xbox": "Xbox", "windows": "Windows"}.get(given)
+        if given and named is None:
+            return []
+        key = (person, f"ask:{request_id}")
+        # The approval's record, so extra time it gave that shows later is adopted as its own (_adopt)
+        self._given.setdefault(key, {"day": dt_util.now().date().isoformat(), "devices": {}, "platforms": []})
+        entries = [self._intend_given(person, key[1], each, until) for each in ((named,) if named else FS_BONUS_PLATFORMS)]
+        await self._store.async_save(self._data())
+        return entries
+
+    @callback
+    def fs_request_settled(
+        self, entries: list[dict[str, Any]], err: BaseException | None, refused: bool | None = None
+    ) -> None:
+        for entry in entries:
+            self._given_settled(entry, err, refused)
+
+    @callback
     def fs_request_approved(
         self, person: str, request_id: str, platform: Any, until, err: BaseException | None = None
     ) -> None:
@@ -346,12 +529,18 @@ class NativeSync:
         Also each minute: Family Link extra time that waited for a device in bedtime, School time or Hearth's own
         hold (_give_family_link) is given once the device is free, until the extra time's end."""
         await self._retry_family_link()
+        # Family Link bonuses whose call failed or was cut off: confirmed by the device, or taken out
+        self._confirm_fl_bonuses()
         if not self.possibly_given:
             return
         now = dt_util.utcnow()
         keep = []
         looked = list(self.possibly_given)
         for entry in looked:
+            if entry.get("pending"):
+                # Its call is still under way: settled by its answer (_given_settled)
+                keep.append(entry)
+                continue
             enforcer = self._enforcer(entry["person"], FAMILY_SAFETY)
             until = _when(entry["until"])
             shown = None
@@ -375,9 +564,10 @@ class NativeSync:
                 )
                 continue
             keep.append(entry)
-        if keep != looked:
-            # Kept with any that failed while this ran
-            self.possibly_given = keep + [e for e in self.possibly_given if e not in looked]
+        done = [e for e in looked if not any(e is k for k in keep)]
+        if done:
+            # Only those adopted or dropped here go: any written, settled or failed while this ran stay as they are
+            self.possibly_given = [e for e in self.possibly_given if not any(e is d for d in done)]
             self._save()
 
     async def _adopt(self, entry: dict[str, Any], enforcer, state: dict[str, Any], ends) -> None:
@@ -678,21 +868,27 @@ class NativeSync:
                 continue
             else:
                 bonus = max(1, min(1440, minutes - max(0, left)))
+            # Hearth's own before the call (saved): one whose answer is lost or that's cut off is still reset when the
+            # extra time is taken back, never a parent's grant (begin_fl_bonus)
+            intent = self.begin_fl_bonus(
+                person, info["device_id"], bonus, _number(device.attributes.get("bonus_minutes")) or 0, why, record
+            )
+            await self._store.async_save(self._data())
             try:
                 await call_service(self.hass,
                     FL_DOMAIN, "add_time_bonus", {"entity_id": device.entity_id, "bonus_minutes": bonus}, blocking=True
                 )
-            except Exception as err:  # noqa: BLE001 - shown on Hearth's page; Hearth's own holds are let go anyway
+            except BaseException as err:  # a reload cutting the call off (CancelledError) too
+                self.fl_bonus_settled(intent, err)
+                if not isinstance(err, Exception):
+                    raise
+                # Shown on Hearth's page; Hearth's own holds are let go anyway
                 _LOGGER.warning("Hearth couldn't add Family Link bonus time on %s: %s", device.entity_id, err)
                 error = str(err)[:200]
                 continue
+            self.fl_bonus_settled(intent, None)
             self.household.enforcement.refresh_soon(device.entity_id)
             added[info["device"]] = bonus
-            record["devices"][info["device_id"]] = record["devices"].get(info["device_id"], 0) + bonus
-            mine = self.fl_added.setdefault(person, {"day": record["day"], "devices": {}})
-            if mine.get("day") != record["day"]:
-                mine.update({"day": record["day"], "devices": {}})
-            mine["devices"][info["device_id"]] = mine["devices"].get(info["device_id"], 0) + bonus
         if added or error:
             self.household.enforcement.note(f"{FAMILY_LINK}|{person}", bonus_added=added, reason=why, error=error)
         return waiting
@@ -987,6 +1183,10 @@ class NativeSync:
                 # A Family Safety without Windows extra time (upstream's is Xbox only): skipped quietly
                 _LOGGER.debug("Family Safety gives no extra time on %s; skipped for %s", platform, person)
                 continue
+            # Possibly given before the call, saved: a write cut off (a reload) or failing after it went out may be in
+            # force all the same, and is Hearth's own while watched (async_pending_tick), never cancelled blind
+            intent = self._intend_given(person, why, platform, until)
+            await self._store.async_save(self._data())
             try:
                 response = await call_service(self.hass,
                     FS_DOMAIN,
@@ -997,19 +1197,22 @@ class NativeSync:
                     person=person,
                     why=why,
                 )
-            except Exception as err:  # noqa: BLE001 - provider errors are plain Exceptions too: the next platform goes on
+            except BaseException as err:  # a reload cutting the call off (CancelledError) too
+                # Refused before it went out (a schema, no such action): not given. Anything else stays possibly given
+                self._given_settled(intent, err)
+                if not isinstance(err, Exception):
+                    raise
+                # Provider errors are plain Exceptions too: the next platform goes on
                 _LOGGER.info("Family Safety extra time on %s for %s unavailable: %s", platform, person, err)
                 error = f"Family Safety extra time unavailable: {err}"[:200]
-                if not isinstance(err, (vol.Invalid, ServiceValidationError)):
-                    # Refused by no schema: the write may have reached Microsoft all the same (an error or a timeout
-                    # after it was applied). Watched for a while (async_pending_tick), never cancelled blind
-                    self._possibly_given(person, why, platform, until, err)
                 continue
+            self._given_settled(intent, None)
             self.household.enforcement.refresh_soon(enforcer.entity_id)
             given[platform] = (
                 response.get("applied_until") or response.get("until") if isinstance(response, dict) else None
             )
-            record["platforms"].append(platform)
+            if platform not in record["platforms"]:
+                record["platforms"].append(platform)
             # When it ends, as Family Safety took it: Hearth's own extra time, not a parent's (fs_derived_hold)
             ends = _when(given[platform]) or until
             record.setdefault("until", {})[platform] = dt_util.as_utc(ends).isoformat()

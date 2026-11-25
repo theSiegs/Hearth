@@ -442,7 +442,8 @@ async def test_a_bedtime_bonus_is_reset_after_a_restart(
 async def test_a_bonus_family_link_refuses_is_tried_again_and_the_start_still_moves(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:
-    from homeassistant.exceptions import HomeAssistantError
+    """Refused before it went out (a schema, a validation): not given, tried again after the retry wait."""
+    from homeassistant.exceptions import ServiceValidationError
 
     _client, _secret, set_bedtime = await _sam(hass, hass_client_no_auth, freezer, 21, 45)
     calls: list[dict] = []
@@ -450,7 +451,7 @@ async def test_a_bonus_family_link_refuses_is_tried_again_and_the_start_still_mo
     async def refuse(call) -> None:
         calls.append(dict(call.data))
         if len(calls) == 1:
-            raise HomeAssistantError("Family Link did not add the time bonus")
+            raise ServiceValidationError("Family Link did not take the bonus")
 
     hass.services.async_register("familylink", "add_time_bonus", refuse)
     _phone(hass)
@@ -459,6 +460,7 @@ async def test_a_bonus_family_link_refuses_is_tried_again_and_the_start_still_mo
     await _bonus(hass, 30)
     household = _household(hass)
     assert len(calls) == 1 and household.bedtime_lift.bonus == {}
+    assert household.sync.own_bonus() == {} and household.sync.fl_pending == []
     assert [c.data for c in set_bedtime] == [_call("22:15")]
     assert household.enforcement.last[KEY]["bedtime_error"] is True
     # Not hammered: a minute later nothing; after the retry wait the rest of the lift is given
@@ -466,6 +468,76 @@ async def test_a_bonus_family_link_refuses_is_tried_again_and_the_start_still_mo
     assert len(calls) == 1
     await _later(hass, freezer, 5)
     assert calls[1] == {"entity_id": PHONE, "bonus_minutes": 24}
+
+
+async def test_a_bonus_whose_call_failed_is_hearth_s_while_watched_then_given_again(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Family Link's errors are plain Exceptions: the bonus may have gone through all the same. It's Hearth's own
+    while watched (reset when the lift ends, never a parent's), not given twice, and given again once 10 minutes pass
+    without the phone showing it. The start still moves."""
+    from homeassistant.exceptions import HomeAssistantError
+
+    _client, _secret, set_bedtime = await _sam(hass, hass_client_no_auth, freezer, 21, 45)
+    calls: list[dict] = []
+
+    async def fail(call) -> None:
+        calls.append(dict(call.data))
+        if len(calls) == 1:
+            raise HomeAssistantError("Family Link did not add the time bonus")
+
+    hass.services.async_register("familylink", "add_time_bonus", fail)
+    _phone(hass)
+    _phone_bedtime(hass, True, _at("21:30"), _at("07:00", 1))
+    await hass.async_block_till_done()
+    await _bonus(hass, 30)
+    household = _household(hass)
+    assert len(calls) == 1
+    assert household.bedtime_lift.bonus["person.sam"]["devices"][DEVICE]["given"] == [30]
+    assert household.sync.own_bonus() == {DEVICE: 30}
+    assert [c.data for c in set_bedtime] == [_call("22:15")]
+    assert household.enforcement.last[KEY]["bedtime_error"] is True
+    # Watched: past the retry wait it isn't given a second time
+    for minutes in (1, 5):
+        await _later(hass, freezer, minutes)
+        await household.sync.async_pending_tick()
+        assert len(calls) == 1
+    # Not shown within 10 minutes: it wasn't given, and the rest of the lift is given now
+    await _later(hass, freezer, 5)
+    await household.sync.async_pending_tick()
+    await _later(hass, freezer, 0)
+    assert calls[1] == {"entity_id": PHONE, "bonus_minutes": 19}
+    # Only the bonus that went through is Hearth's
+    assert household.sync.own_bonus() == {DEVICE: 19} and household.sync.fl_pending == []
+    assert household.bedtime_lift.bonus["person.sam"]["devices"][DEVICE]["given"] == [19]
+
+
+async def test_a_bonus_whose_answer_was_lost_is_reset_with_the_lift(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """The call failed after Family Link took it: the phone shows the bonus. It's Hearth's (confirmed), and reset when
+    the lift ends, not kept as a parent's."""
+    from homeassistant.exceptions import HomeAssistantError
+
+    _client, _secret, _set_bedtime = await _sam(hass, hass_client_no_auth, freezer, 21, 45)
+    reset = async_mock_service(hass, "familylink", "reset_bonus")
+
+    async def lost(call) -> None:
+        raise HomeAssistantError("timed out")
+
+    hass.services.async_register("familylink", "add_time_bonus", lost)
+    _phone(hass)
+    _phone_bedtime(hass, True, _at("21:30"), _at("07:00", 1))
+    await hass.async_block_till_done()
+    await _bonus(hass, 30)
+    household = _household(hass)
+    _phone(hass, bonus=30)
+    await household.sync.async_pending_tick()
+    assert household.sync.fl_pending == [] and household.sync.own_bonus() == {DEVICE: 30}
+    assert household.grants.of("person.sam") == []
+    _phone_bedtime(hass, True, _at("22:15"), _at("07:00", 1))
+    await _later(hass, freezer, 31)
+    assert [c.data for c in reset] == [{"entity_id": PHONE}]
 
 
 
