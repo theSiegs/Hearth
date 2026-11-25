@@ -524,7 +524,14 @@ class HearthHub:
         self, device_id: str, status: dict[str, Any], switch: dict[str, Any], now: datetime
     ) -> None:
         """Fires hearth_tv_profile_changed (docs/contracts/device-presence.md), once the new status is kept."""
-        entry = dr.async_get(self.hass).async_get_device(identifiers={(DOMAIN, device_id)})
+        devices = dr.async_get(self.hass)
+        # async_get_device with identifiers stops working in Home Assistant 2027.8
+        by_identifier = getattr(devices, "async_get_device_by_identifier", None)
+        entry = (
+            by_identifier((DOMAIN, device_id), self.entry.entry_id)
+            if by_identifier is not None
+            else devices.async_get_device(identifiers={(DOMAIN, device_id)})
+        )
         self.hass.bus.async_fire(
             EVENT_TV_PROFILE_CHANGED,
             {
