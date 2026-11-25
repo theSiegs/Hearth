@@ -193,6 +193,7 @@ class DeviceLastInteraction(HearthEntity, SensorEntity):
         state = self.hub.state(self.device_id)
         seen = state.seen.replace(second=0, microsecond=0) if state.seen else None
         return {
+            "kind": "last_interaction",
             "person": self.hub.household.device_person(self.device_id),
             "device_id": self.device_id,
             "last_interaction": _iso(state.used),

@@ -13,6 +13,7 @@ the event below say who is on it ([tv-entities.md](tv-entities.md)).
 
 | | |
 |---|---|
+| `kind` | always `last_interaction`: find these sensors by it and `person` |
 | State | when the device was last used (timestamp, to the minute), or unknown before its first use |
 | `person` | the `person.*` id the device is paired for (its owner), or `null` |
 | `device_id` | Hearth's id of the device |
@@ -26,6 +27,7 @@ Example: Sam's tablet, used at home a minute ago.
 
 ```yaml
 state: "2026-11-09T21:05:00+00:00"
+kind: last_interaction
 person: person.sam
 device_id: tablet-0123456789ab
 last_interaction: "2026-11-09T16:05:00-05:00"
@@ -80,6 +82,7 @@ Fired when someone switches Google TV profiles on a paired Hearth TV.
 | `device` | Hearth's id of the TV (as in `hearth_video_started`) |
 | `name` | the TV's name |
 | `area_id` | the area of the TV's device in Home Assistant, or `null` |
+| `ha_device_id` | the TV's device id in Home Assistant's device registry (for its area when `area_id` is `null`), or `null` |
 | `profile_ref` | the profile switched to (`name:<slug>`, the same on every TV), or `null` from a TV too old to send refs |
 | `profile_id` | that TV's own key for it (`user:10`) |
 | `kids_profile` | whether it's a kids profile (bool, or `null`) |
@@ -93,6 +96,7 @@ data:
   device: tv-0123456789abcdef
   name: The TV
   area_id: den
+  ha_device_id: 0123456789abcdef0123456789abcdef
   profile_ref: name:sam
   profile_id: user:10
   kids_profile: true

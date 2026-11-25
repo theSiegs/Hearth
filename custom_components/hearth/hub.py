@@ -519,6 +519,7 @@ class HearthHub:
                 "device": device_id,
                 "name": (self.devices.get(device_id) or {}).get("name"),
                 "area_id": entry.area_id if entry else None,
+                "ha_device_id": entry.id if entry else None,
                 "profile_ref": status.get("profile_ref"),
                 "profile_id": status.get("profile_id"),
                 "kids_profile": status.get("kids_profile"),

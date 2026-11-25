@@ -63,6 +63,7 @@ async def test_a_status_post_from_the_home_network_is_an_interaction_and_local(
     assert dt_util.parse_datetime(first.state) == dt_util.utcnow().replace(second=0, microsecond=0)
     # Whose device it is, found by this attribute and never by its entity id
     assert attrs["person"] == "person.sam" and attrs["device_id"] == PHONE_ID
+    assert attrs["kind"] == "last_interaction"
     assert attrs["local"] is True and attrs["last_interaction_local"] is True
     assert dt_util.parse_datetime(attrs["last_interaction"]) == dt_util.parse_datetime(first.state)
     assert attrs["last_post"] == attrs["last_interaction"]
@@ -313,6 +314,7 @@ async def test_a_profile_switch_fires_the_event(
         "device": TV_ID,
         "name": "Kitchen",
         "area_id": area.id,
+        "ha_device_id": device.id,
         "profile_ref": "name:sam",
         "profile_id": "user:10",
         "kids_profile": True,
