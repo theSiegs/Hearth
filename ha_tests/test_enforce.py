@@ -542,7 +542,8 @@ async def test_nintendo_waits_out_bonus_time_given_in_the_nintendo_app(
 async def test_a_shared_switch_is_held_only_while_its_kid_is_playing(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:
-    """Out of time on a Switch others share: held while Sam is the one playing, let go when Sam isn't."""
+    """Out of time on a Switch others share: held once Sam is caught playing, and kept held when Sam's sensor goes off
+    (the hold stops the game, which is why it goes off); let go when Sam has time again."""
     freezer.move_to(dt_util.now().replace(hour=12, minute=0))
     _nintendo_switch(hass)
     playing = "binary_sensor.sam_s_switch_sam_playing"
@@ -564,6 +565,12 @@ async def test_a_shared_switch_is_held_only_while_its_kid_is_playing(
     hass.states.async_set(NINTENDO_LIMIT, "0")
     hass.states.async_set(playing, "off")
     await hass.async_block_till_done()
+    freezer.tick(timedelta(minutes=30))
+    hass.states.async_set(playing, "off", {"read": 2})
+    await _bonus(hass, "games", 0)  # a recompute
+    assert [c.data["value"] for c in set_value] == [0]
+
+    await _bonus(hass, "games", 30)
     assert set_value[-1].data == {"entity_id": NINTENDO_LIMIT, "value": 120}
 
 

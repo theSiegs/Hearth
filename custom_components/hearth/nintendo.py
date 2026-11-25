@@ -4,7 +4,10 @@ do with it (Home Assistant's nintendo_parental_controls, or a patched copy of it
     switches(household, person)   each Switch of the person's: today's play, the Switch's own limit, time left and
                                   extra time, Suspend software, playing now, bedtime, last synced, Hearth's hold
     capabilities(hass)            which actions the installed integration has, found at runtime: add_bonus_time and
-                                  the minutes it takes, cancel_bonus_time, list_applications, set_app_allowed
+                                  the minutes it takes, cancel_bonus_time, list_applications, set_app_allowed,
+                                  update_daily_restrictions; and how Hearth tells who plays a shared Switch: each
+                                  player's minutes (Home Assistant's own integration has them), a patched copy's
+                                  playing sensor per player (used too when it's there)
 
 A Switch is the person's when Hearth holds it for them (an enforcer of theirs) or a screen time source of theirs is one
 of its entities. Its entities are found by the Switch's own id in their unique ids ({nintendo id}_{key}), as the
@@ -23,6 +26,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
 from .enforce import NINTENDO, NINTENDO_DOMAIN
+from .switch_play import players, sources_of
 
 if TYPE_CHECKING:
     from .enforce import Enforcer
@@ -75,7 +79,12 @@ def capabilities(hass: HomeAssistant) -> dict[str, Any]:
         (m for m in (360, 120, 60, 30) if add and accepts(hass, ADD_BONUS, {**probe, "bonus_time": m})), None
     )
     has = hass.services.has_service
+    found = players(hass)
     return {
+        # Who plays a shared Switch: their minutes growing (core), a player's playing sensor too (a patched copy)
+        "player_minutes": bool(found),
+        "player_playing": any(p["playing"] for p in found),
+        "update_daily_restrictions": has(NINTENDO_DOMAIN, "update_daily_restrictions"),
         "installed": bool(hass.config_entries.async_entries(NINTENDO_DOMAIN)),
         "add_bonus": add,
         "bonus_min": BONUS_MIN if add else None,
@@ -105,10 +114,12 @@ def playing_title(state: State) -> str | None:
 
 
 def playing_entities(hass: HomeAssistant, enforcer: Enforcer, enforcers: list[Enforcer]) -> list[str]:
-    """What says the person is playing their Switch now: the enforcer's own playing entities (a shared Switch's
-    player sensors), else the Switch's Playing sensor when nobody else's enforcer is on the same Switch."""
-    if enforcer.playing:
-        return list(enforcer.playing)
+    """What says the person is playing their Switch now (on or off): the enforcer's own playing entities (a shared
+    Switch's player sensors, a patched integration's for their player's minutes too), else the Switch's Playing sensor
+    when nobody else's enforcer is on the same Switch. A player's minutes say it too (switch_play.py,
+    watched_entities)."""
+    if enforcer.playing or enforcer.player:
+        return sources_of(hass, enforcer)[0]
     registry = er.async_get(hass)
     entry = registry.async_get(enforcer.entity_id)
     if entry is None or entry.device_id is None:
@@ -124,6 +135,15 @@ def playing_entities(hass: HomeAssistant, enforcer: Enforcer, enforcers: list[En
         return []
     playing = registry.async_get_entity_id("binary_sensor", NINTENDO_DOMAIN, f"{nintendo_id}_{PLAYING}")
     return [playing] if playing else []
+
+
+def watched_entities(hass: HomeAssistant, enforcer: Enforcer, enforcers: list[Enforcer]) -> list[str]:
+    """Every entity whose change may mean the person started or stopped playing their Switch: the playing sensors
+    and their player's minutes."""
+    found = playing_entities(hass, enforcer, enforcers)
+    if enforcer.playing or enforcer.player:
+        found += [e for e in sources_of(hass, enforcer)[1] if e not in found]
+    return found
 
 
 def switch_console(hass: HomeAssistant, entity_id: str) -> str:
@@ -202,6 +222,7 @@ def switches(household: Household, person: str) -> list[dict[str, Any]]:
         found = mine.setdefault(entry.device_id, {"enforcer": None, "own": set()})
         found["enforcer"] = enforcer.entity_id
         found["own"].update(enforcer.playing)
+        found["own"].update(enforcer.player)
     for source in household.sources:
         if source.person != person:
             continue
@@ -230,6 +251,14 @@ def switches(household: Household, person: str) -> list[dict[str, Any]]:
         bedtime = _state(hass, by_key[BEDTIME])
         playing = player_playing or ([by_key[PLAYING]] if by_key[PLAYING] else [])
         played = [_number(hass, e) for e in player_played]
+        # A shared Switch's hold (switch_play.py): who it's held for, someone else's turn, who's playing (None: unknown)
+        hold = household.enforcement.switch_view(found["enforcer"]) if found["enforcer"] else None
+        playing_now = hold["playing"].get(person) if hold else None
+        enforcer = next(
+            (e for e in household.enforcement.enforcers if e.kind == NINTENDO and e.entity_id == found["enforcer"]
+             and e.person == person),
+            None,
+        )
         rows.append(
             {
                 "device_id": device_id,
@@ -246,7 +275,17 @@ def switches(household: Household, person: str) -> list[dict[str, Any]]:
                 # Nintendo's extra playing time today (-1: unlimited for the rest of the day)
                 "extra_minutes": _int(extra),
                 "suspended": None if _state(hass, by_key[SUSPEND]) is None else _state(hass, by_key[SUSPEND]) == "on",
-                "playing": any(_state(hass, e) == "on" for e in playing),
+                "playing": any(_state(hass, e) == "on" for e in playing) or playing_now is True,
+                # Whether they're playing, as Hearth judges a shared Switch: true, false, or null (unknown)
+                "playing_now": playing_now,
+                # Shared with others: held only once they're caught playing
+                "shared": bool(enforcer and enforcer.shared),
+                # Hearth holds it because they were caught playing out of time (everyone on it waits)
+                "caught": bool(hold and person in hold["caught"]),
+                # Something would hold it for them (out of time, a pause, Sleep...): held once they're caught playing
+                "waiting": bool(hold and person in hold["waiting"]),
+                # Someone else's turn: {until, for_person, held_for}
+                "turn": hold["turn"] if hold else None,
                 "each_day": _state(hass, by_key[MODE]) == "each_day_of_the_week",
                 "bedtime": bedtime[:5] if bedtime and bedtime not in ("unknown", "unavailable") and bedtime[:5] != "00:00"
                 else None,

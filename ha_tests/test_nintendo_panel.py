@@ -192,6 +192,7 @@ async def test_what_the_page_offers_follows_the_installed_integration(
     assert config["capabilities"]["nintendo"] == {
         "installed": False, "add_bonus": False, "bonus_min": None, "bonus_max": None, "unlimited": False,
         "cancel_bonus": False, "list_apps": False, "set_app_allowed": False,
+        "player_minutes": False, "player_playing": False, "update_daily_restrictions": False,
     }
     assert config["parental_controls"] == []
 

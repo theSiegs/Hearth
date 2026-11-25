@@ -98,6 +98,7 @@ KINDS_BY_PREFIX = (
     ("voice:", "approval"),
     ("hearth_voice:", "approval"),
     ("hearth_notify_", "notify"),
+    ("hearth_switch_", "switch"),
 )
 
 # A phone button that runs an item's action: HEARTH_ACT|<item key>|<n>

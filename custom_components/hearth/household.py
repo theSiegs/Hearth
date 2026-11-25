@@ -26,7 +26,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
 from .entry_tasks import entry_task
-from .attention import CHOSEN_PHONE, Action, Item
+from .attention import CHOSEN_PHONE, NOTICE, Action, Item
 from .const import (
     CAP_NOTICES,
     CONF_KIND,
@@ -139,7 +139,7 @@ from .phones import person_phones
 from .profiles import REF_PREFIX, is_ref, split_tv_key, tv_key
 from .schooldays import DAY_OFF, HALF_DAY, SCHOOL, SchoolDays
 from .live import LiveTracker, Observation, Together
-from .nintendo import playing_entities, playing_title, switch_console, switch_name
+from .nintendo import playing_entities, playing_title, switch_console, switch_name, watched_entities
 from .sources import (
     Source,
     Title,
@@ -293,6 +293,8 @@ class Household:
         self.school = SchoolDays(hass)
         self.school.configure(dict(hub.entry.options))
         self.enforcement = Enforcement(hass, hub.entry.entry_id)
+        # A shared Switch's kid caught playing, or caught again in someone else's turn: the adults are told
+        self.enforcement.on_switch = self._switch_notice
         # Hearth's own blocks of Android apps, through Family Link (app_blocks.py)
         self.blocks = AppBlocks(hass, self, hub.entry.entry_id)
         # App limits loosened outside Hearth, told to the adults (outside_apps.py)
@@ -527,7 +529,7 @@ class Household:
         enforcers = enforcers_from_options(self.options)
         playing = [
             e for enforcer in enforcers if enforcer.kind == NINTENDO
-            for e in playing_entities(self.hass, enforcer, enforcers)
+            for e in watched_entities(self.hass, enforcer, enforcers)
         ]
         sources = sources_from_options(self.options)
         # A phone app source is playing only while its screen is on
@@ -1297,7 +1299,8 @@ class Household:
                 state for entity_id in playing_entities(self.hass, enforcer, enforcers)
                 if (state := self.hass.states.get(entity_id)) is not None and state.state == "on"
             ]
-            if on:
+            # Their player's minutes growing say it too (switch_play.py)
+            if on or self.enforcement.playing(enforcer) is True:
                 game = next((t for state in on if (t := playing_title(state))), None)
                 # Without the game's name, "together" only on the same console (never two Switches both saying
                 # "Switch")
@@ -2663,6 +2666,116 @@ class Household:
             if extra.kind == EXTRA_BONUS and extra.target.startswith("hearth:") and self._extra_left(extra) == 0:
                 self.device_extras.end(extra.id, None, None)
 
+    # A shared Switch (switch_play.py)
+
+    def switch_entities(self, device: str) -> set[str]:
+        """The Switch enforcers' entities a `device` names: nintendo:<entity>, the entity itself, or the Switch's
+        Home Assistant device id."""
+        given = device.strip().removeprefix("nintendo:")
+        enforcers = [e for e in enforcers_from_options(self.options) if e.kind == NINTENDO]
+        if any(e.entity_id == given for e in enforcers):
+            return {given}
+        registry = er.async_get(self.hass)
+        return {
+            e.entity_id
+            for e in enforcers
+            if (entry := registry.async_get(e.entity_id)) is not None and entry.device_id == given
+        }
+
+    @callback
+    def let_someone_play(
+        self, device: str, minutes: int, for_person: str | None = None, user_id: str | None = None
+    ) -> dict[str, Any]:
+        """Lifts Hearth's hold on a shared Switch for [minutes] so someone else can play ([for_person]: who, when
+        said: their turn ends early when their time runs out); 0 holds it now (a turn ends, or a kid not caught yet
+        whom something would hold is held). Raises ValueError when it can't."""
+        from .enforce import out_of_time
+
+        entities = self.switch_entities(device)
+        if not entities:
+            raise ValueError("That isn't a Switch Hearth holds")
+        if for_person is not None:
+            if for_person not in self.people():
+                raise ValueError(f"{for_person} isn't one of the household's people")
+            held = self.enforcement.switch_enforcers(entities)
+            groups = tuple({g for e in held for g in e.groups})
+            if minutes > 0 and out_of_time(self.days.get(for_person), groups):
+                raise ValueError(f"{self.person_name(for_person)} has no time left for the Switch either")
+        held_for = self.enforcement.let_someone_play(entities, minutes, for_person, user_id)
+        for entity_id in entities:
+            self.hub.attention.clear(_switch_notice_key(entity_id))
+            self.hub.attention.clear(_switch_notice_key(entity_id, "unattributed"))
+        self.recompute()
+        until = dt_util.now() + timedelta(minutes=minutes) if minutes > 0 else None
+        return {"held_for": held_for, "until": until.isoformat() if until else None}
+
+    @callback
+    def _switch_notice(self, enforcer, what: str, details: dict[str, Any]) -> None:
+        """Tells the adults a shared Switch is held for a kid (caught playing when they may not, or in someone else's
+        turn), with a button to let someone else play; takes it back when it's over. Play on no player while a kid
+        would be held is told too, with a button to hold it now: Hearth can't tell whose it is."""
+        from .switch_play import DEFAULT_TURN_MINUTES, UNATTRIBUTED_REPEAT
+
+        key = _switch_notice_key(enforcer.entity_id)
+        unattributed = _switch_notice_key(enforcer.entity_id, "unattributed")
+        switch = switch_name(self.hass, enforcer.entity_id)
+        if what == "unattributed":
+            names = " and ".join(self.person_name(p) for p in details.get("held_for") or [enforcer.person])
+            self.hub.attention.notify(
+                Item(
+                    unattributed,
+                    f"{switch} counted {details.get('minutes')} min of play on no player while {names} may not play "
+                    f"it. Hearth can't tell who it is (an adult, a guest, or {names} with no user picked), so it "
+                    "doesn't hold it by itself.",
+                    title=f"Someone is playing {switch}",
+                    urgency=NOTICE,
+                    actions=(
+                        Action(
+                            "hold_now",
+                            "Hold it now",
+                            f"{DOMAIN}.let_someone_play",
+                            {"device": f"nintendo:{enforcer.entity_id}", "minutes": 0},
+                        ),
+                    ),
+                    about={"person": enforcer.person, "switch": enforcer.entity_id},
+                    expires=dt_util.utcnow() + UNATTRIBUTED_REPEAT,
+                    once=True,
+                )
+            )
+            return
+        self.hub.attention.clear(unattributed)
+        if what not in ("caught", "caught_in_turn"):
+            self.hub.attention.clear(key)
+            return
+        kid = self.person_name(enforcer.person)
+        other = details.get("for_person")
+        if what == "caught_in_turn":
+            whose = f"{self.person_name(other)}'s turn" if other else "someone else's turn"
+            text = f"{kid} played during {whose}, so {switch} is held again."
+        else:
+            text = (
+                f"{kid} played {switch} with no time for it, so it's held for everyone until {kid} may play again."
+            )
+        self.hub.attention.notify(
+            Item(
+                key,
+                text,
+                title=f"{switch} held for {kid}",
+                urgency=NOTICE,
+                actions=(
+                    Action(
+                        "let_someone_play",
+                        "Let someone else play 1 h",
+                        f"{DOMAIN}.let_someone_play",
+                        {"device": f"nintendo:{enforcer.entity_id}", "minutes": DEFAULT_TURN_MINUTES},
+                    ),
+                ),
+                about={"person": enforcer.person, "switch": enforcer.entity_id},
+                tv=True,
+                once=True,
+            )
+        )
+
     def _device_lifted(self, enforcer) -> set[str]:
         """What extra time on one device lifts of an enforcer's holds: a Family Safety platform, the Switch."""
         from .enforce import NINTENDO, SWITCH
@@ -3613,6 +3726,12 @@ class Household:
                 )
             )
         return taken
+
+
+def _switch_notice_key(entity_id: str, what: str = "held") -> str:
+    """A shared Switch's notice: held for a kid, or play on no player (unattributed)."""
+    suffix = "" if what == "held" else f"_{what}"
+    return f"hearth_switch_{entity_id.replace('.', '_')}{suffix}"
 
 
 def _status_media(status: dict[str, Any]) -> dict[str, Any] | None:
