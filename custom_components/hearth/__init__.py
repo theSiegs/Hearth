@@ -412,9 +412,10 @@ BLOCK_APP_SCHEMA = vol.All(
 
 
 def _register_app_blocks(hass: HomeAssistant, loaded_household) -> None:
-    """hearth.block_app and hearth.unblock_app: an adult's block of Android apps through Family Link, kept by Hearth
-    (app_blocks.py). Only apps Hearth blocked are ever unblocked."""
-    from .app_blocks import MAX_APPS, android_package, never_blocked
+    """hearth.block_app and hearth.unblock_app: an adult's block of Android apps through Family Link, and of Xbox and
+    Windows apps (Family Safety's app ids) through Family Safety, kept by Hearth (app_blocks.py). Only apps Hearth
+    blocked are ever unblocked."""
+    from .app_blocks import MAX_APPS, android_package, fs_app_id, never_blocked
 
     def checked(call: ServiceCall, block: bool) -> tuple:
         household = loaded_household()
@@ -422,10 +423,11 @@ def _register_app_blocks(hass: HomeAssistant, loaded_household) -> None:
         apps = [a.strip() for a in ([call.data["app"]] if "app" in call.data else call.data["apps"]) if a.strip()]
         if not apps or len(apps) > MAX_APPS:
             raise ServiceValidationError(f"Give one to {MAX_APPS} apps")
-        wrong = [a for a in apps if not android_package(a)]
+        wrong = [a for a in apps if not android_package(a) and not fs_app_id(a)]
         if wrong:
             raise ServiceValidationError(
-                f"Only Android apps (package names, like com.example.app) can be blocked for now: {', '.join(wrong)}"
+                "Only Android apps (package names, like com.example.app) and Xbox and Windows apps (Family Safety's "
+                f"app ids, like x:9NBLGGH4R315 or win32:game.exe) can be blocked: {', '.join(wrong)}"
             )
         if block and (kept := [a for a in apps if never_blocked(a)]):
             raise ServiceValidationError(f"Hearth never blocks these (they hold the rest): {', '.join(kept)}")
@@ -434,28 +436,40 @@ def _register_app_blocks(hass: HomeAssistant, loaded_household) -> None:
         not_kids = [p for p in people if p not in kids]
         if not_kids:
             raise ServiceValidationError(f"Not one of the household's kids: {', '.join(not_kids)}")
+
+        def has(person: str, app: str) -> bool:
+            """Whether the person has what blocks [app]: Family Link for an Android app, Family Safety for the rest."""
+            return (blocks.target_of(person) if android_package(app) else blocks.fs_target_of(person)) is not None
+
         if block:
-            without = [household.person_name(p) for p in people if blocks.target_of(p) is None]
-            if without and call.data.get("people"):
-                raise ServiceValidationError(
-                    f"No Family Link child set up for {', '.join(without)} (Configure > Enforce)"
-                )
-            # All kids: the ones with Family Link
-            people = [p for p in people if blocks.target_of(p) is not None]
+            for provider, kind in (("Family Link child", android_package), ("Family Safety", fs_app_id)):
+                without = [
+                    household.person_name(p) for p in people if any(kind(a) and not has(p, a) for a in apps)
+                ]
+                if without and call.data.get("people"):
+                    raise ServiceValidationError(
+                        f"No {provider} set up for {', '.join(without)} (Configure > Enforce)"
+                    )
+            # All kids: the ones with Family Link (Android apps) or Family Safety (Xbox and Windows apps)
+            people = [p for p in people if any(has(p, a) for a in apps)]
             if not people:
-                raise ServiceValidationError("No kid has Family Link set up in Hearth (Configure > Enforce)")
-        return household, people, sorted(set(apps))
+                raise ServiceValidationError(
+                    "No kid has Family Link or Family Safety set up in Hearth for these apps (Configure > Enforce)"
+                )
+        return household, people, sorted(set(apps)), has
 
     @callback
     def block_app(call: ServiceCall) -> ServiceResponse:
-        household, people, apps = checked(call, True)
-        done = household.blocks.block(people, apps)
+        household, people, apps, has = checked(call, True)
+        done: dict[str, list[str]] = {}
+        for person in people:
+            done.update(household.blocks.block([person], [a for a in apps if has(person, a)]))
         household.recompute()
         return {"blocked": done}
 
     @callback
     def unblock_app(call: ServiceCall) -> ServiceResponse:
-        household, people, apps = checked(call, False)
+        household, people, apps, _has = checked(call, False)
         done = household.blocks.unblock(people, apps)
         household.recompute()
         return {"unblocked": done}
@@ -583,7 +597,7 @@ ALLOW_SCHEMA = vol.All(
             vol.Optional("ends_on"): ENDS_ON_SCHEMA,
             # Only on this device of theirs (a target id): a group, open there until the time
             vol.Optional("device"): cv.string,
-            # With a device (a TV or phone with Hearth): bedtime is lifted there until the time, nowhere else
+            # With a device: bedtime is lifted there until the time, nowhere else
             vol.Optional("bedtime", default=False): cv.boolean,
         }
     ),
@@ -771,7 +785,8 @@ def _register_exception_services(hass: HomeAssistant, loaded_household, group_id
         now = dt_util.now()
         until = {p: until_for(household, p, call.data["until"], now) for p in people}
         if call.data.get("bedtime"):
-            # Bedtime lifted on one TV or phone: the rest of their devices still stop at bedtime
+            # Bedtime lifted on one device (a TV or phone, a Family Link device, the Xbox or Windows, a Switch): the
+            # rest of their devices still stop at bedtime
             if not call.data.get("device"):
                 raise ServiceValidationError("Bedtime is lifted on one device: give the device")
             if call.data.get("app") or call.data.get("group") or call.data.get("ends_on"):

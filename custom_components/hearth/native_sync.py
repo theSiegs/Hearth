@@ -98,6 +98,11 @@ class NativeSync:
         self.possibly_given: list[dict[str, Any]] = []
         # One retry of waiting Family Link extra time at a time (the minute tick and a hold let go): never given twice
         self._retrying = False
+        # Nintendo extra playing time Hearth itself added today, by Switch (its Max screentime entity): {"day",
+        # "minutes"}. Kept before the call: an extension up to this much is Hearth's own (cancelled before a hold, taken
+        # back with its extra time); more than this is a parent's too
+        self.sw_added: dict[str, dict[str, Any]] = {}
+        household.enforcement.cancel_own_switch_extra = self.cancel_own_switch_extra
 
     async def async_load(self) -> None:
         stored = await self._store.async_load() or {}
@@ -128,6 +133,11 @@ class NativeSync:
             if isinstance(entry, dict)
             and all(isinstance(entry.get(f), str) for f in ("person", "why", "platform", "until", "at"))
         ]
+        self.sw_added = {
+            str(entity): record
+            for entity, record in (stored.get("sw_added") or {}).items()
+            if isinstance(record, dict) and record.get("day") == today and isinstance(record.get("minutes"), int)
+        }
 
     def _data(self) -> dict[str, Any]:
         return {
@@ -136,6 +146,7 @@ class NativeSync:
             "windows": self.windows,
             "moved": self.moved,
             "possibly_given": self.possibly_given,
+            "sw_added": self.sw_added,
         }
 
     def _save(self) -> None:
@@ -177,7 +188,7 @@ class NativeSync:
         Link extra time that waited for Hearth's own hold is tried again at once (a hold let go for bonus time)."""
         if self.detect():
             self.household.recompute()
-        if any(isinstance(r.get("fl_wait"), dict) for r in self._given.values()):
+        if any(isinstance(r.get("fl_wait"), dict) or isinstance(r.get("sw_wait"), dict) for r in self._given.values()):
             entry_task(self.hass, self.household.hub.entry.entry_id, self._retry_family_link(), "hearth extra time that waited")
 
     @callback
@@ -463,15 +474,19 @@ class NativeSync:
 
     @callback
     def mirror_allows(self) -> None:
-        """Each recompute: an allow of All screen time not yet passed on gets extra time in Family Link and Family
-        Safety, until it ends or midnight, once per allow and person."""
+        """Each recompute: an allow of All screen time not yet passed on gets extra time in Family Link, Family Safety
+        and on the Switch, until it ends or midnight, once per allow and person. An allow of another group the Switch is
+        held for (Games) gets it on the Switch alone: it opens the whole console there."""
         now = dt_util.now()
         today = now.date().isoformat()
         self._given = {k: v for k, v in self._given.items() if v.get("day") == today}
         for allow in list(self.household.allows.allows.values()):
-            if allow.group != ALL:
+            if allow.group is None:
                 continue
             for person, until in allow.until.items():
+                switch_only = allow.group != ALL
+                if switch_only and not any(allow.group in e.groups for e in self._switch_enforcers(person)):
+                    continue
                 key = (person, f"allow:{allow.id}")
                 if key in self._given or until <= now or not self._mirrors(person):
                     continue
@@ -479,91 +494,134 @@ class NativeSync:
                 self._save()
                 entry_task(
                     self.hass, self.household.hub.entry.entry_id,
-                    self._give_time(person, min(until, end_of_day(now)), key), "hearth first-party extra time",
+                    self._give_time(person, min(until, end_of_day(now)), key, switch_only=switch_only),
+                    "hearth first-party extra time",
                 )
 
     @callback
     def mirror_bonus(self, person: str, had_none: bool = True) -> None:
         """Bonus time given (every grant: hearth.add_time, an approved ask, a chore, the day-off bonus): Google's and
         Microsoft's own limits get as much as today's time now has left, until midnight at most, wherever they would
-        stop the kid sooner, so a phone never locks early (Hearth's own holds stay the real limit). [had_none] is
-        kept for older callers and no longer matters."""
+        stop the kid sooner, so a phone never locks early (Hearth's own holds stay the real limit). A Switch's own
+        limit gets as much as Hearth now lets the Switch run (its groups' time left: _give_nintendo), also when All
+        screen time has no limit. [had_none] is kept for older callers and no longer matters."""
         day = self.household.days.get(person)
         state = day.limits.get(ALL) if day else None
         left = state.minutes_left if state else None
-        if left is None or left <= 0 or not self._mirrors(person):
+        everything = left is not None and left > 0
+        switch_left = self._switch_left(person)
+        if not self._mirrors(person) or not (everything or (switch_left is not None and switch_left > 0)):
             return
         now = dt_util.now()
         key = (person, f"bonus:{now.isoformat()}")
         self._given[key] = {"day": now.date().isoformat(), "devices": {}, "platforms": []}
         self._save()
-        until = min(now + timedelta(minutes=left), end_of_day(now))
-        entry_task(self.hass, self.household.hub.entry.entry_id, self._give_time(person, until, key), "hearth first-party extra time")
+        until = min(now + timedelta(minutes=left if everything else switch_left), end_of_day(now))
+        entry_task(
+            self.hass, self.household.hub.entry.entry_id,
+            self._give_time(person, until, key, switch_only=not everything), "hearth first-party extra time",
+        )
 
     @callback
     def take_back_bonus(self, person: str) -> bool:
         """An adult took back the extra time that gave All screen time back (hearth.remove_bonus): what Hearth gave for
-        it in Family Link and Family Safety (the latest of today's, mirror_bonus) goes, as when extra time on one
-        device ends early (a parent's own bonus there is kept). Says whether there was any."""
+        it in Family Link, Family Safety and on the Switch (the latest of today's, mirror_bonus) goes, as when extra
+        time on one device ends early (a parent's own bonus there is kept). Says whether there was any."""
         today = dt_util.now().date().isoformat()
         keys = [k for k, v in self._given.items() if k[0] == person and k[1].startswith("bonus:") and v.get("day") == today]
         if not keys:
             return False
         record = self._given.pop(max(keys, key=lambda k: k[1]))
         self._save()
-        if record["devices"] or record["platforms"] or record.get("cutoffs"):
+        if record["devices"] or record["platforms"] or record.get("cutoffs") or record.get("switches"):
             entry_task(self.hass, self.household.hub.entry.entry_id, self._take_back(person, record), "hearth extra time back")
         return True
 
     def _mirrors(self, person: str) -> bool:
         return any(
-            e.person == person and e.kind in (FAMILY_LINK, FAMILY_SAFETY) for e in self.household.enforcement.enforcers
+            e.person == person and e.kind in (FAMILY_LINK, FAMILY_SAFETY, NINTENDO)
+            for e in self.household.enforcement.enforcers
         )
 
+    def _switch_enforcers(self, person: str, only: str | None = None) -> list:
+        return [
+            e for e in self.household.enforcement.enforcers
+            if e.person == person and e.kind == NINTENDO and (only is None or e.entity_id == only)
+        ]
+
+    def _switch_left(self, person: str, only: str | None = None) -> float | None:
+        """How long Hearth lets the person's Switch run now: the fewest minutes left of the groups it's held for
+        (None when none of them has a limit)."""
+        day = self.household.days.get(person)
+        if day is None:
+            return None
+        lefts = [
+            state.minutes_left
+            for group in {g for e in self._switch_enforcers(person, only) for g in e.groups}
+            if (state := day.limits.get(group)) is not None and state.minutes_left is not None
+        ]
+        return min(lefts) if lefts else None
+
     async def _give_time(
-        self, person: str, until, key: tuple[str, str], fl_device: str | None = None, platform: str | None = None
+        self, person: str, until, key: tuple[str, str], fl_device: str | None = None, platform: str | None = None,
+        switch: str | None = None, switch_only: bool = False, bedtime: bool = False,
     ) -> None:
-        """[fl_device] or [platform]: only that Family Link device or Family Safety platform (extra time on one
-        device, device_extra.py); neither: every one that would block."""
+        """[fl_device], [platform] or [switch]: only that Family Link device, Family Safety platform or Switch (extra
+        time on one device, device_extra.py); none: every one that would block ([switch_only]: the Switches alone).
+        [bedtime]: a bedtime lift on that one device (device_extra.py): the Family Link device's bedtime opened, the
+        platform's allowed hours moved, and nothing else."""
         now = dt_util.now()
         minutes = math.ceil((until - now).total_seconds() / 60)
         if minutes <= 0:
             return
         record = self._given[key]
         try:
-            if platform is None:
-                waiting = await self._give_family_link(person, minutes, key[1], record, only=fl_device)
+            if platform is None and switch is None and not switch_only:
+                waiting = await self._give_family_link(person, minutes, key[1], record, only=fl_device, bedtime=bedtime)
                 if waiting:
                     record["fl_wait"] = {"until": dt_util.as_utc(until).isoformat(), "only": fl_device}
+                    if bedtime:
+                        record["fl_wait"]["bedtime"] = True
                 else:
                     record.pop("fl_wait", None)
-            if fl_device is None:
-                await self._give_family_safety(person, until, minutes, key[1], record, only=platform)
+            if fl_device is None and switch is None and not switch_only:
+                await self._give_family_safety(person, until, minutes, key[1], record, only=platform, bedtime=bedtime)
+            if fl_device is None and platform is None and not bedtime:
+                if await self._give_switches(person, until, key[1], record, only=switch):
+                    record["sw_wait"] = {"until": dt_util.as_utc(until).isoformat(), "only": switch}
+                else:
+                    record.pop("sw_wait", None)
         finally:
             self._save()
 
     @callback
-    def give_device(self, person: str, extra_id: str, until, fl_device: str | None, platform: str | None) -> None:
-        """Extra time on one Family Link device or Family Safety platform (hearth.add_bonus or hearth.allow with a
-        device), until [until]."""
+    def give_device(
+        self, person: str, extra_id: str, until, fl_device: str | None, platform: str | None,
+        switch: str | None = None, bedtime: bool = False,
+    ) -> None:
+        """Extra time on one Family Link device, Family Safety platform or Switch (hearth.add_bonus or hearth.allow with
+        a device), until [until]; [bedtime]: bedtime lifted there (hearth.allow with bedtime)."""
         key = (person, f"device:{extra_id}")
         self._given[key] = {"day": dt_util.now().date().isoformat(), "devices": {}, "platforms": []}
         self._save()
         entry_task(
             self.hass, self.household.hub.entry.entry_id,
-            self._give_time(person, until, key, fl_device, platform), "hearth extra time on one device",
+            self._give_time(person, until, key, fl_device, platform, switch, bedtime=bedtime),
+            "hearth extra time on one device",
         )
 
     @callback
     def device_ended(self, person: str, extra_id: str) -> None:
-        """Extra time on one device ended early: what Hearth gave for it in Family Link or Family Safety goes."""
+        """Extra time on one device ended early: what Hearth gave for it in Family Link, Family Safety or on the Switch
+        goes."""
         record = self._given.pop((person, f"device:{extra_id}"), None)
         self._save()
-        if record and (record["devices"] or record["platforms"] or record.get("cutoffs")):
+        if record and (record["devices"] or record["platforms"] or record.get("cutoffs") or record.get("switches")):
             entry_task(self.hass, self.household.hub.entry.entry_id, self._take_back(person, record), "hearth extra time on one device back")
 
     async def _give_family_link(
-        self, person: str, minutes: int, why: str, record: dict[str, Any], only: str | None = None
+        self, person: str, minutes: int, why: str, record: dict[str, Any], only: str | None = None,
+        bedtime: bool = False,
     ) -> bool:
         """A today-only Family Link bonus on each of the child's devices whose own daily limit would block within
         [minutes] (a device with no limit gets none). Says whether a device had to wait.
@@ -571,8 +629,14 @@ class NativeSync:
         A Family Link bonus opens the device whatever holds it: bedtime and School time included (bedtime_lift.py
         uses that on purpose), and Hearth's own hold of the devices (a daily limit of 0). Extra time never lifts
         those, so a device in bedtime or School time, or every device while Hearth holds them, waits: given later
-        (async_pending_tick) once free. A day-off bonus at 00:05 once opened every phone in the middle of the night."""
+        (async_pending_tick) once free. A day-off bonus at 00:05 once opened every phone in the middle of the night.
+
+        [bedtime]: a bedtime lift on the one device [only] (device_extra.py): its bonus is what opens bedtime there, so
+        it's given once the device is in bedtime (Family Link's own, or Hearth's Sleep hold of the devices), for the
+        lift's minutes but never more than All screen time has left; it waits while School time, a pause or daily
+        time running out holds the device (a lift lifts bedtime, nothing else)."""
         from . import family_link as fl
+        from .enforce import WHY_SCHEDULE
 
         child = self.household.family_link_child(person)
         if child is None or not self.hass.services.has_service(FL_DOMAIN, "add_time_bonus"):
@@ -587,16 +651,33 @@ class NativeSync:
             if only is not None and info["device_id"] != only:
                 continue
             left = info["minutes_left"]
-            if left is None or left >= minutes:
+            if bedtime:
+                if record["devices"].get(info["device_id"]):
+                    continue  # given once for this lift
+                sleep_hold = hearth_holds and (
+                    self.household.enforcement._why.get(f"{FAMILY_LINK}|{person}", {}).get(DEVICES) == WHY_SCHEDULE
+                )
+                cap = self._all_left(person)
+                if (
+                    device.attributes.get("school_time_active")
+                    or (hearth_holds and not sleep_hold)
+                    or not (device.attributes.get("bedtime_active") or sleep_hold)
+                    or (cap is not None and cap < 1)
+                ):
+                    waiting = True
+                    continue
+                bonus = max(1, min(1440, minutes, *([math.floor(cap)] if cap is not None else [])))
+            elif left is None or left >= minutes:
                 continue
-            if (
+            elif (
                 hearth_holds
                 or device.attributes.get("bedtime_active")
                 or device.attributes.get("school_time_active")
             ):
                 waiting = True
                 continue
-            bonus = max(1, min(1440, minutes - max(0, left)))
+            else:
+                bonus = max(1, min(1440, minutes - max(0, left)))
             try:
                 await call_service(self.hass,
                     FL_DOMAIN, "add_time_bonus", {"entity_id": device.entity_id, "bonus_minutes": bonus}, blocking=True
@@ -631,35 +712,249 @@ class NativeSync:
         now = dt_util.now()
         today = now.date().isoformat()
         for key, record in list(self._given.items()):
-            wait = record.get("fl_wait")
-            if not isinstance(wait, dict):
-                continue
-            until = _when(wait.get("until"))
-            if record.get("day") != today or until is None or until <= now:
-                record.pop("fl_wait", None)
+            for field in ("fl_wait", "sw_wait"):
+                wait = record.get(field)
+                if not isinstance(wait, dict):
+                    continue
+                until = _when(wait.get("until"))
+                if record.get("day") != today or until is None or until <= now:
+                    record.pop(field, None)
+                    self._save()
+                    continue
+                minutes = math.ceil((until - now).total_seconds() / 60)
+                try:
+                    if field == "fl_wait":
+                        waiting = await self._give_family_link(
+                            key[0], minutes, key[1], record, only=wait.get("only"), bedtime=bool(wait.get("bedtime"))
+                        )
+                    else:
+                        waiting = await self._give_switches(key[0], until, key[1], record, only=wait.get("only"))
+                except Exception:  # noqa: BLE001 - tried again next minute
+                    _LOGGER.exception("Hearth couldn't give extra time that waited")
+                    continue
+                if self._given.get(key) is not record:
+                    break  # taken back meanwhile
+                if not waiting:
+                    record.pop(field, None)
                 self._save()
-                continue
+
+    def _all_left(self, person: str) -> float | None:
+        day = self.household.days.get(person)
+        state = day.limits.get(ALL) if day else None
+        return state.minutes_left if state else None
+
+    # The Switch: Nintendo's extra playing time where its own limit would stop the kid sooner than Hearth
+
+    def _switch_held(self, entity_id: str) -> bool:
+        """Hearth holds the Switch now (for anyone sharing it), or is changing its hold."""
+        from .enforce import SWITCH
+
+        enforcement = self.household.enforcement
+        return enforcement.switch_hold(entity_id) is not None or enforcement.switch_quiet(entity_id) or any(
+            key.startswith(f"{NINTENDO}|") and held.entity_id == entity_id and SWITCH in held.items
+            for key, held in enforcement.held.items()
+        )
+
+    def _switch_row(self, person: str, entity_id: str) -> dict[str, Any] | None:
+        from .nintendo import switches
+
+        return next((r for r in switches(self.household, person) if r["target"] == f"nintendo:{entity_id}"), None)
+
+    def _switch_can_cancel(self, row: dict[str, Any]) -> bool:
+        from .nintendo import CANCEL_BONUS, CANCEL_BUTTON
+        from .enforce import NINTENDO_DOMAIN
+
+        return self.hass.services.has_service(NINTENDO_DOMAIN, CANCEL_BONUS) or bool(row["entities"].get(CANCEL_BUTTON))
+
+    def _sw_mine(self, entity_id: str) -> int:
+        record = self.sw_added.get(entity_id)
+        return int(record["minutes"]) if record and record.get("day") == dt_util.now().date().isoformat() else 0
+
+    async def _give_switches(
+        self, person: str, until, why: str, record: dict[str, Any], only: str | None = None
+    ) -> bool:
+        """Nintendo's extra playing time (add_bonus_time) on each Switch Hearth holds for the person ([only]: that one)
+        whose own limit would stop it before Hearth does: as much as the limit falls short, Nintendo's 5 minutes at
+        least, the installed integration's most at most. Says whether a Switch had to wait.
+
+        Extra playing time opens the Switch whatever holds it, and while it runs the Switch refuses a new limit (so
+        Hearth couldn't hold it): it's given only where Hearth can cancel it again (cancel_bonus_time, or the Cancel
+        extra playing time button), and waits while Hearth holds the Switch (a pause, Sleep, another kid on a shared
+        one). Hearth cancels its own before it holds the Switch again (cancel_own_switch_extra). Nintendo moves the
+        Switch's bedtime alarm for extra time that runs into it, so it never runs past the alarm, and waits while the
+        Switch is in its bedtime. Kept as Hearth's before the call (sw_added): a parent's on top is theirs."""
+        from . import nintendo
+        from .enforce import NINTENDO_DOMAIN
+
+        if not self.hass.services.has_service(NINTENDO_DOMAIN, nintendo.ADD_BONUS):
+            return False
+        caps = nintendo.capabilities(self.hass)
+        now = dt_util.now()
+        today = now.date().isoformat()
+        waiting = False
+        for enforcer in self._switch_enforcers(person, only):
+            entity_id = enforcer.entity_id
+            row = self._switch_row(person, entity_id)
+            if row is None or row["limit_minutes"] is None or not caps["add_bonus"]:
+                continue  # no limit of its own: nothing stops it
             minutes = math.ceil((until - now).total_seconds() / 60)
-            try:
-                waiting = await self._give_family_link(key[0], minutes, key[1], record, only=wait.get("only"))
-            except Exception:  # noqa: BLE001 - tried again next minute
-                _LOGGER.exception("Hearth couldn't give Family Link extra time that waited")
+            if not why.startswith(("allow:", "device:")):
+                # Bonus time: as long as Hearth lets the Switch run now
+                hearth = self._switch_left(person, entity_id)
+                if hearth is not None:
+                    minutes = min(minutes, math.ceil(hearth))
+            bed = _switch_to_bedtime(self.hass, row, now)
+            if bed == 0:
+                waiting = True
                 continue
-            if self._given.get(key) is not record:
-                continue  # taken back meanwhile
-            if not waiting:
-                record.pop("fl_wait", None)
+            if bed is not None:
+                minutes = min(minutes, bed)
+            left = row["minutes_left"]
+            if left is None or minutes <= 0 or left >= minutes:
+                continue
+            if self._switch_held(entity_id):
+                waiting = True
+                continue
+            key = enforcer.key
+            if not self._switch_can_cancel(row):
+                self.household.enforcement.note(
+                    key, error="No Nintendo extra time given: the Nintendo integration can't cancel it (update it)"
+                )
+                continue
+            bonus = max(nintendo.BONUS_MIN, minutes - max(0, left))
+            if caps["bonus_max"] is not None:
+                bonus = min(bonus, caps["bonus_max"])
+            if bed is not None and bonus > bed:
+                continue  # Nintendo's least would run into the Switch's bedtime
+            data = {"device_id": row["device_id"], "bonus_time": bonus}
+            # Hearth's before the call: one whose answer was lost is still Hearth's
+            given = record.setdefault("switches", {})
+            given[entity_id] = given.get(entity_id, 0) + bonus
+            record["sw_until"] = dt_util.as_utc(until).isoformat()
+            mine = self.sw_added.get(entity_id)
+            if mine is None or mine.get("day") != today:
+                mine = self.sw_added[entity_id] = {"day": today, "minutes": 0}
+            mine["minutes"] += bonus
+            await self._store.async_save(self._data())
+            try:
+                await call_service(
+                    self.hass, NINTENDO_DOMAIN, nintendo.ADD_BONUS, data, blocking=True, person=person, why=why,
+                )
+            except (vol.Invalid, ServiceValidationError) as err:
+                # Refused: never applied
+                given[entity_id] -= bonus
+                if not given[entity_id]:
+                    given.pop(entity_id)
+                mine["minutes"] -= bonus
+                self._save()
+                self.household.enforcement.note(key, error=f"Nintendo extra time not given: {err}"[:200], reason=why)
+                continue
+            except Exception as err:  # noqa: BLE001 - shown; it may have been applied all the same
+                self.household.enforcement.note(key, error=f"Nintendo extra time not given: {err}"[:200], reason=why)
+                continue
+            self.household.enforcement.refresh_soon(entity_id)
+            self.household.enforcement.note(key, extra_time={row["name"]: bonus}, reason=why)
+            if self._switch_held(entity_id):
+                # Held meanwhile: Hearth's own extra time mustn't open it
+                await self.cancel_own_switch_extra(entity_id)
+        return waiting
+
+    async def cancel_own_switch_extra(self, entity_id: str) -> bool:
+        """Before Hearth holds a Switch whose extra playing time is running (enforce.py): when that extra time is
+        Hearth's own (no more than it added today), it's cancelled, and the extra time it was for waits to be given
+        again once the hold is let go. False when it's a parent's (theirs stays: the hold waits) or can't be
+        cancelled."""
+        mine = self._sw_mine(entity_id)
+        extended = self._switch_extended_minutes(entity_id)
+        if mine <= 0 or not extended or extended < 0 or extended > mine:
+            return False
+        person = next((e.person for e in self.household.enforcement.enforcers if e.entity_id == entity_id), None)
+        row = self._switch_row(person, entity_id) if person else None
+        if row is None:
+            return False
+        try:
+            await self._cancel_switch(row)
+        except Exception as err:  # noqa: BLE001 - the hold says it's waiting
+            _LOGGER.info("Hearth couldn't cancel its own Nintendo extra time on %s: %s", entity_id, err)
+            return False
+        self.sw_added.pop(entity_id, None)
+        now = dt_util.now()
+        for (p, _why), record in self._given.items():
+            if entity_id in (record.get("switches") or {}):
+                record["switches"].pop(entity_id)
+                until = _when(record.get("sw_until"))
+                if until is not None and until > now:
+                    record["sw_wait"] = {"until": record["sw_until"], "only": entity_id}
+        self._save()
+        return True
+
+    def _switch_extended_minutes(self, entity_id: str) -> float | None:
+        """The Switch's extra playing time today as its sensor says (-1: unlimited; 0: none), None unread."""
+        from .nintendo import EXTRA
+
+        extended = self.household.enforcement._switch_entity(entity_id, "sensor", EXTRA)
+        state = self.hass.states.get(extended) if extended else None
+        if state is None:
+            return None
+        if state.state in ("unknown", "unavailable", ""):
+            return 0.0  # the integration shows no extra playing time as unavailable
+        return _number(state.state)
+
+    async def _cancel_switch(self, row: dict[str, Any]) -> None:
+        from .nintendo import CANCEL_BONUS, CANCEL_BUTTON
+        from .enforce import NINTENDO_DOMAIN
+
+        if self.hass.services.has_service(NINTENDO_DOMAIN, CANCEL_BONUS):
+            await call_service(self.hass, NINTENDO_DOMAIN, CANCEL_BONUS, {"device_id": row["device_id"]}, blocking=True)
+        elif button := row["entities"].get(CANCEL_BUTTON):
+            await call_service(self.hass, "button", "press", {"entity_id": button}, blocking=True)
+        else:
+            raise ValueError("The Nintendo integration can't cancel extra playing time (update it)")
+        self.household.enforcement.refresh_soon(row["entities"].get("today_max_screentime"))
+
+    async def _take_back_switches(self, person: str, record: dict[str, Any]) -> None:
+        """The extra time ended early: Hearth's own extra playing time on each Switch it gave some on is cancelled,
+        unless a parent's came on top (the Switch shows more than Hearth added today) or another of Hearth's extra
+        times still needs it."""
+        now = dt_util.now()
+        for entity_id in list(record.get("switches") or {}):
+            enforcer = next((e for e in self._switch_enforcers(person, entity_id)), None)
+            key = enforcer.key if enforcer else f"{NINTENDO}|{person}|{entity_id}"
+            others = [
+                r for r in self._given.values()
+                if r is not record and entity_id in (r.get("switches") or {})
+                and (_when(r.get("sw_until")) or now) > now
+            ]
+            if others:
+                continue
+            extended = self._switch_extended_minutes(entity_id)
+            if extended is not None and (extended < 0 or extended > self._sw_mine(entity_id)):
+                self.household.enforcement.note(key, extra_time_kept=[entity_id])
+                continue
+            row = self._switch_row(person, entity_id)
+            try:
+                if row is None:
+                    raise ValueError(f"{entity_id} isn't found")
+                await self._cancel_switch(row)
+            except Exception as err:  # noqa: BLE001 - it lapses at midnight; Hearth's hold stays the real limit
+                self.household.enforcement.note(key, error=f"Nintendo extra time left to lapse at midnight: {err}"[:200])
+                continue
+            self.sw_added.pop(entity_id, None)
             self._save()
+            self.household.enforcement.note(key, extra_time_cancelled=[entity_id])
 
     async def _give_family_safety(
-        self, person: str, until, minutes: int, why: str, record: dict[str, Any], only: str | None = None
+        self, person: str, until, minutes: int, why: str, record: dict[str, Any], only: str | None = None,
+        bedtime: bool = False,
     ) -> None:
         """Family Safety extra time (its experimental add_time_bonus) on the enforcer's platforms (Xbox, and Windows
         where the installed Family Safety takes it) whose allowance would block within [minutes]; [only]: that one
         platform, held by Hearth or not. Extra time replaces Hearth's own lock there; when Family Safety lets go of
         that lock for good (fs_hold_released), Hearth no longer holds the platform. A failure says Family Safety's
         extra time is unavailable, isn't retried, and counts as not given. Extra time that runs past the platform's
-        allowed hours today moves today's end of them too (_fs_move_cutoff): Microsoft's extra time doesn't lift them."""
+        allowed hours today moves today's end of them too (_fs_move_cutoff): Microsoft's extra time doesn't lift them.
+        [bedtime]: a bedtime lift on that platform: only its allowed hours are moved (its daily allowance still
+        counts)."""
         enforcer = self._enforcer(person, FAMILY_SAFETY)
         if enforcer is None:
             return
@@ -677,7 +972,7 @@ class NativeSync:
             except Exception as err:  # noqa: BLE001 - its extra time, and the other platform's, still go on
                 _LOGGER.info("Family Safety's allowed hours on %s for %s not moved: %s", platform, person, err)
                 error = f"Family Safety's allowed hours not moved: {err}"[:200]
-            if not bonus or not self._fs_would_block(enforcer, platform, minutes):
+            if bedtime or not bonus or not self._fs_would_block(enforcer, platform, minutes):
                 continue
             data = {
                 **_fs_target(enforcer.entity_id),
@@ -1015,7 +1310,8 @@ class NativeSync:
     @callback
     def allow_ended(self) -> None:
         """An allow of All screen time ended early (hearth.allow_end): the extra time Hearth gave for it in Family
-        Link (reset_bonus, only where no parent's bonus came on top) and Family Safety (cancel_time_bonus) goes."""
+        Link (reset_bonus, only where no parent's bonus came on top), Family Safety (cancel_time_bonus) and on the
+        Switch (cancel_bonus_time, only where no parent's extra playing time came on top) goes."""
         for key, record in list(self._given.items()):
             person, why = key
             if not why.startswith("allow:"):
@@ -1025,7 +1321,7 @@ class NativeSync:
                 continue
             del self._given[key]
             self._save()
-            if record["devices"] or record["platforms"] or record.get("cutoffs"):
+            if record["devices"] or record["platforms"] or record.get("cutoffs") or record.get("switches"):
                 entry_task(self.hass, self.household.hub.entry.entry_id, self._take_back(person, record), "hearth first-party extra time back")
 
     async def _take_back(self, person: str, record: dict[str, Any]) -> None:
@@ -1054,6 +1350,8 @@ class NativeSync:
             self._save()
         if reset or kept or error:
             self.household.enforcement.note(f"{FAMILY_LINK}|{person}", bonus_reset=reset, bonus_kept=kept, error=error)
+        if record.get("switches"):
+            await self._take_back_switches(person, record)
         enforcer = self._enforcer(person, FAMILY_SAFETY)
         if enforcer is None:
             return
@@ -1201,10 +1499,11 @@ class NativeSync:
                     )
         return found
 
-    def blocked_by(self, person: str, midnight: str) -> list[dict[str, Any]]:
+    def blocked_by(self, person: str, midnight: str, groups: set[str] | None = None) -> list[dict[str, Any]]:
         """For hearth.explain: the first-party limits that stop the person now on a device of theirs (device_limit:
-        Google's daily limit on a Family Link device, Microsoft's allowance on a platform) and a parent's own Family
-        Safety lock (parent_lock), so explain says what the device does."""
+        Google's daily limit on a Family Link device, Microsoft's allowance on a platform, a Switch's own limit) and a
+        parent's own Family Safety lock (parent_lock), so explain says what the device does. A Switch's only where
+        what's explained is among [groups] it's held for (All screen time, Games), or with no [groups]."""
         found: list[dict[str, Any]] = []
         first = self.first_party(person)
         for row in first.get(FAMILY_LINK, []):
@@ -1225,6 +1524,19 @@ class NativeSync:
             elif row["blocking"]:
                 found.append(
                     {"kind": "device_limit", "by": row["entity_id"], "platform": row["platform"], "until": None}
+                )
+        covers = {g for e in self._switch_enforcers(person) for g in e.groups}
+        # An app or group of its own (Games) is the Switch's only when the Switch is held for it; All screen time is
+        asked = (groups - {ALL}) or groups if groups is not None else None
+        for row in first.get(NINTENDO, []):
+            if row["blocking"] and (asked is None or not covers or asked & covers):
+                found.append(
+                    {
+                        "kind": "device_limit",
+                        "by": row["entities"].get("today_max_screentime") or row["device_id"],
+                        "device": row["name"],
+                        "until": midnight,
+                    }
                 )
         return found
 
@@ -1427,6 +1739,24 @@ def _clock(value: Any) -> int | None:
         return int(hours) * 60 + int(minutes)
     except (TypeError, ValueError):
         return None
+
+
+def _switch_to_bedtime(hass: HomeAssistant, row: dict[str, Any], now) -> int | None:
+    """Minutes until the Switch's bedtime alarm tonight (nintendo.switches row); 0 while it's in its bedtime (past the
+    alarm, or before its morning end); None without a bedtime."""
+    from .nintendo import BEDTIME_END
+
+    alarm = _clock(row.get("bedtime")) if row.get("bedtime") else None
+    if alarm is None:
+        return None
+    local = dt_util.as_local(now)
+    minute = local.hour * 60 + local.minute
+    end_entity = row["entities"].get(BEDTIME_END)
+    end_state = hass.states.get(end_entity) if end_entity else None
+    end = _clock(end_state.state) if end_state is not None else None
+    if minute >= alarm or (end is not None and minute < end):
+        return 0
+    return alarm - minute
 
 
 def _hhmm(minutes: int) -> str:

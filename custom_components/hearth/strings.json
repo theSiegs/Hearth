@@ -855,7 +855,7 @@
         },
         "bedtime": {
           "name": "Lift bedtime",
-          "description": "With a device (a TV or phone with Hearth): bedtime is lifted there until the time, nowhere else. Their other devices still stop at bedtime."
+          "description": "With a device (a TV or phone with Hearth, a Family Link device, the Xbox or Windows, a Switch): bedtime is lifted there until the time, nowhere else. Their other devices still stop at bedtime."
         }
       }
     },
@@ -1273,19 +1273,19 @@
     },
     "block_app": {
       "name": "Block an app",
-      "description": "Blocks Android apps for kids through Family Link, kept by Hearth: blocked again when the app comes back, never paused or resumed by Hearth's holds, and an allow doesn't lift it.",
+      "description": "Blocks apps for kids, kept by Hearth: Android apps through Family Link, Xbox and Windows apps through Family Safety. Blocked again when the app comes back, never paused or resumed by Hearth's holds, and an allow doesn't lift it.",
       "fields": {
         "people": {
           "name": "Kids",
-          "description": "Who; every kid with Family Link when empty."
+          "description": "Who; every kid with Family Link (Android apps) or Family Safety (Xbox and Windows apps) when empty."
         },
         "app": {
           "name": "App",
-          "description": "The app's Android package name."
+          "description": "The app's Android package name, or its Family Safety app id (x:..., appx:..., win32:...)."
         },
         "apps": {
           "name": "Apps",
-          "description": "Several apps' package names."
+          "description": "Several apps' package names or Family Safety app ids."
         }
       }
     },
@@ -1323,7 +1323,7 @@
     },
     "unblock_app": {
       "name": "Unblock an app",
-      "description": "Ends Hearth's block of Android apps. Only a block Hearth made is lifted in Family Link: a parent's own block there stays.",
+      "description": "Ends Hearth's block of apps. Only a block Hearth made is lifted in Family Link or Family Safety: a parent's own block there stays.",
       "fields": {
         "people": {
           "name": "Kids",
@@ -1331,17 +1331,17 @@
         },
         "app": {
           "name": "App",
-          "description": "The app's Android package name."
+          "description": "The app's Android package name, or its Family Safety app id (x:..., appx:..., win32:...)."
         },
         "apps": {
           "name": "Apps",
-          "description": "Several apps' package names."
+          "description": "Several apps' package names or Family Safety app ids."
         }
       }
     },
     "add_time": {
       "name": "Give bonus time",
-      "description": "Bonus time today: adds minutes to daily time, with no category. The kid may spend it anywhere, minutes past a category's limit included (one bonus shared by every category). Ends at midnight. Family Link and Family Safety get as much where they would stop sooner.",
+      "description": "Bonus time today: adds minutes to daily time, with no category. The kid may spend it anywhere, minutes past a category's limit included (one bonus shared by every category). Ends at midnight. Family Link, Family Safety and the Switch get as much where they would stop sooner.",
       "fields": {
         "person": {
           "name": "Person",

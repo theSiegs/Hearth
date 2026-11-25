@@ -1443,6 +1443,7 @@ class Household:
             paused_of=lambda person: self.paused_packages(person, membership, with_fs=True),
             spared=spared,
             device_lifted_of=self._device_lifted,
+            device_bedtime_of=self._device_bedtime,
             paused_groups_of=lambda person: self.paused_groups(person, now),
             closed_of=self.schedule_holds,
             sleep_locks_devices_of=self.sleep_locks_devices,
@@ -2510,7 +2511,7 @@ class Household:
             )
         # Google's and Microsoft's own limits, and a parent's own Family Safety lock: they stop a device of theirs
         # whatever Hearth allows
-        blocked += self.sync.blocked_by(person, midnight)
+        blocked += self.sync.blocked_by(person, midnight, set(groups))
         # A parent's own Family Link app limit: Hearth's allows and bonuses don't raise it
         if app is not None:
             packages = {app}
@@ -2627,6 +2628,27 @@ class Household:
 
         lifted: set[str] = set()
         for extra in self.device_extras.of(enforcer.person):
+            if extra.kind == EXTRA_BEDTIME:
+                continue  # bedtime alone (_device_bedtime)
+            if enforcer.kind == FAMILY_SAFETY and extra.target.startswith("fs:"):
+                platform = extra.target.removeprefix("fs:").capitalize()
+                if platform in enforcer.platforms:
+                    lifted.add(platform)
+            elif enforcer.kind == NINTENDO and extra.target == f"nintendo:{enforcer.entity_id}":
+                lifted.add(SWITCH)
+        return lifted
+
+    def _device_bedtime(self, enforcer) -> set[str]:
+        """What a bedtime lift on one device lifts of an enforcer's schedule holds while the schedule is in Sleep: that
+        Family Safety platform, that Switch. Never a budget, a pause or School time."""
+        from .enforce import NINTENDO, SWITCH
+
+        if self.schedule_lock(enforcer.person) != "bedtime":
+            return set()
+        lifted: set[str] = set()
+        for extra in self.device_extras.of(enforcer.person):
+            if extra.kind != EXTRA_BEDTIME:
+                continue
             if enforcer.kind == FAMILY_SAFETY and extra.target.startswith("fs:"):
                 platform = extra.target.removeprefix("fs:").capitalize()
                 if platform in enforcer.platforms:
@@ -2676,12 +2698,9 @@ class Household:
         if found is None:
             raise ServiceValidationError(f"{target} isn't one of {self.person_name(person)}'s devices")
         if kind == EXTRA_BEDTIME:
-            # Family Link's bedtime is the child's, every device's; a Family Safety platform or a Switch is held all
-            # Sleep by the schedule. Only a Hearth device keeps its own copy of the person's lock
-            if found["via"] != "hearth":
-                raise ServiceValidationError(
-                    f"Bedtime can be lifted on one device only on a TV or phone with Hearth, not on {found['name']}"
-                )
+            # Bedtime lifted there alone: a Hearth device's own copy of the person's lock; a Family Link device's
+            # bedtime opened by a bonus on it; a Family Safety platform or a Switch let go by the schedule's Sleep (and
+            # the platform's allowed hours moved): native_sync.py, _device_bedtime
             if until is None:
                 raise ServiceValidationError("Say until when bedtime is lifted there")
             group = ALL
@@ -2704,16 +2723,22 @@ class Household:
         if kind == EXTRA_BONUS:
             self.history.log(DEVICE_BONUS, person, device=target, group=group, minutes=minutes)
         self.recompute()
+        bedtime = kind == EXTRA_BEDTIME
         if found["via"] == "family_link":
-            self.sync.give_device(person, extra.id, until, target.removeprefix("fl:"), None)
+            self.sync.give_device(person, extra.id, until, target.removeprefix("fl:"), None, bedtime=bedtime)
         elif found["via"] == "family_safety":
-            self.sync.give_device(person, extra.id, until, None, target.removeprefix("fs:").capitalize())
+            self.sync.give_device(
+                person, extra.id, until, None, target.removeprefix("fs:").capitalize(), bedtime=bedtime
+            )
+        elif found["via"] == "nintendo" and not bedtime:
+            # Nintendo's extra playing time where the Switch's own limit would stop it sooner
+            self.sync.give_device(person, extra.id, until, None, None, switch=target.removeprefix("nintendo:"))
         return extra
 
     def end_device_extras(self, extra_id: str | None, people: list[str] | None, target: str | None) -> list[str]:
         ended = self.device_extras.end(extra_id, people, target)
         for extra in ended:
-            if extra.via in ("family_link", "family_safety"):
+            if extra.via in ("family_link", "family_safety", "nintendo"):
                 self.sync.device_ended(extra.person, extra.id)
         if ended:
             self.recompute()

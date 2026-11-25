@@ -4,7 +4,7 @@ device still reads it; only that device may go past it, today.
 
     bonus  N more minutes there from now, pool or not, till midnight at most
     allow  a group open there until a time
-    bedtime  bedtime lifted there until a time: a Hearth TV or phone only (hearth.allow with bedtime: true)
+    bedtime  bedtime lifted there until a time, nothing else (hearth.allow with bedtime: true)
 
 What it does depends on the device:
 
@@ -16,11 +16,16 @@ What it does depends on the device:
 - A Family Link device (fl:<id>): a Family Link bonus on that device (add_time_bonus), as Hearth gives for an allow
   of All screen time, so Google's own limit (the one Hearth sets to 0 when All screen time is out) lets that device
   alone go on; Google counts it down. Family Link's app pauses are the child's, every device's, so only All screen
-  time can be given on one Family Link device.
+  time can be given on one Family Link device. A bedtime lift: a bonus on that device once it's in bedtime (Family
+  Link's, or Hearth's Sleep lock of the devices), for the lift's minutes but no more than All screen time has left;
+  it waits through School time, a pause or daily time running out (native_sync._give_family_link).
 - A Family Safety platform (fs:xbox, fs:windows): Hearth's lock of that platform is let go while it lasts, and
-  Microsoft's own allowance gets extra time until then where it would stop it. By the clock: N minutes from now.
-- A Switch (nintendo:<entity>): Hearth's hold of the Switch is let go while it lasts (the Switch's own limit, put
-  back, still applies). By the clock: N minutes from now.
+  Microsoft's own allowance gets extra time until then where it would stop it. By the clock: N minutes from now. A
+  bedtime lift: only the schedule's Sleep lock of that platform is let go, and its allowed hours today move to cover
+  the lift (no extra time: its daily allowance and Hearth's budget still hold it).
+- A Switch (nintendo:<entity>): Hearth's hold of the Switch is let go while it lasts, and Nintendo's extra playing time
+  is added where the Switch's own limit would stop it sooner (native_sync._give_switches). By the clock: N minutes
+  from now. A bedtime lift: only the schedule's Sleep hold of the Switch is let go (its own bedtime alarm isn't moved).
 
 Kept with Home Assistant's storage helper for today; a new day starts empty.
 """
