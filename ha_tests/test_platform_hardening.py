@@ -1,7 +1,7 @@
 """The cross-platform hardening review's findings, each with the case that went wrong: a Family Safety lock or unlock
-that applied but raised, the day-off bonus on Family Link devices Hearth holds, Family Safety extra time that fails
-with a plain error, Hearth's own Family Safety request approval, Hearth's own Family Safety pauses in explain, a cut
-short Pending Requests list, one wording for a parent's bonus time, and a person on account-id calls."""
+that applied but raised, the raise to the day's budget on Family Link devices Hearth holds, Family Safety extra time
+that fails with a plain error, Hearth's own Family Safety request approval, Hearth's own Family Safety pauses in
+explain, a cut short Pending Requests list, one wording for a parent's bonus time, and a person on account-id calls."""
 
 from datetime import date, timedelta
 
@@ -130,21 +130,22 @@ async def test_a_lock_refused_by_its_schema_isn_t_possibly_held(
     assert held.items == {"Xbox"} and enforce.FS_LOCKING not in held.restore
 
 
-# 2. The day-off bonus waits while Hearth holds the Family Link devices
+# 2. The raise to the day's budget waits while Hearth holds the Family Link devices
 
 
-async def test_a_day_off_bonus_waits_while_hearth_holds_the_family_link_devices(
+async def test_a_raise_to_the_day_s_budget_waits_while_hearth_holds_the_family_link_devices(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:
-    from test_schedule import YEAR, _at, _set_up, _tick
+    from test_schedule import YEAR, _at, _budget, _set_up, _tick
 
     limit = async_mock_service(hass, "familylink", "set_daily_limit")
     async_mock_service(hass, "switch", "turn_off")
     day_off = date(2026, 11, 26)
     household = await _set_up(
         hass, hass_client_no_auth, freezer, _at(day_off, 0, 1), {**YEAR, "days_off": "2026-11-26"},
-        {"day_off_bonus": 60},
+        {"follow_family_link": True},
     )
+    await _budget(hass, 180, "other_days")
     enforcement = household.enforcement
     # Hearth's Sleep lock past midnight: the weekday's limit at 0 (the enforcement itself stands still here)
     enforcement._closed = True
@@ -157,7 +158,7 @@ async def test_a_day_off_bonus_waits_while_hearth_holds_the_family_link_devices(
     await _tick(hass, household, freezer, _at(day_off, 3, 0))
     assert limit == []
 
-    # Let go in the morning (the weekday's limit back): the bonus goes on top of it then, once
+    # Let go in the morning (the weekday's limit back): raised to the day's budget then, once
     del enforcement.held["family_link|person.sam"]
     hass.states.async_set("number.sam_family_link_thursday_limit", "120", {"child_id": "42", "weekly_minutes": 120})
     await _tick(hass, household, freezer, _at(day_off, 7, 0))

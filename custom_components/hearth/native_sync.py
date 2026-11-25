@@ -690,7 +690,7 @@ class NativeSync:
 
     @callback
     def mirror_bonus(self, person: str, had_none: bool = True) -> None:
-        """Bonus time given (every grant: hearth.add_time, an approved ask, a chore, the day-off bonus): Google's and
+        """Bonus time given (every grant: hearth.add_time, an approved ask, a chore): Google's and
         Microsoft's own limits get as much as today's time now has left, until midnight at most, wherever they would
         stop the kid sooner, so a phone never locks early (Hearth's own holds stay the real limit). A Switch's own
         limit gets as much as Hearth now lets the Switch run (its groups' time left: _give_nintendo), also when All
@@ -819,7 +819,8 @@ class NativeSync:
         A Family Link bonus opens the device whatever holds it: bedtime and School time included (bedtime_lift.py
         uses that on purpose), and Hearth's own hold of the devices (a daily limit of 0). Extra time never lifts
         those, so a device in bedtime or School time, or every device while Hearth holds them, waits: given later
-        (async_pending_tick) once free. A day-off bonus at 00:05 once opened every phone in the middle of the night.
+        (async_pending_tick) once free. An older Hearth's day-off bonus at 00:05 once opened every phone in the middle
+        of the night.
 
         [bedtime]: a bedtime lift on the one device [only] (device_extra.py): its bonus is what opens bedtime there, so
         it's given once the device is in bedtime (Family Link's own, or Hearth's Sleep hold of the devices), for the

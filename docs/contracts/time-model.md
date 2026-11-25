@@ -16,7 +16,8 @@ those minutes, so the day could run out first. Now:
 - There are four ways to give more:
   1. **Bonus time** (`hearth.add_time`): N minutes added to daily time, with **no category**. The kid may spend it
      anywhere. Minutes past any category's limit come out of the same N (one bonus, shared by every category).
-     Chores, approved asks, the day-off bonus and adults all give bonus time. It ends at midnight.
+     Chores, approved asks and adults all give bonus time (a day off gives none: its budget is the
+     other days'). It ends at midnight.
   2. **A category's bonus** (`hearth.add_time` with `category`): "+15 min Messaging bonus", usable only in that
      category, past daily time and its limit; spent before the general bonus. Ends at midnight.
   3. **Raise limit** (`hearth.raise_cap`): one category's limit today, by some minutes, to some minutes, or no limit,

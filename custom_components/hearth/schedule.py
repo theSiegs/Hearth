@@ -8,34 +8,53 @@ Today's day type comes from School days (schooldays.py): school, half_day, day_o
   which turns off the weekly School time with today's), and put back on the next school day.
 - A half day: School time ends some hours early, today only (familylink.set_school_time, scope today), for a kid whose
   School time is on; one whose School time is off gets the early end when it is put back.
-- Both: bonus minutes, as Family Link's today-only daily limit (the weekday's limit plus the bonus, set_daily_limit
-  without a day: an override that ends by itself; written only once Hearth's own hold of the devices is let go) and/or
-  as Hearth bonus minutes on a group.
-- When chosen (bonus_family_safety, off by default) or chosen for the Switch (bonus_nintendo, off by default), the same
-  bonus raises a limit that is a setting, not today's alone, as a temporary limit Hearth puts back itself
-  (temporary_limit.py: Hearth records what it added to and what it wrote before writing, kept across a restart and
-  midnight; puts it back 2 minutes before midnight, at once when the day off is called off the same day
-  (hearth.school_time_off_cancel) or today's day type changes away from a day off or half day, or on the next start
-  when that was missed; only while the limit still reads Hearth's, so a parent's change since stays; a write that
-  failed isn't counted as done and is tried again while it's still today):
+How much time a day gets is its budget and nothing else: school days the school-day budget; weekends, days off and
+no-school days the other days' budget; a half day the one School days chooses (half_day_budget, other days' by
+default); a kid kept home (hearth.home_today) the other days'. The schedule adds no time of its own (an older Hearth's
+day_off_bonus, half_day_bonus and bonus_group, which stacked a bonus on top of the other days' budget, are ignored).
+An adult's bonus time comes on top as always.
+
+The parents' own apps follow the day's budget instead, so one never stops a kid before Hearth's budget does, every
+day (not only days off: a weekend's budget can be over a weekday limit just as well), without changing their weekly
+settings for good. Only ever raised, never lowered: a native limit at or over the budget, or with no limit, is left
+alone, and Hearth's own holds still stop the kid when the budget is spent.
+
+- Family Link: with Hearth's Family Link backstop on (the default, backstop.py) its daily limit already follows
+  Hearth's time left: nothing more here. With the backstop off, and when chosen (follow_family_link, off by default:
+  turning the backstop off means keeping Family Link's own limits), today's daily limit is raised to the day's All
+  screen time budget when the weekday's limit is lower, as a today-only override (set_daily_limit without a day: it
+  ends by itself; written only once Hearth's own hold of the devices is let go; written again if the day's budget
+  changes, the weekday's own limit when the budget falls to it).
+- When chosen for Family Safety (follow_family_safety, off by default) or for the Switch (follow_nintendo, off by
+  default), a limit that is a setting, not today's alone, is raised to the day's budget as a temporary limit Hearth
+  puts back itself. The budget of a platform is the least of the budgets of the groups its enforcer holds for (All
+  screen time and Games by default): the first of those to run out holds the platform, so it can never give more.
+  (temporary_limit.py: Hearth records what it raised from and what it wrote before writing, kept across a restart
+  and midnight; puts it back 2 minutes before midnight, at once when the day's budget changes (School days say
+  otherwise, a kid kept home or that cancelled, a budget changed) and then raises it again to the new budget once
+  the platform shows the put-back, or on the next start when that was missed; only while the limit still reads
+  Hearth's, so a parent's change since stays; a write that failed isn't counted as done and is tried again while it's
+  still today):
   - Family Safety (Windows, Xbox): for each of those platforms of a kid's Family Safety enforcer, this weekday's limit
-    (the integration's per-day limit number: Windows' <weekday> Limit, the Xbox <weekday> Limit) plus the bonus, at
-    most 24 hours, through microsoft_family_safety.set_screentime_limit with day_of_week (upstream's service, the
-    child's entity or account). A parent's own change before Hearth's is what the bonus goes on top of. The Xbox's
-    goes through the Xbox Family Settings sign-in, and fails without it: not set, tried again, reported at the check.
-    A platform without a limit today (24 hours) is left alone. Hearth never uses Family Safety's account lock switch
-    (lock_account), which saves the limits it finds as its restore point: on a bonus day that would be the raised
-    one, but Hearth puts its value back only while it still reads it. School time has no Family Safety equivalent,
-    so a day off and a half day change nothing else there.
-  - The Switch: each chosen kid's Switch (their Nintendo enforcer's Max screentime today) gets today's limit plus the
-    bonus (at most 360, the Switch's own maximum), set once per Switch even when kids share it. Nintendo has no
-    today-only limit: the number is the setting of every day, or of this weekday. It's put back as the Nintendo
-    enforcer does; after midnight (Home Assistant was off), a Switch with a limit per weekday gets that weekday's
-    limit and bedtime back through update_daily_restrictions. A Switch with no limit (-1) is left alone: there's
-    nothing to add to. While bonus time from the Nintendo app runs, the Switch refuses a new limit, so Hearth waits.
-    While Hearth holds the Switch (limit 0 for a budget or a pause), nothing is written to it: the bonus goes into
-    what the hold puts back (and comes out of it again on a cancel or at midnight), so letting go gives the raised
-    limit and a hold never fights the bonus.
+    (the integration's per-day limit number: Windows' <weekday> Limit, the Xbox <weekday> Limit) goes up to the
+    budget, at most 24 hours, through microsoft_family_safety.set_screentime_limit with day_of_week (upstream's
+    service, the child's entity or account). A parent's own change before Hearth's is read as the limit now. The
+    Xbox's goes through the Xbox Family Settings sign-in, and fails without it: not set, tried again, reported at the
+    check. A platform without a limit today (24 hours) is left alone. Hearth never uses Family Safety's account lock
+    switch (lock_account), which saves the limits it finds as its restore point: on a raised day that would be the
+    raised one, but Hearth puts its value back only while it still reads it.
+  - The Switch: each chosen kid's Switch (their Nintendo enforcer's Max screentime today) goes up to the budget (at
+    most 360, the Switch's own maximum), set once per Switch; a Switch kids share takes the biggest of their budgets,
+    so it never stops the kid with the most time first (each kid's own hold still stops them at theirs). Nintendo
+    has no today-only limit: the number is the setting of every day, or of this weekday. It's put back as the
+    Nintendo enforcer does; after midnight (Home Assistant was off), a Switch with a limit per weekday gets that
+    weekday's limit and bedtime back through update_daily_restrictions. A Switch with no limit (-1) is left alone.
+    While bonus time from the Nintendo app runs, the Switch refuses a new limit, so Hearth waits. While Hearth holds
+    the Switch (limit 0 for a budget or a pause), nothing is written to it: the raise goes into what the hold puts
+    back (and comes out of it again when the budget changes or at midnight), so letting go gives the raised limit and
+    a hold never fights it.
+- Bonus time an adult gives goes to the parents' apps as their own extra time (native_sync.mirror_bonus), on top of
+  the raised limit.
 
 hearth.school_time_off takes School time off for some people on a date (today by default), from a time if given.
 
@@ -80,6 +99,7 @@ from homeassistant.util import dt as dt_util
 
 from . import family_link as fl
 from . import fs_site_list
+from .counting import ALL
 from .enforce import (
     FAMILY_LINK,
     FAMILY_SAFETY,
@@ -125,7 +145,7 @@ HOME_REASON = "Home today"
 # Family Safety's limit of a weekday (Windows, or the Xbox through the Xbox Family Settings sign-in)
 FS_LIMIT = "set_screentime_limit"
 FULL_DAY = 1440
-# The platforms whose weekday limit takes the day's extra minutes
+# The platforms whose weekday limit follows the day's budget
 FS_LIMIT_PLATFORMS = (WINDOWS, XBOX)
 # Family Safety's day_of_week: 0 is Sunday
 FS_DAYS = ("sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday")
@@ -159,16 +179,17 @@ class ScheduleConfig:
     """Configure > Schedule: what each day type does. Empty: nothing."""
 
     day_off_school_time_off: bool = False
-    day_off_bonus: int = 0
     half_day_hours_early: float = 0
-    half_day_bonus: int = 0
-    bonus_family_link: bool = True
+    # With the backstop off, Family Link's daily limit today goes up to the day's budget. Off unless chosen: the
+    # backstop off means keeping Family Link's own limits (an older Hearth's bonus_family_link, on by default, did
+    # nothing without day-off minutes, so it isn't carried over)
+    follow_family_link: bool = False
     # Off unless chosen: a household that set this up for Family Link doesn't get its Windows and Xbox raised too
-    bonus_family_safety: bool = False
+    # (an older Hearth's bonus_family_safety, chosen, carries over)
+    follow_family_safety: bool = False
     # Off unless chosen, as Family Safety's: the Switch's limit is a setting Hearth must put back itself
-    bonus_nintendo: bool = False
-    bonus_group: str | None = None
-    # Whose (empty: everyone with Family Link, and for Family Safety's extra time everyone with Family Safety, in
+    follow_nintendo: bool = False
+    # Whose (empty: everyone with Family Link, and for Family Safety's and the Switch's everyone with them, in
     # Configure > Enforce)
     people: tuple[str, ...] = ()
     notify: str | None = None
@@ -182,13 +203,10 @@ class ScheduleConfig:
         return cls(
             enabled=bool(raw),
             day_off_school_time_off=bool(raw.get("day_off_school_time_off")),
-            day_off_bonus=max(0, min(720, int(_number(raw.get("day_off_bonus"))))),
             half_day_hours_early=max(0.0, min(12.0, _number(raw.get("half_day_hours_early")))),
-            half_day_bonus=max(0, min(720, int(_number(raw.get("half_day_bonus"))))),
-            bonus_family_link=raw.get("bonus_family_link", True) is not False,
-            bonus_family_safety=raw.get("bonus_family_safety") is True,
-            bonus_nintendo=raw.get("bonus_nintendo") is True,
-            bonus_group=raw.get("bonus_group") or None,
+            follow_family_link=raw.get("follow_family_link") is True,
+            follow_family_safety=raw.get("follow_family_safety", raw.get("bonus_family_safety")) is True,
+            follow_nintendo=raw.get("follow_nintendo", raw.get("bonus_nintendo")) is True,
             people=tuple(raw.get("people") or ()),
             notify=raw.get("notify") or None,
             watchdog=None if raw.get("watchdog") == "off" else _clock(raw.get("watchdog"), DEFAULT_WATCHDOG),
@@ -270,7 +288,7 @@ class Scheduler:
         self.marks: dict[str, list[str]] = {}
         # person -> the Family Link daily limit set for today (checked at CHECK_AT)
         self.limits_set: dict[str, int] = {}
-        # The limits the day's extra raised, kept until they're put back, over midnight and a restart too
+        # The limits raised to the day's budget, kept until they're put back, over midnight and a restart too
         # (temporary_limit.py): a Switch (its Max screentime today entity, with what putting it back after midnight
         # needs: device_id, bedtime_alarm, bedtime_end_time) and a Family Safety child's Windows or Xbox (by
         # "family_safety|<enforcer entity>|<platform>", with the enforcer's entity_id)
@@ -409,6 +427,13 @@ class Scheduler:
     def _marked(self, who: str, what: str) -> bool:
         return what in self.marks.get(who, [])
 
+    def _unmark(self, who: str, prefix: str) -> None:
+        """Today's marks of [who] starting with [prefix] are dropped (done again)."""
+        kept = [m for m in self.marks.get(who, []) if not m.startswith(prefix)]
+        if who in self.marks and len(kept) != len(self.marks[who]):
+            self.marks[who] = kept
+            self._save()
+
     def off_now(self, person: str, now: datetime | None = None) -> Off | None:
         """School time is off for the person by Hearth now: taken off for a day that isn't over (one waiting to be put
         back is a school day again, whether or not Family Link has caught up)."""
@@ -545,35 +570,20 @@ class Scheduler:
     def cancel(self, people: list[str] | None, day: date | None) -> list[str]:
         """Not taken off yet: dropped. Taken off: put back from today (inside the window, as always).
 
-        On a day off, a cancel for today also calls off the day's Family Safety and Switch extra time (put back as the
-        tick gets to it, and not set again today) for each person with either it names (everyone without people), whether
-        or not School time was taken off: Family Safety has no School time, and a day off only takes School time off
-        when the schedule says so. A cancel that only drops a later School time off (from a time, or another day)
-        leaves it."""
+        School time only: the day's budget, and the parents' limits raised to it, stay what the day type says (an
+        older Hearth called off a day off's Family Safety and Switch extra time here; there's no extra any more)."""
         today = dt_util.now().date()
         changed: list[str] = []
-        touched: dict[str, list[Off]] = {}
         for off in list(self.offs.values()):
             if people is not None and off.person not in people:
                 continue
             if day is not None and off.day != day:
                 continue
-            touched.setdefault(off.person, []).append(off)
             if off.applied:
                 off.restore_from = today
             else:
                 del self.offs[off.id]
             changed.append(off.id)
-        if (day is None or day == today) and self.day == today.isoformat() and self.day_type(today) == DAY_OFF:
-            for with_it, mark in ((self.family_safety_people(), "fs_cancel"), (self.nintendo_people(), "sw_cancel")):
-                for person in with_it:
-                    if people is not None and person not in people:
-                        continue
-                    offs = touched.get(person)
-                    if offs and all(o.day != today or o.start is not None for o in offs):
-                        continue
-                    if not self._marked(person, mark):
-                        self._mark(person, mark)
         self._save()
         return changed
 
@@ -647,18 +657,9 @@ class Scheduler:
         if kind == HALF_DAY and config.half_day_hours_early and not self._marked(person, "early"):
             if await self._end_early(person, today, config.half_day_hours_early):
                 self._mark(person, "early")
-        minutes = config.day_off_bonus if kind == DAY_OFF else config.half_day_bonus if kind == HALF_DAY else 0
-        # With Hearth's Family Link backstop on (backstop.py), Family Link's limit follows Hearth's bonus time: the
-        # minutes go there instead of onto Family Link's limit directly
-        backstop = self.household.backstop.enabled()
-        if minutes and config.bonus_family_link and not backstop and not self._marked(person, "bonus_fl"):
-            if await self._family_link_bonus(person, today, minutes):
-                self._mark(person, "bonus_fl")
-        wanted = config.bonus_group or (backstop and config.bonus_family_link)
-        if minutes and wanted and not self._marked(person, "bonus_hearth"):
-            self._mark(person, "bonus_hearth")
-            # Bonus time, whatever group the setting names (time_model.py: bonus time has no category)
-            self.household.add_time(person, minutes, via="day_off")
+        # With Hearth's Family Link backstop on (backstop.py), Family Link's limit follows Hearth's time left already
+        if config.follow_family_link and not self.household.backstop.enabled():
+            await self._family_link_follow(person, today)
 
     def _did(self, key: str) -> None:
         self._done_at[key] = dt_util.utcnow()
@@ -705,8 +706,45 @@ class Scheduler:
             self._event("half_day", person, end=hhmm(end))
         return ok
 
-    async def _family_link_bonus(self, person: str, today: date, minutes: int) -> bool:
-        """Today's daily limit = the weekday's limit + [minutes], as a today-only override (no day).
+    # The day's budget, which the parents' apps follow
+
+    def budget_known(self, person: str, today: date) -> bool:
+        """Hearth has worked out the person's day today (a restart, or the first minutes past midnight, may not yet):
+        until then nothing is raised or put back for a budget change."""
+        household = self.household
+        return household.today == today and person in household.days
+
+    def day_budget(self, person: str, groups: tuple[str, ...], today: date) -> int | None:
+        """Hearth's budget today (no bonus) of the first of [groups] to run out: the least of their budgets, the most
+        a platform held for those groups gives. None: none of them has one, or the day isn't worked out yet."""
+        if not self.budget_known(person, today):
+            return None
+        budgets = self.household.budget_on(person, today)
+        found = [int(b) for g in groups if (b := budgets.get(g)) is not None]
+        return min(found) if found else None
+
+    def _family_link_target(self, person: str, child: str, today: date) -> int | None:
+        """The today-only daily limit Family Link should have for the day's budget: the budget when the weekday's
+        limit is lower; the weekday's own when Hearth raised it today and the budget has fallen to it since; None when
+        there's nothing to write (no daily limit today, the day not worked out, already done)."""
+        switch = fl.daily_limit_switch(self.hass, child)
+        switch_state = self.hass.states.get(switch) if switch else None
+        if switch_state is not None and switch_state.state != "on":
+            return None  # no daily limit today: nothing to raise
+        limit = fl.weekday_limit(self.hass, child, today)
+        weekly = limit.get("weekly_minutes") if limit else None
+        if not isinstance(weekly, (int, float)) or not self.budget_known(person, today):
+            return None
+        budget = self.day_budget(person, (ALL,), today)
+        target = max(int(weekly), min(FULL_DAY, budget)) if budget is not None else int(weekly)
+        done = self.limits_set.get(person)
+        if done == target or (done is None and target <= int(weekly)):
+            return None
+        return target
+
+    async def _family_link_follow(self, person: str, today: date) -> bool:
+        """Today's daily limit = the day's All screen time budget when the weekday's limit is lower, as a today-only
+        override (no day); written again when the budget changes.
 
         Not while Hearth holds the kid's devices (Sleep past midnight, daily time out, a family pause: the weekday's
         limit at 0): the override would open them, read as a parent's change in the Family Link app, and keep the
@@ -718,15 +756,9 @@ class Scheduler:
             return True
         if self.household.enforcement.family_link_devices_held(person):
             return False
-        switch = fl.daily_limit_switch(self.hass, child)
-        switch_state = self.hass.states.get(switch) if switch else None
-        if switch_state is not None and switch_state.state != "on":
-            return True  # no daily limit today: nothing to add to
-        limit = fl.weekday_limit(self.hass, child, today)
-        weekly = limit.get("weekly_minutes") if limit else None
-        if not isinstance(weekly, (int, float)):
+        target = self._family_link_target(person, child, today)
+        if target is None:
             return True
-        target = int(weekly) + minutes
         # The child's id as a string, never a template: Home Assistant reads 21 digits as a number and loses some
         ok = await self._call(
             f"{person}|limit", "familylink", "set_daily_limit", {"child_id": str(child), "daily_minutes": target}
@@ -734,10 +766,10 @@ class Scheduler:
         if ok:
             self.limits_set[person] = target
             self._save()
-            self._event("bonus", person, minutes=minutes, daily_minutes=target)
+            self._event("limit_raised", person, via="family_link", daily_minutes=target)
         return ok
 
-    # Family Safety (Windows, Xbox): the day's extra minutes on the weekday's limit, put back by Hearth
+    # Family Safety (Windows, Xbox): the weekday's limit raised to the day's budget, put back by Hearth
 
     def family_safety_enforcer(self, person: str) -> Enforcer | None:
         return next(
@@ -768,8 +800,9 @@ class Scheduler:
         return None
 
     def _fs_limit_wanted(self, enforcer: Enforcer, config: ScheduleConfig) -> bool:
-        """Family Safety takes part: its extra minutes are chosen (Configure > Schedule) and it has a weekday's limit."""
-        return config.bonus_family_safety and self._fs_data(
+        """Family Safety takes part: following the day's budget is chosen (Configure > Schedule) and it has a weekday's
+        limit."""
+        return config.follow_family_safety and self._fs_data(
             enforcer.entity_id, FS_LIMIT, {"platform": WINDOWS, "day_of_week": 0, "hours": 1, "minutes": 0}
         ) is not None
 
@@ -796,43 +829,86 @@ class Scheduler:
             return None
         return await self._call(key, FS_DOMAIN, FS_LIMIT, data)
 
+    def _fs_target(self, enforcer: Enforcer, today: date) -> int | None:
+        """What a Family Safety platform of the enforcer goes up to today: the day's budget of the groups it holds
+        for, at most a day. None: no budget."""
+        budget = self.day_budget(enforcer.person, enforcer.groups, today)
+        return None if budget is None else min(FULL_DAY, budget)
+
+    def _fs_still_wanted(self, mine: dict[str, Any], config: ScheduleConfig, today: date) -> bool:
+        """A Family Safety raise of today is still the one the day's budget wants (or the day isn't worked out yet:
+        nothing changes on a guess)."""
+        people = mine.get("people") or []
+        person = people[0] if people else None
+        enforcer = self.family_safety_enforcer(person) if person else None
+        if enforcer is None or enforcer.entity_id != mine.get("entity_id") or not config.follow_family_safety:
+            return False
+        if not self.budget_known(person, today):
+            return True
+        return self._fs_target(enforcer, today) == mine["target"]
+
+    def _moved(self, key: str, target: Any) -> None:
+        """A raise put back because the day's budget changed: raised again to the new budget, but only once the
+        platform no longer reads the one put back (it may show it till its next read)."""
+        self._mark("", f"moved:{key}={target}")
+
+    def _moved_from(self, key: str, current: Any) -> bool:
+        """The platform still reads a raise put back today for a budget change: not read back yet, wait."""
+        value = _number(current, None)
+        return value is not None and self._marked("", f"moved:{key}={int(value) if value == int(value) else value}")
+
     async def _family_safety_day(self, now: datetime, kind: str, config: ScheduleConfig) -> None:
-        """What Hearth added to a Family Safety platform goes back when due (a later day, just before midnight, a
-        cancel, a day type that changed); then a day off or half day's extra goes on each chosen platform, once a
-        day."""
+        """What Hearth raised on a Family Safety platform goes back when due (a later day, just before midnight, the
+        day's budget changed); then each chosen platform goes up to the day's budget, once a day (again after a
+        budget change)."""
         today = now.date()
-        extra_day = kind in (DAY_OFF, HALF_DAY)
         for key, mine in self.temporary.of(FS_LIMIT_PLATFORMS):
-            people = mine.get("people") or []
-            called_off = bool(people and all(self._marked(p, "fs_cancel") for p in people))
-            if self.temporary.due(mine, now, extra_day, called_off) and await self._family_safety_restore(key, mine):
+            still = self._fs_still_wanted(mine, config, today)
+            reading = self._fs_current(str(mine.get("entity_id")), mine["platform"], str(mine.get("weekday")))
+            # Raised again for the new budget, unless a parent changed the limit since (theirs stays all day)
+            moved = (
+                not still
+                and self.temporary.today(mine, today)
+                and not near_midnight(now)
+                and not (mine.get("written_at") and reading not in (None, mine["target"], mine["base"]))
+            )
+            if self.temporary.due(mine, now, still) and await self._family_safety_restore(key, mine):
                 self.temporary.drop(key)
-                self._mark("", f"fs_back:{key}")
-        minutes = config.day_off_bonus if kind == DAY_OFF else config.half_day_bonus if kind == HALF_DAY else 0
-        if not minutes or near_midnight(now) or now.time() < DAY_START:
+                if moved:
+                    self._moved(key, mine["target"])
+                    for person in mine.get("people") or []:
+                        self._unmark(person, f"fs_raised:{mine['platform']}@")
+                else:
+                    self._mark("", f"fs_back:{key}")
+        if near_midnight(now) or now.time() < DAY_START:
             return
         for person in self.family_safety_people(config.people):
             enforcer = self.family_safety_enforcer(person)
-            if enforcer is None or self._marked(person, "fs_cancel") or not self._fs_limit_wanted(enforcer, config):
+            if enforcer is None or not self._fs_limit_wanted(enforcer, config):
+                continue
+            target = self._fs_target(enforcer, today)
+            if target is None:
                 continue
             for platform in enforcer.platforms:
-                if platform not in FS_LIMIT_PLATFORMS or self._marked(person, f"bonus_fs:{platform}"):
+                # Done once per budget: a budget changed since is looked at again
+                if platform not in FS_LIMIT_PLATFORMS or self._marked(person, f"fs_raised:{platform}@{target}"):
                     continue
                 if self._marked("", f"fs_back:{self._fs_key(enforcer.entity_id, platform)}"):
                     continue  # put back already today: not raised again
-                done = await self._family_safety_limit(person, enforcer, platform, today, minutes)
+                done = await self._family_safety_limit(person, enforcer, platform, today, target)
                 if done is not None:
-                    self._mark(person, f"bonus_fs:{platform}")
+                    self._mark(person, f"fs_raised:{platform}@{target}")
 
     async def _family_safety_limit(
-        self, person: str, enforcer: Enforcer, platform: str, today: date, minutes: int
+        self, person: str, enforcer: Enforcer, platform: str, today: date, budget: int
     ) -> str | None:
-        """This weekday's limit of the platform + [minutes]. SET, SKIP (no limit today: nothing to add to; or Hearth's
-        limit changed since, by a parent), or None when not done (not read, just written, an earlier day's not put back
-        yet, or the call failed: tried again; the Xbox's fails without the Xbox Family Settings sign-in).
+        """This weekday's limit of the platform up to [budget]. SET, SKIP (no limit today, or one at the budget or over
+        it: nothing to raise; or Hearth's limit changed since, by a parent), or None when not done (not read, just
+        written, an earlier day's not put back yet, or the call failed: tried again; the Xbox's fails without the Xbox
+        Family Settings sign-in).
 
-        The limit read is the weekday's as it is now: a parent's change before Hearth's is what the extra goes on top
-        of. Hearth's own (kept in temporary) is never added to again."""
+        The limit read is the weekday's as it is now: a parent's change before Hearth's is what's raised from.
+        Hearth's own (kept in temporary) is never taken as the limit to raise from."""
         key = self._fs_key(enforcer.entity_id, platform)
         weekday = WEEKDAYS[today.weekday()]
         current = self._fs_current(enforcer.entity_id, platform, weekday)
@@ -846,11 +922,15 @@ class Scheduler:
             if seen != WRITE:
                 return seen  # SET (already: a restart before it was marked), SKIP (a parent's since)
             # The last write failed: the limit still reads the base, written again below
+        elif self._moved_from(key, current):
+            return None  # Hearth's earlier raise of today, put back for a budget change: not read back yet
         if current is None:
             return None
         if current < 0 or current >= FULL_DAY:
             return SKIP
-        target = min(FULL_DAY, int(current) + minutes)
+        target = min(FULL_DAY, budget)
+        if target <= current:
+            return SKIP  # the limit is at the budget or over it: it never stops the kid first
         # Kept before the call: one that reached Family Safety but whose answer was lost is still known as Hearth's
         self.temporary.begin(key, platform, int(current), target, [person], entity_id=enforcer.entity_id)
         await self.async_flush()
@@ -863,11 +943,11 @@ class Scheduler:
             self.temporary.failed(key)
             return None
         self.temporary.written(key)
-        self._event("bonus", person, via="family_safety", platform=platform, minutes=minutes, daily_minutes=target)
+        self._event("limit_raised", person, via="family_safety", platform=platform, daily_minutes=target)
         return SET
 
     async def _family_safety_restore(self, key: str, mine: dict[str, Any]) -> bool:
-        """The limit Hearth added to goes back on the recorded weekday (on a later day too: a weekday's limit reads and
+        """The limit Hearth raised goes back on the recorded weekday (on a later day too: a weekday's limit reads and
         writes any day), only while it still reads Hearth's. True when done (put back, or nothing of Hearth's left: a
         parent's change stays), False to try again next minute."""
         entity_id, platform, weekday = mine.get("entity_id"), mine["platform"], mine.get("weekday")
@@ -887,10 +967,10 @@ class Scheduler:
         if not await self._fs_write(f"fs_back:{key}", entity_id, platform, weekday, mine["base"]):
             return False
         for person in mine.get("people") or []:
-            self._event("bonus_back", person, via="family_safety", platform=platform, daily_minutes=mine["base"])
+            self._event("limit_back", person, via="family_safety", platform=platform, daily_minutes=mine["base"])
         return True
 
-    # Nintendo Switch: the day's extra minutes on its Max screentime today, put back by Hearth
+    # Nintendo Switch: its Max screentime today raised to the day's budget, put back by Hearth
 
     def nintendo_switches(self, chosen: tuple[str, ...] = ()) -> dict[str, list[str]]:
         """Each Switch of the chosen people's Nintendo enforcers (everyone's without), with its people: a Switch two
@@ -903,37 +983,64 @@ class Scheduler:
                     people.append(e.person)
         return found
 
-    def nintendo_people(self, chosen: tuple[str, ...] = ()) -> list[str]:
-        return sorted({p for people in self.nintendo_switches(chosen).values() for p in people})
+    def _switch_target(self, entity_id: str, people: list[str], today: date) -> int | None:
+        """What a Switch goes up to today: the biggest of its kids' day budgets (each of the groups their Nintendo
+        enforcer holds for), so it never stops the kid with the most time first, at most SWITCH_MAX. A kid with no
+        budget isn't counted (the Switch's own limit is their only one). None: no budget."""
+        budgets = [
+            budget
+            for e in enforcers_from_options(self.household.options)
+            if e.kind == NINTENDO and e.entity_id == entity_id and e.person in people
+            and (budget := self.day_budget(e.person, e.groups, today)) is not None
+        ]
+        return min(SWITCH_MAX, max(budgets)) if budgets else None
+
+    def _switch_still_wanted(self, entity_id: str, mine: dict[str, Any], config: ScheduleConfig, today: date) -> bool:
+        """A Switch's raise of today is still the one the day's budgets want (or a day isn't worked out yet)."""
+        people = self.nintendo_switches(config.people).get(entity_id)
+        if not people or not config.follow_nintendo:
+            return False
+        if not all(self.budget_known(p, today) for p in people):
+            return True
+        return self._switch_target(entity_id, people, today) == mine["target"]
 
     async def _nintendo_day(self, now: datetime, kind: str, config: ScheduleConfig) -> None:
-        """What Hearth added to a Switch goes back when due (a later day, just before midnight, a cancel, a day type
-        that changed); then a day off or half day's extra goes on each chosen Switch, once a day."""
+        """What Hearth raised on a Switch goes back when due (a later day, just before midnight, the day's budget
+        changed); then each chosen Switch goes up to the day's budget, once a day (again after a budget change)."""
         today = now.date()
-        extra_day = kind in (DAY_OFF, HALF_DAY)
         for entity_id, mine in self.temporary.of((SWITCH,)):
-            people = mine.get("people") or []
-            called_off = bool(people and all(self._marked(p, "sw_cancel") for p in people))
-            if self.temporary.due(mine, now, extra_day, called_off) and await self._nintendo_restore(
-                entity_id, mine, today
-            ):
+            still = self._switch_still_wanted(entity_id, mine, config, today)
+            state = self.hass.states.get(entity_id)
+            reading = _number(state.state if state else None, None)
+            hold = self.household.enforcement.switch_hold(entity_id)
+            # Raised again for the new budget, unless a parent changed the limit since (theirs stays all day)
+            theirs = bool(hold.restore.get("adopted")) if hold is not None else bool(
+                mine.get("written_at") and reading not in (None, 0, mine["target"], mine["base"])
+            )
+            moved = not still and self.temporary.today(mine, today) and not near_midnight(now) and not theirs
+            if self.temporary.due(mine, now, still) and await self._nintendo_restore(entity_id, mine, today):
                 self.temporary.drop(entity_id)
-                self._mark("", f"sw_back:{entity_id}")
-        minutes = config.day_off_bonus if kind == DAY_OFF else config.half_day_bonus if kind == HALF_DAY else 0
-        if not minutes or not config.bonus_nintendo or near_midnight(now) or now.time() < DAY_START:
+                if moved:
+                    self._moved(entity_id, mine["target"])
+                    self._unmark("", f"sw_raised:{entity_id}@")
+                else:
+                    self._mark("", f"sw_back:{entity_id}")
+        if not config.follow_nintendo or near_midnight(now) or now.time() < DAY_START:
             return
         for entity_id, people in self.nintendo_switches(config.people).items():
-            if self._marked("", f"bonus_sw:{entity_id}") or self._marked("", f"sw_back:{entity_id}"):
+            target = self._switch_target(entity_id, people, today)
+            if target is None:
                 continue
-            if all(self._marked(p, "sw_cancel") for p in people):
+            # Done once per budget: a budget changed since is looked at again
+            if self._marked("", f"sw_raised:{entity_id}@{target}") or self._marked("", f"sw_back:{entity_id}"):
                 continue
-            done = await self._nintendo_bonus(entity_id, people, minutes, today)
+            done = await self._nintendo_raise(entity_id, people, target, today)
             if done is not None:
-                self._mark("", f"bonus_sw:{entity_id}")
+                self._mark("", f"sw_raised:{entity_id}@{target}")
 
-    async def _nintendo_bonus(self, entity_id: str, people: list[str], minutes: int, today: date) -> str | None:
-        """Today's limit of the Switch + [minutes]. SET, SKIP (no limit, or at the most already), or None when not
-        done (not read, bonus time running, Hearth's hold under way, the call failed: tried again)."""
+    async def _nintendo_raise(self, entity_id: str, people: list[str], budget: int, today: date) -> str | None:
+        """Today's limit of the Switch up to [budget]. SET, SKIP (no limit, or one at the budget or over it), or None
+        when not done (not read, bonus time running, Hearth's hold under way, the call failed: tried again)."""
         enforcement = self.household.enforcement
         mine = self.temporary.get(entity_id)
         state = self.hass.states.get(entity_id)
@@ -954,9 +1061,9 @@ class Scheduler:
         if enforcement.switch_quiet(entity_id):
             return None
         if hold is not None:
-            # Held (limit 0): nothing is written to the Switch. The extra goes into what letting go puts back
+            # Held (limit 0): nothing is written to the Switch. The raise goes into what letting go puts back
             if hold.restore.get("adopted"):
-                return None  # a parent's change lets the hold go: then their limit is the one to add to
+                return None  # a parent's change lets the hold go: then their limit is the one to raise from
             if current != 0:
                 # Not reading the hold's 0 yet: changing what it puts back now would look like a parent's change
                 return None
@@ -964,12 +1071,16 @@ class Scheduler:
         else:
             if enforcement.switch_extended(entity_id):
                 return None  # bonus time from the Nintendo app runs: the Switch refuses a new limit till it's over
+            if mine is None and self._moved_from(entity_id, current):
+                return None  # Hearth's earlier raise of today, put back for a budget change: not read back yet
             base = current
         if base is None:
             return None
         if base < 0 or base >= SWITCH_MAX:
-            return SKIP  # no limit, or the most already: nothing to add to
-        target = min(SWITCH_MAX, int(base) + minutes)
+            return SKIP  # no limit, or the most already: nothing to raise
+        target = min(SWITCH_MAX, budget)
+        if target <= base:
+            return SKIP  # the limit is at the budget or over it: it never stops the kid first
         # Kept before any change: one that reached Nintendo but whose answer was lost is still known as Hearth's
         self.temporary.begin(
             entity_id, SWITCH, int(base), target, people, via_hold=hold is not None, **enforcement.switch_day(entity_id)
@@ -986,11 +1097,11 @@ class Scheduler:
             return None
         self.temporary.written(entity_id)
         for person in people:
-            self._event("bonus", person, via="nintendo", switch=entity_id, minutes=minutes, daily_minutes=target)
+            self._event("limit_raised", person, via="nintendo", switch=entity_id, daily_minutes=target)
         return SET
 
     async def _nintendo_restore(self, entity_id: str, mine: dict[str, Any], today: date) -> bool:
-        """The limit Hearth added to goes back, only while the Switch has Hearth's: True when done (put back, or a
+        """The limit Hearth raised goes back, only while the Switch has Hearth's: True when done (put back, or a
         parent's change left alone), False to try again next minute."""
         enforcement = self.household.enforcement
         target, base = mine["target"], mine["base"]
@@ -1037,7 +1148,7 @@ class Scheduler:
 
     def _back(self, entity_id: str, mine: dict[str, Any]) -> None:
         for person in mine.get("people") or []:
-            self._event("bonus_back", person, via="nintendo", switch=entity_id, daily_minutes=mine["base"])
+            self._event("limit_back", person, via="nintendo", switch=entity_id, daily_minutes=mine["base"])
 
     async def _take_off_due(self, now: datetime) -> None:
         today = now.date()
@@ -1236,39 +1347,49 @@ class Scheduler:
             limit = fl.weekday_limit(self.hass, child, today) if child else None
             override = limit.get("override_minutes") if limit else None
             if override is not None and int(_number(override, -1)) != target:
-                problems.append(f"{self.household.person_name(person)}'s extra time didn't apply")
-        minutes = config.day_off_bonus if kind == DAY_OFF else config.half_day_bonus if kind == HALF_DAY else 0
-        # With the backstop on, Family Link follows Hearth's bonus time (backstop.py): nothing of its own to check
-        if minutes and config.bonus_family_link and not self.household.backstop.enabled():
+                problems.append(f"{self.household.person_name(person)}'s limit for today's budget didn't apply")
+        # With the backstop on, Family Link follows Hearth's time left (backstop.py): nothing of its own to check
+        if config.follow_family_link and not self.household.backstop.enabled():
             for person in people:
+                child = self.child(person)
                 # Waiting for Hearth's own hold of the devices to be let go is no failure
-                if not self._marked(person, "bonus_fl") and not self.household.enforcement.family_link_devices_held(
-                    person
+                if (
+                    child is not None
+                    and self._family_link_target(person, child, today) is not None
+                    and not self.household.enforcement.family_link_devices_held(person)
                 ):
-                    problems.append(f"{self.household.person_name(person)}'s extra time couldn't be set")
+                    name = self.household.person_name(person)
+                    problems.append(f"{name}'s limit couldn't be raised to today's budget")
         fs_problems: list[str] = []
-        for person in self.family_safety_people(config.people) if minutes else []:
+        for person in self.family_safety_people(config.people):
             enforcer = self.family_safety_enforcer(person)
-            if enforcer is None or self._marked(person, "fs_cancel") or not self._fs_limit_wanted(enforcer, config):
+            if enforcer is None or not self._fs_limit_wanted(enforcer, config):
+                continue
+            target = self._fs_target(enforcer, today)
+            if target is None:
                 continue
             missing = [
                 p
                 for p in enforcer.platforms
                 if p in FS_LIMIT_PLATFORMS
-                and not self._marked(person, f"bonus_fs:{p}")
+                and not self._marked(person, f"fs_raised:{p}@{target}")
                 and not self._marked("", f"fs_back:{self._fs_key(enforcer.entity_id, p)}")
             ]
             if missing:
                 fs_problems.append(
-                    f"{self.household.person_name(person)}'s {' and '.join(missing)} extra time couldn't be set"
+                    f"{self.household.person_name(person)}'s {' and '.join(missing)} limit couldn't be raised to "
+                    "today's budget"
                 )
         sw_problems: list[str] = []
-        switches = self.nintendo_switches(config.people) if minutes and config.bonus_nintendo else {}
+        switches = self.nintendo_switches(config.people) if config.follow_nintendo else {}
         for entity_id, owners in switches.items():
-            if self._marked("", f"bonus_sw:{entity_id}") or all(self._marked(p, "sw_cancel") for p in owners):
+            target = self._switch_target(entity_id, owners, today)
+            if target is None or self._marked("", f"sw_raised:{entity_id}@{target}"):
+                continue
+            if self._marked("", f"sw_back:{entity_id}"):
                 continue
             names = " and ".join(self.household.person_name(p) for p in owners)
-            sw_problems.append(f"{names}'s Switch extra time couldn't be set")
+            sw_problems.append(f"{names}'s Switch limit couldn't be raised to today's budget")
         if problems or fs_problems or sw_problems:
             apps = (("Family Link", problems), ("Family Safety", fs_problems), ("the Nintendo app", sw_problems))
             where = " and ".join(name for name, found in apps if found)

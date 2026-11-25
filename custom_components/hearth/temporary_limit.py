@@ -1,18 +1,19 @@
 """Temporary limits: a daily limit Hearth raises for one day and puts back itself.
 
-The schedule's extra minutes on a day off or half day (schedule.py) raise a limit that is a setting, not today's alone:
-the Switch's Max screentime today (of every day, or of this weekday) and Family Safety's limit of a weekday for Windows
-or the Xbox (microsoft_family_safety.set_screentime_limit with day_of_week). Neither has a today-only limit Hearth can
-count on, so a raise would stay. Hearth keeps one record per limit it raised (one platform of one child, or one Switch):
+The schedule raises a parent's limit to the day's budget when it's lower (schedule.py, when chosen), and that limit is
+a setting, not today's alone: the Switch's Max screentime today (of every day, or of this weekday) and Family Safety's
+limit of a weekday for Windows or the Xbox (microsoft_family_safety.set_screentime_limit with day_of_week). Neither has
+a today-only limit Hearth can count on, so a raise would stay. Hearth keeps one record per limit it raised (one
+platform of one child, or one Switch):
 
-- Before writing, what it added to ("base"), what it writes ("target"), the day and weekday, the platform and whose it
-  is ("people"), with whatever the platform needs to put it back. Kept across a restart and midnight, so Hearth never
-  adds to its own value twice.
+- Before writing, what it raised from ("base"), what it writes ("target"), the day and weekday, the platform and whose
+  it is ("people"), with whatever the platform needs to put it back. Kept across a restart and midnight, so Hearth
+  never takes its own value for the parent's.
 - A write that failed is not Hearth's limit: "written_at" stays empty, the raise isn't done, and it's written again
   while it's still today (a write that did reach the platform is found by its reading the target).
-- The base goes back 2 minutes before midnight, at once when the day's extra is called off or the day type changed,
-  or on the next start when Home Assistant was off then (on the recorded weekday: a weekday's setting can be put back
-  any day; the Switch's own way is in schedule.py).
+- The base goes back 2 minutes before midnight, at once when the day's budget changed (then raised again to the new
+  one by schedule.py) or following it was turned off, or on the next start when Home Assistant was off then (on the
+  recorded weekday: a weekday's setting can be put back any day; the Switch's own way is in schedule.py).
 - Only while the limit still reads Hearth's target: a parent's change since (in the Family Safety or Nintendo app, or
   an automation) is theirs and stays. A limit that reads the base right after Hearth's write is waited on for a while
   (the integration may not have read it back yet).
@@ -145,10 +146,10 @@ class TemporaryLimits:
         return record.get("day") == today.isoformat()
 
     @staticmethod
-    def due(record: dict[str, Any], now: datetime, extra_day: bool, called_off: bool) -> bool:
-        """Its base goes back now: a later day (missed at midnight), 2 minutes before midnight, today isn't a day off
-        or half day any more, or the day's extra was called off for everyone it's for."""
-        return not TemporaryLimits.today(record, now.date()) or near_midnight(now) or not extra_day or called_off
+    def due(record: dict[str, Any], now: datetime, still_wanted: bool) -> bool:
+        """Its base goes back now: a later day (missed at midnight), 2 minutes before midnight, or the raise isn't the
+        one the day wants any more (the day's budget changed, or following it was turned off)."""
+        return not TemporaryLimits.today(record, now.date()) or near_midnight(now) or not still_wanted
 
     @staticmethod
     def just_written(record: dict[str, Any], settle: timedelta = QUIET_AFTER_CALL) -> bool:
