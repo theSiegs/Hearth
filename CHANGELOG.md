@@ -7,6 +7,8 @@
 
 ### Home Assistant integration
 
+- **Extra time no longer opens a phone in bedtime, School time or Hearth's own hold.** A Family Link bonus opens a device whatever holds it, so the half-day bonus Hearth gave at 00:05 opened the kids' phones and tablets in the middle of the night (on one tablet until 5 AM). Extra time that Hearth passes on to Family Link (bonus time, an allow of All screen time, a day-off or half-day bonus) now waits on a device in bedtime or School time, and on every device while Hearth holds them, and is given each minute once the device is free, until it ends. Lifting bedtime on purpose still uses a bonus.
+- **No School time window for a kid whose Family Link School time is switched off**: a kid's `School today` sensor no longer shows a school window for a kid whose School time switch is off in Family Link, unless Hearth itself switched it off for the day (School time off, Home today, a day off).
 - **Block a website by hand**: `hearth.block_site` blocks one or more domains for the kids (everyone with Family Link or Family Safety by default) in Family Link's Chrome (`*.example.com` and `example.com`) and in Family Safety, next to the daily website list. Web addresses are cut down to their domain; IP addresses, wildcards and suffixes such as `co.uk` are refused. `hearth.unblock_site` takes back only what Hearth's block added: a block made in the Family Link or Family Safety app stays, and so does a site the website list blocked, and the answer says which were kept and why. A hand-blocked site stays blocked when the website list drops it. The kid's screen-time sensor shows them under `exceptions.blocked_sites`.
 
 ## 2026.11.56

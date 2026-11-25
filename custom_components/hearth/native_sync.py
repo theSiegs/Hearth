@@ -26,6 +26,7 @@ from .entry_tasks import entry_task
 from . import grants as g
 from .counting import ALL
 from .enforce import (
+    DEVICES,
     FAMILY_LINK,
     FAMILY_SAFETY,
     FS_ALLOW_UNTIL,
@@ -94,6 +95,8 @@ class NativeSync:
         # Family Safety extra time whose write failed but may have been applied: {person, why, platform, until (what
         # Hearth asked for), error, at}; adopted as Hearth's own if it shows, dropped after POSSIBLY_GIVEN_WINDOW
         self.possibly_given: list[dict[str, Any]] = []
+        # One retry of waiting Family Link extra time at a time (the minute tick and a hold let go): never given twice
+        self._retrying = False
 
     async def async_load(self) -> None:
         stored = await self._store.async_load() or {}
@@ -169,9 +172,12 @@ class NativeSync:
 
     @callback
     def after_apply(self) -> None:
-        """Enforcement just held or let go: what it holds now is watched (and a change already there is seen)."""
+        """Enforcement just held or let go: what it holds now is watched (and a change already there is seen). Family
+        Link extra time that waited for Hearth's own hold is tried again at once (a hold let go for bonus time)."""
         if self.detect():
             self.household.recompute()
+        if any(isinstance(r.get("fl_wait"), dict) for r in self._given.values()):
+            entry_task(self.hass, self.household.hub.entry.entry_id, self._retry_family_link(), "hearth extra time that waited")
 
     @callback
     def detect(self) -> bool:
@@ -272,7 +278,11 @@ class NativeSync:
         as Hearth's own: given for its reason (so it's Hearth's, never a parent's grant, and Hearth's cancel applies),
         and logged as a WARNING to hand the Family Safety maintainer. When its reason ended meanwhile, it's cancelled
         through cancel_time_bonus (which checks what's in force first), as any of Hearth's own. Nothing shows within
-        POSSIBLY_GIVEN_WINDOW: dropped, the write wasn't applied. Hearth never sends a blind cancel."""
+        POSSIBLY_GIVEN_WINDOW: dropped, the write wasn't applied. Hearth never sends a blind cancel.
+
+        Also each minute: Family Link extra time that waited for a device in bedtime, School time or Hearth's own
+        hold (_give_family_link) is given once the device is free, until the extra time's end."""
+        await self._retry_family_link()
         if not self.possibly_given:
             return
         now = dt_util.utcnow()
@@ -466,7 +476,11 @@ class NativeSync:
         record = self._given[key]
         try:
             if platform is None:
-                await self._give_family_link(person, minutes, key[1], record, only=fl_device)
+                waiting = await self._give_family_link(person, minutes, key[1], record, only=fl_device)
+                if waiting:
+                    record["fl_wait"] = {"until": dt_util.as_utc(until).isoformat(), "only": fl_device}
+                else:
+                    record.pop("fl_wait", None)
             if fl_device is None:
                 await self._give_family_safety(person, until, minutes, key[1], record, only=platform)
         finally:
@@ -494,22 +508,37 @@ class NativeSync:
 
     async def _give_family_link(
         self, person: str, minutes: int, why: str, record: dict[str, Any], only: str | None = None
-    ) -> None:
+    ) -> bool:
         """A today-only Family Link bonus on each of the child's devices whose own daily limit would block within
-        [minutes] (a device with no limit gets none)."""
+        [minutes] (a device with no limit gets none). Says whether a device had to wait.
+
+        A Family Link bonus opens the device whatever holds it: bedtime and School time included (bedtime_lift.py
+        uses that on purpose), and Hearth's own hold of the devices (a daily limit of 0). Extra time never lifts
+        those, so a device in bedtime or School time, or every device while Hearth holds them, waits: given later
+        (async_pending_tick) once free. A day-off bonus at 00:05 once opened every phone in the middle of the night."""
         from . import family_link as fl
 
         child = self.household.family_link_child(person)
         if child is None or not self.hass.services.has_service(FL_DOMAIN, "add_time_bonus"):
-            return
+            return False
+        held = self.household.enforcement.held.get(f"{FAMILY_LINK}|{person}")
+        hearth_holds = bool(held and DEVICES in held.items)
         added: dict[str, int] = {}
         error = None
+        waiting = False
         for device in fl.devices(self.hass, child):
             info = fl.device_limit(self.hass, child, device)
             if only is not None and info["device_id"] != only:
                 continue
             left = info["minutes_left"]
             if left is None or left >= minutes:
+                continue
+            if (
+                hearth_holds
+                or device.attributes.get("bedtime_active")
+                or device.attributes.get("school_time_active")
+            ):
+                waiting = True
                 continue
             bonus = max(1, min(1440, minutes - max(0, left)))
             try:
@@ -529,6 +558,42 @@ class NativeSync:
             mine["devices"][info["device_id"]] = mine["devices"].get(info["device_id"], 0) + bonus
         if added or error:
             self.household.enforcement.note(f"{FAMILY_LINK}|{person}", bonus_added=added, reason=why, error=error)
+        return waiting
+
+    async def _retry_family_link(self) -> None:
+        """Family Link extra time that waited (_give_family_link): given now to the devices that are free, the rest
+        wait on, until the extra time's end (then dropped)."""
+        if self._retrying:
+            return
+        self._retrying = True
+        try:
+            await self._retry_waiting()
+        finally:
+            self._retrying = False
+
+    async def _retry_waiting(self) -> None:
+        now = dt_util.now()
+        today = now.date().isoformat()
+        for key, record in list(self._given.items()):
+            wait = record.get("fl_wait")
+            if not isinstance(wait, dict):
+                continue
+            until = _when(wait.get("until"))
+            if record.get("day") != today or until is None or until <= now:
+                record.pop("fl_wait", None)
+                self._save()
+                continue
+            minutes = math.ceil((until - now).total_seconds() / 60)
+            try:
+                waiting = await self._give_family_link(key[0], minutes, key[1], record, only=wait.get("only"))
+            except Exception:  # noqa: BLE001 - tried again next minute
+                _LOGGER.exception("Hearth couldn't give Family Link extra time that waited")
+                continue
+            if self._given.get(key) is not record:
+                continue  # taken back meanwhile
+            if not waiting:
+                record.pop("fl_wait", None)
+            self._save()
 
     async def _give_family_safety(
         self, person: str, until, minutes: int, why: str, record: dict[str, Any], only: str | None = None

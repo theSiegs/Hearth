@@ -712,6 +712,54 @@ async def test_extra_time_given_back_reaches_family_link_too(
     assert [c.data["bonus_minutes"] for c in added] == [15]
 
 
+async def test_extra_time_waits_for_bedtime_and_school_time_on_a_device(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """A Family Link bonus opens a device whatever holds it, bedtime and School time included. A day-off bonus given
+    at 00:05 once opened every phone in the middle of the night: extra time waits until the device is free."""
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+    added = async_mock_service(hass, "familylink", "add_time_bonus")
+    await _sam_with_family_link(hass, hass_client_no_auth)
+    _phone(hass, bedtime_active=True)
+    _remaining(hass, 0)
+    await _budget(hass, "all", 30)
+    await _bonus(hass, "all", 20)
+    sync = _household(hass).sync
+    await sync.async_pending_tick()
+    assert added == []
+
+    _phone(hass, school_time_active=True)
+    await sync.async_pending_tick()
+    assert added == []
+
+    _phone(hass)  # free: the waiting extra time is given, once
+    await sync.async_pending_tick()
+    await sync.async_pending_tick()
+    assert [c.data["entity_id"] for c in added] == [PHONE]
+
+
+async def test_extra_time_waits_while_hearth_holds_the_devices(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """While Hearth holds the devices (its daily limit of 0: Sleep, a pause), a bonus on them would open them."""
+    freezer.move_to(dt_util.now().replace(hour=12, minute=0, second=0, microsecond=0))
+    added = async_mock_service(hass, "familylink", "add_time_bonus")
+    await _sam_with_family_link(hass, hass_client_no_auth)
+    _phone(hass)
+    _remaining(hass, 0)
+    await _budget(hass, "all", 60)  # 40 left today
+    household = _household(hass)
+    held = household.enforcement.held.setdefault("family_link|person.sam", enforce.Held())
+    held.items.add(enforce.DEVICES)
+    household.sync.mirror_bonus("person.sam")
+    await hass.async_block_till_done()
+    assert added == []
+
+    held.items.discard(enforce.DEVICES)
+    await household.sync.async_pending_tick()
+    assert [c.data["entity_id"] for c in added] == [PHONE]
+
+
 async def test_allowing_all_screen_time_gives_family_safety_extra_time(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:
