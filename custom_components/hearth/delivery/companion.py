@@ -2,7 +2,8 @@
 
 A button with a service goes out as HEARTH_ACT|<item key>|<n> (attention.py runs it); one without goes out as its own
 id (HEARTH_MORE|..., HEARTH_APP|...), as phones already know it. Every push carries a tag starting with hearth_: a phone
-app that shows Hearth's notices (Glint) goes by that prefix.
+app that shows Hearth's notices (Glint) goes by that prefix, and routes each by its data's hearth_kind, hearth_person and
+hearth_people (attention.routing), never by parsing the tag.
 """
 
 from __future__ import annotations
@@ -29,7 +30,10 @@ def buttons(item: Item) -> list[dict[str, str]]:
 
 def send(hass: HomeAssistant, options: Mapping[str, Any], to: list[phones.Phone], item: Item) -> list[str]:
     """The item on the phones [to]; the services told."""
-    data: dict[str, Any] = {"tag": item.channel_tag}
+    from ..attention import routing
+
+    # hearth_kind, hearth_person, hearth_people: an app routes by them, never by parsing the tag
+    data: dict[str, Any] = {"tag": item.channel_tag, **routing(item)}
     if item.actions:
         data["actions"] = buttons(item)
     if item.link and not item.opens:

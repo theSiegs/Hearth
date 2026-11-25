@@ -657,7 +657,11 @@
         },
         "minutes": {
           "name": "Minutes",
-          "description": "Minutes a day."
+          "description": "Minutes a day. -1 (or no_limit) for no limit."
+        },
+        "no_limit": {
+          "name": "No limit",
+          "description": "On: no limit (leave minutes out)."
         },
         "days": {
           "name": "Days",

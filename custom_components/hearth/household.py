@@ -1343,7 +1343,9 @@ class Household:
         # The day turned: each person's final minutes of the day before, as last counted (history.py, `day`)
         if self.today is not None and self.today != today:
             for person, last in self.days.items():
-                self.history.log_day(person, self.today, self.day_minutes(last), self.day_budget(last))
+                self.history.log_day(
+                    person, self.today, self.day_minutes(last), self.day_budget(last), self.day_used_minutes(last)
+                )
         elif backfill:
             back_day = today - timedelta(days=1)
             # Only who had time counted on Hearth's devices or live sources: a totals sensor has started today since
@@ -1594,8 +1596,15 @@ class Household:
             )
 
     def day_minutes(self, day: PersonDay | None) -> dict[str, int]:
-        """A person's minutes per group of the household (seconds / 60, rounded), as the summary's `week` shows them."""
+        """A person's counted minutes per group of the household (seconds / 60, rounded), as the summary's `week`
+        shows them: what counts against the day's time (Unlimited's minutes left out)."""
         groups = day.groups if day is not None else {}
+        return {g.id: int(round(groups.get(g.id, 0.0) / 60)) for g in self.groups}
+
+    def day_used_minutes(self, day: PersonDay | None) -> dict[str, int]:
+        """A person's minutes used per group (seconds / 60, rounded): every minute, the ones used while Unlimited too
+        (unlimited.py leaves those out of day_minutes only)."""
+        groups = (day.raw_groups or day.groups) if day is not None else {}
         return {g.id: int(round(groups.get(g.id, 0.0) / 60)) for g in self.groups}
 
     def day_budget(self, day: PersonDay) -> dict[str, int | None]:
@@ -2410,7 +2419,7 @@ class Household:
             f"{happened(ends_on, who, self.places.place_name(person, next(iter(ends_on.values()))))}; {what}."
             for ends_on, what in ended
         ]
-        self.hub.asks.tell(f"{who}: {self.places.place_name(person, went_to)}", " ".join(lines), f"hearth_place_{person}")
+        self.hub.asks.tell(f"{who}: {self.places.place_name(person, went_to)}", " ".join(lines), f"hearth_place_{person}", person)
 
     @callback
     def presence_changed(self, person: str, fact: str, value: Any) -> None:
@@ -2745,7 +2754,12 @@ class Household:
                             {"device": f"nintendo:{enforcer.entity_id}", "minutes": 0},
                         ),
                     ),
-                    about={"person": enforcer.person, "switch": enforcer.entity_id},
+                    # The kids it may be held for: about one of them only when there's one
+                    about={
+                        **({"person": held[0]} if len(held := list(details.get("held_for") or [enforcer.person])) == 1 else {}),
+                        "people": held,
+                        "switch": enforcer.entity_id,
+                    },
                     expires=dt_util.utcnow() + UNATTRIBUTED_REPEAT,
                     once=True,
                 )
@@ -2778,7 +2792,12 @@ class Household:
                         {"device": f"nintendo:{enforcer.entity_id}", "minutes": DEFAULT_TURN_MINUTES},
                     ),
                 ),
-                about={"person": enforcer.person, "switch": enforcer.entity_id},
+                # The kid it's held for, and whose turn it was
+                about={
+                    "person": enforcer.person,
+                    "people": [enforcer.person, *([other] if other and other != enforcer.person else [])],
+                    "switch": enforcer.entity_id,
+                },
                 tv=True,
                 once=True,
             )

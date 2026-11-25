@@ -3,6 +3,16 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **Every group's budgets in the household summary.** Each person in `hearth/household` now has `budgets`: every group, with a budget or not (`null`: no limit), its school-day and other-day minutes, and its own weekdays when some differ on the Schedule tab; plus which budget a half day uses (`half_day_budget`, the person's and the household's). An adult's app (not only an administrator's Hearth page) can show and offer to switch on a limit.
+- **`hearth.set_budget` takes "no limit" and answers what it changed.** `minutes: null`, `"no_limit"`, `-1` or `no_limit: true` remove a limit; the service answers the values before and after, for an undo.
+- **Kid time on Glint Panels.** A panel reads each kid's time today, read only, over its own secret (`hearth/panel/kids/subscribe`): time left and used, each category, bonus time, Unlimited, locks, the schedule's mode, school today and bedtime. The panel no longer has to guess entity ids from names.
+- **Notices say who and what they're about.** Every phone notification from Hearth carries `hearth_kind`, `hearth_person` and `hearth_people` in its data, and the `hearth_notice` event's `about` lists `people` when it's about several (a shared Switch's notice names each kid). An app routes by them instead of reading the tag. Where a kid went and Unlimited's end now name their kid too.
+- **Minutes used while Unlimited show as used.** They still don't count against the day, but each group's "today" sensor (and its history and statistics) now shows them, with `counted` and `unlimited` attributes; the household summary has `total_minutes` and `unlimited_minutes` per group and `used` per day of the week, and a day's record keeps them.
+
 ## 2026.11.60
 
 ### Home Assistant integration

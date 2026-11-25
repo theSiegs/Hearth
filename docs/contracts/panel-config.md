@@ -228,6 +228,50 @@ not be what it does on any other error.)
 
 (The handoff's `parent_pins` and `parent_pins_version` are not in the document: no PIN hash leaves Home Assistant.)
 
+### `<d>/panel/kids/subscribe {device_id, secret}` (kid time, read only)
+
+Each kid's time today, for a kid card on the wall, so the panel never builds entity ids from names
+([people-entities.md](people-entities.md)). Not part of the document: live minutes would change the document's
+`version` every minute. Errors as `subscribe` (`unknown_panel`, `unavailable`); a server without it (Hearth before
+it) answers `unknown_command`: fall back to what the panel did before. Result `null`, then an event, and again
+whenever it changes (batched 2 s, only when its `version` differs):
+
+```json
+{
+  "kids": [
+    {
+      "person": "person.sam", "name": "Sam",
+      "time": {"today_left": 45, "today_minutes": 60, "base_minutes": 60, "bonus": 0, "bonus_left": 0, "used": 15,
+               "unlimited": null, "unlimited_today": [], "text": "45 min left today",
+               "categories": [{"id": "video", "name": "Video", "limit": 30, "limit_today": 30, "left": 20, "used": 10,
+                               "text": "...", "limit_text": "...", "raised": false, "closed": false, "until": null,
+                               "bonus": 0, "bonus_left": 0, "origin": null}],
+               "by_category": [{"id": "video", "name": "Video", "minutes": 10}], "uncounted": 0,
+               "category_bonuses": []},
+      "unlimited_minutes": 0,
+      "locked": false, "lock": null, "pause": null, "bedtime_lifted": null, "next_lock": {"at": "...", "kind": "bedtime"},
+      "mode": null,
+      "school_today": {"state": "school", "start": "...", "end": "...", "decided_by": "...", "window_source": "family_link"},
+      "bedtime": {"start": "2026-11-25T20:30:00-08:00", "end": "2026-11-25T07:00:00-08:00"}
+    }
+  ],
+  "version": "3f2a9c1e04aa7b21",
+  "at": "2026-11-25T16:05:00-08:00"
+}
+```
+
+- `kids`: the kids on Hearth's page (else everyone it maps something to who isn't an adult), each once. The panel shows
+  the ones its `panel.people` names, or all.
+- `time`: the time model's view ([time-model.md](time-model.md)) as phones and TVs get it, without `origins` (who gave
+  what stays with the adults' apps). `time.used` is the counted minutes; `unlimited_minutes` is daily time's minutes
+  used while Unlimited (used, not counted).
+- `locked`, `lock` {`by`, `kind` (`bedtime`, `school_time`, `pause`, `other`), `kinds`, `until`}, `pause`,
+  `bedtime_lifted`, `next_lock`: as in the person's state document. `mode`: the weekly schedule's mode now (`{id, name,
+  allows, since, until, closed}`), `null` while their schedule has no changes. `school_today`: as the School today
+  sensor (`state` `school`, `half_day`, `off`, `home_today`, and today's window). `bedtime`: tonight's start and this
+  morning's wake (local), or `null`.
+- Never a place, a PIN, a request's note, or anything to change it with: a panel changes nothing through this.
+
 ## The document
 
 Sent whole, never as a diff. Every key is present; `null` or `[]` means "derive it" (the panel works out live things

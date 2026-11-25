@@ -46,12 +46,13 @@ async def test_the_week_is_seven_days_newest_first_with_what_happened(hass: Home
 
     week = history.week("person.alex", {"all": 20, "games": 0}, now)
     assert [row["date"] for row in week] == [(today - timedelta(days=i)).isoformat() for i in range(7)]
-    assert week[0] == {"date": today.isoformat(), "minutes": {"all": 20, "games": 0}, "out": [],
-                       "bonus": {"all": 15}, "asks": 0, "budget": {}}
-    assert week[1] == {"date": (today - timedelta(days=1)).isoformat(), "minutes": {}, "out": [], "bonus": {}, "asks": 0,
-                       "budget": {}}
+    assert week[0] == {"date": today.isoformat(), "minutes": {"all": 20, "games": 0}, "used": {"all": 20, "games": 0},
+                       "out": [], "bonus": {"all": 15}, "asks": 0, "budget": {}}
+    assert week[1] == {"date": (today - timedelta(days=1)).isoformat(), "minutes": {}, "used": {}, "out": [],
+                       "bonus": {}, "asks": 0, "budget": {}}
     assert week[2] == {"date": (today - timedelta(days=2)).isoformat(), "minutes": {"all": 95, "games": 40},
-                       "out": ["games"], "bonus": {"games": 30}, "asks": 1, "budget": {}}
+                       "used": {"all": 95, "games": 40}, "out": ["games"], "bonus": {"games": 30}, "asks": 1,
+                       "budget": {}}
     assert all(row["minutes"] == {} for row in week[3:])
 
 
@@ -88,7 +89,7 @@ async def test_the_day_s_minutes_are_recorded_when_it_turns(
     assert week[1]["minutes"] == record["minutes"]
     # A day nothing was recorded for is unknown, not zero
     assert week[2]["minutes"] == {}
-    assert set(week[0]) == {"date", "minutes", "out", "bonus", "asks", "budget"}
+    assert set(week[0]) == {"date", "minutes", "used", "out", "bonus", "asks", "budget"}
     # The day's budget per group: logged with its minutes, today's live (null: no limit)
     assert set(record["budget"]) == set(record["minutes"]) and week[1]["budget"] == record["budget"]
     assert set(week[0]["budget"]) == set(record["budget"]) and set(week[2]["budget"]) == set(record["budget"])

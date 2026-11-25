@@ -140,10 +140,13 @@ async def test_the_summary_shows_the_switch_s_own_limit_and_play(
     device_id = await _sam_on_the_switch(hass, hass_client_no_auth)
     ws = await hass_ws_client(hass)
 
-    [switch] = (await _sam(ws))["first_party"]["nintendo"]
+    sam = await _sam(ws)
+    [switch] = sam["first_party"]["nintendo"]
     assert switch["device_id"] == device_id
     assert switch["name"] == "Sam's Switch"
     assert switch["target"] == f"nintendo:{LIMIT}"
+    # The same id the person's targets have, and hearth.allow / add_bonus take as `device`
+    assert switch["target"] in {t["id"] for t in sam["targets"]}
     assert switch["available"] is True
     assert (switch["played_minutes"], switch["player_minutes"]) == (75, 50)  # Sam's own player, not Alex's
     assert (switch["limit_minutes"], switch["minutes_left"], switch["extra_minutes"]) == (120, 45, 0)

@@ -3,16 +3,18 @@ it may ask). Nothing here imports glint_panel/; the panels import nothing of Hea
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import hmac
 from typing import Any
 
 from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY
-from homeassistant.core import Context, HomeAssistant, ServiceCall
+from homeassistant.core import Context, HomeAssistant, ServiceCall, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.util import dt as dt_util
 
 from . import parent_pin
 from .auth import async_check_caller, async_check_context, is_adult_user, is_kid_user
-from .const import DOMAIN, KIND_PANEL, PANEL_HELLO
+from .const import DOMAIN, KIND_PANEL, PANEL_HELLO, SIGNAL_PEOPLE
 from .hub import HearthHub, hash_secret, pin_lockout
 from .notifications import clear_panel_hello, notify_panel_hello
 from .panel import URL_PATH
@@ -96,6 +98,15 @@ class HearthPanelHost:
                 DOMAIN, context={"source": SOURCE_INTEGRATION_DISCOVERY}, data={"panel_hello": device_id}
             )
         )
+
+    def kids_time(self) -> dict[str, Any]:
+        from .kid_time import kids_document
+
+        return kids_document(self._hub.household)
+
+    def watch_kids_time(self, changed: Callable[[], None]) -> Callable[[], None]:
+        # Every recompute (a status post, a minute's tick, a service) says the people changed
+        return async_dispatcher_connect(self._hass, SIGNAL_PEOPLE, callback(lambda *_args: changed()))
 
     def hello_answered(self, device_id: str) -> None:
         clear_panel_hello(self._hass, device_id)

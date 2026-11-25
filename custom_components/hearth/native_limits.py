@@ -542,7 +542,7 @@ class NativeLimits:
                 audience=ADULTS,
                 bell=True,
                 phone=phone,
-                about={"person": row["people"][0]} if len(row["people"]) == 1 else {},
+                about={**({"person": row["people"][0]} if len(row["people"]) == 1 else {}), "people": list(row["people"])},
                 kind="native_limit",
             )
         )

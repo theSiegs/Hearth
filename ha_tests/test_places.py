@@ -257,7 +257,9 @@ async def test_arriving_home_ends_an_allow_and_takes_back_family_link_s_bonus(
     await _reading(hass, freezer, HOME)
     assert _household(hass).allows.of("person.sam") == []
     assert [c.data for c in reset] == [{"entity_id": "switch.sam_s_phone"}]
-    assert told == [("Sam: Home", "Sam got home; their allow (screen time) ended.", "hearth_place_person.sam")]
+    assert told == [
+        ("Sam: Home", "Sam got home; their allow (screen time) ended.", "hearth_place_person.sam", "person.sam")
+    ]
 
 
 async def test_leaving_needs_a_confirmed_place_and_unknown_never_ends_it(
