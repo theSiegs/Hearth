@@ -37,7 +37,9 @@ and `apart_from_adults` are not.
 `start` and `end` are today's School time, as it is, with no travel time added. They come from Family Link's School
 time for today's weekday (`window_source: family_link`), ending early on a half day when the schedule says so. Without
 Family Link, they come from the School mode of the kid's weekly schedule (`window_source: schedule`). Both are `null`
-(and `window_source` is `null`) when the state is `off` or `home_today`, or when no window is known.
+(and `window_source` is `null`) when the state is `off` or `home_today`, when no window is known, or when the kid's
+Family Link School time is switched off (other than by Hearth's own School time off), since the times left in Family
+Link then aren't a schedule anyone keeps.
 
 `decided_by` says what made today a school day or not: `date` (a date typed in), `rule` (the weekdays of the school
 year), `entity`, `calendar`, or `home_today`.

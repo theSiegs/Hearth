@@ -55,6 +55,29 @@ async def test_school_today_says_the_day_and_family_link_s_window(
     assert state.attributes["decided_by"] == "rule"
 
 
+async def test_no_window_while_family_link_school_time_is_switched_off(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    household = await _kid(hass, hass_client_no_auth, freezer, _at(MONDAY, 7))
+    hass.states.async_set(SWITCH, "off")
+    household.recompute()
+    await hass.async_block_till_done()
+    state = hass.states.get(SCHOOL_TODAY)
+    assert state.state == "school"
+    assert state.attributes["start"] is None and state.attributes["end"] is None
+    assert state.attributes["window_source"] is None
+    # Hearth's own School time off keeps the window: school still happens
+    async_mock_service(hass, "switch", "turn_off")
+    async_mock_service(hass, "familylink", "set_school_time")
+    hass.states.async_set(SWITCH, "on")
+    await hass.services.async_call(DOMAIN, "school_time_off", {"people": ["person.sam"]}, blocking=True)
+    await _tick(hass, household, freezer, _at(MONDAY, 7, 1))
+    hass.states.async_set(SWITCH, "off")
+    household.recompute()
+    await hass.async_block_till_done()
+    assert hass.states.get(SCHOOL_TODAY).attributes["window_source"] == "family_link"
+
+
 async def test_a_weekend_is_off_without_a_window(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:
