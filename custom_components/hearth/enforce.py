@@ -183,6 +183,27 @@ PAUSE_SHOWS_WITHIN = timedelta(minutes=3)
 PAUSE_RETRY_MAX = timedelta(hours=1)
 # How held.error starts while a pause didn't take
 PAUSE_NOT_TAKEN = "Family Link didn't take the pause"
+# held.restore key of a Family Link enforcer: the apps of a resume call that failed or was cut off part-way. Family
+# Link resumes a list one app after the other and raises at the first one refused, so some are resumed and the rest
+# still paused: the next pass tells them apart by Family Link's own pause records (_reconcile_resume)
+RESUME_UNSURE = "resume_unsure"
+# held.restore keys: when Hearth started putting a limit back (Family Link's daily limit, a Switch's). A call cut off
+# by a reload or a restart, or one that failed after the write went out, leaves the hold in Hearth's books while the
+# limit reads what Hearth itself put back: within OWN_PUT_BACK_WITHIN that reading is Hearth's own write, never a
+# parent's change
+LOCK_PUT_BACK_AT = "lock_put_back_at"
+SWITCH_PUT_BACK_AT = "put_back_at"
+OWN_PUT_BACK_WITHIN = timedelta(minutes=15)
+# Swapping between the device lock and pausing every app costs a Family Link call per app, each way. After a swap,
+# Hearth stays on the device lock at least this long before it pauses every app again
+SWAP_DWELL = timedelta(minutes=10)
+# This many swaps within SWAP_WINDOW and Hearth stays on the device lock (one call, and it holds everything) for
+# SWAP_BREAK, and says so once
+MAX_SWAPS = 4
+SWAP_WINDOW = timedelta(hours=1)
+SWAP_BREAK = timedelta(hours=1)
+LOCK_KIND_DEVICES = "devices"
+LOCK_KIND_APPS = "apps"
 
 # Never paused, whatever category they're in: calls (the dialer and contacts, so an emergency call always works), the
 # system, and the apps that hold the rest. Messages apps are NOT here: daily time, a limit, bedtime
@@ -539,7 +560,14 @@ class Enforcement:
         self._busy: set[str] = set()
         # Called after each run (native_sync.py watches what's held then)
         self.on_applied = None
+        # Kept over a reload or restart (the store): a change Hearth's own call caused mustn't read as a parent's
+        # because Hearth started again in between
         self._quiet_until: dict[str, datetime] = {}
+        # Swaps between the device lock and pausing every app, by Family Link enforcer key: {kind, at: [ISO times of
+        # the swaps of the last hour], until: ISO time the breaker holds the device lock to} (kept in the store)
+        self._swaps: dict[str, dict[str, Any]] = {}
+        # Each Family Link child's last whole read of their Always allowed apps (kept in the store)
+        self._always_last: dict[str, list[str]] = {}
         # Why each wanted item is held, by enforcer key: {item: budget, school_time or pause} (for Hearth's page)
         self._why: dict[str, dict[str, str]] = {}
         # The refreshes waiting after a write, by entity: one each at a time
@@ -562,6 +590,21 @@ class Enforcement:
                 set(data.get("items", [])), data.get("entity_id"), restore=dict(data.get("restore") or {})
             )
         self.last = {key: dict(record) for key, record in (stored.get("last") or {}).items() if isinstance(record, dict)}
+        now = dt_util.utcnow()
+        for key, until in (stored.get("quiet") or {}).items():
+            # Never longer than Hearth itself sets it (a clock set back mustn't keep parents' changes unseen)
+            if (when := _utc(until)) is not None and now < when <= now + QUIET_AFTER_CALL:
+                self._quiet_until[key] = when
+        self._swaps = {
+            key: {"kind": record.get("kind"), "at": list(record.get("at") or []), "until": record.get("until")}
+            for key, record in (stored.get("swaps") or {}).items()
+            if isinstance(record, dict)
+        }
+        self._always_last = {
+            str(child): [a for a in apps if isinstance(a, str)]
+            for child, apps in (stored.get("fl_always_allowed") or {}).items()
+            if isinstance(apps, list)
+        }
         # Each child's last whole read of their Family Link app lists, back before the first run asks for it: a
         # list cut short by Hearth's own pauses must not read as "apps not known" after a restart
         fl.restore_installed(self.hass, stored.get("fl_installed"))
@@ -595,6 +638,11 @@ class Enforcement:
             "last": self.last,
             # Each Family Link child's last whole read of their installed apps (family_link.installed_apps)
             "fl_installed": fl.last_installed(self.hass),
+            # ... and of their Always allowed apps
+            "fl_always_allowed": self._always_last,
+            # Until when a change is Hearth's own call showing, by enforcer
+            "quiet": {key: until.isoformat() for key, until in self._quiet_until.items() if until > dt_util.utcnow()},
+            "swaps": self._swaps,
         }
 
     async def async_flush(self) -> None:
@@ -699,12 +747,26 @@ class Enforcement:
             # run past daily time). Bedtime, School time and pauses aren't lifted by it
             budget_lifted = budget_lifted_of(e.person) if budget_lifted_of else lifted
             budget = wanted(e, days.get(e.person), apps_of, now, playing, budget_lifted, groups_of_app)
+            always_allowed, always_known = (
+                self._always_allowed_read(e.entity_id) if e.kind == FAMILY_LINK else (set(), True)
+            )
             if ALL_APPS in budget:
-                budget = (budget - {ALL_APPS}) | self._all_apps_but(e, budget_lifted, apps_of, groups_of_app)
+                every = self._all_apps_but(e, budget_lifted, apps_of, groups_of_app)
+                # Which apps have unlimited time can't be told (the list cut short or not read, and no whole read
+                # before): pausing every app would pause those too. The device lock spares them by itself
+                if DEVICES not in every and not always_known:
+                    every = {DEVICES}
+                # Swapped too recently or too often: the device lock stays (_may_pause_every_app)
+                if DEVICES not in every and not self._may_pause_every_app(e, now):
+                    every = {DEVICES}
+                budget = (budget - {ALL_APPS}) | every
+                self._lock_kind(e.key, LOCK_KIND_DEVICES if DEVICES in every else LOCK_KIND_APPS, now)
+            elif e.kind == FAMILY_LINK:
+                self._lock_kind(e.key, LOCK_KIND_DEVICES if DEVICES in budget else None, now)
             # An app a parent gave unlimited time in Family Link is never paused for a budget: it stays usable, as on
             # a locked device. The School-time apps are the parent's own choice, so they are paused all the same.
             if e.kind == FAMILY_LINK:
-                budget -= self._always_allowed(e.entity_id)
+                budget -= always_allowed
             # An older Family Safety can't pause an app: only its platforms
             if e.kind == FAMILY_SAFETY and not self.hass.services.has_service(FS_DOMAIN, "pause_app"):
                 budget = {item for item in budget if not fs_app(item)}
@@ -742,7 +804,7 @@ class Enforcement:
                 else set()
             )
             if e.kind == FAMILY_LINK:
-                scheduled -= self._always_allowed(e.entity_id)
+                scheduled -= always_allowed
                 # The schedule's Sleep for a kid without a Family Link bedtime: their devices are locked whole, as a
                 # family pause does (nothing else would hold a phone or tablet without a Hearth app)
                 if sleep_locks_devices_of and sleep_locks_devices_of(e.person):
@@ -860,6 +922,9 @@ class Enforcement:
             enforcer = by_key.get(key)
             kind, person = key_parts(key)
             entity_id = enforcer.entity_id if enforcer else held.entity_id
+            if kind == FAMILY_LINK and held.restore.get(RESUME_UNSURE) and entity_id is not None:
+                # A resume failed part-way: what's held is what Family Link still has a pause record of
+                self._reconcile_resume(held, entity_id)
             # A Family Safety lock that ran out (at midnight) while still wanted (Sleep, a pause) is locked again
             hold = want - (held.items - _ended_locks(held))
             let_go = _holding(held) - want if self._may_let_go() else set()
@@ -869,6 +934,9 @@ class Enforcement:
             if not _holding(held) or held.entity_id is None:
                 held.entity_id = entity_id
             outcomes: dict[str, Any] = {}
+            # Why each item is held, as it is now: a pause or resume of every app takes minutes, and what's wanted
+            # (and why) may be something else by the time it's logged
+            why = dict(self._why.get(key, {}))
             self._busy.add(key)
             try:
                 # Switching between the whole-device lock and pausing apps one by one (a category open past daily
@@ -900,7 +968,6 @@ class Enforcement:
                 )
                 self.note(key, held=sorted(hold), let_go=sorted(let_go), outcomes=outcomes)
                 if self.activity is not None:
-                    why = self._why.get(key, {})
                     for reason in sorted({why.get(i, "limit") for i in hold}):
                         self.activity.hold(True, person, [i for i in hold if why.get(i, "limit") == reason], reason, kind)
                     if let_go:
@@ -1004,14 +1071,29 @@ class Enforcement:
                     # pause of them goes through or they're resumed, so letting go resumes them (_holding)
                     _maybe_paused(held, packages)
                     self._save()
-                response = await call_service(self.hass,
-                    "familylink",
-                    service,
-                    {"entity_id": entity_id, "packages": sorted(packages)},
-                    blocking=True,
-                    return_response=self._responds("familylink", service),
-                )
+                try:
+                    response = await call_service(self.hass,
+                        "familylink",
+                        service,
+                        {"entity_id": entity_id, "packages": sorted(packages)},
+                        blocking=True,
+                        return_response=self._responds("familylink", service),
+                    )
+                except BaseException:  # a reload cutting the call off (CancelledError) too
+                    if not hold:
+                        # Family Link resumes one app after the other and raises at the first one refused: the
+                        # apps before it are open again, the rest still paused. None is held for sure any more
+                        # (a hold wanted again pauses them again); all stay possibly held, so letting go tries
+                        # again; and the next pass sorts them by Family Link's pause records (_reconcile_resume)
+                        held.items -= packages
+                        _maybe_paused(held, packages)
+                        held.restore[RESUME_UNSURE] = sorted(set(held.restore.get(RESUME_UNSURE) or ()) | packages)
+                        # (a reload's flush stores it itself: nothing of this instance saves after that)
+                        if not self._closed:
+                            self._save()
+                    raise
                 _maybe_paused(held, packages, False)
+                _resume_sure(held, packages)
                 if not hold:
                     outcomes.update(_resume_outcomes(response))
                     _forget_pauses(held, packages)
@@ -1128,17 +1210,100 @@ class Enforcement:
 
     def _always_allowed(self, entity_id: str) -> set[str]:
         """The child's apps with unlimited time in Family Link (its Always allowed apps sensor, by the child's id)."""
-        state = self.hass.states.get(entity_id)
-        child = state.attributes.get("child_id") if state else None
+        return self._always_allowed_read(entity_id)[0]
+
+    def _always_allowed_read(self, entity_id: str) -> tuple[set[str], bool]:
+        """The child's apps with unlimited time in Family Link, and whether they're known. A list cut short
+        (truncated) or not readable (its sensor unavailable, or gone) is what it shows plus the last whole read (kept
+        over a restart); with no whole read before, they aren't known (False): every app mustn't be paused on that,
+        an always-allowed app would be paused with the rest."""
+        child = fl.child_of(self.hass, entity_id)
         if not child:
-            return set()
-        found: set[str] = set()
-        for other in self.hass.states.async_all("sensor"):
-            if other.entity_id.endswith("_always_allowed_apps") and str(other.attributes.get("child_id")) == str(child):
-                for app in other.attributes.get("apps") or []:
-                    package = app.get("package") if isinstance(app, dict) else app
-                    if isinstance(package, str) and package:
-                        found.add(package)
+            return set(), True
+        read = fl.always_allowed_apps(self.hass, child)
+        found, whole = read if read is not None else (set(), False)
+        if whole:
+            if self._always_last.get(child, []) != sorted(found):
+                self._always_last[child] = sorted(found)
+                self._save()
+            return found, True
+        if child in self._always_last:
+            return found | set(self._always_last[child]), True
+        return found, False
+
+    def _may_pause_every_app(self, enforcer: Enforcer, now: datetime) -> bool:
+        """Whether the device lock may be swapped for a pause of every app now. Each swap is a Family Link call per
+        app (about 150 for a phone), each way, and whatever opens and closes a category in turn (a place flapping, a
+        bonus running out and topped up) swaps again and again. So: not within SWAP_DWELL of the last swap, and after
+        MAX_SWAPS swaps within SWAP_WINDOW not for SWAP_BREAK (said once: the log, Hearth's page, the action log).
+        Until then the device lock stays: one call, and it holds everything. Only a swap is damped: from nothing
+        held, every app is paused at once."""
+        record = self._swaps.get(enforcer.key) or {}
+        if (until := _utc(record.get("until"))) is not None and now < until:
+            return False
+        if record.get("kind") != LOCK_KIND_DEVICES:
+            return True
+        swaps = [w for at in record.get("at") or [] if (w := _utc(at)) is not None and now - w < SWAP_WINDOW]
+        if len(swaps) >= MAX_SWAPS:
+            until = now + SWAP_BREAK
+            self._swaps[enforcer.key] = {**record, "until": dt_util.as_utc(until).isoformat()}
+            self._save()
+            _LOGGER.warning(
+                "Hearth swapped %s's device lock and app pauses %s times within the hour: it keeps the devices locked "
+                "until %s rather than pausing every app again",
+                enforcer.person, len(swaps), dt_util.as_local(until).strftime("%H:%M"),
+            )
+            self.note(enforcer.key, swap_breaker=dt_util.as_utc(until).isoformat(), swaps=len(swaps))
+            if self.activity is not None:
+                self.activity.hold(True, enforcer.person, DEVICES, "swap_breaker", enforcer.kind)
+            return False
+        return not swaps or now - max(swaps) >= SWAP_DWELL
+
+    def _lock_kind(self, key: str, kind: str | None, now: datetime) -> None:
+        """Keeps how a Family Link kid's daily time out is held now (the device lock, a pause of every app, or
+        neither), and when it swapped from one to the other."""
+        record = self._swaps.get(key) or {}
+        was = record.get("kind")
+        if was == kind:
+            return
+        swaps = [at for at in record.get("at") or [] if (w := _utc(at)) is not None and now - w < SWAP_WINDOW]
+        if was is not None and kind is not None:
+            swaps.append(dt_util.as_utc(now).isoformat())
+        until = record.get("until") if (w := _utc(record.get("until"))) is not None and now < w else None
+        if kind is None and not swaps and until is None:
+            self._swaps.pop(key, None)
+        else:
+            self._swaps[key] = {"kind": kind, "at": swaps, "until": until}
+        self._save()
+
+    def _reconcile_resume(self, held: Held, entity_id: str) -> None:
+        """After a resume that failed part-way: the apps Family Link still has a pause record of are held as before,
+        the others were resumed and are let go of. While the records can't be read (no such list, or cut short), all
+        of them stay possibly held: letting go resumes them again, a hold pauses them again."""
+        unsure = set(held.restore.get(RESUME_UNSURE) or ()) & set(held.restore.get(MAYBE_PAUSED) or ())
+        child = fl.child_of(self.hass, entity_id)
+        records = self._pause_records(child) if child else None
+        if unsure and records is None:
+            return
+        if unsure:
+            still = unsure & records
+            _maybe_paused(held, unsure, False)
+            held.items |= still
+            _forget_pauses(held, unsure - still)
+        held.restore.pop(RESUME_UNSURE, None)
+        self._save()
+
+    def _pause_records(self, child: str) -> set[str] | None:
+        """The packages Family Link has a pause record of for the child (paused_apps of their With time limits
+        sensor); None when that can't be told (no such list, or cut short)."""
+        found: set[str] | None = None
+        for state in self.hass.states.async_all("sensor"):
+            paused = state.attributes.get("paused_apps")
+            if str(state.attributes.get("child_id")) != str(child) or not isinstance(paused, list):
+                continue
+            if state.attributes.get("truncated"):
+                return None
+            found = (found or set()) | {str(p.get("package")) for p in paused if isinstance(p, dict)}
         return found
 
     def _all_apps_but(self, enforcer: Enforcer, lifted: Lifted, apps_of, groups_of_app) -> set[str]:
@@ -1243,6 +1408,11 @@ class Enforcement:
             if switch_state is not None and switch_state.state == "off":
                 held.restore["lock_switched_on"] = True
             self._save()
+        # Locked (again): a put-back that didn't finish is over, and the 0 has to show again
+        if LOCK_PUT_BACK_AT in held.restore:
+            held.restore.pop(LOCK_PUT_BACK_AT, None)
+            held.restore.pop("lock_seen_zero", None)
+            self._save()
         if held.restore.get("lock_switched_on"):
             switch = fl.daily_limit_switch(self.hass, held.restore["lock_child"])
             switch_state = self.hass.states.get(switch) if switch else None
@@ -1299,6 +1469,10 @@ class Enforcement:
                 )
                 outcome = KEPT_CURRENT
             else:
+                # Kept before the call: cut off by a reload, or failed after the write went out, the limit then
+                # reads what Hearth put back while the hold is still in its books (never a parent's change)
+                restore[LOCK_PUT_BACK_AT] = dt_util.utcnow().isoformat()
+                self._save()
                 await call_service(self.hass,
                     "familylink",
                     "set_daily_limit",
@@ -1340,6 +1514,11 @@ class Enforcement:
                 "suspend_was": suspend_state.state if suspend_state else None,
                 **self.switch_day(entity_id),
             }
+            self._save()
+        elif SWITCH_PUT_BACK_AT in held.restore:
+            # Held again: a put-back that didn't finish is over, and the 0 has to show again
+            held.restore.pop(SWITCH_PUT_BACK_AT, None)
+            held.restore.pop("seen_zero", None)
             self._save()
         suspend = held.restore.get("suspend")
         if suspend and held.restore.get("suspend_was") != "on":
@@ -1434,13 +1613,18 @@ class Enforcement:
         elif limit is None:
             _LOGGER.warning("Hearth had no limit kept for %s: left as it is (check it in the Nintendo app)", entity_id)
         else:
+            # Kept before the call, as for Family Link's daily limit (_unlock_devices)
+            restore[SWITCH_PUT_BACK_AT] = dt_util.utcnow().isoformat()
+            self._save()
             await call_service(self.hass,
                 "number", "set_value", {"entity_id": entity_id, "value": limit}, blocking=True
             )
         suspend = restore.get("suspend")
         if suspend and restore.get("suspend_was") == "off":
             await call_service(self.hass, "switch", "turn_off", {"entity_id": suspend}, blocking=True)
-        self._switch_put_back[entity_id] = (dt_util.utcnow(), dict(restore))
+        self._switch_put_back[entity_id] = (
+            dt_util.utcnow(), {k: v for k, v in restore.items() if k != SWITCH_PUT_BACK_AT}
+        )
         held.restore = {}
         return RESTORED
 
@@ -1509,6 +1693,18 @@ class Enforcement:
                 self._save()
         elif quiet:
             return
+        elif (
+            current is not None
+            and current == held.restore.get("max")
+            and _own_put_back(held.restore.get(SWITCH_PUT_BACK_AT))
+        ):
+            # Hearth's own put-back, cut off (a reload, a restart) or failed after the write went out: not a parent's
+            # change. The Switch isn't held any more; still wanted, it's held again, else let go of as usual
+            held.items.discard(SWITCH)
+            held.restore.pop(SWITCH_PUT_BACK_AT, None)
+            held.restore.pop("seen_zero", None)
+            self._save()
+            return
         elif current is not None and "max" in held.restore and (
             current != held.restore["max"] or held.restore.get("seen_zero")
         ):
@@ -1547,6 +1743,19 @@ class Enforcement:
                     self._save()
             elif quiet:
                 pass
+            elif (
+                current is not None
+                and current == restore["lock_minutes"]
+                and _own_put_back(restore.get(LOCK_PUT_BACK_AT))
+            ):
+                # Hearth's own put-back, cut off (a reload, a restart) or failed after the write went out: the limit
+                # reads what Hearth itself wrote, not a parent's change. The devices aren't locked any more: still
+                # wanted, they're locked again (the kept limit stays), else let go of as usual
+                held.items.discard(DEVICES)
+                restore.pop(LOCK_PUT_BACK_AT, None)
+                restore.pop("lock_seen_zero", None)
+                self._save()
+                return
             elif current is not None and (current != restore["lock_minutes"] or restore.get("lock_seen_zero")):
                 # Adopted: letting go doesn't write over it
                 restore["lock_adopted"] = True
@@ -1980,6 +2189,21 @@ def _maybe_paused(held: Held, packages: set[str], add: bool = True) -> None:
         held.restore[MAYBE_PAUSED] = sorted(now)
     else:
         held.restore.pop(MAYBE_PAUSED, None)
+
+
+def _resume_sure(held: Held, packages: set[str]) -> None:
+    """A pause or resume of [packages] went through: they're no longer left over from a resume that failed."""
+    unsure = set(held.restore.get(RESUME_UNSURE) or ()) - packages
+    if unsure:
+        held.restore[RESUME_UNSURE] = sorted(unsure)
+    else:
+        held.restore.pop(RESUME_UNSURE, None)
+
+
+def _own_put_back(at: Any) -> bool:
+    """Hearth started putting a limit back at [at] and it's recent enough for the limit's reading to be that write."""
+    when = _utc(at)
+    return when is not None and timedelta(0) <= dt_util.utcnow() - when < OWN_PUT_BACK_WITHIN
 
 
 def _forget_pauses(held: Held, packages: set[str]) -> None:

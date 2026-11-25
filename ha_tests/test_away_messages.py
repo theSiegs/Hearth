@@ -189,8 +189,14 @@ async def test_school_time_keeps_messages_paused(
 
 
 async def test_a_pause_a_block_and_bedtime_still_hold(
-    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer, monkeypatch
 ) -> None:
+    from custom_components.hearth import enforce
+
+    # Swap after swap within the minute here: the wait between swaps and their breaker have their own test
+    # (test_enforce_own_writes)
+    monkeypatch.setattr(enforce, "SWAP_DWELL", timedelta(0))
+    monkeypatch.setattr(enforce, "MAX_SWAPS", 99)
     await sam_out_of_time(hass, hass_client_no_auth, freezer)
     await _opened(hass, freezer)
     household = _household(hass)
