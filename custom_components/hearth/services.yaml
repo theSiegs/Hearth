@@ -1241,3 +1241,36 @@ adult_offer_answer:
           options:
             - adult
             - not_now
+
+set_play_area:
+  fields:
+    switch:
+      selector:
+        entity:
+    dock:
+      selector:
+        entity:
+          domain:
+            - binary_sensor
+            - switch
+            - input_boolean
+            - sensor
+    above:
+      selector:
+        number:
+          min: 0
+          max: 10000
+          unit_of_measurement: W
+    area_id:
+      selector:
+        area:
+    source:
+      selector:
+        text:
+    console:
+      selector:
+        entity:
+          domain: media_player
+    remove:
+      selector:
+        boolean:

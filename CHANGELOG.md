@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **Where a kid is playing.** Each kid's Playing sensor now has a `person` attribute, and each of its `playing` entries an `area_id` (the room, when Hearth knows it, else `null`) and `active` (`true` while Hearth sees it played, `false` while it sees it stopped, `null` when it can't tell). A Hearth TV's entry is in the TV's own area. An Xbox game is in its console's area while that console is on (the Xbox integration's media player showing the same game, or the console set with the new `hearth.set_play_area`). A Switch is in a room only while a dock signal set for it says docked: a binary sensor or switch that is on, or the dock plug's power above a number of watts; the room is the one set, else the signal's own. The state stays what's on, as before. See [contracts/people-entities.md](docs/contracts/people-entities.md).
+
 ## 2026.11.60
 
 ### Home Assistant integration

@@ -360,6 +360,22 @@ What counts as playing now, for Playing, `playing` and together:
   source on the same Switch says it instead.
 - **Phone app sources**: above, in [Screen time from other integrations](#screen-time-from-other-integrations).
 
+**Where, and whether it's played now.** Each entry of the Playing sensor's `playing` has `area_id` (the room, when
+Hearth knows it, else null) and `active` (true, false, or null when it can't be told), and the sensor has `person`
+([contracts/people-entities.md](contracts/people-entities.md#playing) has the table). A TV's app is in the TV's area;
+an Xbox game in its console's area while the console is on; a Switch in a room only while a dock signal set for it says
+docked. The console and the dock signal are options (`play_areas`), set with `hearth.set_play_area` (administrators):
+
+- `{switch: <the Nintendo enforcer's entity>, dock: <binary_sensor | switch | input_boolean>, area_id?: <area>}`:
+  docked while it's on.
+- `{switch: ..., dock: <sensor of the dock plug's power>, above: <watts>, area_id?: <area>}`: docked above the watts.
+- `{source: <a live source's id>, console: <media_player>}`: the console an Xbox source is played on. Without one,
+  the Xbox integration's media player that is on with the same title is used, when one room has it.
+
+`remove: true` with `switch` or `source` takes it out. The room is `area_id`, else the entity's own (or its device's)
+area. A TV's state is never used for a Switch: a Hearth TV is a Google TV puck on one HDMI input and reads off while
+another input shows.
+
 Each such play is also logged when it ends, in the history's `played` (see [History](#history)).
 
 ## Limits

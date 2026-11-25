@@ -51,6 +51,7 @@ from .apps import (
     update_notification,
 )
 from .counting import ALL, DeviceUsage, Reading, group_seconds, merge, minus, without
+from .play_area import console_active, console_area, dock_area, hearth_device_area, hearth_tv_active
 from .categories import CategoryBook, values_document
 from .client import exempt_packages
 from .limits import (
@@ -199,6 +200,10 @@ class Playing:
     key: str | None = None
     source: str | None = None
     label: str | None = None
+    # The room it's played in (a Home Assistant area id) when Hearth knows it, and whether it's being played right now
+    # (True), seen stopped (False) or can't be told (None): play_area.py. On the Playing sensor only, not in view()
+    area_id: str | None = None
+    active: bool | None = None
 
     def view(self) -> dict[str, Any]:
         return {
@@ -1243,6 +1248,10 @@ class Household:
                 entry = Playing(status.get("app"), package, name, status.get("state"), f"hearth:{device_id}", kind="app")
                 for field_name, value in (media or {}).items():
                     setattr(entry, field_name, value)
+                # A TV's room is its device's; a phone or tablet moves with its person
+                if device.get(CONF_KIND) == KIND_TV:
+                    entry.area_id = hearth_device_area(self.hass, self.hub, device_id)
+                entry.active = hearth_tv_active(status.get("state"), entry.paused)
                 shown = entry.series or entry.title
                 observe(entry, person, device_id, shown or package, None, shown or status.get("app"))
 
@@ -1257,18 +1266,23 @@ class Household:
 
                     target, _ = target_of_counted(self, source.person, f"source:{source.id}")
                     app = self._app_name(package)
-                    observe(Playing(app, package, source.name, "playing", target, kind="app"), source.person, device,
-                            package, None, app)
+                    # In use while the phone's screen is on and interactive; a phone has no room
+                    observe(Playing(app, package, source.name, "playing", target, kind="app", active=True), source.person,
+                            device, package, None, app)
             elif source.live:
                 item = now_playing(self.hass, source)
                 if item is not None:
                     from .targets import target_of_counted
 
                     target, _ = target_of_counted(self, source.person, f"source:{source.id}")
-                    observe(
-                        Playing(item, None, source.name, "playing", target, item, kind="game"),
-                        source.person, device, item, source.reading_source, item,
-                    )
+                    entry = Playing(item, None, source.name, "playing", target, item, kind="game")
+                    # A live source on a Switch is in its dock's room; any other (Xbox) in its console's
+                    if target.startswith("nintendo:"):
+                        entry.area_id = dock_area(self.hass, options, target.removeprefix("nintendo:"))
+                    else:
+                        entry.area_id = console_area(self.hass, options, source.id, item)
+                        entry.active = console_active(self.hass, options, source.id)
+                    observe(entry, source.person, device, item, source.reading_source, item)
             else:
                 reading = totals_reading(self.hass, source, today)
                 last = self._last_totals.get(source.id)
@@ -1310,9 +1324,11 @@ class Household:
                 # Without the game's name, "together" only on the same console (never two Switches both saying
                 # "Switch")
                 item = game or f"{SWITCH_ITEM}@{switch_console(self.hass, enforcer.entity_id)}"
+                # In a room only while docked; played while their player's minutes grow (switch_play.py)
                 observe(
                     Playing(game or SWITCH_ITEM, None, switch_name(self.hass, enforcer.entity_id), "playing", target, game,
-                            kind="game"),
+                            kind="game", area_id=dock_area(self.hass, options, enforcer.entity_id),
+                            active=self.enforcement.playing(enforcer)),
                     enforcer.person, target, item, None, game or SWITCH_ITEM,
                 )
 
