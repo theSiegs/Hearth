@@ -57,7 +57,8 @@ restart). The website list is synced once a day at its time, person by person, t
 (familylink.sync_site_list) and Family Safety each on its own: a Family Safety with sync_site_list (a fork's) does it
 itself; the released one is kept in step by Hearth (fs_site_list.py: the list downloaded once, get_sites, block_website,
 remove_website, what Hearth added kept here). A failure for one is logged, tried again later, and the others go on. The
-hearth_schedule events say which with "via".
+hearth_schedule events say which with "via". Sites an adult blocked by hand (hearth.block_site, site_blocks.py, kept here
+too) stay blocked when the list drops them.
 
 What's pending is kept with Home Assistant's storage helper.
 """
@@ -94,6 +95,7 @@ from .enforce import (
 from .schooldays import DAY_OFF, HALF_DAY, SCHOOL
 from .temporary_limit import DONE, SET, SKIP, SWITCH, WAIT, WINDOWS, WRITE, XBOX, TemporaryLimits
 from .activity import call_service
+from .site_blocks import SiteBlocks
 
 if TYPE_CHECKING:
     from .household import Household
@@ -264,6 +266,8 @@ class Scheduler:
         self._done_at: dict[str, datetime] = {}
         # What Hearth blocked from website lists in Family Safety itself (no sync_site_list): {account: {url: [domains]}}
         self.fs_sites = fs_site_list.FsSiteList(hass, {}, self._save)
+        # Websites an adult blocked by hand (hearth.block_site): what Hearth's block added, per kid and side
+        self.site_blocks = SiteBlocks(hass, self)
         # Kids kept home on a school day (hearth.home_today): person -> {ISO date: reason}
         self.home: dict[str, dict[str, str]] = {}
 
@@ -279,6 +283,7 @@ class Scheduler:
             for account, lists in (stored.get("fs_sites") or {}).items()
             if isinstance(lists, dict)
         }
+        self.site_blocks.load(stored.get("site_blocks"))
         # An older Hearth kept the Switches' as sw_limits; its fs_limits were Family Safety's own today-only changes,
         # which Family Safety put back itself: nothing of Hearth's to put back
         self.temporary.load(stored.get("temporary_limits"), stored.get("sw_limits"))
@@ -318,6 +323,7 @@ class Scheduler:
             "limits_set": self.limits_set,
             "temporary_limits": self.temporary.dump(),
             "fs_sites": self.fs_sites.owned,
+            "site_blocks": self.site_blocks.dump(),
             "home": self.home,
             "offs": [
                 {
@@ -1223,12 +1229,19 @@ class Scheduler:
                 await self._sync_sites(person, "family_safety", FS_DOMAIN, {**target, "url": sites.url})
             elif fs_site_list.available(self.hass):
                 await self._sync_sites(
-                    person, "family_safety", FS_DOMAIN, target, own=lambda t=target: self._fs_own_sync(t, sites.url, listed)
+                    person,
+                    "family_safety",
+                    FS_DOMAIN,
+                    target,
+                    own=lambda t=target, p=person: self._fs_own_sync(t, sites.url, listed, p),
                 )
 
-    async def _fs_own_sync(self, target: dict[str, str], url: str, listed: dict[str, Any]) -> dict[str, Any]:
+    async def _fs_own_sync(
+        self, target: dict[str, str], url: str, listed: dict[str, Any], person: str = ""
+    ) -> dict[str, Any]:
         """Hearth's own sync of the list into one kid's Family Safety (fs_site_list.py); the list is downloaded once
-        per run ([listed] keeps it, or the download's failure, for the next kid)."""
+        per run ([listed] keeps it, or the download's failure, for the next kid). The kid's hand-blocked sites
+        (hearth.block_site) are never taken back by it."""
         if "domains" not in listed:
             try:
                 listed["domains"] = fs_site_list.parse(await fs_site_list.fetch(self.hass, url))
@@ -1238,7 +1251,8 @@ class Scheduler:
             raise listed["domains"]
         entity = target.get("entity_id") or target.get("account_id") or ""
         account = fs_account_of(self.hass, entity) or entity
-        return await self.fs_sites.sync(target, account, url, listed["domains"])
+        keep = self.site_blocks.domains(person, FAMILY_SAFETY)
+        return await self.fs_sites.sync(target, account, url, listed["domains"], keep=keep)
 
     async def _sync_sites(
         self, person: str, via: str, domain: str, data: dict[str, Any], own=None
@@ -1254,16 +1268,26 @@ class Scheduler:
         if self._waiting(key):
             return
         result: dict[str, Any] | None = None
+        target = {k: v for k, v in data.items() if k != "url"}
         try:
-            if own is not None:
-                result = await own()
-                failed = result.get("failed") or []
-                if failed and len(failed) >= result.get("attempted", 0):
-                    raise HomeAssistantError(
-                        "every site failed: " + "; ".join(f"{f['site']} ({f['error']})" for f in failed[:5])
-                    )
-            else:
-                await call_service(self.hass, domain, "sync_site_list", data, blocking=True)
+            # One at a time with hearth.block_site / unblock_site (site_blocks.py)
+            async with self.site_blocks.lock:
+                if own is not None:
+                    result = await own()
+                    failed = result.get("failed") or []
+                    if failed and len(failed) >= result.get("attempted", 0):
+                        raise HomeAssistantError(
+                            "every site failed: " + "; ".join(f"{f['site']} ({f['error']})" for f in failed[:5])
+                        )
+                else:
+                    # The provider's own sync takes out what its list dropped, hand-blocked or not: what it took out
+                    # of a hand block is blocked again right after (also when it failed part-way: the next try's
+                    # read no longer shows it as the list's)
+                    at_risk = await self.site_blocks.at_risk(person, via, target)
+                    try:
+                        await call_service(self.hass, domain, "sync_site_list", data, blocking=True)
+                    finally:
+                        await self.site_blocks.restore(person, via, target, at_risk)
         except Exception as err:  # noqa: BLE001 - one child's list failing mustn't stop the others
             _LOGGER.warning("Hearth couldn't sync the website list for %s through %s: %s", person, via, err)
             self._failed[key] = dt_util.utcnow()
