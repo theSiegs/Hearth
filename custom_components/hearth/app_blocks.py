@@ -32,6 +32,10 @@ What Hearth blocked itself is kept (applied), so:
 - Only what Family Link lists as blocked (Hearth's confirmed blocks and a parent's) is left out of Hearth's pauses; a
   block Hearth wants that isn't confirmed stays subject to them, so the app is still held meanwhile.
 - A browser added to SUPPORTED_BROWSERS later (or a rule turned off) is unblocked, only where Hearth blocked it.
+- A Blocked apps list that is missing or cut short (truncated) is unknown, never "nothing is blocked": Hearth then
+  blocks and unblocks nothing (_plan), and what is left out of its pauses and resumes is the last whole list
+  (last_blocked, kept over a restart) with what the list shows now. With no whole list ever read (blocked_known is
+  False), a standing rule's apps don't swap the device lock for app pauses (household.open_apps).
 
 A blocked app is never paused or resumed by Hearth's holds (enforce.py: a budget, a pause, School time, the schedule):
 Family Link's resume_app skips a blocked app and keeps its saved setting, and Hearth leaves its own record of the pause
@@ -274,6 +278,9 @@ class AppBlocks:
         self.parent_unblocked: dict[str, dict[str, dict[str, Any]]] = {}
         # Apps the adults were asked about (one only by its name): person -> package -> {"at", "name"}; never asked again
         self.asked: dict[str, dict[str, dict[str, Any]]] = {}
+        # Family Link's Blocked apps list at its last whole read: person -> packages. What blocked_packages goes by
+        # while the list is missing or cut short
+        self.last_blocked: dict[str, set[str]] = {}
         # Apps whose name was looked at and isn't a companion's, this run: person -> packages (not looked at again)
         self._not_named: dict[str, set[str]] = {}
         # Block calls Family Link hasn't confirmed yet, by (person, package); at MAX_TRIES Hearth stops and says so
@@ -310,6 +317,11 @@ class AppBlocks:
             for p, apps in (stored.get("asked") or {}).items()
             if isinstance(apps, dict)
         }
+        self.last_blocked = {
+            p: {a for a in apps if isinstance(a, str) and a}
+            for p, apps in (stored.get("last_blocked") or {}).items()
+            if isinstance(apps, list)
+        }
 
     def _data(self) -> dict[str, Any]:
         return {
@@ -318,6 +330,8 @@ class AppBlocks:
             "applied": {p: apps for p, apps in self.applied.items() if apps},
             "parent_unblocked": {p: apps for p, apps in self.parent_unblocked.items() if apps},
             "asked": {p: apps for p, apps in self.asked.items() if apps},
+            # An empty list is a read too ("nothing is blocked" is known)
+            "last_blocked": {p: sorted(apps) for p, apps in self.last_blocked.items()},
         }
 
     def _save(self) -> None:
@@ -460,7 +474,25 @@ class AppBlocks:
         if target is None:
             return set()
         blocked = fl.app_lists(self.hass, target[1])[1]
-        return set(blocked or ())
+        if blocked is not None:
+            if self.last_blocked.get(person) != blocked:
+                self.last_blocked[person] = set(blocked)
+                if not self._closed:
+                    self._save()
+            return set(blocked)
+        # The list is missing or cut short. That is unknown, not "nothing is blocked": read as nothing, every blocked
+        # app became one Hearth pauses and resumes (a limit written to a blocked app can lift its block). The last
+        # whole list stands, with what the list shows now
+        return set(self.last_blocked.get(person, ())) | fl.blocked_shown(self.hass, target[1])
+
+    def blocked_known(self, person: str) -> bool:
+        """Whether blocked_packages can be gone by for [person]: Family Link's Blocked apps list is whole now, or was
+        read whole before (kept over a restart). False while it is missing or cut short and never was whole: which
+        apps are blocked isn't known then, and a caller does the careful thing."""
+        target = self.target_of(person)
+        if target is None:
+            return True
+        return fl.app_lists(self.hass, target[1])[1] is not None or person in self.last_blocked
 
     def why_blocked(self, person: str, package: str) -> set[str]:
         return self.wanted(person).get(package, set())

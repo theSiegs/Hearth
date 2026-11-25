@@ -375,6 +375,21 @@ def app_lists(hass: HomeAssistant, child: str) -> tuple[set[str], set[str] | Non
     return listed, blocked
 
 
+def blocked_shown(hass: HomeAssistant, child: str) -> set[str]:
+    """The packages the child's Blocked apps list shows now, also when it is cut short (then not all of them: use
+    app_lists to know whether the list is whole)."""
+    shown: set[str] = set()
+    for suffix, state in _child_lists(hass, child):
+        apps = _apps_of(state)
+        if suffix != "_blocked_apps" or not isinstance(apps, list):
+            continue
+        for app in apps:
+            package = app.get("package") if isinstance(app, dict) else app
+            if isinstance(package, str) and package:
+                shown.add(package)
+    return shown
+
+
 # Google's capabilities of a device that takes a daily limit (HAFamilyLink's CAPS_TIME_LIMIT): a Google TV has neither
 TIME_LIMIT_CAPABILITIES = ("capabilityBedtime", "capabilityLockWithDeadline")
 

@@ -17,9 +17,12 @@ The providers, each read the same way into {installed, blocked, limits, paused, 
   for the console.
 
 The providers can't say who made a change: a parent in their app, or anyone holding a parent's phone. Hearth's own
-writes are told apart by its action log (activity.py): a call of the provider's that names the same app in the last
-OWN_WINDOW is Hearth's. Apps Hearth pauses (paused_apps) are left out of the limit comparison, before and after.
-Tightening (a block, a lower limit) is never told.
+writes are told apart by its action log (activity.py own_call): a call of the provider's that names the same app is
+Hearth's while it runs (a pause or resume of 150 apps takes minutes, and its changes show long before it returns),
+and for OWN_WINDOW after it ended, counted back from the last look (the change happened some time since then), not
+from now: a list that was cut short for an hour is compared with the look before that hour. Every app of the call
+counts, not the first 50 an action log record keeps. Apps Hearth pauses (paused_apps) are left out of the limit
+comparison, before and after. Tightening (a block, a lower limit) is never told.
 
 Nothing is told on the first look (there is nothing to compare with), nor while a list is missing or cut short.
 The last look is stored, so a change made while Home Assistant was down is told at the first look after.
@@ -52,7 +55,8 @@ _LOGGER = logging.getLogger(__name__)
 EVENT = "hearth_outside_app_change"
 # Activity record kind for a change told
 OUTSIDE = "outside_app_change"
-# A call of the provider's naming the same app this recently made the change
+# A call of the provider's naming the same app that ended this long before the last look (or later, or still runs)
+# made the change
 OWN_WINDOW = timedelta(minutes=30)
 # Nintendo's allow list is read through a service: at most this often
 NINTENDO_EVERY = timedelta(minutes=10)
@@ -210,6 +214,8 @@ class OutsideAppChanges:
         self._entry_id = entry_id
         self._store: Store[dict[str, Any]] = Store(hass, 1, f"hearth.outside_apps.{entry_id}")
         self.last: dict[str, dict[str, Any]] = {}
+        # When each list was last looked at whole, this run: a change found now happened since then
+        self._looked: dict[str, datetime] = {}
         self._nintendo_at: datetime | None = None
         self._nintendo_task = None
 
@@ -319,7 +325,7 @@ class OutsideAppChanges:
                 try:
                     response = await call_service(
                         self.hass, NINTENDO_DOMAIN, nintendo.LIST_APPS, {"device_id": device_id}, blocking=True,
-                        return_response=True, person=person, why="outside_apps",
+                        return_response=True, person=person, why="outside_apps", quiet=True,
                     )
                 except Exception as err:  # noqa: BLE001 - a console that can't be read is looked at next time
                     _LOGGER.debug("outside apps: couldn't list %s's applications: %s", switch["name"], err)
@@ -377,12 +383,17 @@ class OutsideAppChanges:
 
     # Comparing
 
-    def _hearths(self, look: Look, app: str) -> bool:
-        """Hearth itself called the provider about this app just now."""
+    def _hearths(self, look: Look, app: str, since: datetime) -> bool:
+        """Hearth itself called the provider about this app: a call still running, or one that ended no longer than
+        OWN_WINDOW before [since], the last look at this list (the change came some time after it)."""
         activity = getattr(self.household, "activity", None)
         if activity is None:
             return False
-        for record in activity.query(kind="call", since=dt_util.utcnow() - OWN_WINDOW, limit=1000):
+        since = since - OWN_WINDOW
+        if activity.own_call(look.own_services, app, since):
+            return True
+        # The records too (they name a call's first 50 apps): what an older Hearth wrote before own_call was kept
+        for record in activity.query(kind="call", since=since, limit=1000):
             if record.get("service") not in look.own_services:
                 continue
             args = record.get("args") or {}
@@ -394,14 +405,18 @@ class OutsideAppChanges:
 
     def _compare(self, looks: list[Look]) -> None:
         dirty = False
+        at = dt_util.utcnow()
         for look in looks:
             snapshot = _snapshot(look.lists)
             before = self.last.get(look.key)
+            # Not known after a restart: then the change is taken as just made
+            since = self._looked.get(look.key, at)
+            self._looked[look.key] = at
             if before == snapshot:
                 continue
             if before is not None:
                 for change, app, was, now in changes(before, look.lists):
-                    if self._hearths(look, app):
+                    if self._hearths(look, app, since):
                         continue
                     name = look.lists["names"].get(app) or (before.get("names") or {}).get(app)
                     if not name and look.provider == "Family Link":

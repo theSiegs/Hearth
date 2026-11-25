@@ -649,3 +649,66 @@ async def test_what_the_ai_companion_rule_takes_for_one(
     assert not blocks.named_ai_companion("com.example.chatty")
     assert not blocks.named_ai_companion("com.example.tutor")
     assert blocks.rule_reason("com.example.pal") is None
+
+
+async def test_a_blocked_list_cut_short_is_not_nothing_blocked(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """A Blocked apps list that is cut short (or missing) is unknown. Read as "nothing is blocked", every blocked app
+    became one Hearth pauses and resumes."""
+    other = "com.example.other"
+    calls = await _sam(hass, hass_client_no_auth, installed=[GAME, other], blocked=[GAME])
+    blocks = _household(hass).blocks
+    assert blocks.blocked_packages("person.sam") == {GAME} and blocks.blocked_known("person.sam")
+
+    # Cut short, showing none of them: the last whole list stands
+    hass.states.async_set("sensor.sam_blocked_apps", "80", {"child_id": CHILD, "apps": [], "truncated": True})
+    await _recompute(hass)
+    assert blocks.blocked_packages("person.sam") == {GAME} and blocks.blocked_known("person.sam")
+    await _call(hass, "pause", {"app": GAME, "minutes": 30, "people": ["person.sam"]})
+    await _call(hass, "pause", {"app": other, "minutes": 30, "people": ["person.sam"]})
+    paused = {p for c in calls["pause"] for p in c.data["packages"]}
+    assert other in paused and GAME not in paused
+    # And nothing is blocked or unblocked on a list that can't be read
+    await _call(hass, "block_app", {"app": other})
+    await _call(hass, "unblock_app", {"app": GAME})
+    assert not calls["block"] and not calls["unblock"]
+
+    # Missing altogether: the same
+    hass.states.async_remove("sensor.sam_blocked_apps")
+    await _recompute(hass)
+    assert blocks.blocked_packages("person.sam") == {GAME}
+
+    # What a cut-short list does show counts too
+    hass.states.async_set(
+        "sensor.sam_blocked_apps", "80", {"child_id": CHILD, "apps": [{"package": other}], "truncated": True}
+    )
+    assert blocks.blocked_packages("person.sam") == {GAME, other}
+
+    # Kept over a restart
+    await blocks.async_flush()
+    again = app_blocks.AppBlocks(hass, _household(hass), blocks._store.key.removeprefix("hearth.app_blocks."))
+    await again.async_load()
+    assert again.last_blocked == {"person.sam": {GAME}}
+
+    # Whole again with nothing blocked: that is known, and replaces the last list
+    _lists(hass, [GAME, other])
+    assert blocks.blocked_packages("person.sam") == set() and blocks.blocked_known("person.sam")
+    assert blocks.last_blocked == {"person.sam": set()}
+
+
+async def test_a_blocked_list_never_read_whole_is_unknown(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    calls = await _sam(hass, hass_client_no_auth, installed=[GAME], blocked=[GAME])
+    blocks = _household(hass).blocks
+    blocks.last_blocked.clear()
+    hass.states.async_set(
+        "sensor.sam_blocked_apps", "80", {"child_id": CHILD, "apps": [{"package": GAME}], "truncated": True}
+    )
+    assert not blocks.blocked_known("person.sam")
+    assert blocks.blocked_packages("person.sam") == {GAME}
+    assert blocks.last_blocked == {}
+    # Someone with no Family Link has nothing to know
+    assert blocks.blocked_known("person.nobody") and blocks.blocked_packages("person.nobody") == set()
+    assert not calls["block"] and not calls["unblock"]

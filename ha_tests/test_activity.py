@@ -190,3 +190,133 @@ async def test_backstop_leaves_a_switched_off_daily_limit_alone(
     household.backstop.check()
     await hass.async_block_till_done()
     assert [r for r in household.activity.records if r.get("service") == "familylink.set_daily_limit"]
+
+
+async def test_holds_outlive_a_flood_of_calls_for_14_days(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """Calls are capped by their own count: a week of them never pushes a hold record out (the stray-pause release
+    reads a week of holds). Only age does, at 14 days."""
+    from homeassistant.util import dt as dt_util
+
+    from custom_components.hearth import activity as activity_module
+
+    household = await _sam(hass, hass_client_no_auth)
+    log = household.activity
+    log.records.clear()
+    old = log.add("hold_start", person="person.sam", target=["com.example.game"], reason="limit", by="family_link")
+    old["at"] = (dt_util.utcnow() - timedelta(days=13, hours=23)).isoformat()
+    older = log.add("hold_start", person="person.sam", target=["com.example.old"], reason="limit", by="family_link")
+    older["at"] = (dt_util.utcnow() - timedelta(days=14, hours=1)).isoformat()
+    log.records.sort(key=lambda r: r["at"])
+    for n in range(activity_module.MAX_RECORDS + 1500):
+        log.add("call", person="person.sam", service="familylink.pause_app", args={"n": n}, result="ok")
+    calls = [r for r in log.records if r["kind"] == "call"]
+    assert activity_module.MAX_RECORDS <= len(calls) <= activity_module.MAX_RECORDS + activity_module.TRIM_EVERY
+    # The newest calls are the ones kept
+    assert calls[-1]["args"] == {"n": activity_module.MAX_RECORDS + 1499}
+    holds = log.query("person.sam", "hold_start", since=dt_util.utcnow() - timedelta(days=14), limit=5000)
+    assert [r["target"] for r in holds] == [["com.example.game"]]
+    assert older not in log.records
+
+    # Each other kind has its own room too: the oldest of that kind go first, the calls stay
+    for n in range(activity_module.MAX_OTHER + 250):
+        log.add("hold_end", person="person.sam", target=[f"app{n}"], reason="time_given", by="hearth")
+    log._trim()
+    ends = [r for r in log.records if r["kind"] == "hold_end"]
+    assert len(ends) == activity_module.MAX_OTHER and ends[-1]["target"] == [f"app{activity_module.MAX_OTHER + 249}"]
+    assert old in log.records
+    assert len([r for r in log.records if r["kind"] == "call"]) >= activity_module.MAX_RECORDS
+
+
+async def test_a_quiet_read_is_recorded_only_when_it_fails(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """The Nintendo applications list is read every 10 minutes (about 850 records a day): it no longer fills the
+    log."""
+    from homeassistant.core import SupportsResponse
+
+    household = await _sam(hass, hass_client_no_auth)
+    fail = False
+
+    async def listing(call):
+        if fail:
+            raise HomeAssistantError("console not found")
+        return {"applications": []}
+
+    hass.services.async_register("nintendo_parental_controls", "list_applications", listing,
+                                 supports_response=SupportsResponse.ONLY)
+    listed = lambda: [  # noqa: E731
+        r for r in household.activity.records if r.get("service") == "nintendo_parental_controls.list_applications"
+    ]
+    response = await call_service(hass, "nintendo_parental_controls", "list_applications", {"device_id": "d"},
+                                  blocking=True, return_response=True, why="outside_apps", quiet=True)
+    assert response == {"applications": []} and listed() == []
+    fail = True
+    with pytest.raises(HomeAssistantError):
+        await call_service(hass, "nintendo_parental_controls", "list_applications", {"device_id": "d"},
+                           blocking=True, return_response=True, why="outside_apps", quiet=True)
+    [record] = listed()
+    assert record["result"] == "failed" and record["why"] == "outside_apps"
+    # A read that isn't marked quiet is recorded as before
+    fail = False
+    await call_service(hass, "nintendo_parental_controls", "list_applications", {"device_id": "d"},
+                       blocking=True, return_response=True)
+    assert len(listed()) == 2
+
+
+async def test_every_app_of_a_call_is_hearths_from_the_moment_it_starts(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator
+) -> None:
+    """own_call: a call's whole app list (a record keeps the first 50), while it runs and after, kept over a
+    restart."""
+    import asyncio
+
+    from homeassistant.util import dt as dt_util
+
+    from custom_components.hearth.activity import ActivityLog
+
+    household = await _sam(hass, hass_client_no_auth)
+    log = household.activity
+    packages = [f"com.example.app{n:03d}" for n in range(150)]
+    started, release = asyncio.Event(), asyncio.Event()
+
+    async def resume(call):
+        started.set()
+        await release.wait()
+
+    hass.services.async_register("familylink", "resume_app", resume)
+    task = asyncio.create_task(
+        call_service(hass, "familylink", "resume_app", {"entity_id": FAMILY_LINK, "packages": packages}, blocking=True)
+    )
+    await started.wait()
+    own = {"familylink.resume_app"}
+    later = dt_util.utcnow() + timedelta(hours=1)
+    # Still running: no record yet, and every app is known as Hearth's, whatever the window
+    assert not [r for r in log.records if r.get("service") == "familylink.resume_app"]
+    assert log.own_call(own, packages[0], later) and log.own_call(own, packages[149], later)
+    assert not log.own_call(own, "com.example.never", later)
+    assert not log.own_call({"familylink.block_app"}, packages[149], later)
+    release.set()
+    await task
+    [record] = [r for r in log.records if r.get("service") == "familylink.resume_app"]
+    assert len(record["args"]["packages"]) == 50
+    # Ended: Hearth's since any time up to the call's end, not after it
+    assert log.own_call(own, packages[149], dt_util.utcnow() - timedelta(minutes=30))
+    assert not log.own_call(own, packages[149], later)
+
+    # Kept over a restart
+    await log.async_flush()
+    again = ActivityLog(hass, household, log._store.key.removeprefix("hearth.activity."))
+    await again.async_load()
+    assert again.own_call(own, packages[149], dt_util.utcnow() - timedelta(minutes=30))
+
+    # A failed call's apps are Hearth's too (it may have changed some before it failed)
+    async def boom(call):
+        raise HomeAssistantError("Family Link did not take the app limit")
+
+    hass.services.async_register("familylink", "pause_app", boom)
+    with pytest.raises(HomeAssistantError):
+        await call_service(hass, "familylink", "pause_app", {"packages": packages}, blocking=True)
+    assert log.own_call({"familylink.pause_app"}, packages[100], dt_util.utcnow() - timedelta(minutes=1))
+    assert log._running == {}

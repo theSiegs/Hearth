@@ -3097,6 +3097,10 @@ class Household:
         installed = fl.installed_apps(self.hass, child, self.enforcement.family_link_holding(person)) if child else None
         if not installed:
             return set()
+        if not self.blocks.blocked_known(person):
+            # Which apps are blocked can't be told (the Blocked apps list is cut short and never was read whole): the
+            # device lock stays, rather than every other app paused, the blocked ones with them
+            return set()
         membership = self.membership()
         apps = (apps & installed) - self.blocks.blocked_packages(person) - self.paused_packages(person, membership)
         closed = set(self.schedule_closed(person))
