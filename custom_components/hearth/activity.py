@@ -7,9 +7,17 @@ person, target, reason, by}), and so are TV commands, Glint inbox writes and a s
 rule}: Messages when away).
 
 Records name people and devices by their entity or device ids only, never a name, and keep only call arguments from a
-short allow list (ids, minutes, times, packages): never a message, a PIN or a token. They are kept 14 days, at most
-MAX_RECORDS, with Home Assistant's storage helper (as history.py). hearth.get_activity, the hearth/activity command and
-the page's Activity view read them; diagnostics include the last 200.
+short allow list (ids, minutes, times, packages): never a message, a PIN or a token. They are kept 14 days, with Home
+Assistant's storage helper (as history.py). The count is capped per kind (MAX_RECORDS calls, MAX_OTHER of each other
+kind), so a busy kind never pushes out another's: the stray-pause release (stray_pauses.py) reads a week of hold
+records, which a day's calls used to evict. A routine read that changes nothing (quiet=True: the Nintendo
+applications list every 10 minutes) is recorded only when it fails. hearth.get_activity, the hearth/activity command
+and the page's Activity view read them; diagnostics include the last 200.
+
+Next to the records, the log knows which apps Hearth's own calls touch (own_call), for telling Hearth's changes from
+an adult's in the provider's app (outside_apps.py): every app a call names, however many (a record keeps the first 50
+of a list), from the moment the call starts (a pause of 150 apps takes minutes, and is recorded when it returns), and
+when the call last ran. Kept OWN_KEEP, over a restart.
 """
 
 from __future__ import annotations
@@ -29,7 +37,17 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 KEEP = timedelta(days=14)
+# The most call records kept
 MAX_RECORDS = 5000
+# The most records kept of each other kind (holds, TV commands, rules...): their own room, whatever the calls do
+MAX_OTHER = 2000
+# The log is trimmed every this many records added
+TRIM_EVERY = 100
+# How long the apps Hearth's own calls touched stay known (own_call)
+OWN_KEEP = timedelta(days=1)
+# The arguments of a call that name the app (or apps) it changes
+_APP_ARGS = ("package_name", "app", "application_id", "app_id")
+_APP_LIST_ARGS = ("packages", "apps")
 CALL = "call"
 HOLD_START = "hold_start"
 HOLD_END = "hold_end"
@@ -65,6 +83,22 @@ def safe_args(data: dict[str, Any] | None) -> dict[str, Any]:
     return out
 
 
+def apps_of(data: dict[str, Any] | None) -> frozenset[str]:
+    """Every app a call names (a package, an application id), all of a list however long."""
+    found: set[str] = set()
+    for key in _APP_ARGS:
+        value = (data or {}).get(key)
+        if isinstance(value, str) and value:
+            found.add(value)
+    for key in _APP_LIST_ARGS:
+        value = (data or {}).get(key)
+        if isinstance(value, str) and value:
+            found.add(value)
+        elif isinstance(value, (list, tuple, set, frozenset)):
+            found |= {v for v in value if isinstance(v, str) and v}
+    return frozenset(found)
+
+
 def _log_of(hass: HomeAssistant) -> ActivityLog | None:
     for entry in hass.config_entries.async_loaded_entries(DOMAIN):
         hub = getattr(entry, "runtime_data", None)
@@ -86,9 +120,15 @@ async def call_service(
     *,
     person: str | None = None,
     why: str | None = None,
+    quiet: bool = False,
 ) -> Any:
-    """hass.services.async_call, recorded in the action log (every outbound call of Hearth's goes through here)."""
+    """hass.services.async_call, recorded in the action log (every outbound call of Hearth's goes through here).
+
+    [quiet]: a routine read that changes nothing; recorded only when it fails."""
     started = time.monotonic()
+    # Known as Hearth's from now, not from when it returns: its changes show while it still runs
+    log = _log_of(hass)
+    token = log.begin(f"{domain}.{service}", data) if log is not None else None
     try:
         result = await hass.services.async_call(
             domain, service, data, blocking=blocking, context=context, target=target, return_response=return_response
@@ -96,6 +136,13 @@ async def call_service(
     except Exception as err:
         _record_call(hass, domain, service, data, person, why, started, err)
         raise
+    finally:
+        # Also when cancelled (a reload mid-call): what it changed until then is still Hearth's
+        if log is not None and token is not None:
+            log.finish(token)
+    if quiet:
+        _LOGGER.debug("call %s.%s for %s (%s): ok, not recorded", domain, service, person, why)
+        return result
     _record_call(hass, domain, service, data, person, why, started, None)
     return result
 
@@ -135,21 +182,34 @@ def _record_call(
 
 
 class ActivityLog:
-    """The records, newest last, kept 14 days and at most MAX_RECORDS."""
+    """The records, newest last, kept 14 days and at most MAX_RECORDS calls and MAX_OTHER of each other kind."""
 
     def __init__(self, hass: HomeAssistant, household: Any, entry_id: str) -> None:
         self.hass = hass
         self.household = household
         self._store: Store[dict[str, Any]] = Store(hass, 1, f"hearth.activity.{entry_id}")
         self.records: list[dict[str, Any]] = []
+        self._added = 0
+        # The apps Hearth's own calls touched: service -> app -> when a call naming it last started or ended (ISO,
+        # UTC). Every app of a call, not a record's first 50
+        self._own: dict[str, dict[str, str]] = {}
+        # Calls running now: token -> (service, its apps)
+        self._running: dict[int, tuple[str, frozenset[str]]] = {}
+        self._token = 0
 
     async def async_load(self) -> None:
         stored = await self._store.async_load() or {}
         self.records = [r for r in stored.get("records") or [] if isinstance(r, dict) and r.get("at")]
+        own = stored.get("own")
+        self._own = {
+            str(service): {str(app): at for app, at in apps.items() if isinstance(at, str)}
+            for service, apps in (own.items() if isinstance(own, dict) else ())
+            if isinstance(apps, dict)
+        }
         self._trim()
 
     def _data(self) -> dict[str, Any]:
-        return {"records": self.records}
+        return {"records": self.records, "own": self._own}
 
     def _save(self) -> None:
         self._store.async_delay_save(self._data, 10)
@@ -158,8 +218,67 @@ class ActivityLog:
         await self._store.async_save(self._data())
 
     def _trim(self) -> None:
-        cutoff = (dt_util.utcnow() - KEEP).isoformat()
-        self.records = [r for r in self.records if str(r.get("at")) >= cutoff][-MAX_RECORDS:]
+        """Drops what is older than KEEP, and of each kind what is beyond its own count (the oldest first): calls are
+        many and holds few, and a count over all kinds let a week of calls push the holds out."""
+        now = dt_util.utcnow()
+        cutoff = (now - KEEP).isoformat()
+        room: dict[str, int] = {}
+        kept: list[dict[str, Any]] = []
+        for record in reversed(self.records):
+            if str(record.get("at")) < cutoff:
+                continue
+            kind = str(record.get("kind"))
+            left = room.get(kind, MAX_RECORDS if kind == CALL else MAX_OTHER)
+            if left <= 0:
+                continue
+            room[kind] = left - 1
+            kept.append(record)
+        kept.reverse()
+        self.records = kept
+        own_cutoff = (now - OWN_KEEP).isoformat()
+        self._own = {
+            service: fresh
+            for service, apps in self._own.items()
+            if (fresh := {app: at for app, at in apps.items() if at >= own_cutoff})
+        }
+
+    # Hearth's own calls, by app
+
+    @callback
+    def begin(self, service: str, data: dict[str, Any] | None) -> int | None:
+        """A call of Hearth's starts: every app it names is Hearth's from now. Gives what finish() takes; None when
+        the call names no app."""
+        apps = apps_of(data)
+        if not apps:
+            return None
+        self._token += 1
+        self._running[self._token] = (service, apps)
+        self._stamp(service, apps)
+        return self._token
+
+    @callback
+    def finish(self, token: int) -> None:
+        """That call returned (or failed, or was cancelled): its apps were last touched now."""
+        service, apps = self._running.pop(token, (None, frozenset()))
+        if service is not None:
+            self._stamp(service, apps)
+
+    def _stamp(self, service: str, apps: frozenset[str]) -> None:
+        # Saved at the start too: a restart in the middle of a long call still knows its apps
+        at = dt_util.utcnow().isoformat()
+        mine = self._own.setdefault(service, {})
+        for app in apps:
+            mine[app] = at
+        self._save()
+
+    def own_call(self, services: Iterable[str], app: str, since: datetime) -> bool:
+        """Whether a call of Hearth's to one of [services] naming [app] is running now, or ran (started or ended) at
+        or after [since]."""
+        services = set(services)
+        if any(service in services and app in apps for service, apps in self._running.values()):
+            return True
+        lo = dt_util.as_utc(since).isoformat()
+        return any((at := self._own.get(service, {}).get(app)) is not None and at >= lo for service in services)
 
     def person_of(self, data: dict[str, Any] | None) -> str | None:
         """The person an outbound call is about: the enforcer whose entity (or Family Link child) it names."""
@@ -186,7 +305,9 @@ class ActivityLog:
     def add(self, kind: str, **fields: Any) -> dict[str, Any]:
         record = {"at": dt_util.utcnow().isoformat(), "kind": kind, **{k: v for k, v in fields.items() if v not in (None, [], {})}}
         self.records.append(record)
-        if len(self.records) > MAX_RECORDS + 100:
+        self._added += 1
+        if self._added >= TRIM_EVERY:
+            self._added = 0
             self._trim()
         self._save()
         return record

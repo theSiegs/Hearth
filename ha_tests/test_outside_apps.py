@@ -248,3 +248,109 @@ async def test_the_button_only_takes_lists_hearth_looks_at(hass: HomeAssistant, 
                  {"source": "person.sam|family_link", "app": "com.android.settings"}):
         with pytest.raises(ServiceValidationError):
             await _call(hass, "block_outside_app", data)
+
+
+MANY = [f"com.example.app{n:03d}" for n in range(150)]
+LATE = MANY[120]
+
+
+async def _resume_running(hass: HomeAssistant):
+    """Hearth's resume of 150 apps, still running at Family Link: (the call's task, the event that lets it end)."""
+    import asyncio
+
+    from custom_components.hearth.activity import call_service
+
+    started, release = asyncio.Event(), asyncio.Event()
+
+    async def resume(call: ServiceCall):
+        started.set()
+        await release.wait()
+
+    hass.services.async_register("familylink", "resume_app", resume)
+    # Not a task of Home Assistant's: _recompute waits for those
+    task = asyncio.create_task(
+        call_service(hass, "familylink", "resume_app", {"child_id": CHILD, "packages": MANY}, blocking=True,
+                     person="person.sam", why="limit")
+    )
+    await started.wait()
+    return task, release
+
+
+async def test_a_change_seen_while_hearths_resume_of_150_apps_still_runs_is_not_told(
+    hass: HomeAssistant, hass_client_no_auth
+) -> None:
+    """Hearth's resume put an app's 60-minute limit back while Family Link's own pause record of it was already gone:
+    seen two minutes before the call returned, it was told as "limit raised in Family Link, not by Hearth"."""
+    await _sam(hass, hass_client_no_auth, installed=[*MANY, APP])
+    await _look(hass, installed=[*MANY, APP], limits={LATE: 1, MANY[3]: 1, APP: 30})
+    task, release = await _resume_running(hass)
+    household = _household(hass)
+    assert not [r for r in household.activity.records if r.get("service") == "familylink.resume_app"]
+
+    # The 121st app of the call, and an early one, while the call runs
+    assert await _look(hass, installed=[*MANY, APP], limits={LATE: 60, MANY[3]: 1, APP: 30}) == {}
+    assert await _look(hass, installed=[*MANY, APP], limits={LATE: 60, APP: 30}) == {}
+    # An app the call doesn't name is still an adult's change
+    notices = await _look(hass, installed=[*MANY, APP], limits={LATE: 60, APP: 90})
+    assert list(notices) == [f"outside_app_person.sam_family_link_{APP}"]
+
+    release.set()
+    await task
+    await hass.async_block_till_done()
+    [record] = [r for r in household.activity.records if r.get("service") == "familylink.resume_app"]
+    assert LATE not in record["args"]["packages"]
+    # After it returned: a package past the 50th of the call is still Hearth's
+    notices = await _look(hass, installed=[*MANY, APP], limits={LATE: 75, APP: 90})
+    assert list(notices) == [f"outside_app_person.sam_family_link_{APP}"]
+
+
+async def test_hearths_window_runs_from_the_calls_end_to_the_last_look(
+    hass: HomeAssistant, hass_client_no_auth, freezer
+) -> None:
+    from datetime import timedelta
+
+    from custom_components.hearth.activity import call_service
+
+    async_mock_service(hass, "familylink", "set_app_daily_limit")
+    await _sam(hass, hass_client_no_auth, installed=[APP, OTHER])
+    await _look(hass, installed=[APP, OTHER], limits={APP: 30, OTHER: 30})
+    for app in (APP, OTHER):
+        await call_service(hass, "familylink", "set_app_daily_limit",
+                           {"child_id": CHILD, "package_name": app, "minutes": 60}, blocking=True)
+
+    # The lists are cut short for 50 minutes (nothing compared), then whole again: the change is from some time
+    # since the last look, which Hearth's call was within, however long ago that is now
+    hass.states.async_set("sensor.sam_blocked_apps", "0", {"child_id": CHILD, "apps": [], "truncated": True})
+    freezer.tick(timedelta(minutes=50))
+    await _recompute(hass)
+    assert await _look(hass, installed=[APP, OTHER], limits={APP: 60, OTHER: 30}) == {}
+
+    # Looked at whole again and again: 45 minutes after Hearth's call, a raise is an adult's
+    freezer.tick(timedelta(minutes=45))
+    await _look(hass, installed=[APP, OTHER], limits={APP: 60, OTHER: 30})
+    freezer.tick(timedelta(minutes=1))
+    notices = await _look(hass, installed=[APP, OTHER], limits={APP: 60, OTHER: 60})
+    assert list(notices) == [f"outside_app_person.sam_family_link_{OTHER}"]
+
+
+async def test_the_nintendo_list_reads_stay_out_of_the_action_log(hass: HomeAssistant, hass_client_no_auth) -> None:
+    from homeassistant.core import SupportsResponse
+    from test_enforce import NINTENDO_LIMIT, _add_enforcer, _nintendo_switch
+
+    await _sam(hass, hass_client_no_auth)
+    _nintendo_switch(hass)
+    await _add_enforcer(hass, {"kind": "nintendo", "person": "person.sam", "entity_id": NINTENDO_LIMIT})
+    reads = []
+
+    async def listing(call: ServiceCall):
+        reads.append(call)
+        return {"applications": [{"application_id": "0100AAA", "name": "Blaster Arena", "allowed": False}]}
+
+    hass.services.async_register("nintendo_parental_controls", "list_applications", listing,
+                                 supports_response=SupportsResponse.ONLY)
+    outside = _household(hass).outside_apps
+    for _ in range(3):
+        outside._nintendo_at = None
+        await _recompute(hass)
+    assert len(reads) >= 3
+    assert not [r for r in _household(hass).activity.records if "list_applications" in str(r.get("service"))]

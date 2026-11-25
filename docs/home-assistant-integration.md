@@ -983,13 +983,20 @@ moves each one into Family Link's With time limits list, which then outgrows Hom
 cut short (`truncated`). The apps installed are then read as the last whole read plus what the lists show, so Hearth
 keeps the apps paused rather than swapping to the device lock and back. The last whole read is kept over a restart of
 Home Assistant; with none yet, a With time limits list cut short reads as what it shows plus the apps Hearth holds.
+A Blocked apps list that is missing or cut short is unknown, never "nothing is blocked": Hearth blocks and unblocks
+nothing meanwhile, keeps out of its pauses and resumes the apps of the last whole list (kept over a restart) plus
+the ones the list shows, and, when the list was never read whole, keeps the device lock rather than pausing every
+other app.
 
 - **Told:** an app unblocked (still installed); an app's time limit raised or taken off; an app made Always allowed
   or put on a Switch's allow list. The text says the app, what changed, where and when, e.g. "Pins was unblocked in
   Family Link, not by Hearth (5:40 PM)."
 - **Not told:** tightening (a block, a lower limit), an app uninstalled, and Hearth's own changes: a call of the
-  provider's that names the app (block, unblock, pause, resume or an app limit; Nintendo's `set_app_allowed`) in the action log in
-  the last 30 minutes. Apps Hearth pauses are left out of the limit comparison before and after.
+  provider's that names the app (block, unblock, pause, resume or an app limit; Nintendo's `set_app_allowed`), while
+  the call still runs (a pause or resume of 150 apps takes two minutes, and its changes show before it returns) and
+  for 30 minutes after it ended, counted back from the last look at the list rather than from now (a list cut short
+  for an hour is compared with the look before that hour). Every app of the call counts, however long its list (the
+  action log's record keeps the first 50). Apps Hearth pauses are left out of the limit comparison before and after.
 - Each list is compared with the last look (kept across restarts, so a change made while Home Assistant was down is
   told at the next look). Nothing is told at the first look, or while a list is missing or cut short.
 - `hearth_outside_app_change` fires for each one (`person`, `provider`, `app`, `change`: `unblocked`, `limit_raised`,
@@ -2662,8 +2669,10 @@ group's Today sensor is `total_increasing`).
 
 #### Activity
 
-Hearth keeps a durable log of what it did (activity.py), 14 days and at most 5,000 records, with Home Assistant's
-storage helper:
+Hearth keeps a durable log of what it did (activity.py), 14 days, with Home Assistant's storage helper. The count is
+capped per kind: at most 5,000 calls and 2,000 of each other kind, so a busy evening of calls never pushes out the
+holds (`hearth.release_stray_pauses` reads a week of them). A routine read that changes nothing (the Nintendo
+applications list, every 10 minutes) is recorded only when it fails:
 
 - **Calls** to other integrations: every `familylink.*` (pauses and resumes, the backstop's `set_daily_limit`, blocks
   and unblocks, bonus time, bedtime and School time), `microsoft_family_safety.*`, `nintendo_parental_controls.*`,

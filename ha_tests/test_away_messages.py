@@ -229,6 +229,30 @@ async def test_a_pause_a_block_and_bedtime_still_hold(
     assert MESSAGES not in household.away.sms_apps(SAM)
 
 
+async def test_a_blocked_list_never_read_whole_keeps_the_device_lock(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    """Which apps are blocked isn't known (the Blocked apps list is cut short and was never read whole): the device
+    lock isn't swapped for a pause of every other app, the blocked ones with them."""
+    await sam_out_of_time(hass, hass_client_no_auth, freezer)
+    await _opened(hass, freezer)
+    household = _household(hass)
+    assert household.open_apps(SAM) == {MESSAGES} and "Devices" not in _held(hass)
+
+    # Cut short after a whole read: the last whole list stands, and nothing swaps
+    hass.states.async_set("sensor.sam_blocked_apps", "80", {"child_id": "42", "apps": [], "truncated": True})
+    household.recompute()
+    await hass.async_block_till_done()
+    assert household.open_apps(SAM) == {MESSAGES} and "Devices" not in _held(hass)
+
+    # Never read whole
+    household.blocks.last_blocked.clear()
+    assert household.open_apps(SAM) == set()
+    household.recompute()
+    await hass.async_block_till_done()
+    assert "Devices" in _held(hass)
+
+
 async def test_with_an_adult_9_minutes_stays_open_10_closes(
     hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
 ) -> None:
