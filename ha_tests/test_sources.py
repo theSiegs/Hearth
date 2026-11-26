@@ -422,3 +422,101 @@ async def test_a_source_still_on_yesterday_after_midnight_isn_t_kept_all_day(
     hass.states.async_set(SWITCH_SENSOR, "0", {"unit_of_measurement": "min"})
     await hass.async_block_till_done()
     assert games() <= 5
+
+
+# A kid's phone both on Family Link and paired with Hearth (Glint): one device by its model
+
+FL_MODEL = "EX-1000"
+
+
+def _family_link_phone(
+    hass: HomeAssistant, name: str, device_id: str, minutes: int, model: str | None = FL_MODEL
+) -> str:
+    """A Family Link device's Daily screen time sensor on its Home Assistant device (model [model])."""
+    fl_entry = MockConfigEntry(domain="familylink")
+    fl_entry.add_to_hass(hass)
+    device = dr.async_get(hass).async_get_or_create(
+        config_entry_id=fl_entry.entry_id, identifiers={("familylink", f"42_{device_id}")}, manufacturer="Google",
+        model=model,
+    )
+    entity_id = er.async_get(hass).async_get_or_create(
+        "sensor", "familylink", f"42_{device_id}_screen_time", suggested_object_id=f"{name}_daily_screen_time",
+        config_entry=fl_entry, device_id=device.id,
+    ).entity_id
+    hass.states.async_set(
+        entity_id, str(minutes), {"unit_of_measurement": "min", "child_id": "42", "device_id": device_id}
+    )
+    return entity_id
+
+
+async def _sam_s_hearth_phone(hass: HomeAssistant, client, freezer, model: str = FL_MODEL) -> None:
+    """Sam's phone paired with Hearth (its own name, not Family Link's), 20 minutes today."""
+    from test_init import NONCE, PHONE_ID, _post
+    from test_people import _today
+
+    freezer.tick(timedelta(seconds=11))
+    response = await client.post(
+        "/api/hearth/pair",
+        json={"device_id": PHONE_ID, "kind": "mobile", "name": "The phone", "model": model, "nonce": NONCE},
+    )
+    pairing_id = (await response.json())["pairing_id"]
+    await hass.async_block_till_done()
+    flow = hass.config_entries.flow.async_progress_by_handler(DOMAIN)[0]
+    await hass.config_entries.flow.async_configure(flow["flow_id"], {"person": "person.sam"})
+    await hass.async_block_till_done()
+    secret = (await (await client.get(f"/api/hearth/pair/{pairing_id}", headers={"X-Hearth-Nonce": NONCE})).json())[
+        "secret"
+    ]
+    await _post(client, secret, body={"screen": "on", "day": _today(), "seconds_today": 0}, device_id=PHONE_ID)
+    await _post(client, secret, body={"screen": "on", "day": _today(), "seconds_today": 1200}, device_id=PHONE_ID)
+    await hass.async_block_till_done()
+
+
+async def test_a_family_link_phone_of_the_hearth_phone_s_model_counts_once(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    client, _ = await _household_with_sam(hass, hass_client_no_auth)
+    await _sam_s_hearth_phone(hass, client, freezer)
+    phone = _family_link_phone(hass, "sam_galaxy", "d1", 30)
+    await _option(hass, "add_source", {"entity_id": phone, "person": "person.sam", "name": "Sam's Galaxy"})
+    # TV 15, and the phone's 30 (Family Link's) and 20 (Hearth's) once: 45, not 65
+    assert _state(hass, "sensor.hearth_sam_screen_time_today") == "45"
+    # Inferred each time, never saved
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    assert not next(s for s in entry.options["sources"] if s["entity_id"] == phone).get("same_as")
+
+
+async def test_two_family_link_phones_of_one_model_link_nothing(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    client, _ = await _household_with_sam(hass, hass_client_no_auth)
+    await _sam_s_hearth_phone(hass, client, freezer)
+    first = _family_link_phone(hass, "sam_galaxy", "d1", 30)
+    second = _family_link_phone(hass, "sam_old_galaxy", "d2", 5)
+    await _option(hass, "add_source", {"entity_id": first, "person": "person.sam"})
+    await _option(hass, "add_source", {"entity_id": second, "person": "person.sam"})
+    # Which one is the Hearth phone can't be told: each counts on its own (15 + 20 + 30 + 5)
+    assert _state(hass, "sensor.hearth_sam_screen_time_today") == "70"
+
+
+async def test_a_source_s_own_same_as_wins_over_the_model(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    client, _ = await _household_with_sam(hass, hass_client_no_auth)
+    await _sam_s_hearth_phone(hass, client, freezer)
+    phone = _family_link_phone(hass, "sam_galaxy", "d1", 30)
+    await _option(hass, "add_source", {"entity_id": phone, "person": "person.sam", "same_as": f"hearth:{TV_ID}"})
+    # Counted with the TV, as chosen (30 over the TV's 15), and the Hearth phone's 20 on its own
+    assert _state(hass, "sensor.hearth_sam_screen_time_today") == "50"
+
+
+async def test_no_model_or_another_model_links_nothing(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    client, _ = await _household_with_sam(hass, hass_client_no_auth)
+    await _sam_s_hearth_phone(hass, client, freezer)
+    unknown = _family_link_phone(hass, "sam_galaxy", "d1", 30, model=None)
+    other = _family_link_phone(hass, "sam_tablet", "d2", 5, model="EX-2000")
+    await _option(hass, "add_source", {"entity_id": unknown, "person": "person.sam"})
+    await _option(hass, "add_source", {"entity_id": other, "person": "person.sam"})
+    assert _state(hass, "sensor.hearth_sam_screen_time_today") == "70"

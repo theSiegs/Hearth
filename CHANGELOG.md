@@ -3,6 +3,12 @@
 > **Draft.** Hearth is in early development and this document is a draft: features, settings and
 > setup steps may change or be incomplete.
 
+## Unreleased
+
+### Home Assistant integration
+
+- **A kid's phone on Family Link and on Glint counts once.** A Family Link phone added as a source and the same kid's phone paired with Hearth through Glint were counted as two devices, their minutes added together, because the two name the phone differently. Hearth now takes them as one device when the Family Link phone's model (its Home Assistant device's) is the Glint phone's, and it's the kid's only Glint phone and only Family Link phone source of that model; Hearth's page shows them as one device the same way (by name as before otherwise). Two phones of one model, an unknown model, an adult's phone or a source with its own "Same device as" link nothing; that setting always wins, and the inferred link is never saved.
+
 ## 2026.11.61
 
 ### Home Assistant integration

@@ -33,6 +33,7 @@ from .const import (
     CONF_KIND,
     CONF_LOCKS,
     CONF_MEDIA_PLAYERS,
+    CONF_MODEL,
     CONF_PERSON,
     CONF_PROFILES,
     CONF_ROLES,
@@ -40,6 +41,7 @@ from .const import (
     DOMAIN,
     EVENT_BUDGET_REACHED,
     EVENT_PLAYING_TOGETHER,
+    KIND_MOBILE,
     KIND_TV,
     SIGNAL_PEOPLE,
 )
@@ -156,6 +158,7 @@ from .sources import (
     title_key,
     titles_from_options,
     totals_reading,
+    with_phone_twins,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -1182,7 +1185,7 @@ class Household:
         back_live = self.live.seconds if backfill else {}
         options = self.options
         self.groups = groups_from_options(options)
-        self.sources = sources_from_options(options)
+        self.sources = with_phone_twins(self.hass, sources_from_options(options), self._kid_phones())
         self.titles = titles_from_options(options)
         by_id = {s.id: s for s in self.sources}
         readings: dict[str, dict[str, list[Reading]]] = {}
@@ -2361,6 +2364,15 @@ class Household:
         return body
 
     # School time and exceptions
+
+    def _kid_phones(self) -> dict[str, tuple[str, str]]:
+        """Each kid's Hearth phone (Glint) whose model is known: id -> (person, model)."""
+        return {
+            device_id: (device[CONF_PERSON], device[CONF_MODEL])
+            for device_id, device in self.hub.devices.items()
+            if device.get(CONF_KIND) == KIND_MOBILE and device.get(CONF_PERSON) and device.get(CONF_MODEL)
+            and self.hub.glint_agent.is_kid_phone(device_id)
+        }
 
     def family_link_child(self, person: str) -> str | None:
         enforcer = next(

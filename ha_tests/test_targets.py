@@ -283,6 +283,44 @@ async def test_one_handset_as_a_hearth_phone_and_a_family_link_device_is_marked(
     assert targets[f"hearth:{PHONE_ID}"]["also"] == ["fl:dev1"]
 
 
+async def test_a_family_link_device_of_the_hearth_phone_s_model_is_marked(
+    hass: HomeAssistant, hass_client_no_auth: ClientSessionGenerator, freezer
+) -> None:
+    from datetime import timedelta
+
+    from homeassistant.helpers import device_registry as dr, entity_registry as er
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    from test_init import NONCE, PHONE_ID
+
+    await _sam_with_family_link(hass, hass_client_no_auth)
+    # Family Link's device switch on its Home Assistant device, the handset's model
+    fl_entry = MockConfigEntry(domain="familylink")
+    fl_entry.add_to_hass(hass)
+    device = dr.async_get(hass).async_get_or_create(
+        config_entry_id=fl_entry.entry_id, identifiers={("familylink", "42_dev1")}, model="EX-1000"
+    )
+    er.async_get(hass).async_get_or_create(
+        "switch", "familylink", "42_dev1", suggested_object_id="sam_s_phone", config_entry=fl_entry, device_id=device.id
+    )
+    _phone(hass)
+    client = await hass_client_no_auth()
+    freezer.tick(timedelta(seconds=11))
+    # Its own name, not Family Link's
+    await client.post(
+        "/api/hearth/pair",
+        json={"device_id": PHONE_ID, "kind": "mobile", "name": "The phone", "model": "EX-1000", "nonce": NONCE},
+    )
+    await hass.async_block_till_done()
+    flow = hass.config_entries.flow.async_progress_by_handler(DOMAIN)[0]
+    await hass.config_entries.flow.async_configure(flow["flow_id"], {"person": "person.sam"})
+    await hass.async_block_till_done()
+
+    targets = {t["id"]: t for t in _sam(hass)["targets"]}
+    assert targets["fl:dev1"]["same_as"] == f"hearth:{PHONE_ID}"
+    assert targets[f"hearth:{PHONE_ID}"]["also"] == ["fl:dev1"]
+
+
 def _windows(hass: HomeAssistant, end: str = "22:00:00", used: int = 48) -> None:
     hass.states.async_set(
         "sensor.sam_windows_time_remaining",

@@ -21,14 +21,14 @@ A source can be "the same device" as a Hearth device or another source, so their
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 import re
 from typing import Any
 
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.util import dt as dt_util
 
 from .counting import Reading
@@ -41,6 +41,7 @@ NOT_PLAYING = {"", "none", "offline", "online", "idle", "home", "away", "not pla
 
 _UNITS = {"s": 1, "sec": 1, "min": 60, "h": 3600, "hr": 3600, "d": 86400}
 FS_DOMAIN = "microsoft_family_safety"
+FL_DOMAIN = "familylink"
 MAX_APPS = 200
 
 
@@ -132,6 +133,35 @@ def device_key(source: Source, sources: dict[str, Source]) -> str:
             break
         current = nxt
     return f"source:{current.id}"
+
+
+def family_link_model(hass: HomeAssistant, entity_id: str) -> str | None:
+    """The handset model of a Family Link device's entity (its Home Assistant device's model), else None."""
+    entry = er.async_get(hass).async_get(entity_id)
+    if entry is None or entry.platform != FL_DOMAIN or not entry.device_id:
+        return None
+    device = dr.async_get(hass).async_get(entry.device_id)
+    return (device.model or None) if device is not None else None
+
+
+def with_phone_twins(hass: HomeAssistant, sources: list[Source], phones: dict[str, tuple[str, str]]) -> list[Source]:
+    """The sources, a kid's Family Link phone "the same device" as their Hearth phone of the same model ([phones]:
+    a kid's Hearth phone id -> (person, model)). Only one to one: one Hearth phone and one Family Link phone source of
+    that person and model. Worked out each time, never saved, and a source's own "same as" always wins."""
+    taken = {s.same_as for s in sources if s.same_as}
+    models = {
+        s.id: model for s in sources
+        if not s.same_as and not s.live and not s.phone_app and (model := family_link_model(hass, s.entity_id))
+    }
+    out = []
+    for source in sources:
+        model = models.get(source.id)
+        twins = [d for d, (person, m) in phones.items() if person == source.person and m == model]
+        alike = [s for s in sources if s.person == source.person and models.get(s.id) == model]
+        if model and len(twins) == 1 and len(alike) == 1 and f"hearth:{twins[0]}" not in taken:
+            source = replace(source, same_as=f"hearth:{twins[0]}")
+        out.append(source)
+    return out
 
 
 def _seconds(value: Any, unit: str | None) -> float | None:

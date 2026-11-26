@@ -17,8 +17,9 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.helpers import entity_registry as er
 
 from . import family_link as fl
-from .const import CONF_KIND, CONF_PERSON, KIND_TV
+from .const import CONF_KIND, CONF_MODEL, CONF_PERSON, KIND_TV
 from .enforce import FAMILY_SAFETY, NINTENDO
+from .sources import family_link_model
 
 if TYPE_CHECKING:
     from .household import Household
@@ -47,7 +48,9 @@ def targets_of(household: Household, person: str) -> list[dict[str, Any]]:
                 }
             )
     if (child := household.family_link_child(person)) is not None:
-        for state in fl.devices(hass, child):
+        fl_devices = fl.devices(hass, child)
+        fl_models = [family_link_model(hass, s.entity_id) for s in fl_devices]
+        for state, model in zip(fl_devices, fl_models):
             device_id = str(state.attributes.get("device_id"))
             found.append(
                 {
@@ -58,11 +61,16 @@ def targets_of(household: Household, person: str) -> list[dict[str, Any]]:
                     "groups": False,
                 }
             )
-            # The same handset as a Hearth phone of theirs (by name): one device, shown once
-            twin = next(
-                (t for t in found if t["via"] == HEARTH and t["kind"] == "phone"
-                 and t["name"].casefold() == found[-1]["name"].casefold()),
-                None,
+            # The same handset as a Hearth phone of theirs: the one of its model (when it's the only one of that model
+            # on both sides), else by name. One device, shown once
+            phones = [t for t in found if t["via"] == HEARTH and t["kind"] == "phone"]
+            hub_devices = household.hub.devices
+            alike = [
+                t for t in phones
+                if model and (hub_devices.get(t["id"].removeprefix(f"{HEARTH}:")) or {}).get(CONF_MODEL) == model
+            ]
+            twin = alike[0] if len(alike) == 1 and fl_models.count(model) == 1 else next(
+                (t for t in phones if t["name"].casefold() == found[-1]["name"].casefold()), None
             )
             if twin is not None:
                 found[-1]["same_as"] = twin["id"]
