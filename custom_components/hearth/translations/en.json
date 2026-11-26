@@ -56,6 +56,17 @@
   },
   "entity": {
     "sensor": {
+      "bluetooth_sharing": {
+        "name": "Bluetooth sharing",
+        "state": {
+          "off": "Off",
+          "running": "Running",
+          "needs_permission": "Needs permission on the TV",
+          "bluetooth_off": "Bluetooth off on the TV",
+          "location_off": "Location off on the TV",
+          "stopped": "Not running"
+        }
+      },
       "tv_state": {
         "name": "State",
         "state": {
@@ -200,6 +211,9 @@
       }
     },
     "switch": {
+      "share_bluetooth": {
+        "name": "Share Bluetooth with Home Assistant"
+      },
       "panel_photo_caption": {
         "name": "Photo captions"
       },
@@ -1720,6 +1734,16 @@
         "commute_window": {
           "name": "Commute window",
           "description": "{from, until, days}."
+        }
+      }
+    },
+    "get_tv_bluetooth": {
+      "name": "Get TV Bluetooth proxies",
+      "description": "Each Hearth TV's Bluetooth proxy (Share Bluetooth with Home Assistant): its address, ESPHome name, MAC and encryption key, and whether Hearth added it to ESPHome. For entering a TV in the ESPHome integration by hand. With no target: every TV. Administrators only.",
+      "fields": {
+        "device_id": {
+          "name": "TV",
+          "description": "The TV's device."
         }
       }
     },

@@ -3136,6 +3136,25 @@ Exactly one of `video_id`, `package` or `url`; `profile_id` null for whoever is 
    id means `ok`; `error` is a short reason, at most 64 characters; at most 20). Home Assistant drops those from the
    queue; an id it doesn't know is ignored, so saying one again is harmless.
 
+### Share Bluetooth with Home Assistant
+
+A Hearth TV can be a Bluetooth proxy for Home Assistant's ESPHome and Bluetooth integrations, so room presence
+(Bermuda, Private BLE Device and the like) hears nearby phones and watches through the TV. It's off by default, per
+TV. Each paired TV has a switch **Share Bluetooth with Home Assistant** (adults and automations only, as Hearth's other
+controls) and a sensor **Bluetooth sharing**: `off`, `running`, `needs_permission` (an adult has to allow location and
+Bluetooth scanning on the TV: Settings, Home Assistant, Allow Bluetooth sharing), `bluetooth_off`, `location_off` or
+`stopped`. The switch is unavailable until the TV runs a Hearth TV that can. Turning it on on the TV (Settings, Home
+Assistant) works the same and shows on the switch; the later change wins.
+
+The TV makes its own encryption key once and sends it to Hearth over its pairing. Once the TV's proxy runs, Hearth
+adds it to the ESPHome integration itself (the TV's address, port 6053 and that key, through ESPHome's own setup), and
+the sensor's `esphome` attribute says how that went (`added`, `exists`, `failed` with `esphome_detail`,
+`esphome_unavailable`, `removed`). An ESPHome entry already there for the TV is left alone, and one deleted after
+Hearth added it isn't added back until the switch is turned off and on. To add it by hand (Settings, Devices
+& services, Add integration, ESPHome), an administrator gets the TV's `host`, `port` and `noise_psk` from
+`hearth.get_tv_bluetooth`. Turning the switch off stops the proxy on the TV; the ESPHome entry stays (unavailable) and
+comes back when it's on again. Details: [contracts/hearth-tv.md, Bluetooth sharing](contracts/hearth-tv.md#bluetooth-sharing).
+
 ### Media rooms
 
 For a phone's "what's playing where" (Glint's Music), the household summary and every phone's state document (a kid's
@@ -3277,7 +3296,8 @@ Services: `hearth.add_bonus`, `hearth.remove_bonus`, `hearth.set_budget`, `heart
 [Exceptions](#exceptions) and [Schedule](#schedule)), `hearth.play_on_tv` (event
 `hearth_command_done`, see [Play on a TV](#play-on-a-tv));
 `hearth.get_watch_log`, `hearth.watch_digest`, `hearth.block_video`, `hearth.block_channel`, `hearth.block_word` and
-their `unblock_` twins. Event `hearth_video_started`.
+their `unblock_` twins. Event `hearth_video_started`; `hearth.get_tv_bluetooth` (administrators: each TV's Bluetooth proxy and its key, see
+[Share Bluetooth with Home Assistant](#share-bluetooth-with-home-assistant)).
 
 ## The device's side of the API
 

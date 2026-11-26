@@ -28,7 +28,7 @@ screens).
 ```text
 contract: 3
 always: profiles youtube_blocks commands people version contract
-optional: adult_phones notices parent_pins_version parent_pins client_settings
+optional: adult_phones notices parent_pins_version parent_pins client_settings bluetooth_proxy
 ```
 <!-- /hearth-tv-contract:state-document -->
 
@@ -49,6 +49,7 @@ A TV gets its state document as `state` in every status answer (`POST .../status
 | `notices` | the TV declared cap `notices` | attention items for TVs, `[{key, tag, title, message, urgency, actions[{id, title}], for?, expires?}]` (household.py:2105-2106; attention.py:121-136) | yes (TV: HaNotices.java:72-102) |
 | `parent_pins_version` | some adult has a Parent PIN | hash of the list below (household.py:2110-2121) | yes, and sent back in the status |
 | `parent_pins` | as above, and the TV's `parent_pins_version` differs | `[{person, name, hash, profiles}]`, salted hashes, never a PIN (household.py:2111-2123) | yes (TV: HaParentPins.java:47-73) |
+| `bluetooth_proxy` | the TV declared cap `bluetooth_proxy` | `{on, rev, area}`: whether the TV shares its Bluetooth with Home Assistant, the setting's revision, and the TV's Home Assistant area name or null ([Bluetooth sharing](#bluetooth-sharing); bt_proxy.py) | yes (TV: BtProxy.java) |
 | `client_settings` | the TV paired with a `client` (contract 3) | `{"<scope>/<name>": etag}` ([client-settings.md](client-settings.md); household.py:2128-2129) | no |
 | `version` | always | 16 hex characters of the document's hash; the long poll compares it (household.py:2130) | yes (TV: HaStatusReporter.java:630) |
 | `contract` | always | `const.CONTRACT`, now 3 (household.py:2131; const.py:11) | **no**, never checked |
@@ -102,7 +103,8 @@ What the TV sends: `screen`, `state`, `app`, `app_package`, `profile`, `profile_
 `playing_seconds_today`, `usage_today` (per profile: `seconds`, `apps`, `playing`, `profile_name`, `profile_ref`),
 `allowed_apps`, `app_categories`, `screen_time_*` (Google TV's own screen-time screen), `media_*`,
 `now_playing_available`, `pin_lockouts`, `parent_pins_version`, `checks` (`[{id: "accessibility", ok, label}]`),
-`caps`, `client`, and `local_rules` until each profile's are taken. It does not send `utc_offset_minutes`,
+`caps`, `client`, `bluetooth_proxy` ([Bluetooth sharing](#bluetooth-sharing)), and `local_rules` until each profile's
+are taken. It does not send `utc_offset_minutes`,
 `commands_done` or `contract` at the top level.
 
 The answer: `{ok, contract, state, day, clock_off?, local_rules_taken?, push?}` (api.py:368-383). The TV reads `state`
@@ -131,10 +133,48 @@ The settings (`.../settings/<scope>/<name>`) and `end_grant` endpoints exist for
 
 ## Capabilities
 
-The TV declares `caps: ["events", "notices"]` (TV: HaStatusReporter.java:56-59). Home Assistant knows `commands.play`,
-`events`, `push`, `notices` and drops others (HA: const.py:67-71; status.py:179-184). A device that never sent `caps`
+The TV declares `caps: ["events", "notices", "bluetooth_proxy"]` (TV: HaStatusReporter.java:56-59). Home Assistant
+knows `commands.play`, `events`, `push`, `notices`, `bluetooth_proxy` and drops others (HA: const.py:67-71; status.py:179-184). A device that never sent `caps`
 gets its kind's defaults, for a TV `commands.play` and `events` (const.py:74-82; hub.py:318-324). The TV leaves out
 `commands.play` on purpose: it doesn't run `commands`, so `hearth.play_on_tv` is refused for it instead of expiring.
+
+## Bluetooth sharing
+
+"Share Bluetooth with Home Assistant" (added 2026.11, no contract bump): a TV that declares cap `bluetooth_proxy` can
+run an ESPHome Bluetooth proxy (TV: BtProxy.java, HearthBtProxyService.java in its own `:btproxy` process; the
+vendored `android/esphome-proxy` modules), so Home Assistant's ESPHome and Bluetooth integrations hear nearby phones
+and watches through it for room presence. Off by default, per TV. An adult turns it on on the TV (Settings, Home
+Assistant) or with the TV's switch in Home Assistant (HA: switch.py `ShareBluetooth`, adults and automations only).
+
+**One value, by revision, no clocks.** Home Assistant keeps `{on, rev}` per TV (HA: bt_proxy.py, store
+`hearth.bt_proxy.<entry>`) and sends it as the state document's `bluetooth_proxy` `{on, rev, area}`. The TV keeps its
+own `on`, the `rev` it last took, and `changed` (a change made on the TV that Home Assistant hasn't taken yet), and sends
+them in every status as `bluetooth_proxy`:
+
+| Field | What |
+|---|---|
+| `on`, `rev`, `changed` | the TV's value, the revision it's set against, whether it's the TV's own change not yet taken |
+| `state` | what it comes to: `off`, `running`, `needs_permission` (location or Bluetooth scanning not allowed on the TV), `bluetooth_off`, `location_off`, `stopped` (on and allowed, but Android hasn't let the service start yet) |
+| `name`, `friendly_name` | while on: the ESPHome node name (chosen once, so a renamed TV stays the same device) and "<TV name> Bluetooth" |
+| `mac`, `host`, `port` | while on: the proxy's MAC (ESPHome's unique id, derived from the TV's ANDROID_ID), the TV's IPv4 address, 6053 |
+| `key` | while on: the proxy's ESPHome API encryption key (Noise PSK, 32 bytes base64), made once on the TV and kept in its private storage |
+
+Home Assistant changes `rev` up by one for each change of its own. It takes the TV's `on` when it differs and the TV
+says `changed` against Home Assistant's current `rev`, or the TV's `rev` is higher than Home Assistant's (its record
+started again), and then raises `rev` past both; the TV takes Home Assistant's word when its `rev` is higher than the
+TV's, or the same with no change of the TV's own waiting (TV: `BtProxy.fromHomeAssistant`). So the later change wins
+on either side.
+
+**The key** never goes into Home Assistant's status store, an entity, a log or diagnostics: hub.update_status hands
+the report to bt_proxy and keeps the rest without it. With the TV's proxy running, Hearth adds it to Home Assistant's
+ESPHome integration by going through ESPHome's own setup as a person would (`flow.async_init("esphome", source user,
+{host, port})`, then the `encryption_key` step with the key); any other step (a name conflict, a wrong key) ends that
+flow and is shown, as is an ESPHome entry already there for the MAC or host (left alone) and ESPHome not being
+available. A failed try is tried again after 10 minutes. The TV's sensor "Bluetooth sharing" (HA: sensor.py
+`BluetoothSharing`) shows `state` with attributes `wanted`, `esphome` (`waiting`, `added`, `exists`, `failed`,
+`esphome_unavailable`, `removed`: deleted in ESPHome after Hearth added it, not added again until the switch is turned
+off and on) and `esphome_detail`. By hand: an administrator's `hearth.get_tv_bluetooth` answers each TV's
+host, port, MAC, name and `noise_psk` for ESPHome's own setup.
 
 ## Pushes and pings
 

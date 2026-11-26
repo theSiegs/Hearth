@@ -65,12 +65,14 @@ TICKET_KINDS = (KIND_TV, KIND_MOBILE)
 # What a device can do, for new features: a device may say so in its status (`caps`); one that never did gets its
 # kind's (default_caps). The kind stays who the device is (a TV's profiles, a phone's person) and what it may vouch
 # for; caps say only what it can be sent. commands.play: hearth.play_on_tv; events: HearthTube's started videos;
-# push: an ntfy channel for "something changed" pings; notices: attention items in its state document
+# push: an ntfy channel for "something changed" pings; notices: attention items in its state document;
+# bluetooth_proxy: a TV that can share its Bluetooth with Home Assistant as an ESPHome proxy (bt_proxy.py)
 CAP_PLAY = "commands.play"
 CAP_EVENTS = "events"
 CAP_PUSH = "push"
 CAP_NOTICES = "notices"
-CAPS = (CAP_PLAY, CAP_EVENTS, CAP_PUSH, CAP_NOTICES)
+CAP_BT_PROXY = "bluetooth_proxy"
+CAPS = (CAP_PLAY, CAP_EVENTS, CAP_PUSH, CAP_NOTICES, CAP_BT_PROXY)
 MAX_CAPS = 16
 
 

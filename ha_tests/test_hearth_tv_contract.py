@@ -87,8 +87,9 @@ async def test_a_tv_s_document_has_the_page_s_keys_and_no_others(
     assert redeemed.status == 200
     second = (await redeemed.json())["secret"]
     await hass.async_block_till_done()
-    full = await _post(client, second, body={**_tv_status(hearthtube_s=60), "caps": ["events", "notices"],
-                                             "client": TV_CLIENT}, device_id=SECOND_TV)
+    caps = ["events", "notices", "bluetooth_proxy"]
+    full = await _post(client, second, body={**_tv_status(hearthtube_s=60), "caps": caps, "client": TV_CLIENT},
+                       device_id=SECOND_TV)
     assert full.status == 200
     answer = await full.json()
     assert answer["contract"] == CONTRACT

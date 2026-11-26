@@ -14,7 +14,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import UnitOfTime
+from homeassistant.const import EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -23,7 +23,8 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
 
 from . import HearthConfigEntry
-from .const import DOMAIN, KIND_MOBILE, KIND_TV, SIGNAL_WATCH, TV_STATES
+from .bt_proxy import SIGNAL_BT_PROXY, STATES as BT_STATES
+from .const import CAP_BT_PROXY, DOMAIN, KIND_MOBILE, KIND_TV, SIGNAL_WATCH, TV_STATES
 from .counting import ALL
 from .limits import never_held_group
 from .schooldays import DAY_TYPES
@@ -112,6 +113,8 @@ async def async_setup_entry(
                 *(HearthSensor(hub, device_id, d) for d in SENSORS if kind in d.kinds),
                 # A phone or tablet: when it was last used, and whether from the home network
                 *([DeviceLastInteraction(hub, device_id, LAST_INTERACTION)] if kind == KIND_MOBILE else []),
+                # A TV: whether its Bluetooth sharing runs, or why not (bt_proxy.py)
+                *([BluetoothSharing(hub, device_id, BLUETOOTH_SHARING)] if kind == KIND_TV else []),
             ],
         )
     )
@@ -165,6 +168,41 @@ class HearthSensor(HearthEntity, SensorEntity):
             for name, key in (("state_entity", "state"), ("media_title_entity", "media_title")):
                 attrs[name] = registry.async_get_entity_id("sensor", DOMAIN, f"{self.device_id}_{key}")
         return attrs
+
+
+BLUETOOTH_SHARING = SensorEntityDescription(
+    key="bluetooth_sharing",
+    translation_key="bluetooth_sharing",
+    device_class=SensorDeviceClass.ENUM,
+    options=BT_STATES,
+    entity_category=EntityCategory.DIAGNOSTIC,
+)
+
+
+class BluetoothSharing(HearthEntity, SensorEntity):
+    """What a TV's "Share Bluetooth with Home Assistant" comes to, as the TV says: off, running, needs_permission
+    (the TV's adult has to allow location and Bluetooth scanning on the TV), bluetooth_off, location_off or stopped;
+    and whether Hearth added it to ESPHome (never the key: hearth.get_tv_bluetooth has it, for administrators)."""
+
+    @property
+    def available(self) -> bool:
+        return self.hub.has_cap(self.device_id, CAP_BT_PROXY) and super().available
+
+    @property
+    def native_value(self) -> str | None:
+        report = (self.status or {}).get("bluetooth_proxy") or {}
+        return report.get("state")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        esphome, why = self.hub.bt_proxy.setup_state(self.device_id)
+        return {"wanted": self.hub.bt_proxy.wanted(self.device_id), "esphome": esphome, "esphome_detail": why}
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            async_dispatcher_connect(self.hass, SIGNAL_BT_PROXY.format(self.device_id), self.async_write_ha_state)
+        )
 
 
 LAST_INTERACTION = SensorEntityDescription(

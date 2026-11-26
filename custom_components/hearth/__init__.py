@@ -35,7 +35,8 @@ from .auth import is_adult_user, register_service
 from .websocket import async_register_commands
 from .pause import async_load_pauses, end_app_pause, pausable, set_app_pause, set_pause
 from .places import ARRIVE, LEAVE
-from . import adult_offer, client_settings_ws, glint_api, llm_api, notify_service, panel, suggest_push, todo_ws, weekly_ws
+from .bt_proxy import SIGNAL_BT_CAPABLE
+from . import adult_offer, bt_proxy, client_settings_ws, glint_api, llm_api, notify_service, panel, suggest_push, todo_ws, weekly_ws
 from . import glint_panel
 from .glint_panel_seam import HearthPanelHost
 from .todos import migrated_options
@@ -44,6 +45,7 @@ from .apps import ACTION_PREFIX
 from .asks import ACTION_PREFIX as ASK_ACTION_PREFIX
 from .commands import is_profile_id, what_to_play
 from .const import (
+    CAP_BT_PROXY,
     CAP_PLAY,
     CAP_PUSH,
     CONF_DEVICES,
@@ -450,6 +452,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     panel.async_register_play_area_service(hass)
     # An administrator's Make adult or Not now on the offer for a person who signed in from a phone (adult_offer.py)
     adult_offer.async_register_service(hass)
+    # Each TV's Bluetooth proxy with its key, for an administrator entering it in ESPHome (bt_proxy.py)
+    bt_proxy.async_register_service(hass)
     # A message on Hearth's devices, a person's or the household's (notify_service.py)
     notify_service.async_register_service(hass)
     # Hearth for assistants: Home Assistant's MCP Server and Assist (llm_api.py)
@@ -1894,8 +1898,9 @@ def _check_profile_keys(hass: HomeAssistant, entry: HearthConfigEntry) -> None:
 
 
 async def _panel_platforms(hass: HomeAssistant, entry: HearthConfigEntry, panels: glint_panel.Panels) -> None:
-    """The panels' selects and switches: now when there's a panel, else when the first one pairs (so a household
-    without one loads no switch platform)."""
+    """The panels' selects and switches, and each TV's Share Bluetooth switch: now when there's a panel or a TV that
+    can, else when the first panel pairs or a TV first says it can share its Bluetooth, so a household without either
+    loads no switch platform."""
 
     async def load() -> None:
         if hass.data.get(_PANEL_PLATFORMS_LOADED) or entry.state is not ConfigEntryState.LOADED:
@@ -1912,6 +1917,23 @@ async def _panel_platforms(hass: HomeAssistant, entry: HearthConfigEntry, panels
     def paired(_device_id: str) -> None:
         entry.async_create_task(hass, load())
 
+    # A TV's Share Bluetooth switch, for a TV that can (its cap bluetooth_proxy): once the household is loaded (not
+    # during its setup, which stays as quick as without one), or when a TV first says it can
+    hub = entry.runtime_data
+    if any(hub.kind(device_id) == KIND_TV and hub.has_cap(device_id, CAP_BT_PROXY) for device_id in hub.devices):
+
+        @callback
+        def state_changed() -> None:
+            if entry.state is ConfigEntryState.LOADED:
+                entry.async_create_task(hass, load())
+
+        entry.async_on_unload(entry.async_on_state_change(state_changed))
+
+    @callback
+    def capable() -> None:
+        entry.async_create_task(hass, load())
+
+    entry.async_on_unload(async_dispatcher_connect(hass, SIGNAL_BT_CAPABLE, capable))
     entry.async_on_unload(async_dispatcher_connect(hass, glint_panel.signal_added(DOMAIN), paired))
 
 

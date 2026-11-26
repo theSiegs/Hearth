@@ -173,6 +173,11 @@ def clean_status(raw: Any) -> dict[str, Any] | None:
     status["local_rules"] = local_rules(raw.get("local_rules"))
     # What the device says it can do (const.CAPS); None when it didn't say, and its kind's apply (hub.has_cap)
     status["caps"] = caps(raw.get("caps"))
+    # A TV's Bluetooth sharing (bt_proxy.py): its value, what it comes to, and while on how ESPHome reaches it. The
+    # key in it is taken out before the status is kept (hub.update_status)
+    from .bt_proxy import clean_report
+
+    status["bluetooth_proxy"] = clean_report(raw.get("bluetooth_proxy"))
     return status
 
 

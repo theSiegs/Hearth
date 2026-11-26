@@ -10,6 +10,7 @@
     "parent_pins_version": "0123456789abcdef",
     "parent_pins": [{"person": "person.alex", "name": "Alex", "hash": "v2$10000$00$00", "profiles": ["user:0"]}],
     "client_settings": {},
+    "bluetooth_proxy": {"on": false, "rev": 0, "area": null},
     "version": "fedcba9876543210",
     "contract": 3
   },

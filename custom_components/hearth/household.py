@@ -28,6 +28,7 @@ from homeassistant.util import dt as dt_util
 from .entry_tasks import entry_task
 from .attention import CHOSEN_PHONE, NOTICE, Action, Item
 from .const import (
+    CAP_BT_PROXY,
     CAP_NOTICES,
     CONF_KIND,
     CONF_LOCKS,
@@ -2302,6 +2303,10 @@ class Household:
                 body["parent_pins_version"] = pins_version
                 if status.get("parent_pins_version") != pins_version:
                     body["parent_pins"] = listed
+            # Whether this TV shares its Bluetooth with Home Assistant, for a TV that can (bt_proxy.py): its value, the
+            # revision a change on the TV is set against, and the TV's area for ESPHome's suggested area
+            if self.hub.has_cap(device_id, CAP_BT_PROXY):
+                body["bluetooth_proxy"] = self.hub.bt_proxy.document_for(device_id)
         else:
             body = self._phone_body(device.get(CONF_PERSON), device_id)
         # Contract 3: the etags of the client settings this device may read, for the client it paired with, so it

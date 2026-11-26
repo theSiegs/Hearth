@@ -18,6 +18,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CAP_BT_PROXY,
     DOMAIN,
     APPROVED_EXPIRES,
     CONF_DEVICES,
@@ -54,6 +55,7 @@ from .const import (
     STORAGE_VERSION,
 )
 from .asks import Asks
+from .bt_proxy import SIGNAL_BT_CAPABLE, BluetoothProxies, public as bt_public
 from .fs_requests import RequestTracker
 from .adult_offer import AdultOffers
 from .attention import ADMINS, ADULTS, Attention, Item
@@ -336,6 +338,8 @@ class HearthHub:
         self.glint_panel: Any = None
         # "Make this person an adult?", asked of the administrators once a person (adult_offer.py)
         self.adult_offers = AdultOffers(hass, self)
+        # Each TV's "Share Bluetooth with Home Assistant" and its ESPHome proxy (bt_proxy.py)
+        self.bt_proxy = BluetoothProxies(hass, self)
 
     # The devices
 
@@ -364,6 +368,7 @@ class HearthHub:
         await self.client_settings.async_load()
         await self.glint_agent.async_load()
         await self.adult_offers.async_load()
+        await self.bt_proxy.async_load()
         stored = await self._store.async_load() or {}
         for device_id, kept in stored.items():
             if device_id not in self.devices or not isinstance(kept, dict):
@@ -467,6 +472,18 @@ class HearthHub:
             if status.get(kept) is None and (state.status or {}).get(kept) is not None:
                 status = {**status, kept: state.status[kept]}
         status = self._on_hearth_day(device_id, state.status, status)
+        # A TV's Bluetooth sharing: taken (with the proxy's key) by bt_proxy; the status keeps it without the key. A
+        # TV saying for the first time that it can loads the switch platform for its switch
+        if (
+            self.kind(device_id) == KIND_TV
+            and CAP_BT_PROXY in (status.get("caps") or [])
+            and CAP_BT_PROXY not in ((state.status or {}).get("caps") or [])
+        ):
+            async_dispatcher_send(self.hass, SIGNAL_BT_CAPABLE)
+        if (report := status.get("bluetooth_proxy")) is not None:
+            if self.kind(device_id) == KIND_TV:
+                self.bt_proxy.on_report(device_id, report)
+            status = {**status, "bluetooth_proxy": bt_public(report)}
         self._tell_failed_checks(device_id, state.status, status)
         if self.kind(device_id) == KIND_TV:
             self._tell_failing_tv_checks(device_id, state, status)
@@ -729,6 +746,7 @@ class HearthHub:
         await self.client_settings.async_flush()
         await self.glint_agent.async_flush()
         await self.adult_offers.async_flush()
+        await self.bt_proxy.async_flush()
 
     async def async_remove_device(self, device_id: str) -> None:
         """Forgets a device: its secret stops working at once."""
@@ -736,6 +754,7 @@ class HearthHub:
         # person and household documents stay until an adult removes them
         self.pin_grants.forget(device_id)
         self.glint_agent.forget(device_id)
+        self.bt_proxy.forget(device_id)
         self.client_settings.remove_device(device_id)
         await self.client_settings.async_flush()
         devices = {k: v for k, v in self.devices.items() if k != device_id}
