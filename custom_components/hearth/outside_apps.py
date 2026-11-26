@@ -432,6 +432,15 @@ class OutsideAppChanges:
                 return True
         return False
 
+    def _kept_always(self, look: Look, change: str, app: str) -> bool:
+        """An app made Always allowed in Family Link that Hearth itself keeps Always allowed for the kid
+        (always_allowed.py): what Hearth wants, whoever wrote it, so not told."""
+        always = getattr(self.household, "always", None)
+        return (
+            change == ALWAYS_ALLOWED and look.provider == "Family Link" and always is not None
+            and app in always.apps_for(look.person)
+        )
+
     def _compare(self, looks: list[Look]) -> None:
         dirty = False
         at = dt_util.utcnow()
@@ -445,7 +454,7 @@ class OutsideAppChanges:
                 continue
             if before is not None:
                 for change, app, was, now in changes(before, look.lists):
-                    if self._hearths(look, app, since):
+                    if self._hearths(look, app, since) or self._kept_always(look, change, app):
                         continue
                     name = look.lists["names"].get(app) or (before.get("names") or {}).get(app)
                     if not name and look.provider == "Family Link":

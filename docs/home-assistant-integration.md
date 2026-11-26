@@ -1102,6 +1102,58 @@ so Hearth's pauses, its schedule and its blocks stay in step (`app_blocks.py`).
 - Events: `hearth_app_blocked` and `hearth_app_unblocked` (`person`, `app`) after each Family Link or Family Safety
   call.
 
+### Always allowed apps
+
+Glint (the kids' phone launcher) and Glint Phone (its dialer) must work through every hold. Hearth's own pauses never
+touch them, but Family Link's whole-device holds (Hearth's device lock, which is the daily limit at 0; a family pause;
+Family Link's bedtime and School time) let only the child's **Always allowed** apps through. So Hearth keeps a list of
+apps Always allowed in Family Link for every kid with Family Link (`always_allowed.py`):
+
+- **The list.** Option `always_allowed`: package -> `"kids"` (every kid) or a list of kids. Not set: Glint and Glint
+  Phone for every kid. `hearth.always_allow` (adults only) changes it: `apps` (package names) for `people` (every kid
+  when left out), `remove: true` to take them off, `bedtime` (below). An app Hearth blocks (`hearth.block_app`) is
+  refused until it's unblocked, and `hearth.block_app` refuses an app Hearth keeps Always allowed for that kid (Glint
+  is never blocked anyway). Hearth's page has an "Always allowed by Hearth" card: each kid's apps and where each
+  stands, the bedtime setting, and Keep always allowed after a parent's change. `hearth/config` carries it as
+  `always_allowed`.
+- **Written once, when installed.** Hearth writes `familylink.set_app_daily_limit` (`minutes: -2`) for an app that is
+  installed on the child's devices (Family Link takes it only then: until then nothing shows) and not yet Always
+  allowed, from whole app lists only (one missing or cut short changes nothing). An app installed later gets it at
+  the next look. An app already Always allowed is done (`by: found`): nothing is written.
+- **Hearth's own before the call.** The write is recorded (with the setting the app had) and saved before it goes
+  out, so one cut off by a reload or failing after it went out is still Hearth's; a refusal before it went out
+  leaves nothing. A write that failed, or went through but doesn't show within 5 minutes, is tried again after 2
+  minutes, doubling up to 6 hours; after 4 tries the adults are told once. Each write is Hearth's own call in the
+  action log, so the outside-change notices never tell it, and an app made Always allowed that Hearth keeps so for
+  the kid isn't told either (whoever wrote it).
+- **Never fighting.** Once Family Link showed an app Always allowed, a change of it in Family Link that Hearth didn't
+  make (a time limit, no limit of its own, a block) is a parent's: Hearth records it, fires
+  `hearth_always_allowed_changed` (`person`, `app`, `now`), tells the adults once ("Keep always allowed" runs
+  `hearth.always_allow` for that app and kid) and doesn't write again until an adult says so. The adult's latest
+  word wins: the parent's change in the Family Link app stands until an adult asks Hearth again. A change Hearth's
+  own calls made (a pause, resume, block or unblock naming the app in the last 30 minutes) is written over; an app
+  that left the device and came back isn't a parent's change either.
+- **A block wins.** Hearth never writes to a blocked app (a limit written to it would unblock it).
+- **Taken off the list.** What Hearth wrote goes back to the setting it had (its time limit, or no limit of its own,
+  `-1`), also recorded before the call; an app found Always allowed is left as it is.
+- **Hearth's holds.** The apps on the list are never paused by Hearth for that kid (a budget, a pause, School time,
+  the schedule, the pause of every other app while an app stays open); `hearth.release_stray_pauses` only touches apps
+  at a 1-minute limit, so never these.
+- **Bedtime.** Family Link's bedtime lets the Always allowed apps through only while the child's "Allow apps with
+  unlimited time during downtime" is on (`switch.<child>_unlimited_apps_during_downtime`). Google's help says the
+  same of School time; that part hasn't been checked on a device. It's one setting per child: on, it lets every
+  Always allowed app through bedtime, a parent's audiobook or music app too. So Hearth leaves it alone unless the
+  option `always_allowed_bedtime` is on (off by default; the card's "Keep them working at bedtime too", or
+  `hearth.always_allow` `bedtime: true`). Then it's kept on for each kid with an app on the list
+  (`familylink.set_downtime_unlimited_apps`), the same way: before the call, and a parent's switching it off stands
+  until an adult asks again (`bedtime: true`). Turned off again, what Hearth switched on is switched off.
+- **`hearth.explain`** for an app on the list (or one a parent made Always allowed) has `always_allowed`: `by`
+  (`hearth` or `family_link`), `state` (`always_allowed`, `not_installed`, `pending`, `blocked`,
+  `blocked_by_hearth`, `parent_changed`, `unknown`, `no_family_link`), `stopped_at_bedtime` (true while the downtime
+  setting is off), `bedtime` (`on`, `kept_by_hearth`, a parent's change) and a sentence, e.g. "Glint is always
+  allowed in Family Link (Hearth keeps it so): it works through Hearth's device lock and Family Link's daily limit.
+  Family Link's bedtime stops it: "Allow apps with unlimited time during downtime" is off for Sam."
+
 ### Outside app changes
 
 When an app gets more room in a parental-controls app and Hearth didn't do it, every adult's phone is told

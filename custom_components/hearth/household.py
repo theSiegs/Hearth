@@ -86,6 +86,7 @@ from .enforce import (
 )
 from .app_blocks import AppBlocks
 from .outside_apps import OutsideAppChanges
+from .always_allowed import AlwaysAllowed
 from .exceptions import Allows, Lifted, end_of_day
 from .history import BONUS, DEVICE_BONUS, RAISE, History
 from .time_model import (
@@ -305,6 +306,8 @@ class Household:
         self.blocks = AppBlocks(hass, self, hub.entry.entry_id)
         # App limits loosened outside Hearth, told to the adults (outside_apps.py)
         self.outside_apps = OutsideAppChanges(hass, self, hub.entry.entry_id)
+        # Apps kept Always allowed in Family Link: Glint and Glint Phone through every lock (always_allowed.py)
+        self.always = AlwaysAllowed(hass, self, hub.entry.entry_id)
         self.watch = WatchLog(hass, hub.entry.entry_id)
         self.allows = Allows(hass, hub.entry.entry_id)
         self.grants = Grants(hass, hub.entry.entry_id)
@@ -385,6 +388,7 @@ class Household:
         await self.enforcement.async_load()
         await self.blocks.async_load()
         await self.outside_apps.async_load()
+        await self.always.async_load()
         await self.watch.async_load()
         await self.allows.async_load()
         await self.grants.async_load()
@@ -422,6 +426,7 @@ class Household:
         await self.enforcement.async_flush()
         await self.blocks.async_flush()
         await self.outside_apps.async_flush()
+        await self.always.async_flush()
         await self.watch.async_flush()
         await self.allows.async_flush()
         await self.grants.async_flush()
@@ -1473,12 +1478,14 @@ class Household:
             paused_groups_of=lambda person: self.paused_groups(person, now),
             closed_of=self.schedule_holds,
             sleep_locks_devices_of=self.sleep_locks_devices,
-            exempt_of=self.client_exempt(),
+            exempt_of=self._exempt_of(),
             blocked_of=self.blocks.blocked_packages,
             fs_blocks_of=self.blocks.fs_blocks,
         )
         # Hearth's app blocks in step with Family Link (an app that showed up, a block or unblock of an adult's)
         self.blocks.sync()
+        # The apps Hearth keeps Always allowed, in step with Family Link (always_allowed.py)
+        self.always.sync()
         # Tell the adults what loosened in Family Link without Hearth (an unblock, a limit raised or off)
         self.outside_apps.check()
         # An adult's allow of All screen time opens Google's and Microsoft's own limits too
@@ -1491,6 +1498,12 @@ class Household:
         for together, what in [(t, "started") for t in started] + [(t, "ended") for t in ended]:
             self.hass.bus.async_fire(EVENT_PLAYING_TOGETHER, self._together_event(together, what))
         async_dispatcher_send(self.hass, SIGNAL_PEOPLE, new_day)
+
+    def _exempt_of(self):
+        """person -> the packages Family Link never pauses for them: their paired clients (client_exempt) and the apps
+        Hearth keeps Always allowed for them (always_allowed.py): a pause would take their unlimited time away."""
+        clients = self.client_exempt()
+        return lambda person: clients(person) | self.always.apps_for(person)
 
     def client_exempt(self):
         """person -> the packages never paused for them: the client (and its companions) locked at the pairing of
@@ -2595,6 +2608,7 @@ class Household:
             blocked += self.blocks.explain(person, app)
             # A parent's own block, made in Family Link or Family Safety: no allow lifts it either
             blocked += self.outside_apps.blocked_elsewhere(person, app)
+            always_allowed = self.always.explain(person, app)
         # An allowed Xbox or Windows app on a platform Hearth keeps locked whole (Windows always; the Xbox when its swap
         # to app pauses fell back): lifted by extra time or an allow on that device
         if excepted:
@@ -2662,6 +2676,8 @@ class Household:
                 [rule] if app in rule_apps and (rule := self.away.view(person, app)) is not None else []
             ),
             "school_time_off": self.off_views(person),
+            # An app always allowed in Family Link (kept so by Hearth, or a parent's): whether it stops at bedtime
+            **({"always_allowed": always_allowed} if app is not None and always_allowed is not None else {}),
             # Extra time on one device (a device's own bonus or allow): that device may go on whatever the pool says
             "device_extras": [
                 v for v in self.device_extra_views(person) if v["group"] == ALL or v["group"] in groups

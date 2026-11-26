@@ -125,6 +125,21 @@ def bedtime_switch(hass: HomeAssistant, child: str) -> str | None:
     return None
 
 
+def downtime_unlimited_switch(hass: HomeAssistant, child: str) -> str | None:
+    """The child's "Allow apps with unlimited time during downtime" switch (on: the Always allowed apps stay usable
+    at bedtime)."""
+    return _by_unique_id(hass, "switch", f"{FL_DOMAIN}_{child}_downtime_unlimited_apps")
+
+
+def downtime_unlimited(hass: HomeAssistant, child: str) -> bool | None:
+    """Whether the child's Always allowed apps stay usable at bedtime; None when it can't be read."""
+    entity_id = downtime_unlimited_switch(hass, child)
+    state = hass.states.get(entity_id) if entity_id else None
+    if state is None or state.state not in ("on", "off"):
+        return None
+    return state.state == "on"
+
+
 def school_time_sensors(hass: HomeAssistant, child: str) -> list[Any]:
     """The child's School time sensors, one per device (binary_sensor.<device>_school_time_active, maybe _2)."""
     return [

@@ -303,6 +303,25 @@ release_stray_pauses:
       selector:
         boolean:
 
+always_allow:
+  fields:
+    people:
+      selector:
+        entity:
+          domain: person
+          multiple: true
+    apps:
+      example: '["com.example.app"]'
+      selector:
+        object:
+    remove:
+      default: false
+      selector:
+        boolean:
+    bedtime:
+      selector:
+        boolean:
+
 block_outside_app:
   fields:
     source:

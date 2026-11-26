@@ -497,6 +497,11 @@ def _register_app_blocks(hass: HomeAssistant, loaded_household) -> None:
         not_kids = [p for p in people if p not in kids]
         if not_kids:
             raise ServiceValidationError(f"Not one of the household's kids: {', '.join(not_kids)}")
+        # An app Hearth keeps Always allowed for a kid (always_allowed.py): taken off that list first
+        if block and (always := sorted({a for p in people for a in apps if a in household.always.apps_for(p)})):
+            raise ServiceValidationError(
+                f"Hearth keeps these always allowed (take them off first, hearth.always_allow remove): {', '.join(always)}"
+            )
 
         def has(person: str, app: str) -> bool:
             """Whether the person has what blocks [app]: Family Link for an Android app, Family Safety for the rest."""
@@ -555,6 +560,80 @@ def _register_app_blocks(hass: HomeAssistant, loaded_household) -> None:
     register_service(
         hass, DOMAIN, "block_outside_app", block_outside_app,
         schema=vol.Schema({vol.Required("source"): cv.string, vol.Required("app"): cv.string}),
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+
+    @callback
+    def always_allow(call: ServiceCall) -> ServiceResponse:
+        """The apps Hearth keeps Always allowed in Family Link for the kids (always_allowed.py): added, taken off
+        (remove), or asked again after a parent's change; and whether the kids' "Allow apps with unlimited time during
+        downtime" is kept on (bedtime)."""
+        from .always_allowed import (
+            CONF_ALWAYS_ALLOWED,
+            CONF_ALWAYS_ALLOWED_BEDTIME,
+            MAX_APPS as ALWAYS_MAX,
+            changed_option,
+        )
+
+        household = loaded_household()
+        blocks = household.blocks
+        kids = blocks.kids()
+        given = call.data.get("people")
+        not_kids = [p for p in given or [] if p not in kids]
+        if not_kids:
+            raise ServiceValidationError(f"Not one of the household's kids: {', '.join(not_kids)}")
+        people = list(given) if given else kids
+        remove = call.data["remove"]
+        apps = sorted({a.strip() for a in call.data.get("apps") or [] if a.strip()})
+        wrong = [a for a in apps if not android_package(a)]
+        if wrong:
+            raise ServiceValidationError(f"Only Android apps (package names, like com.example.app): {', '.join(wrong)}")
+        if apps and not remove:
+            if given and (without := [household.person_name(p) for p in given if blocks.target_of(p) is None]):
+                raise ServiceValidationError(f"No Family Link child set up for {', '.join(without)} (Configure > Enforce)")
+            held = sorted({a for p in people for a in apps if a in blocks.adult.get(p, {})})
+            if held:
+                raise ServiceValidationError(f"Hearth blocks these (hearth.block_app): unblock them first: {', '.join(held)}")
+        options = dict(household.options)
+        current = household.always.configured()
+        if apps:
+            wanted = changed_option(current, apps, list(given) if given else None, kids, remove)
+            if len(wanted) > ALWAYS_MAX:
+                raise ServiceValidationError(f"Hearth keeps at most {ALWAYS_MAX} apps always allowed")
+            if wanted != current:
+                options[CONF_ALWAYS_ALLOWED] = wanted
+        bedtime = call.data.get("bedtime")
+        if bedtime is not None and bool(options.get(CONF_ALWAYS_ALLOWED_BEDTIME)) != bedtime:
+            options[CONF_ALWAYS_ALLOWED_BEDTIME] = bedtime
+        # An adult asked again: a parent's change in Family Link isn't kept any more
+        rearmed = [] if remove else household.always.rearm(people, apps, bedtime=bool(bedtime))
+        answer = {
+            "always_allowed": options.get(CONF_ALWAYS_ALLOWED, current),
+            "bedtime": bool(options.get(CONF_ALWAYS_ALLOWED_BEDTIME)),
+            "asked_again": rearmed,
+        }
+        entry = household.hub.entry
+        if options != dict(entry.options):
+            # The entry reloads with it, as after the Configure menu
+            hass.config_entries.async_update_entry(entry, options=options)
+        else:
+            household.recompute()
+        return answer
+
+    register_service(
+        hass, DOMAIN, "always_allow", always_allow,
+        schema=vol.All(
+            vol.Schema(
+                {
+                    # The kids (all of them by default)
+                    vol.Optional("people"): vol.All(cv.ensure_list, [cv.entity_id]),
+                    vol.Optional("apps"): vol.All(cv.ensure_list, [cv.string], vol.Length(min=1, max=20)),
+                    vol.Optional("remove", default=False): cv.boolean,
+                    vol.Optional("bedtime"): cv.boolean,
+                }
+            ),
+            cv.has_at_least_one_key("apps", "bedtime"),
+        ),
         supports_response=SupportsResponse.OPTIONAL,
     )
 

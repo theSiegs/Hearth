@@ -1327,6 +1327,28 @@
         }
       }
     },
+    "always_allow": {
+      "name": "Keep apps always allowed",
+      "description": "The apps Hearth keeps Always allowed in Family Link (unlimited time: they work through Hearth's device lock and Family Link's daily limit), Glint and Glint Phone for every kid unless changed. Adds apps for some kids (every kid when empty), takes them off (remove: what Hearth wrote goes back to the setting it had), or asks again after a parent changed one in Family Link. bedtime keeps each kid's \"Allow apps with unlimited time during downtime\" on, so these apps work at bedtime too; it lets every always allowed app through bedtime, not only these.",
+      "fields": {
+        "people": {
+          "name": "People",
+          "description": "Which kids; every kid when empty."
+        },
+        "apps": {
+          "name": "Apps",
+          "description": "Android package names, like com.example.app."
+        },
+        "remove": {
+          "name": "Remove",
+          "description": "Take the apps off the list for these kids instead."
+        },
+        "bedtime": {
+          "name": "Bedtime too",
+          "description": "Keep the kids' \"Allow apps with unlimited time during downtime\" on (off: Hearth leaves it alone, and switches off what it switched on)."
+        }
+      }
+    },
     "block_outside_app": {
       "name": "Block an app loosened outside Hearth",
       "description": "The button on Hearth's notice of an app unblocked, its limit raised or taken off, or always allowed in Family Link, Family Safety or Nintendo without Hearth: blocks it again there (Family Link: as Hearth's own block; Nintendo: off the Switch's allow list).",
