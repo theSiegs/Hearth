@@ -1510,6 +1510,16 @@ class HearthPanel extends HTMLElement {
       case "block-browsers":
         await this._setOption("block_unsupported_browsers", el.checked, el.checked ? "Browsers Hearth doesn't support get blocked" : "Browser rule off: Hearth unblocks what it blocked for it");
         return;
+      case "always-allowed-bedtime":
+        await this._setOption("always_allowed_bedtime", el.checked, el.checked ? "Always allowed apps work at bedtime too" : "Hearth leaves the bedtime setting alone");
+        return;
+      case "always-allow-again": {
+        // A parent's change in Family Link: Hearth makes it always allowed again
+        const name = d.name || d.app;
+        await this._service("always_allow", { apps: [d.app], people: [d.person] }, `${name} always allowed again for ${this._personName(d.person)}`);
+        await this._loadConfig();
+        return;
+      }
       case "block-ai-companions":
         await this._setOption("block_ai_companions", el.checked, el.checked ? "AI companion apps get blocked" : "AI companion rule off: Hearth unblocks what it blocked for it");
         return;
@@ -4531,6 +4541,44 @@ class HearthPanel extends HTMLElement {
     </section>`;
   }
 
+  // Always allowed by Hearth (always_allowed.py): the apps Hearth keeps Always allowed in Family Link for each kid, a
+  // parent's change kept until an adult asks again, and the bedtime setting (off unless chosen)
+  _alwaysCard() {
+    const a = this._config.always_allowed;
+    if (!a) return "";
+    const states = {
+      always_allowed: "always allowed",
+      not_installed: "not installed yet: made always allowed once Family Link lists it",
+      pending: "being made always allowed",
+      blocked: "blocked in Family Link by a parent: a block wins",
+      blocked_by_hearth: "blocked by Hearth: a block wins",
+      parent_changed: "changed by a parent in Family Link: Hearth leaves it so",
+      unknown: "Family Link's app lists can't be read whole now",
+      no_family_link: "no Family Link set up",
+    };
+    const bedtime = (k) => {
+      const b = k.bedtime || {};
+      if (b.on === true) return `<span class="chip small">Works at bedtime: "Allow apps with unlimited time during downtime" is on</span>`;
+      if (b.on === false) return `<span class="chip small warn">Stops at bedtime: "Allow apps with unlimited time during downtime" is off${b.parent ? " (switched off by a parent in Family Link)" : ""}</span>`;
+      return `<span class="muted small">Bedtime: the downtime setting can't be read</span>`;
+    };
+    const kids = (a.kids || []).filter((k) => k.family_link);
+    return `<section class="card">
+      <h3><ha-icon icon="mdi:shield-check-outline"></ha-icon>Always allowed by Hearth</h3>
+      <p class="muted">Apps Hearth keeps Always allowed in Family Link, so they work when the device is locked (daily time out, a family pause). Hearth never pauses or blocks them. If a parent changes one in the Family Link app, Hearth leaves it and asks you.</p>
+      <label class="check"><input type="checkbox" data-change="always-allowed-bedtime" ${a.bedtime ? "checked" : ""}> Keep them working at bedtime too</label>
+      <div class="muted small">Switches on each kid's "Allow apps with unlimited time during downtime" in Family Link. That setting lets every always allowed app through bedtime, not only these (a parent's audiobook or music app too).</div>
+      ${kids.length ? `<ul class="list compact">${kids
+        .map((k) => `<li><div class="grow"><div>${esc(k.name)}</div>
+          <ul class="list compact">${(k.apps || [])
+            .map((x) => `<li><div class="grow"><div title="${esc(x.app)}">${esc(x.name || x.app)}</div><div class="muted small">${esc(states[x.state] || x.state)}${x.error ? ` · ${esc(x.error)}` : ""}</div></div>
+              ${x.state === "parent_changed" ? `<button class="btn" data-action="always-allow-again" data-app="${esc(x.app)}" data-name="${esc(x.name || x.app)}" data-person="${esc(k.person)}">Keep always allowed</button>` : ""}</li>`)
+            .join("")}</ul>
+          <div>${bedtime(k)}</div></div></li>`)
+        .join("")}</ul>` : `<p class="muted small">No kid has Family Link set up.</p>`}
+    </section>`;
+  }
+
   // An app's name, never its package: a guess from the package when nothing better is known
   _appName(a) {
     if (a.name && a.name !== a.package) return a.name;
@@ -4609,6 +4657,7 @@ class HearthPanel extends HTMLElement {
     const recent = (cfg.recent || []).filter((a) => !this._testBuild(a.package));
     const appsCards = `${this._checkTheseCard()}
       ${this._blocksCard()}
+      ${this._alwaysCard()}
       <section class="card">
         <h3><ha-icon icon="mdi:new-box"></ha-icon>Sorted lately</h3>
         <p class="muted">New apps go to a group on their own: one that lists them, else what they are (games, video, social…; Messaging and Accessibility only from Hearth's list or your choice, never a guess), else Other. Accessibility apps are never paused. System screens (the home screen, lock screen, keyboards) never count and are never paused; only Hearth's list or your choice puts an app there. If one landed wrong, move it or say what it is; your choice always wins.</p>

@@ -28,6 +28,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 
+from .always_allowed import CONF_ALWAYS_ALLOWED, CONF_ALWAYS_ALLOWED_BEDTIME, EVERY_KID, MAX_APPS as ALWAYS_MAX_APPS
 from .app_blocks import CONF_BLOCK_AI_COMPANIONS, CONF_BLOCK_UNSUPPORTED_BROWSERS
 from .backstop import CONF_FL_BACKSTOP, CONF_FL_BACKSTOP_MARGIN
 from .time_model import BACKSTOP_MARGIN
@@ -393,6 +394,8 @@ def config_document(hass: HomeAssistant, hub) -> dict[str, Any]:
         "voice_assistants": bool(options.get(CONF_VOICE_ASSISTANTS)),
         # Hearth's app blocks (app_blocks.py): the browser rule, the supported browsers, each kid's blocks and web filter
         "app_blocks": household.blocks.page(),
+        # The apps Hearth keeps Always allowed in Family Link, and the bedtime setting (always_allowed.py)
+        "always_allowed": household.always.page(),
         "push_server": options.get(CONF_PUSH_SERVER),
         "parent_pins": sorted(parent_pin.stored_pins(options)),
         "school_days": dict(options.get(CONF_SCHOOL_DAYS) or {}),
@@ -489,6 +492,13 @@ OPTION_SCHEMAS: dict[str, Any] = {
     CONF_BLOCK_UNSUPPORTED_BROWSERS: bool,
     # Block AI companion apps (app_blocks.py): on unless turned off
     CONF_BLOCK_AI_COMPANIONS: bool,
+    # Apps kept Always allowed in Family Link (always_allowed.py): package -> "kids" or the kids it's kept for
+    CONF_ALWAYS_ALLOWED: vol.All(
+        vol.Schema({vol.All(cv.string, vol.Match(r"^[A-Za-z][\w]*(\.[A-Za-z_][\w]*)+$")): vol.Any(EVERY_KID, [_PERSON])}),
+        vol.Length(max=ALWAYS_MAX_APPS),
+    ),
+    # ... and the kids' "Allow apps with unlimited time during downtime" kept on for them: off unless chosen
+    CONF_ALWAYS_ALLOWED_BEDTIME: bool,
     # Family Link's daily limit as a backstop (backstop.py)
     CONF_FL_BACKSTOP: bool,
     CONF_FL_BACKSTOP_MARGIN: vol.All(vol.Coerce(int), vol.Range(min=0, max=240)),
